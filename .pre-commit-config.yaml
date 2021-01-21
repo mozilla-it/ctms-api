@@ -1,0 +1,54 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.1.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-json
+        exclude: 'k8s/secret.json'
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: pretty-format-json
+        args: [
+          '--autofix',
+          '--indent', '4',
+          '--no-sort-keys',
+        ]
+        exclude: 'k8s/secret.json'
+      - id: trailing-whitespace
+  - repo: https://github.com/pre-commit/mirrors-pylint
+    rev: v2.5.3
+    hooks:
+      - id: pylint
+        additional_dependencies: [pylint-venv]
+        args: ['--disable=all']
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.782
+    hooks:
+      - id: mypy
+        args: [--no-strict-optional, --ignore-missing-imports]
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.6.2
+    hooks:
+      - id: bandit
+        args: [-lll, --recursive]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v0.14.3
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: "poetry.lock"
+  - repo: https://github.com/asottile/seed-isort-config
+    rev: v1.9.3
+    hooks:
+      - id: seed-isort-config
+  - repo: https://github.com/PyCQA/isort
+    rev: 4.3.21
+    hooks:
+      - id: isort
+        additional_dependencies: [pyproject, toml]
+        args: ["--recursive", "--settings-path", "./pyproject.toml", "."]
+  - repo: https://github.com/psf/black
+    rev: 20.8b1
+    hooks:
+      - id: black
+        args: ["--config","./pyproject.toml", "."]

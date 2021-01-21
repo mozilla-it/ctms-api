@@ -1,0 +1,3 @@
+steps:
+- name: 'docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/github.com/mozilla-it/$REPO_NAME:$SHORT_SHA', '--file', 'docker/Dockerfile',  '.', '--target', 'test']
