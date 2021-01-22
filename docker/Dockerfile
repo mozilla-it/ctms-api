@@ -94,4 +94,4 @@ ENTRYPOINT /docker-entrypoint.sh $0 $@
 
 EXPOSE 80
 
-CMD ["uvicorn", "ctms-spike-185.app:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "ctms_spike.app:app", "--host", "0.0.0.0", "--port", "80"]
