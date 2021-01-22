@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import Body, FastAPI, Path, Query
 from fastapi.responses import RedirectResponse
 
-from containerized_microservice_template.models import (
+from ctms_spike.models import (
     APIRequest,
     APIResponse,
     ExampleAPIRequest,

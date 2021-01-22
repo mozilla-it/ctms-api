@@ -12,8 +12,8 @@ What types of changes does your code introduce?
 
 ## Checklist
 
-- [ ] I have read the [guides](https://github.com/mozilla-it/containerized-microservice-template/tree/main/guides) 
-- [ ] I have followed the [Mozilla Lean Data Policies](https://www.mozilla.org/en-US/about/policy/lean-data/) 
+- [ ] I have read the [guides](https://github.com/jwhitlock/ctms-spike-185/tree/main/guides)
+- [ ] I have followed the [Mozilla Lean Data Policies](https://www.mozilla.org/en-US/about/policy/lean-data/)
 - [ ] Lint and tests pass both locally and on the cicd with my changes
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] I have added necessary documentation (if appropriate)
@@ -22,4 +22,3 @@ What types of changes does your code introduce?
 ## Further comments
 
 _Use this space for additional comments, complications, learnings, alternatives,..._
-

@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "containerized_microservice_template"
-copyright = "2020, B.Sieber <bsieber@mozilla.com>"
-author = "B.Sieber <bsieber@mozilla.com>"
+project = "ctms_spike"
+copyright = "2020, John Whitlock <jwhitlock@mozilla.com>"
+author = "John Whitlock <jwhitlock@mozilla.com>"
 
 # The short X.Y version
 version = "0.0.1"

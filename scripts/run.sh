@@ -7,4 +7,4 @@ BASE_DIR="$(dirname "$CURRENT_DIR")"
 
 cd $BASE_DIR
 
-docker run -d -p 80:80 containerized_microservice_template:latest
+docker run -d -p 80:80 ctms-spike-185:latest

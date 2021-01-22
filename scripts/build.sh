@@ -7,4 +7,4 @@ BASE_DIR="$(dirname "$CURRENT_DIR")"
 
 cd $BASE_DIR
 
-docker build --tag containerized_microservice_template --file docker/Dockerfile .
+docker build --tag ctms-spike-185 --file docker/Dockerfile .

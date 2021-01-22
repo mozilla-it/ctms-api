@@ -7,7 +7,7 @@ Submodules
 containerized\_microservice\_template.app module
 ------------------------------------------------
 
-.. automodule:: containerized_microservice_template.app
+.. automodule:: ctms_spike.app
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ containerized\_microservice\_template.app module
 containerized\_microservice\_template.models module
 ---------------------------------------------------
 
-.. automodule:: containerized_microservice_template.models
+.. automodule:: ctms_spike.models
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ containerized\_microservice\_template.models module
 Module contents
 ---------------
 
-.. automodule:: containerized_microservice_template
+.. automodule:: ctms_spike
    :members:
    :undoc-members:
    :show-inheritance:

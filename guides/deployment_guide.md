@@ -21,7 +21,7 @@ Follow the article below to install the `cloud-build-local` and view additional 
 - https://cloud.google.com/cloud-build/docs/build-debug-locally
 
 Run the following to build locally:
-> cloud-build-local --config=cloudbuild.yaml --dryrun=false --substitutions=REPO_NAME=containerized_microservice_template,SHORT_SHA=1a2b3c4 .
+> cloud-build-local --config=cloudbuild.yaml --dryrun=false --substitutions=REPO_NAME=ctms-spike-185,SHORT_SHA=1a2b3c4 .
 ---
 ## Kubernetes
 ### Details

@@ -3,19 +3,16 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry]
-name = "containerized_microservice_template"
+name = "ctms-spike-185"
 version = "0.0.1"
-description = "Template microservice repo."
+description = "Contact Management System Spike (OSS-185). Based on https://github.com/mozilla-it/containerized-microservice-template"
 authors = [
-    "Bryan Sieber <bsieber@mozilla.com>",
-    "Chris Valaas <cvalaas@mozilla.com>",
-    "Stew Henderson <shenderson@mozilla.com>",
-    "Shraddha Patil <spatil@mozilla.com>",
+    "John Whitlock <jwhitlock@mozilla.com>",
 ]
 readme = "README.md"
-homepage = "https://github.com/mozilla-it/containerized-microservice-template"
-repository = "https://github.com/mozilla-it/containerized-microservice-template"
-documentation = "https://mozilla-it.github.io/containerized-microservice-template"
+homepage = "https://github.com/jwhitlock/ctms-spike-185"
+repository = "https://github.com/jwhitlock/ctms-spike-185"
+documentation = "https://jwhitlock.github.io/ctms-spike-185"
 
 
 [tool.poetry.dependencies]

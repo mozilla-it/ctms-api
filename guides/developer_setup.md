@@ -48,8 +48,8 @@ The command `deactivate` will not work to full disengage the poetry shell as it 
 
 ### Install the Hooks
 Using poetry (pre-commit is located in the [pyproject.toml](../pyproject.toml) )
-> poetry shell
 
+> poetry shell
 > pre-commit install
 
 You should get the following response after installing pre-commit into the githooks:
@@ -77,10 +77,10 @@ Install Docker here: https://docs.docker.com/get-docker/
 
 ### Building
 Build images with:
-> docker build --tag containerized_microservice_template --file docker/Dockerfile .
+> docker build --tag ctms-spike-185 --file docker/Dockerfile .
 
 Stop the build at optional stages (development, lint, test, production) with the --target option:
-> docker build --name containerized_microservice_template --file docker/Dockerfile . --target <stage>
+> docker build --name ctms-spike-185 --file docker/Dockerfile . --target <stage>
 
 #### Optional
 It is also possible to build the full image through the provided scripts:
