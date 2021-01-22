@@ -75,9 +75,13 @@ line_length = 88
 [tool.coverage]
 # https://github.com/nedbat/coveragepy
     [tool.coverage.run]
-    omit = ['*/.local/*', '/usr/*','*/.venv/*','*/.tox/*']
-    # omit anything in a .local directory anywhere
-    # omit everything in /usr
+    omit = [
+        '*/.local/*',
+        '/usr/*',
+        '*/.venv/*',
+        '*/.tox/*',
+        '*/virtualenvs/*',
+    ]
 
     [tool.coverage.report]
 
