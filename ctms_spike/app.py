@@ -31,75 +31,44 @@ def root():
     return RedirectResponse(url="./docs")
 
 
-@app.post(
-    "/api/{path_param}",
-    summary="Post with Path, Query, and Body Params",
-    response_description="JSON provided from request is passed through.",
+@app.get(
+    "/identity/{contact_id}",
+    summary="Get identities associated with the ID",
 )
-def post_with_path_body_and_query(
-    path_param: str = Path(..., title="An example path_param"),
-    request=Body(..., embed=False),
-    query_params: Optional[str] = Query(None),
-):
-    """POST to /api/{path_param} potentially with a JSON Body and optionally query params.
-
-    - Args:
-        - **path_param (str)**: Path param desired to traverse
-        - **request (Body)**: JSON body upon HTTP Request
-        - **query_params (Optional[str])**: Query parameters can be provided if desired
-
-    - Returns:
-        - **response**: returns the input request
-    """
-
-    # If you DO NOT know the model representation of the API Request,
-    # use this method to get the body necessary to generate the model.
-    return request
+def read_identity(contact_id: str):
+    return {
+        "id": "001A000001aABcDEFG",
+        "amo_id": None,
+        "fxa_id": None,
+        "payee_id": None,
+        "email": "ctms-user@example.com",
+        "fxa_primary_email": None,
+        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+    }
 
 
-@app.post(
-    "/api",
-    summary="Post with APIRequest Model as JSON Body",
-    response_description="JSON provided from request is passed through.",
-    response_model=APIResponse,
-)
-def post_api_by_models(request: APIRequest = Body(..., embed=False)):
-    """POST to /api with a JSON Body in the form of an APIRequest model.
-
-    - Args:
-        - **request (APIRequest)**: JSON body upon HTTP Request in the APIRequest model form
-
-    - Returns:
-        - **response**: returns the input request in the APIResponse model form
-    """
-
-    # If you DO know the model representation of the API Request,
-    # construct a model then replace the models in use here.
-    return request
-
-
-# TODO: Remove the Example below ----
-@app.post(
-    "/example",
-    summary="Example Models in use",
-    response_description="JSON provided from request has a field filtered",
-    response_model=ExampleAPIResponse,
-)
-def example(request: ExampleAPIRequest):
-    """POST to /example with a HTTP Request consisting of a Body in the form of the ExampleAPIRequest model
-
-    - Args:
-        - **request (ExampleAPIRequest)**: JSON body upon HTTP Request in the ExampleAPIRequest model form
-
-    - Returns:
-        - **response**: returns the input request in the form of an ExampleAPIResponse model
-    """
-
-    # Purely an example with models
-    return request
-
-
-# TODO: Remove the Example above ----
+@app.get("/contact/main/{contact_id}", summary="Get contact by ID")
+def read_contact_main(contact_id: str):
+    return {
+        "postal_code": "666",
+        "cv_created_at": None,
+        "cv_days_interval": None,
+        "cv_first_contribution_date": None,
+        "cv_goal_reached_at": None,
+        "cv_last_active_date": None,
+        "cv_two_day_streak": None,
+        "email": "ctms-user@example.com",
+        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+        "country": "us",
+        "created_date": "2014-01-22T15:24:00.000+0000",
+        "lang": "en",
+        "last_modified_date": "2020-01-22T15:24:00.000+0000",
+        "optin": True,
+        "optout": False,
+        "reason": None,
+        "record_type": "0124A0000001aABCDE",
+        "id": "001A000001aABcDEFG",
+    }
 
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a
