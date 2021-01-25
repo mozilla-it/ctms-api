@@ -26,7 +26,6 @@ def invokes_http_method(context, http_method):
 
 @then("the user expects the response to have a status of {status_code}")
 def response_status(context, status_code):
-    assert context.response
     assert context.response.status_code == int(
         status_code
-    ), "Expected status code not found"
+    ), f"Expected status code was {status_code}, got {context.response.status_code}"
