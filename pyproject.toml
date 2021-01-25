@@ -24,6 +24,7 @@ requests = "^2.24.0"
 uvicorn = "^0.12.2"
 gunicorn = "^20.0.4"
 sphinx = "^3.2.1"
+pydantic = {extras = ["email"], version = "^1.7.3"}
 
 
 [tool.poetry.dev-dependencies]

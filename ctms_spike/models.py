@@ -1,6 +1,8 @@
-from typing import Optional, List, Dict
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, uuid
+from typing import Dict, Optional
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr
 
 
 # TODO: Replace APIRequest with JSON Request Body fields
@@ -25,29 +27,56 @@ class ExampleAPIResponse(APIResponse):
 
 # TODO: Remove the Examples above ----
 
+
+class UserIdentity(BaseModel):
+    id: Optional[str] = None
+    amo_id: Optional[str] = None
+    fxa_id: Optional[str] = None
+    fxa_primary_email: Optional[str] = None
+    token: Optional[str] = None
+
+
+class UserMain(BaseModel):
+    postal_code: Optional[str] = None
+    cv_created_at: Optional[datetime] = None
+    cv_days_interval: Optional[str] = None
+    cv_first_contribution_date: Optional[datetime] = None
+    cv_goal_reached_at: Optional[str] = None
+    cv_last_active_date: Optional[str] = None
+    cv_two_day_streak: Optional[str] = None
+    email: Optional[EmailStr] = None
+    token: Optional[str] = None
+    country: Optional[str] = None
+    created_date: Optional[datetime] = None
+    lang: Optional[str] = None
+    last_modified_date: Optional[datetime] = None
+    optin: Optional[str] = None
+    optout: Optional[str] = None
+    reason: Optional[str] = None
+    record_type: Optional[str] = None
+    id: Optional[str] = None
+
+
 class UserSchema(BaseModel):
-    amo_id: Optional[Str] = None
-    country: Optional[Str] = None
+    amo_id: Optional[str] = None
+    country: Optional[str] = None
     created_date: Optional[datetime] = None
     cv_created_at: Optional[datetime] = None
-    cv_days_interval: Optional[Str] = None
+    cv_days_interval: Optional[str] = None
     cv_first_contribution_date: Optional[datetime] = None
-    cv_goal_reached_at: Optional[Str] = None
-    cv_last_active_date: Optional[Str] = None
-    cv_two_day_streak: Optional[Str] = None
+    cv_goal_reached_at: Optional[str] = None
+    cv_last_active_date: Optional[str] = None
+    cv_two_day_streak: Optional[str] = None
     email: Optional[EmailStr] = None
-    fxa_id: Optional[Str] = None
-    fxa_primary_email: Optional[Str] = None
-    id: Optional[Str] = None
-    lang: Optional[Str] = None
+    fxa_id: Optional[str] = None
+    fxa_primary_email: Optional[str] = None
+    id: Optional[str] = None
+    lang: Optional[str] = None
     last_modified_date: Optional[datetime] = None
-    optin: Optional[Str] = None
-    optout: Optional[Str] = None
-    payee_id: Optional[Str] = None
-    postal_code: Optional[Str] = None
-    reason: Optional[Str] = None
-    record_type: Optional[Str] = None
-    token: Optional[Str] = None
-        
-class UserDict(BaseModel):
-    user_dict: Dict[uuid.UUID, UserSchema]
+    optin: Optional[bool] = None
+    optout: Optional[bool] = None
+    payee_id: Optional[str] = None
+    postal_code: Optional[str] = None
+    reason: Optional[str] = None
+    record_type: Optional[str] = None
+    token: Optional[str] = None
