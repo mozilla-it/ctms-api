@@ -18,7 +18,7 @@ Feature: Getting the test user's information works
         "amo_location": null,
         "amo_user": false,
         "country": "us",
-        "created_date": "2014-01-22T15:24:00.000+0000",
+        "created_date": "2014-01-22T15:24:00+00:00",
         "cv_created_at": null,
         "cv_days_interval": null,
         "cv_first_contribution_date": null,
@@ -34,7 +34,7 @@ Feature: Getting the test user's information works
         "fxa_service": null,
         "id": "001A000001aABcDEFG",
         "lang": "en",
-        "last_modified_date": "2020-01-22T15:24:00.000+0000",
+        "last_modified_date": "2020-01-22T15:24:00+00:00",
         "optin": true,
         "optout": false,
         "payee_id": null,
@@ -97,9 +97,9 @@ Feature: Getting the test user's information works
         "email": "ctms-user@example.com",
         "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
         "country": "us",
-        "created_date": "2014-01-22T15:24:00.000+0000",
+        "created_date": "2014-01-22T15:24:00+00:00",
         "lang": "en",
-        "last_modified_date": "2020-01-22T15:24:00.000+0000",
+        "last_modified_date": "2020-01-22T15:24:00+00:00",
         "optin": true,
         "optout": false,
         "reason": null,
@@ -115,6 +115,7 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
+        "amo_id": null,
         "amo_display_name": null,
         "amo_homepage": null,
         "amo_last_login": null,
