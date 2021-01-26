@@ -8,11 +8,11 @@ from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
 
 from ctms_spike.models import (
-    ContactAmoSchema,
-    ContactCVSchema,
-    ContactFpnSchema,
-    ContactFsaSchema,
-    ContactFxaSchema,
+    ContactAddonsSchema,
+    ContactCommonVoiceSchema,
+    ContactFirefoxAccountsSchema,
+    ContactFirefoxPrivateNetworkSchema,
+    ContactFirefoxStudentAmbassadorSchema,
     ContactMainSchema,
     ContactSchema,
     CTMSResponse,
@@ -76,12 +76,12 @@ async def read_ctms(contact_id: UUID = Path(..., title="The Contact ID")):
         raise HTTPException(status_code=404, detail="Contact not found")
     return CTMSResponse(
         id=contact.id,
-        amo=contact.amo or ContactAmoSchema(),
+        amo=contact.amo or ContactAddonsSchema(),
         contact=contact.contact or ContactMainSchema(),
-        cv=contact.cv or ContactCVSchema(),
-        fpn=contact.fpn or ContactFpnSchema(),
-        fsa=contact.fsa or ContactFsaSchema(),
-        fxa=contact.fxa or ContactFxaSchema(),
+        cv=contact.cv or ContactCommonVoiceSchema(),
+        fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
+        fsa=contact.fsa or ContactFirefoxStudentAmbassadorSchema(),
+        fxa=contact.fxa or ContactFirefoxAccountsSchema(),
         newsletters=contact.newsletters or [],
         status="ok",
     )
@@ -116,66 +116,66 @@ async def read_contact_main(contact_id: UUID = Path(..., title="The Contact ID")
 @app.get(
     "/contact/amo/{contact_id}",
     summary="Get contact's add-ons details",
-    response_model=ContactAmoSchema,
+    response_model=ContactAddonsSchema,
 )
 async def read_contact_amo(contact_id: UUID = Path(..., title="The Contact ID")):
     try:
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.amo or ContactAmoSchema()
+    return contact.amo or ContactAddonsSchema()
 
 
 @app.get(
     "/contact/cv/{contact_id}",
     summary="Get contact's Common Voice details",
-    response_model=ContactCVSchema,
+    response_model=ContactCommonVoiceSchema,
 )
 async def read_contact_cv(contact_id: UUID = Path(..., title="The Contact ID")):
     try:
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.cv or ContactCVSchema()
+    return contact.cv or ContactCommonVoiceSchema()
 
 
 @app.get(
     "/contact/fpn/{contact_id}",
     summary="Get contact's Firefox Private Network details",
-    response_model=ContactFpnSchema,
+    response_model=ContactFirefoxPrivateNetworkSchema,
 )
 async def read_contact_fpn(contact_id: UUID = Path(..., title="The Contact ID")):
     try:
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.fpn or ContactFpnSchema()
+    return contact.fpn or ContactFirefoxPrivateNetworkSchema()
 
 
 @app.get(
     "/contact/fsa/{contact_id}",
     summary="Get contact's FSA details",
-    response_model=ContactFsaSchema,
+    response_model=ContactFirefoxStudentAmbassadorSchema,
 )
 async def read_contact_fsa(contact_id: UUID = Path(..., title="The Contact ID")):
     try:
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.fsa or ContactFsaSchema()
+    return contact.fsa or ContactFirefoxStudentAmbassadorSchema()
 
 
 @app.get(
     "/contact/fxa/{contact_id}",
     summary="Get contact's Firefox Account details",
-    response_model=ContactFxaSchema,
+    response_model=ContactFirefoxAccountsSchema,
 )
 async def read_contact_fxa(contact_id: UUID = Path(..., title="The Contact ID")):
     try:
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.fxa or ContactFxaSchema()
+    return contact.fxa or ContactFirefoxAccountsSchema()
 
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a

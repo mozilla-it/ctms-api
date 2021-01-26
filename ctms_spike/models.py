@@ -9,12 +9,12 @@ class ContactSchema(BaseModel):
     """A complete contact."""
 
     id: UUID
-    amo: Optional["ContactAmoSchema"] = None
+    amo: Optional["ContactAddonsSchema"] = None
     contact: Optional["ContactMainSchema"] = None
-    cv: Optional["ContactCVSchema"] = None
-    fpn: Optional["ContactFpnSchema"] = None
-    fsa: Optional["ContactFsaSchema"] = None
-    fxa: Optional["ContactFxaSchema"] = None
+    cv: Optional["ContactCommonVoiceSchema"] = None
+    fpn: Optional["ContactFirefoxPrivateNetworkSchema"] = None
+    fsa: Optional["ContactFirefoxStudentAmbassadorSchema"] = None
+    fxa: Optional["ContactFirefoxAccountsSchema"] = None
     newsletters: List[str] = []
 
     def as_identity_response(self) -> "IdentityResponse":
@@ -28,7 +28,7 @@ class ContactSchema(BaseModel):
         )
 
 
-class ContactAmoSchema(BaseModel):
+class ContactAddonsSchema(BaseModel):
     """
     The addons.mozilla.org data for a contact.
 
@@ -69,7 +69,7 @@ class ContactMainSchema(BaseModel):
     token: Optional[str] = None
 
 
-class ContactCVSchema(BaseModel):
+class ContactCommonVoiceSchema(BaseModel):
     """The CommonVoice schema."""
 
     created_at: Optional[datetime] = None
@@ -80,14 +80,14 @@ class ContactCVSchema(BaseModel):
     two_day_streak: Optional[str] = None
 
 
-class ContactFpnSchema(BaseModel):
+class ContactFirefoxPrivateNetworkSchema(BaseModel):
     """The Firefox Private Network schema."""
 
     country: Optional[str] = None
     platform: Optional[str] = None
 
 
-class ContactFsaSchema(BaseModel):
+class ContactFirefoxStudentAmbassadorSchema(BaseModel):
     """
     The Firefox Student Ambassador program schema
 
@@ -102,7 +102,7 @@ class ContactFsaSchema(BaseModel):
     school: Optional[str] = None
 
 
-class ContactFxaSchema(BaseModel):
+class ContactFirefoxAccountsSchema(BaseModel):
     """The Firefox Account schema."""
 
     create_date: Optional[datetime] = None
@@ -120,12 +120,12 @@ class CTMSResponse(BaseModel):
     """ContactSchema but sub-schemas are required."""
 
     id: UUID
-    amo: ContactAmoSchema
+    amo: ContactAddonsSchema
     contact: ContactMainSchema
-    cv: ContactCVSchema
-    fpn: ContactFpnSchema
-    fsa: ContactFsaSchema
-    fxa: ContactFxaSchema
+    cv: ContactCommonVoiceSchema
+    fpn: ContactFirefoxPrivateNetworkSchema
+    fsa: ContactFirefoxStudentAmbassadorSchema
+    fxa: ContactFirefoxAccountsSchema
     newsletters: List[str]
     status: str = "ok"
 
