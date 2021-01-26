@@ -9,7 +9,6 @@ from pydantic import EmailStr
 
 from ctms_spike.models import (
     ContactAmoSchema,
-    ContactCVResponse,
     ContactCVSchema,
     ContactFpnSchema,
     ContactFsaSchema,
@@ -41,8 +40,8 @@ async def root():
 
 
 SAMPLE_CONTACT = ContactSchema(
-    contact_id="93db83d4-4119-4e0c-af87-a713786fa81d",
-    main_data=ContactMainSchema(
+    id="93db83d4-4119-4e0c-af87-a713786fa81d",
+    contact=ContactMainSchema(
         id="001A000001aABcDEFG",
         country="us",
         created_date="2014-01-22T15:24:00+00:00",
@@ -62,7 +61,7 @@ SAMPLE_CONTACT = ContactSchema(
         "mozilla-learning-network",
     ],
 )
-SAMPLE_CONTACTS = {SAMPLE_CONTACT.contact_id: SAMPLE_CONTACT}
+SAMPLE_CONTACTS = {SAMPLE_CONTACT.id: SAMPLE_CONTACT}
 
 
 @app.get(
@@ -75,7 +74,17 @@ async def read_ctms(contact_id: UUID = Path(..., title="The Contact ID")):
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.as_ctms_response()
+    return CTMSResponse(
+        id=contact.id,
+        amo=contact.amo or ContactAmoSchema(),
+        contact=contact.contact or ContactMainSchema(),
+        cv=contact.cv or ContactCVSchema(),
+        fpn=contact.fpn or ContactFpnSchema(),
+        fsa=contact.fsa or ContactFsaSchema(),
+        fxa=contact.fxa or ContactFxaSchema(),
+        newsletters=contact.newsletters or [],
+        status="ok",
+    )
 
 
 @app.get(
@@ -101,7 +110,7 @@ async def read_contact_main(contact_id: UUID = Path(..., title="The Contact ID")
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.main_data or ContactMainSchema()
+    return contact.contact or ContactMainSchema()
 
 
 @app.get(
@@ -114,30 +123,20 @@ async def read_contact_amo(contact_id: UUID = Path(..., title="The Contact ID"))
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.amo_data or ContactAmoSchema()
+    return contact.amo or ContactAmoSchema()
 
 
 @app.get(
     "/contact/cv/{contact_id}",
     summary="Get contact's Common Voice details",
-    response_model=ContactCVResponse,
+    response_model=ContactCVSchema,
 )
 async def read_contact_cv(contact_id: UUID = Path(..., title="The Contact ID")):
     try:
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    # TODO: test with non-null CV data
-    assert contact.cv_data is None
-    """
-    if contact.cv_data:
-        response = ContactCVResponse(**contact.cv_data.dict())
-    else:
-        response = ContactCVResponse()
-    """
-    response = ContactCVResponse()
-    response.id = getattr(contact.main_data, "id", None)
-    return response
+    return contact.cv or ContactCVSchema()
 
 
 @app.get(
@@ -150,7 +149,7 @@ async def read_contact_fpn(contact_id: UUID = Path(..., title="The Contact ID"))
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.fpn_data or ContactFpnSchema()
+    return contact.fpn or ContactFpnSchema()
 
 
 @app.get(
@@ -163,7 +162,7 @@ async def read_contact_fsa(contact_id: UUID = Path(..., title="The Contact ID"))
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.fsa_data or ContactFsaSchema()
+    return contact.fsa or ContactFsaSchema()
 
 
 @app.get(
@@ -176,7 +175,7 @@ async def read_contact_fxa(contact_id: UUID = Path(..., title="The Contact ID"))
         contact = SAMPLE_CONTACTS[contact_id]
     except KeyError:
         raise HTTPException(status_code=404, detail="Contact not found")
-    return contact.fxa_data or ContactFxaSchema()
+    return contact.fxa or ContactFxaSchema()
 
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a

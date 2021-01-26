@@ -11,57 +11,69 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "amo_id": null,
-        "amo_display_name": null,
-        "amo_homepage": null,
-        "amo_last_login": null,
-        "amo_location": null,
-        "amo_user": false,
-        "country": "us",
-        "created_date": "2014-01-22T15:24:00+00:00",
-        "cv_created_at": null,
-        "cv_days_interval": null,
-        "cv_first_contribution_date": null,
-        "cv_goal_reached_at": null,
-        "cv_last_active_date": null,
-        "cv_two_day_streak": null,
-        "email": "ctms-user@example.com",
-        "fxa_id": null,
-        "fxa_primary_email": null,
-        "fxa_create_date": null,
-        "fxa_deleted": null,
-        "fxa_lang": null,
-        "fxa_service": null,
-        "id": "001A000001aABcDEFG",
-        "lang": "en",
-        "last_modified_date": "2020-01-22T15:24:00+00:00",
-        "optin": true,
-        "optout": false,
-        "payee_id": null,
-        "postal_code": "666",
-        "reason": null,
-        "record_type": "0124A0000001aABCDE",
-        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
-        "source_url": null,
-        "format": null,
-        "payee_id": null,
-        "first_name": null,
-        "last_name": null,
-        "fpn_country": null,
-        "fpn_platform": null,
-        "fsa_allow_share": null,
-        "fsa_city": null,
-        "fsa_current_status": null,
-        "fsa_grad_year": null,
-        "fsa_major": null,
-        "fsa_school": null,
-        "status": "ok",
+        "id": "93db83d4-4119-4e0c-af87-a713786fa81d",
+        "amo": {
+          "display_name": null,
+          "homepage": null,
+          "id": null,
+          "last_login": null,
+          "location": null,
+          "user": false
+        },
+        "contact": {
+          "country": "us",
+          "created_date": "2014-01-22T15:24:00+00:00",
+          "email": "ctms-user@example.com",
+          "first_name": null,
+          "format": "H",
+          "id": "001A000001aABcDEFG",
+          "lang": "en",
+          "last_modified_date": "2020-01-22T15:24:00+00:00",
+          "last_name": "_",
+          "optin": true,
+          "optout": false,
+          "payee_id": null,
+          "postal_code": "666",
+          "reason": null,
+          "record_type": "0124A0000001aABCDE",
+          "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+          "source_url": null
+        },
+        "cv": {
+          "created_at": null,
+          "days_interval": null,
+          "first_contribution_date": null,
+          "goal_reached_at": null,
+          "last_active_date": null,
+          "two_day_streak": null
+        },
+        "fpn": {
+          "country": null,
+          "platform": null
+        },
+        "fsa": {
+          "allow_share": null,
+          "city": null,
+          "current_status": null,
+          "grad_year": null,
+          "major": null,
+          "school": null
+        },
+        "fxa": {
+          "create_date": null,
+          "deleted": null,
+          "id": null,
+          "lang": null,
+          "primary_email": null,
+          "service": null
+        },
         "newsletters": [
             "app-dev",
             "maker-party",
             "mozilla-foundation",
             "mozilla-learning-network"
-        ]
+        ],
+        "status": "ok"
       }
       """
 
@@ -87,24 +99,23 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "postal_code": "666",
-        "cv_created_at": null,
-        "cv_days_interval": null,
-        "cv_first_contribution_date": null,
-        "cv_goal_reached_at": null,
-        "cv_last_active_date": null,
-        "cv_two_day_streak": null,
-        "email": "ctms-user@example.com",
-        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
         "country": "us",
         "created_date": "2014-01-22T15:24:00+00:00",
+        "email": "ctms-user@example.com",
+        "first_name": null,
+        "format": "H",
+        "id": "001A000001aABcDEFG",
         "lang": "en",
         "last_modified_date": "2020-01-22T15:24:00+00:00",
+        "last_name": "_",
         "optin": true,
         "optout": false,
+        "payee_id": null,
+        "postal_code": "666",
         "reason": null,
         "record_type": "0124A0000001aABCDE",
-        "id": "001A000001aABcDEFG"
+        "source_url": null,
+        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7"
       }
       """
 
@@ -115,12 +126,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "amo_id": null,
-        "amo_display_name": null,
-        "amo_homepage": null,
-        "amo_last_login": null,
-        "amo_location": null,
-        "amo_user": false
+        "display_name": null,
+        "homepage": null,
+        "id": null,
+        "last_login": null,
+        "location": null,
+        "user": false
       }
       """
 
@@ -131,12 +142,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "source_url": null,
-        "id": "001A000001aABcDEFG",
-        "format": null,
-        "payee_id": null,
-        "first_name": null,
-        "last_name": null
+        "created_at": null,
+        "days_interval": null,
+        "first_contribution_date": null,
+        "goal_reached_at": null,
+        "last_active_date": null,
+        "two_day_streak": null
       }
       """
 
@@ -147,8 +158,8 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "fpn_country": null,
-        "fpn_platform": null
+        "country": null,
+        "platform": null
       }
       """
 
@@ -159,12 +170,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "fsa_allow_share": null,
-        "fsa_city": null,
-        "fsa_current_status": null,
-        "fsa_grad_year": null,
-        "fsa_major": null,
-        "fsa_school": null
+        "allow_share": null,
+        "city": null,
+        "current_status": null,
+        "grad_year": null,
+        "major": null,
+        "school": null
       }
       """
 
@@ -175,12 +186,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "fxa_id": null,
-        "fxa_primary_email": null,
-        "fxa_create_date": null,
-        "fxa_deleted": null,
-        "fxa_lang": null,
-        "fxa_service": null
+        "create_date": null,
+        "deleted": null,
+        "id": null,
+        "lang": null,
+        "primary_email": null,
+        "service": null
       }
       """
 
