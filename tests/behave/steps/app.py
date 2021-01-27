@@ -5,7 +5,7 @@ from behave import given, step, then, when
 from fastapi.testclient import TestClient
 from pytest import fail
 
-from ctms_spike.app import app
+from ctms.app import app
 
 
 @given("the TestClient is setup")

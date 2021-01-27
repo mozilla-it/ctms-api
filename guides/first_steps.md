@@ -35,12 +35,12 @@ These may need to be made executable...
 ### Poetry
 
 Run a reloading server through poetry and uvicorn locally (CTRL+C to kill):
-> poetry run uvicorn ctms_spike.app:app  --host 0.0.0.0 --port 80 --reload
+> poetry run uvicorn ctms.app:app  --host 0.0.0.0 --port 80 --reload
 
 ### Docker
 
 Run a container image locally in the background with (the return is the CONTAINER ID of the image):
-> docker run -d -p 80:80 ctms-spike-185:latest
+> docker run -d -p 80:80 ctms-api:latest
 
 View running containers:
 > docker ps

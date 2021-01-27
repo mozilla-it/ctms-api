@@ -40,7 +40,7 @@ The project is structured with the following in mind:
     - Auto-generated Sphinx docs live here.
 - guides/
     - Documentation to guide others around the project interactions
-- ctms_spike/
+- ctms/
     - Operational source code exists here
     - .../app.py
         - FastAPI Handling of HTTP Requests and routing to services

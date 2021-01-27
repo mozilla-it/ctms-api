@@ -65,7 +65,7 @@ CMD ["uvicorn", "--reload", "--host=0.0.0.0", "--port=8000", "main:app"]
 # running in check mode means build will fail if any linting errors occur
 FROM development AS lint
 RUN isort --settings-path ./pyproject.toml --recursive --check-only
-RUN black --config ./pyproject.toml --check ctms_spike tests
+RUN black --config ./pyproject.toml --check ctms tests
 CMD ["tail", "-f", "/dev/null"]
 
 
@@ -94,4 +94,4 @@ ENTRYPOINT /docker-entrypoint.sh $0 $@
 
 EXPOSE 80
 
-CMD ["uvicorn", "ctms_spike.app:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "ctms.app:app", "--host", "0.0.0.0", "--port", "80"]
