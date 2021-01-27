@@ -12,7 +12,7 @@ What types of changes does your code introduce?
 
 ## Checklist
 
-- [ ] I have read the [guides](https://github.com/mozilla-it/ctms_api/tree/main/guides)
+- [ ] I have read the [guides](https://github.com/mozilla-it/ctms-api/tree/main/guides)
 - [ ] I have followed the [Mozilla Lean Data Policies](https://www.mozilla.org/en-US/about/policy/lean-data/)
 - [ ] Lint and tests pass both locally and on the cicd with my changes
 - [ ] I have added tests that prove my fix is effective or that my feature works
