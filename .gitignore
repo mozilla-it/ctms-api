@@ -12,3 +12,4 @@ reports/
 behave-reports/
 htmlcov/
 .isort.cfg
+docs/_build
