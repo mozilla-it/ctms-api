@@ -24,7 +24,7 @@ ENV_ZONE=mozilla-api-${ENV}-zone
 NAMESPACE=ctms-api
 SVC_NAME=ctms-api
 SECRET_NAME=ctms-api-secrets
-SUBDOMAIN=ctms
+SUBDOMAIN=ctms-api
 
 FULL_DOMAIN=${SUBDOMAIN}.${DOMAIN}
 
