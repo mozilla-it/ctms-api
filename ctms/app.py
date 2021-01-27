@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
 
-from ctms_spike.models import (
+from ctms.models import (
     ContactAddonsSchema,
     ContactCommonVoiceSchema,
     ContactFirefoxAccountsSchema,

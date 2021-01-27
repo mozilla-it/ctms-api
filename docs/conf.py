@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "ctms_spike"
+project = "ctms"
 copyright = "2020, John Whitlock <jwhitlock@mozilla.com>"
 author = "John Whitlock <jwhitlock@mozilla.com>"
 
