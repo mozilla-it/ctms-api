@@ -1,6 +1,6 @@
-# containerized-microservice-template
+# ctms-api
 
-A github repo template using python3 with:
+The python CTMS API with:
  - Using FastAPI framework (Pydantic, Swagger, included)
  - BDD testing strategies (using Gherkin and Behave)
  - Python package control through **poetry**

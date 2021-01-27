@@ -21,10 +21,10 @@ fi
 # VARS
 PROJ_ENV=mozilla-api-${ENV}
 ENV_ZONE=mozilla-api-${ENV}-zone
-NAMESPACE=containerized-microservice-template
-SVC_NAME=containerized-microservice-template
-SECRET_NAME=containerized-microservice-template-secrets
-SUBDOMAIN=example
+NAMESPACE=ctms-api-microservice
+SVC_NAME=ctms-api-microservice
+SECRET_NAME=ctms-api-microservice-secrets
+SUBDOMAIN=ctms
 
 FULL_DOMAIN=${SUBDOMAIN}.${DOMAIN}
 
