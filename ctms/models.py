@@ -128,7 +128,7 @@ class CTMSResponse(BaseModel):
     fsa: ContactFirefoxStudentAmbassadorSchema
     fxa: ContactFirefoxAccountsSchema
     newsletters: List[str]
-    status: str = "ok"
+    status: Literal["ok"]
 
 
 class IdentityResponse(BaseModel):
@@ -139,3 +139,12 @@ class IdentityResponse(BaseModel):
     fxa_id: Optional[str] = None
     fxa_primary_email: Optional[str] = None
     token: Optional[str] = None
+
+
+class NotFoundResponse(BaseModel):
+    """The content of the 404 Not Found message."""
+
+    detail: str
+
+    class Config:
+        schema_extra = {"example": {"detail": "Unknown contact_id"}}

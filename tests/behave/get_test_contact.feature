@@ -203,7 +203,7 @@ Feature: Getting the test user's information works
     And the response JSON is
     """
     {
-      "detail": "Contact not found"
+      "detail": "Unknown contact_id"
     }
     """
 
