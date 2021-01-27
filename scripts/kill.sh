@@ -7,4 +7,4 @@ BASE_DIR="$(dirname "$CURRENT_DIR")"
 
 cd $BASE_DIR
 
-docker rm $(docker stop $(docker ps -a -q --filter ancestor=ctms_api --format="{{.ID}}"))
+docker rm $(docker stop $(docker ps -a -q --filter ancestor=ctms-api --format="{{.ID}}"))
