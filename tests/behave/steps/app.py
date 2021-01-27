@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from pytest import fail
 
 from ctms_spike.app import app
-from ctms_spike.models import APIRequest, ExampleAPIRequest
 
 
 @given("the TestClient is setup")
