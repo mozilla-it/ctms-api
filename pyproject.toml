@@ -5,15 +5,15 @@ build-backend = "poetry.masonry.api"
 [tool.poetry]
 name = "ctms-api"
 version = "0.0.1"
-description = "Contact Management System API. Based on https://github.com/mozilla-it/containerized-microservice-template"
+description = "Contact Management System API"
 authors = [
     "John Whitlock <jwhitlock@mozilla.com>",
-    "Bryan Sieber <bsieber@mozilla.com",
+    "Bryan Sieber <bsieber@mozilla.com>",
 ]
 readme = "README.md"
-homepage = "https://github.com/mozilla-it/ctms_api"
-repository = "https://github.com/mozilla-it/ctms_api"
-documentation = "https://github.com/mozilla-it/ctms_api"
+homepage = "https://github.com/mozilla-it/ctms-api"
+repository = "https://github.com/mozilla-it/ctms-api"
+documentation = "https://github.com/mozilla-it/ctms-api"
 
 
 [tool.poetry.dependencies]

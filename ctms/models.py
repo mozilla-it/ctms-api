@@ -33,10 +33,11 @@ class ContactAddonsSchema(BaseModel):
     The addons.mozilla.org data for a contact.
 
     TODO: user: When is this set true?
+
+    In basket code:
+
     - upsert_amo_user_data - set to True when User Sync request
-      https://github.com/mozmeao/basket/blob/31941961e56c462a7d260f079c937e05ac0d9ae3/basket/news/tasks.py#L1137
     - amo_check_user_for_deletion - set to False when deleting a user
-      https://github.com/mozmeao/basket/blob/31941961e56c462a7d260f079c937e05ac0d9ae3/basket/news/tasks.py#L1189
     """
 
     display_name: Optional[str] = None

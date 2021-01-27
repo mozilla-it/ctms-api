@@ -1,6 +1,31 @@
-# ctms-api
+# CTMS API
 
-The python CTMS API with:
+This is a work-in-progress for the Contact Management System (CTMS) API.
+The API is read-only with some sample test contacts with fake data:
+
+* ``93db83d4-4119-4e0c-af87-a713786fa81d``: sample contact with:
+  - email ``ctms-user@example.com``
+  - SalesForce ``001A000001aABcDEFG``
+  - Basket token ``142e20b6-1ef5-43d8-b5f4-597430e956d7``
+
+Next features for the read-only version:
+
+* [ ] Review rounds
+* [ ] Flesh out the rest of the read-only API
+* [ ] Implement the ``/identity`` APIs with alternate IDs
+* [ ] Add more sample contacts
+
+Future features:
+
+* [ ] Backing database for development
+* [ ] Create / Update / Delete endpoints
+* [ ] Convert template docs to CTMS docs
+
+# Based on containerized-microservice-template
+
+[containerized-microservice-template](https://github.com/mozilla-it/containerized-microservice-template)
+is a github repo template using python3 with:
+
  - Using FastAPI framework (Pydantic, Swagger, included)
  - BDD testing strategies (using Gherkin and Behave)
  - Python package control through **poetry**
@@ -10,7 +35,7 @@ The python CTMS API with:
  - Deployment yaml's for k8s
 
 ---
-## Index
+## Template Docs
 
 [View All Docs](./guides/)
 - [Auto Documentation Setup](guides/auto_documentation.md)
