@@ -1,8 +1,8 @@
-containerized-microservice-template
-===================================
+ctms-api
+========
 
 .. toctree::
    :maxdepth: 4
 
-   ctms_spike
+   ctms
    tests

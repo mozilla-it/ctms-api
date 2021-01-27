@@ -17,9 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "ctms"
-copyright = "2020, John Whitlock <jwhitlock@mozilla.com>"
-author = "John Whitlock <jwhitlock@mozilla.com>"
+project = "ctms_api"
+copyright = "2021, Bryan Sieber  <bsieber@mozilla.com>"
+author = "Bryan Sieber  <bsieber@mozilla.com>"
 
 # The short X.Y version
 version = "0.0.1"

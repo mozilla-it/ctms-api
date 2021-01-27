@@ -3,16 +3,17 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry]
-name = "ctms-spike-185"
+name = "ctms-api"
 version = "0.0.1"
-description = "Contact Management System Spike (OSS-185). Based on https://github.com/mozilla-it/containerized-microservice-template"
+description = "Contact Management System API. Based on https://github.com/mozilla-it/containerized-microservice-template"
 authors = [
     "John Whitlock <jwhitlock@mozilla.com>",
+    "Bryan Sieber <bsieber@mozilla.com",
 ]
 readme = "README.md"
-homepage = "https://github.com/jwhitlock/ctms-spike-185"
-repository = "https://github.com/jwhitlock/ctms-spike-185"
-documentation = "https://jwhitlock.github.io/ctms-spike-185"
+homepage = "https://github.com/mozilla-it/ctms_api"
+repository = "https://github.com/mozilla-it/ctms_api"
+documentation = "https://github.com/mozilla-it/ctms_api"
 
 
 [tool.poetry.dependencies]

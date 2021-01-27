@@ -20,8 +20,8 @@ from ctms.models import (
 )
 
 app = FastAPI(
-    title="Contact Management System (CTMS)",
-    description="Spike of CTMS API for task 185.",
+    title="ConTact Management System (CTMS)",
+    description="CTMS API.",
     version="0.0.1",
 )
 
