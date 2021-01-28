@@ -40,7 +40,7 @@ async def get_contact_or_404(contact_id) -> ContactSchema:
         raise HTTPException(status_code=404, detail="Unknown contact_id")
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def root():
     """GET via root redirects to /docs.
 
@@ -58,6 +58,7 @@ async def root():
     summary="Get all contact details in basket format",
     response_model=CTMSResponse,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Public"],
 )
 async def read_ctms(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -79,6 +80,7 @@ async def read_ctms(contact_id: UUID = Path(..., title="The Contact ID")):
     summary="Get identities associated with the ID",
     response_model=IdentityResponse,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_identity(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -90,6 +92,7 @@ async def read_identity(contact_id: UUID = Path(..., title="The Contact ID")):
     summary="Get contact's main details",
     response_model=ContactMainSchema,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_contact_main(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -101,6 +104,7 @@ async def read_contact_main(contact_id: UUID = Path(..., title="The Contact ID")
     summary="Get contact's add-ons details",
     response_model=ContactAddonsSchema,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_contact_amo(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -112,6 +116,7 @@ async def read_contact_amo(contact_id: UUID = Path(..., title="The Contact ID"))
     summary="Get contact's Common Voice details",
     response_model=ContactCommonVoiceSchema,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_contact_cv(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -123,6 +128,7 @@ async def read_contact_cv(contact_id: UUID = Path(..., title="The Contact ID")):
     summary="Get contact's Firefox Private Network details",
     response_model=ContactFirefoxPrivateNetworkSchema,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_contact_fpn(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -134,6 +140,7 @@ async def read_contact_fpn(contact_id: UUID = Path(..., title="The Contact ID"))
     summary="Get contact's FSA details",
     response_model=ContactFirefoxStudentAmbassadorSchema,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_contact_fsa(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -145,6 +152,7 @@ async def read_contact_fsa(contact_id: UUID = Path(..., title="The Contact ID"))
     summary="Get contact's Firefox Account details",
     response_model=ContactFirefoxAccountsSchema,
     responses={404: {"model": NotFoundResponse}},
+    tags=["Private"],
 )
 async def read_contact_fxa(contact_id: UUID = Path(..., title="The Contact ID")):
     contact = await get_contact_or_404(contact_id)
@@ -153,7 +161,7 @@ async def read_contact_fxa(contact_id: UUID = Path(..., title="The Contact ID"))
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a
 # better proxy for application availability as opposed to health.
-@app.get("/health")
+@app.get("/health", tags=["Platform"])
 async def health():
     return {"health": "OK"}, 200
 
