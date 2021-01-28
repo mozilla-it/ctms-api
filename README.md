@@ -3,10 +3,16 @@
 This is a work-in-progress for the Contact Management System (CTMS) API.
 The API is read-only with some sample test contacts with fake data:
 
-* ``93db83d4-4119-4e0c-af87-a713786fa81d``: sample contact with:
+* [93db83d4-4119-4e0c-af87-a713786fa81d](http://ctms-api.api.data.allizom.org/ctms/93db83d4-4119-4e0c-af87-a713786fa81d):
+  sample contact with minimal data:
   - email ``ctms-user@example.com``
-  - SalesForce ``001A000001aABcDEFG``
+  - SalesForce ID ``001A000001aABcDEFG``
   - Basket token ``142e20b6-1ef5-43d8-b5f4-597430e956d7``
+* [93db83d4-4119-4e0c-af87-a713786fa81d](http://ctms-api.api.data.allizom.org/ctms/93db83d4-4119-4e0c-af87-a713786fa81d):
+  sample contact with all data:
+  - email ``mozilla-fan@example.com``
+  - SalesForce ID ``001A000001aMozFan``
+  - Basket token ``d9ba6182-f5dd-4728-a477-2cc11bf62b69``
 
 Next features for the read-only version:
 

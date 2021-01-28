@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class ContactSchema(BaseModel):
@@ -30,22 +30,51 @@ class ContactSchema(BaseModel):
 
 class ContactAddonsSchema(BaseModel):
     """
-    The addons.mozilla.org data for a contact.
+    The addons.mozilla.org (AMO) data for a contact.
 
-    TODO: user: When is this set true?
-
-    In basket code:
-
-    - upsert_amo_user_data - set to True when User Sync request
-    - amo_check_user_for_deletion - set to False when deleting a user
+    Extra info in Basket / Salesforce:
+    * amo_deleted - True if the user was deleted in AMO. Basket also sets
+        the amo_id to null on deletion.
     """
 
-    display_name: Optional[str] = None
-    homepage: Optional[str] = None
-    id: Optional[str] = None
-    last_login: Optional[datetime] = None
-    location: Optional[str] = None
-    user: bool = False
+    display_name: Optional[str] = Field(
+        default=None,
+        description="Author name on AMO, AMO_Display_Name__c in Salesforce",
+    )
+    homepage: Optional[str] = Field(
+        default=None,
+        description=(
+            "Homepage linked on AMO, AMO_Location__c in Salesforce,"
+            " <em>planning to drop</em>"
+        ),
+    )
+    id: Optional[int] = Field(
+        default=None, description="Author ID on AMO, AMO_User_ID__c in Salesforce"
+    )
+    last_login: Optional[datetime] = Field(
+        default=None,
+        description="Last login on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
+    )
+    location: Optional[str] = Field(
+        default=None,
+        description="Free-text location on AMO, AMO_Location__c in Salesforce",
+    )
+    user: bool = Field(
+        default=False,
+        description="True if user is from an Add-on sync, AMO_User__c in Salesforce",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "display_name": "Add-ons Author",
+                "homepage": "https://my-mozilla-addon.example.org/",
+                "id": 98765,
+                "last_login": "2021-01-28T19:21:50.908Z",
+                "location": "California, USA, Earth",
+                "user": True,
+            }
+        }
 
 
 class ContactMainSchema(BaseModel):
