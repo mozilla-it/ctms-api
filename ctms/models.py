@@ -145,7 +145,7 @@ class ContactMainSchema(BaseModel):
     )
     record_type: Optional[str] = Field(
         default=None,
-        description="Salesforce record type, maybe used to identify Foundation contacts, RecordTypeId in Salesforce",
+        description="Salesforce record type, may be used to identify Foundation contacts, RecordTypeId in Salesforce",
     )
     source_url: Optional[HttpUrl] = Field(
         default=None,
