@@ -35,6 +35,9 @@ class ContactAddonsSchema(BaseModel):
     Extra info in Basket / Salesforce:
     * amo_deleted - True if the user was deleted in AMO. Basket also sets
         the amo_id to null on deletion.
+
+    All are in basket's IGNORE_USER_FIELDS, and usually stripped from
+    contact data on the return from Salesforce.
     """
 
     display_name: Optional[str] = Field(
@@ -131,17 +134,18 @@ class ContactMainSchema(BaseModel):
     )
     payee_id: Optional[str] = Field(
         default=None,
-        description="Payment system ID (Stripe or other), PMT_Cust_Id__c in Salesforce",
+        description="Payment system ID (Stripe or other), in basket IGNORE_USER_FIELDS, PMT_Cust_Id__c in Salesforce",
     )
     postal_code: Optional[str] = Field(
         default=None, description="Mailing postal code, MailingPostalCode in Salesforce"
     )
     reason: Optional[str] = Field(
         default=None,
-        description="Reason for unsubscribing, Unsubscribe_Reason__c in Salesforce",
+        description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
     record_type: Optional[str] = Field(
-        default=None, description="Salesforce record type, RecordTypeId in Salesforce"
+        default=None,
+        description="Salesforce record type, maybe used to identify Foundation contacts, RecordTypeId in Salesforce",
     )
     source_url: Optional[HttpUrl] = Field(
         default=None,
@@ -176,14 +180,50 @@ class ContactMainSchema(BaseModel):
 
 
 class ContactCommonVoiceSchema(BaseModel):
-    """The CommonVoice schema."""
+    """
+    The CommonVoice schema.
 
-    created_at: Optional[datetime] = None
-    days_interval: Optional[str] = None
-    first_contribution_date: Optional[datetime] = None
-    goal_reached_at: Optional[str] = None
-    last_active_date: Optional[str] = None
-    two_day_streak: Optional[str] = None
+    With the Jan 2021 adoption of the project by the Mozilla Foundation,
+    this data may move out of CTMS.
+
+    All of this data is in basket's IGNORE_USER_FIELDS, ignored by default
+    when displaying or updating contact data.
+    """
+
+    created_at: Optional[datetime] = Field(
+        default=None,
+        description="Creation date of common voice account, cv_created_at__c in Salesforce",
+    )
+    days_interval: Optional[int] = Field(
+        default=None, description="Unknown, cv_days_interval__c in Salesforce"
+    )
+    first_contribution_date: Optional[datetime] = Field(
+        default=None,
+        description="Date of first contribution, cv_days_interval__c in Salesforce",
+    )
+    goal_reached_at: Optional[datetime] = Field(
+        default=None, description="Unknown, cv_goal_reached_at__c in Salesforce"
+    )
+    last_active_date: Optional[datetime] = Field(
+        default=None,
+        description="Last day the user was active on CV, cv_last_active_dt__c in Salesforce <em>(not on retain list)</em>",
+    )
+    two_day_streak: Optional[bool] = Field(
+        default=None,
+        description="Unknown, cv_two_day_streak in Salesforce <em>(not on retain list)</em>",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "created_at": "2019-02-14T16:05:21.423Z",
+                "days_interval": 10,
+                "first_contribution_date": "2019-02-15T10:07Z",
+                "goal_reached_at": "2019-03-15T11:15:19Z",
+                "last_active_date": "2020-12-10T16:56Z",
+                "two_day_streak": True,
+            }
+        }
 
 
 class ContactFirefoxPrivateNetworkSchema(BaseModel):

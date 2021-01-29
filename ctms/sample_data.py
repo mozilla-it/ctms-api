@@ -1,6 +1,11 @@
 from uuid import UUID
 
-from .models import ContactAddonsSchema, ContactMainSchema, ContactSchema
+from .models import (
+    ContactAddonsSchema,
+    ContactCommonVoiceSchema,
+    ContactMainSchema,
+    ContactSchema,
+)
 
 SAMPLE_CONTACTS = {
     UUID("93db83d4-4119-4e0c-af87-a713786fa81d"): ContactSchema(
@@ -53,6 +58,14 @@ SAMPLE_CONTACTS = {
             record_type="0124A0000001aABCDE",
             source_url="https://developer.mozilla.org/fr/",
             token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        ),
+        cv=ContactCommonVoiceSchema(
+            created_at="2020-10-14T16:05:21.423Z",
+            days_interval=12,
+            first_contribution_date="2020-10-15T10:07Z",
+            goal_reached_at="2020-11-2T11:15:19.008Z",
+            last_active_date="2021-1-10T11:15:19.008Z",
+            two_day_streak=True,
         ),
         newsletters=[
             "about-addons",
