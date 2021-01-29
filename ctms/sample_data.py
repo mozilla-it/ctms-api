@@ -3,6 +3,7 @@ from uuid import UUID
 from .models import (
     ContactAddonsSchema,
     ContactCommonVoiceSchema,
+    ContactFirefoxPrivateNetworkSchema,
     ContactMainSchema,
     ContactSchema,
 )
@@ -69,6 +70,10 @@ SAMPLE_MAXIMAL = ContactSchema(
         last_active_date="2021-1-10T11:15:19.008Z",
         two_day_streak=True,
     ),
+    fpn=ContactFirefoxPrivateNetworkSchema(
+        country="Canada",
+        platform="Windows",
+    ),
     newsletters=[
         "about-addons",
         "about-mozilla",
@@ -128,6 +133,9 @@ SAMPLE_EXAMPLE = ContactSchema(
     contact=ContactMainSchema(**ContactMainSchema.Config.schema_extra["example"]),
     cv=ContactCommonVoiceSchema(
         **ContactCommonVoiceSchema.Config.schema_extra["example"]
+    ),
+    fpn=ContactFirefoxPrivateNetworkSchema(
+        **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
     ),
 )
 

@@ -227,10 +227,31 @@ class ContactCommonVoiceSchema(BaseModel):
 
 
 class ContactFirefoxPrivateNetworkSchema(BaseModel):
-    """The Firefox Private Network schema."""
+    """
+    The Firefox Private Network schema.
 
-    country: Optional[str] = None
-    platform: Optional[str] = None
+    These fields are present in Basket but might not be in SFDC.
+    Requested in https://github.com/mozmeao/basket/issues/384
+    """
+
+    country: Optional[str] = Field(
+        default=None,
+        max_length=120,
+        description="FPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
+    )
+    platform: Optional[str] = Field(
+        default=None,
+        max_length=120,
+        description="FPRM waitlist, FPN_Waitlist_Platform__c in Salesforce",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "country": "France",
+                "platform": "Chrome",
+            }
+        }
 
 
 class ContactFirefoxStudentAmbassadorSchema(BaseModel):

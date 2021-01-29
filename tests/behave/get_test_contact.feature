@@ -125,8 +125,8 @@ Feature: Getting the test user's information works
           "two_day_streak": true
         },
         "fpn": {
-          "country": null,
-          "platform": null
+          "country": "Canada",
+          "platform": "Windows"
         },
         "fsa": {
           "allow_share": null,
@@ -243,8 +243,8 @@ Feature: Getting the test user's information works
           "two_day_streak": true
         },
         "fpn": {
-          "country": null,
-          "platform": null
+          "country": "France",
+          "platform": "Chrome"
         },
         "fsa": {
           "allow_share": null,
