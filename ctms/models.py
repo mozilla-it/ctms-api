@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, HttpUrl
 
 
 class ContactSchema(BaseModel):
@@ -30,44 +30,149 @@ class ContactSchema(BaseModel):
 
 class ContactAddonsSchema(BaseModel):
     """
-    The addons.mozilla.org data for a contact.
+    The addons.mozilla.org (AMO) data for a contact.
 
-    TODO: user: When is this set true?
-
-    In basket code:
-
-    - upsert_amo_user_data - set to True when User Sync request
-    - amo_check_user_for_deletion - set to False when deleting a user
+    Extra info in Basket / Salesforce:
+    * amo_deleted - True if the user was deleted in AMO. Basket also sets
+        the amo_id to null on deletion.
     """
 
-    display_name: Optional[str] = None
-    homepage: Optional[str] = None
-    id: Optional[str] = None
-    last_login: Optional[datetime] = None
-    location: Optional[str] = None
-    user: bool = False
+    display_name: Optional[str] = Field(
+        default=None,
+        description="Author name on AMO, AMO_Display_Name__c in Salesforce",
+    )
+    homepage: Optional[str] = Field(
+        default=None,
+        description=(
+            "Homepage linked on AMO, AMO_Location__c in Salesforce,"
+            " <em>planning to drop</em>"
+        ),
+    )
+    id: Optional[int] = Field(
+        default=None, description="Author ID on AMO, AMO_User_ID__c in Salesforce"
+    )
+    last_login: Optional[datetime] = Field(
+        default=None,
+        description="Last login on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
+    )
+    location: Optional[str] = Field(
+        default=None,
+        description="Free-text location on AMO, AMO_Location__c in Salesforce",
+    )
+    user: bool = Field(
+        default=False,
+        description="True if user is from an Add-on sync, AMO_User__c in Salesforce",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "display_name": "Add-ons Author",
+                "homepage": "https://my-mozilla-addon.example.org/",
+                "id": 98765,
+                "last_login": "2021-01-28T19:21:50.908Z",
+                "location": "California, USA, Earth",
+                "user": True,
+            }
+        }
 
 
 class ContactMainSchema(BaseModel):
     """The "main" contact schema."""
 
-    country: Optional[str] = None
-    created_date: Optional[datetime] = None
-    email: Optional[EmailStr] = None
-    first_name: Optional[str] = None
-    format: Literal["H", "T"] = "H"
-    id: Optional[str] = None
-    lang: Optional[str] = None
-    last_modified_date: Optional[datetime] = None
-    last_name: str = "_"
-    optin: Optional[bool] = None
-    optout: Optional[bool] = None
-    payee_id: Optional[str] = None
-    postal_code: Optional[str] = None
-    reason: Optional[str] = None
-    record_type: Optional[str] = None
-    source_url: Optional[str] = None
-    token: Optional[str] = None
+    country: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=2,
+        regex="^[a-z][a-z]$",
+        description="Mailing country code, 2 lowercase letters, MailingCountryCode in Salesforce",
+    )
+    created_date: Optional[datetime] = Field(
+        default=None, description="Contact creation date, CreatedDate in Salesforce"
+    )
+    email: Optional[EmailStr] = Field(
+        default=None, description="Contact email address, Email in Salesforce"
+    )
+    first_name: Optional[str] = Field(
+        default=None,
+        max_length=40,
+        description="First name of contact, FirstName in Salesforce",
+    )
+    format: Literal["H", "T"] = Field(
+        default="H",
+        description="Email format, H=HTML, T=Plain Text, Email_Format__c in Salesforce",
+    )
+    id: Optional[str] = Field(
+        default=None, description="Salesforce record ID, Id in Salesforce"
+    )
+    lang: Optional[str] = Field(
+        default="en",
+        min_length=2,
+        max_length=2,
+        regex="^[a-z][a-z]$",
+        description="Email language code, 2 lowercase letters, Email_Language__c in Salesforce",
+    )
+    last_modified_date: Optional[datetime] = Field(
+        default=None,
+        description="Contact last modified date, LastModifiedDate in Salesforce",
+    )
+    last_name: str = Field(
+        default="_",
+        max_length=80,
+        description="Last name, '_' for blank, LastName in Salesforce",
+    )
+    optin: bool = Field(
+        default=False,
+        description="Double opt-in complete or skipped, Double_Opt_In__c in Salesforce",
+    )
+    optout: bool = Field(
+        default=False,
+        description="User has opted-out, HasOptedOutOfEmail in Salesforce",
+    )
+    payee_id: Optional[str] = Field(
+        default=None,
+        description="Payment system ID (Stripe or other), PMT_Cust_Id__c in Salesforce",
+    )
+    postal_code: Optional[str] = Field(
+        default=None, description="Mailing postal code, MailingPostalCode in Salesforce"
+    )
+    reason: Optional[str] = Field(
+        default=None,
+        description="Reason for unsubscribing, Unsubscribe_Reason__c in Salesforce",
+    )
+    record_type: Optional[str] = Field(
+        default=None, description="Salesforce record type, RecordTypeId in Salesforce"
+    )
+    source_url: Optional[HttpUrl] = Field(
+        default=None,
+        description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
+    )
+    token: Optional[UUID] = Field(
+        default=None, description="Basket token, Token__c in Salesforce"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "country": "us",
+                "created_date": "2020-03-28T15:41:00.000Z",
+                "email": "contact@example.com",
+                "first_name": None,
+                "format": "H",
+                "id": "001A000001aABcDEFG",
+                "lang": "en",
+                "last_modified_date": "2021-01-28T21:26:57.511Z",
+                "last_name": "_",
+                "optin": True,
+                "optout": False,
+                "payee_id": None,
+                "postal_code": "94041",
+                "reason": None,
+                "record_type": "0124A0000001aABCDE",
+                "source_url": "https://www.mozilla.org/en-US/",
+                "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
+            }
+        }
 
 
 class ContactCommonVoiceSchema(BaseModel):
@@ -128,14 +233,23 @@ class CTMSResponse(BaseModel):
     fsa: ContactFirefoxStudentAmbassadorSchema
     fxa: ContactFirefoxAccountsSchema
     newsletters: List[str]
-    status: str = "ok"
+    status: Literal["ok"]
 
 
 class IdentityResponse(BaseModel):
     """The identity keys for a contact."""
 
     id: Optional[str] = None
-    amo_id: Optional[str] = None
+    amo_id: Optional[int] = None
     fxa_id: Optional[str] = None
-    fxa_primary_email: Optional[str] = None
-    token: Optional[str] = None
+    fxa_primary_email: Optional[EmailStr] = None
+    token: Optional[UUID] = None
+
+
+class NotFoundResponse(BaseModel):
+    """The content of the 404 Not Found message."""
+
+    detail: str
+
+    class Config:
+        schema_extra = {"example": {"detail": "Unknown contact_id"}}
