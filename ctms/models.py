@@ -259,14 +259,42 @@ class ContactFirefoxStudentAmbassadorSchema(BaseModel):
     The Firefox Student Ambassador program schema
 
     This is now at https://community.mozilla.org/en/, may not be used.
+    All fields are on basket's IGNORE_USER_FIELDS list, and are
+    not planned to migrate to Acoustic.
     """
 
-    allow_share: Optional[str] = None
-    city: Optional[str] = None
-    current_status: Optional[str] = None
-    grad_year: Optional[int] = None
-    major: Optional[str] = None
-    school: Optional[str] = None
+    allow_share: Optional[bool] = Field(
+        default=None, description="FSA_Allow_Info_Shared__c in Salesforce"
+    )
+    city: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="MailingCity or maybe FSA_City__c in Salesforce",
+    )
+    current_status: Optional[str] = Field(
+        default=None, description="FSA_Current_Status__c in Salesforce"
+    )
+    grad_year: Optional[int] = Field(
+        default=None, description="FSA_Grad_Year__c in Salesforce"
+    )
+    major: Optional[str] = Field(
+        default=None, max_length=100, description="FSA_Major__c in Salesforce"
+    )
+    school: Optional[str] = Field(
+        default=None, max_length=100, description="FSA_School__c in Salesforce"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "allow_share": True,
+                "city": "Dehradun",
+                "current_status": "Student",
+                "grad_year": 2012,
+                "major": "Computer Science",
+                "school": "DIT University, Makkawala, Salon gaon, Dehradun",
+            }
+        }
 
 
 class ContactFirefoxAccountsSchema(BaseModel):

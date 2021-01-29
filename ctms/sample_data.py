@@ -4,6 +4,7 @@ from .models import (
     ContactAddonsSchema,
     ContactCommonVoiceSchema,
     ContactFirefoxPrivateNetworkSchema,
+    ContactFirefoxStudentAmbassadorSchema,
     ContactMainSchema,
     ContactSchema,
 )
@@ -74,6 +75,14 @@ SAMPLE_MAXIMAL = ContactSchema(
         country="Canada",
         platform="Windows",
     ),
+    fsa=ContactFirefoxStudentAmbassadorSchema(
+        allow_share=False,
+        city="Montreal",
+        current_status="Graduate",
+        grad_year=2011,
+        major="Library & Information Management",
+        school="McGill University",
+    ),
     newsletters=[
         "about-addons",
         "about-mozilla",
@@ -136,6 +145,9 @@ SAMPLE_EXAMPLE = ContactSchema(
     ),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
+    ),
+    fsa=ContactFirefoxStudentAmbassadorSchema(
+        **ContactFirefoxStudentAmbassadorSchema.Config.schema_extra["example"]
     ),
 )
 

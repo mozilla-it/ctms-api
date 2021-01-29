@@ -129,12 +129,12 @@ Feature: Getting the test user's information works
           "platform": "Windows"
         },
         "fsa": {
-          "allow_share": null,
-          "city": null,
-          "current_status": null,
-          "grad_year": null,
-          "major": null,
-          "school": null
+          "allow_share": false,
+          "city": "Montreal",
+          "current_status": "Graduate",
+          "grad_year": 2011,
+          "major": "Library & Information Management",
+          "school": "McGill University"
         },
         "fxa": {
           "create_date": null,
@@ -247,12 +247,12 @@ Feature: Getting the test user's information works
           "platform": "Chrome"
         },
         "fsa": {
-          "allow_share": null,
-          "city": null,
-          "current_status": null,
-          "grad_year": null,
-          "major": null,
-          "school": null
+          "allow_share": true,
+          "city": "Dehradun",
+          "current_status": "Student",
+          "grad_year": 2012,
+          "major": "Computer Science",
+          "school": "DIT University, Makkawala, Salon gaon, Dehradun"
         },
         "fxa": {
           "create_date": null,
