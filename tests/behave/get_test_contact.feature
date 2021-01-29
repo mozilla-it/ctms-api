@@ -4,6 +4,7 @@ Feature: Getting the test user's information works
     Given the TestClient is setup
     And the test contact 93db83d4-4119-4e0c-af87-a713786fa81d is setup
     And the test contact 67e52c77-950f-4f28-accb-bb3ea1a2c51a is setup
+    And the test contact 332de237-cab7-4461-bcc3-48e68f42bd5c is setup
 
   Scenario: User wants to get full contact info for the minimal contact
     Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
@@ -197,6 +198,75 @@ Feature: Getting the test user's information works
       }
       """
 
+  Scenario: User wants to get full contact info for the example contact
+    Given the contact_id 332de237-cab7-4461-bcc3-48e68f42bd5c
+    And the desired endpoint /ctms/(contact_id)
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      {
+        "id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+        "amo": {
+          "display_name": "Add-ons Author",
+          "homepage": "https://my-mozilla-addon.example.org/",
+          "id": 98765,
+          "last_login": "2021-01-28T19:21:50.908000+00:00",
+          "location": "California, USA, Earth",
+          "user": true
+        },
+        "contact": {
+          "country": "us",
+          "created_date": "2020-03-28T15:41:00+00:00",
+          "email": "contact@example.com",
+          "first_name": null,
+          "format": "H",
+          "id": "001A000023aABcDEFG",
+          "lang": "en",
+          "last_modified_date": "2021-01-28T21:26:57.511000+00:00",
+          "last_name": "_",
+          "optin": true,
+          "optout": false,
+          "payee_id": null,
+          "postal_code": "94041",
+          "reason": null,
+          "record_type": "0124A0000001aABCDE",
+          "source_url": "https://www.mozilla.org/en-US/",
+          "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"
+        },
+        "cv": {
+          "created_at": "2019-02-14T16:05:21.423000+00:00",
+          "days_interval": 10,
+          "first_contribution_date": "2019-02-15T10:07:00+00:00",
+          "goal_reached_at": "2019-03-15T11:15:19+00:00",
+          "last_active_date": "2020-12-10T16:56:00+00:00",
+          "two_day_streak": true
+        },
+        "fpn": {
+          "country": null,
+          "platform": null
+        },
+        "fsa": {
+          "allow_share": null,
+          "city": null,
+          "current_status": null,
+          "grad_year": null,
+          "major": null,
+          "school": null
+        },
+        "fxa": {
+          "create_date": null,
+          "deleted": null,
+          "id": null,
+          "lang": null,
+          "primary_email": null,
+          "service": null
+        },
+        "newsletters": [],
+        "status": "ok"
+      }
+      """
+
   Scenario: User wants to read identity data for the minimal contact
     Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
     And the desired endpoint /identity/(contact_id)
@@ -226,6 +296,22 @@ Feature: Getting the test user's information works
         "fxa_primary_email": null,
         "id": "001A000001aMozFan",
         "token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69"
+      }
+      """
+
+  Scenario: User wants to read identity data for the example contact
+    Given the contact_id 332de237-cab7-4461-bcc3-48e68f42bd5c
+    And the desired endpoint /identity/(contact_id)
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      {
+        "amo_id": 98765,
+        "fxa_id": null,
+        "fxa_primary_email": null,
+        "id": "001A000023aABcDEFG",
+        "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"
       }
       """
 
