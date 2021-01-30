@@ -80,6 +80,10 @@ class ContactAddonsSchema(BaseModel):
         }
 
 
+class SourceUrl(HttpUrl):
+    max_length = 255
+
+
 class ContactMainSchema(BaseModel):
     """The "main" contact schema."""
 
@@ -141,13 +145,14 @@ class ContactMainSchema(BaseModel):
     )
     reason: Optional[str] = Field(
         default=None,
+        max_length=1000,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
     record_type: Optional[str] = Field(
         default=None,
         description="Salesforce record type, may be used to identify Foundation contacts, RecordTypeId in Salesforce",
     )
-    source_url: Optional[HttpUrl] = Field(
+    source_url: Optional[SourceUrl] = Field(
         default=None,
         description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
     )
