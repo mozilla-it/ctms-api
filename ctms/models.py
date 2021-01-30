@@ -358,8 +358,14 @@ class CTMSResponse(BaseModel):
     fpn: ContactFirefoxPrivateNetworkSchema
     fsa: ContactFirefoxStudentAmbassadorSchema
     fxa: ContactFirefoxAccountsSchema
-    newsletters: List[str]
-    status: Literal["ok"]
+    newsletters: List[str] = Field(
+        default=[],
+        description="List of identifiers for newsletters for which the contact is subscribed",
+        example=(["firefox-welcome", "mozilla-welcome"]),
+    )
+    status: Literal["ok"] = Field(
+        default="ok", description="Request was successful", example="ok"
+    )
 
 
 class IdentityResponse(BaseModel):
