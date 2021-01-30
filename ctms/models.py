@@ -305,12 +305,44 @@ class ContactFirefoxStudentAmbassadorSchema(BaseModel):
 class ContactFirefoxAccountsSchema(BaseModel):
     """The Firefox Account schema."""
 
-    create_date: Optional[datetime] = None
-    deleted: Optional[bool] = None
-    id: Optional[str] = None
-    lang: Optional[str] = None
-    primary_email: Optional[str] = None
-    service: Optional[str] = None
+    create_date: Optional[datetime] = Field(
+        default=None,
+        description="Source is unix timestamp, FxA_Created_Date__c in Salesforce",
+    )
+    deleted: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Set to True when FxA account deleted or dupe,"
+            " FxA_Account_Deleted__c in Salesforce"
+        ),
+    )
+    id: Optional[str] = Field(
+        default=None, description="Firefox Accounts foreign ID, FxA_Id__c in Salesforce"
+    )
+    lang: Optional[str] = Field(
+        default=None,
+        description="FxA Locale like 'en,en-US', FxA_Language__c in Salesforce",
+    )
+    primary_email: Optional[str] = Field(
+        default=None,
+        description="FxA Email, can be foreign ID, FxA_Primary_Email__c in Salesforce",
+    )
+    service: Optional[str] = Field(
+        default=None,
+        description="First service that an FxA user used, FirstService__c in Salesforce",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "create_date": "2021-01-29T18:43:49.082375+00:00",
+                "deleted": None,
+                "id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+                "lang": "en,en-US",
+                "primary_email": "my-fxa-acct@example.com",
+                "service": "sync",
+            }
+        }
 
 
 ContactSchema.update_forward_refs()

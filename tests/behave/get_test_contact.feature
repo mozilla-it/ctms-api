@@ -137,12 +137,12 @@ Feature: Getting the test user's information works
           "school": "McGill University"
         },
         "fxa": {
-          "create_date": null,
+          "create_date": "2019-05-22T08:29:31.906094+00:00",
           "deleted": null,
-          "id": null,
-          "lang": null,
-          "primary_email": null,
-          "service": null
+          "id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "lang": "fr,fr-CA",
+          "primary_email": "fxa-firefox-fan@example.com",
+          "service": "monitor"
         },
         "newsletters": [
             "about-addons",
@@ -255,12 +255,12 @@ Feature: Getting the test user's information works
           "school": "DIT University, Makkawala, Salon gaon, Dehradun"
         },
         "fxa": {
-          "create_date": null,
+          "create_date": "2021-01-29T18:43:49.082375+00:00",
           "deleted": null,
-          "id": null,
-          "lang": null,
-          "primary_email": null,
-          "service": null
+          "id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+          "lang": "en,en-US",
+          "primary_email": "my-fxa-acct@example.com",
+          "service": "sync"
         },
         "newsletters": [],
         "status": "ok"
@@ -292,8 +292,8 @@ Feature: Getting the test user's information works
       """
       {
         "amo_id": 123,
-        "fxa_id": null,
-        "fxa_primary_email": null,
+        "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+        "fxa_primary_email": "fxa-firefox-fan@example.com",
         "id": "001A000001aMozFan",
         "token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69"
       }
@@ -308,8 +308,8 @@ Feature: Getting the test user's information works
       """
       {
         "amo_id": 98765,
-        "fxa_id": null,
-        "fxa_primary_email": null,
+        "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+        "fxa_primary_email": "my-fxa-acct@example.com",
         "id": "001A000023aABcDEFG",
         "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"
       }

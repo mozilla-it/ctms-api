@@ -3,6 +3,7 @@ from uuid import UUID
 from .models import (
     ContactAddonsSchema,
     ContactCommonVoiceSchema,
+    ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactFirefoxStudentAmbassadorSchema,
     ContactMainSchema,
@@ -83,6 +84,13 @@ SAMPLE_MAXIMAL = ContactSchema(
         major="Library & Information Management",
         school="McGill University",
     ),
+    fxa=ContactFirefoxAccountsSchema(
+        create_date="2019-05-22T08:29:31.906094+00:00",
+        id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+        lang="fr,fr-CA",
+        primary_email="fxa-firefox-fan@example.com",
+        service="monitor",
+    ),
     newsletters=[
         "about-addons",
         "about-mozilla",
@@ -148,6 +156,9 @@ SAMPLE_EXAMPLE = ContactSchema(
     ),
     fsa=ContactFirefoxStudentAmbassadorSchema(
         **ContactFirefoxStudentAmbassadorSchema.Config.schema_extra["example"]
+    ),
+    fxa=ContactFirefoxAccountsSchema(
+        **ContactFirefoxAccountsSchema.Config.schema_extra["example"]
     ),
 )
 
