@@ -35,6 +35,9 @@ class ContactAddonsSchema(BaseModel):
     Extra info in Basket / Salesforce:
     * amo_deleted - True if the user was deleted in AMO. Basket also sets
         the amo_id to null on deletion.
+
+    All are in basket's IGNORE_USER_FIELDS, and usually stripped from
+    contact data on the return from Salesforce.
     """
 
     display_name: Optional[str] = Field(
@@ -75,6 +78,10 @@ class ContactAddonsSchema(BaseModel):
                 "user": True,
             }
         }
+
+
+class SourceUrl(HttpUrl):
+    max_length = 255
 
 
 class ContactMainSchema(BaseModel):
@@ -131,19 +138,21 @@ class ContactMainSchema(BaseModel):
     )
     payee_id: Optional[str] = Field(
         default=None,
-        description="Payment system ID (Stripe or other), PMT_Cust_Id__c in Salesforce",
+        description="Payment system ID (Stripe or other), in basket IGNORE_USER_FIELDS, PMT_Cust_Id__c in Salesforce",
     )
     postal_code: Optional[str] = Field(
         default=None, description="Mailing postal code, MailingPostalCode in Salesforce"
     )
     reason: Optional[str] = Field(
         default=None,
-        description="Reason for unsubscribing, Unsubscribe_Reason__c in Salesforce",
+        max_length=1000,
+        description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
     record_type: Optional[str] = Field(
-        default=None, description="Salesforce record type, RecordTypeId in Salesforce"
+        default=None,
+        description="Salesforce record type, may be used to identify Foundation contacts, RecordTypeId in Salesforce",
     )
-    source_url: Optional[HttpUrl] = Field(
+    source_url: Optional[SourceUrl] = Field(
         default=None,
         description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
     )
@@ -159,7 +168,7 @@ class ContactMainSchema(BaseModel):
                 "email": "contact@example.com",
                 "first_name": None,
                 "format": "H",
-                "id": "001A000001aABcDEFG",
+                "id": "001A000023aABcDEFG",
                 "lang": "en",
                 "last_modified_date": "2021-01-28T21:26:57.511Z",
                 "last_name": "_",
@@ -176,21 +185,78 @@ class ContactMainSchema(BaseModel):
 
 
 class ContactCommonVoiceSchema(BaseModel):
-    """The CommonVoice schema."""
+    """
+    The CommonVoice schema.
 
-    created_at: Optional[datetime] = None
-    days_interval: Optional[str] = None
-    first_contribution_date: Optional[datetime] = None
-    goal_reached_at: Optional[str] = None
-    last_active_date: Optional[str] = None
-    two_day_streak: Optional[str] = None
+    With the Jan 2021 adoption of the project by the Mozilla Foundation,
+    this data may move out of CTMS.
+
+    All of this data is in basket's IGNORE_USER_FIELDS, ignored by default
+    when displaying or updating contact data.
+    """
+
+    created_at: Optional[datetime] = Field(
+        default=None,
+        description="Creation date of common voice account, cv_created_at__c in Salesforce",
+    )
+    days_interval: Optional[int] = Field(
+        default=None, description="Unknown, cv_days_interval__c in Salesforce"
+    )
+    first_contribution_date: Optional[datetime] = Field(
+        default=None,
+        description="Date of first contribution, cv_days_interval__c in Salesforce",
+    )
+    goal_reached_at: Optional[datetime] = Field(
+        default=None, description="Unknown, cv_goal_reached_at__c in Salesforce"
+    )
+    last_active_date: Optional[datetime] = Field(
+        default=None,
+        description="Last day the user was active on CV, cv_last_active_dt__c in Salesforce <em>(not on retain list)</em>",
+    )
+    two_day_streak: Optional[bool] = Field(
+        default=None,
+        description="Unknown, cv_two_day_streak in Salesforce <em>(not on retain list)</em>",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "created_at": "2019-02-14T16:05:21.423Z",
+                "days_interval": 10,
+                "first_contribution_date": "2019-02-15T10:07Z",
+                "goal_reached_at": "2019-03-15T11:15:19Z",
+                "last_active_date": "2020-12-10T16:56Z",
+                "two_day_streak": True,
+            }
+        }
 
 
 class ContactFirefoxPrivateNetworkSchema(BaseModel):
-    """The Firefox Private Network schema."""
+    """
+    The Firefox Private Network schema.
 
-    country: Optional[str] = None
-    platform: Optional[str] = None
+    These fields are present in Basket but might not be in SFDC.
+    Requested in https://github.com/mozmeao/basket/issues/384
+    """
+
+    country: Optional[str] = Field(
+        default=None,
+        max_length=120,
+        description="FPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
+    )
+    platform: Optional[str] = Field(
+        default=None,
+        max_length=120,
+        description="FPRM waitlist, FPN_Waitlist_Platform__c in Salesforce",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "country": "France",
+                "platform": "Chrome",
+            }
+        }
 
 
 class ContactFirefoxStudentAmbassadorSchema(BaseModel):
@@ -198,25 +264,85 @@ class ContactFirefoxStudentAmbassadorSchema(BaseModel):
     The Firefox Student Ambassador program schema
 
     This is now at https://community.mozilla.org/en/, may not be used.
+    All fields are on basket's IGNORE_USER_FIELDS list, and are
+    not planned to migrate to Acoustic.
     """
 
-    allow_share: Optional[str] = None
-    city: Optional[str] = None
-    current_status: Optional[str] = None
-    grad_year: Optional[int] = None
-    major: Optional[str] = None
-    school: Optional[str] = None
+    allow_share: Optional[bool] = Field(
+        default=None, description="FSA_Allow_Info_Shared__c in Salesforce"
+    )
+    city: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="MailingCity or maybe FSA_City__c in Salesforce",
+    )
+    current_status: Optional[str] = Field(
+        default=None, description="FSA_Current_Status__c in Salesforce"
+    )
+    grad_year: Optional[int] = Field(
+        default=None, description="FSA_Grad_Year__c in Salesforce"
+    )
+    major: Optional[str] = Field(
+        default=None, max_length=100, description="FSA_Major__c in Salesforce"
+    )
+    school: Optional[str] = Field(
+        default=None, max_length=100, description="FSA_School__c in Salesforce"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "allow_share": True,
+                "city": "Dehradun",
+                "current_status": "Student",
+                "grad_year": 2012,
+                "major": "Computer Science",
+                "school": "DIT University, Makkawala, Salon gaon, Dehradun",
+            }
+        }
 
 
 class ContactFirefoxAccountsSchema(BaseModel):
     """The Firefox Account schema."""
 
-    create_date: Optional[datetime] = None
-    deleted: Optional[bool] = None
-    id: Optional[str] = None
-    lang: Optional[str] = None
-    primary_email: Optional[str] = None
-    service: Optional[str] = None
+    create_date: Optional[datetime] = Field(
+        default=None,
+        description="Source is unix timestamp, FxA_Created_Date__c in Salesforce",
+    )
+    deleted: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Set to True when FxA account deleted or dupe,"
+            " FxA_Account_Deleted__c in Salesforce"
+        ),
+    )
+    id: Optional[str] = Field(
+        default=None, description="Firefox Accounts foreign ID, FxA_Id__c in Salesforce"
+    )
+    lang: Optional[str] = Field(
+        default=None,
+        description="FxA Locale like 'en,en-US', FxA_Language__c in Salesforce",
+    )
+    primary_email: Optional[str] = Field(
+        default=None,
+        description="FxA Email, can be foreign ID, FxA_Primary_Email__c in Salesforce",
+    )
+    service: Optional[str] = Field(
+        default=None,
+        description="First service that an FxA user used, FirstService__c in Salesforce",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "create_date": "2021-01-29T18:43:49.082375+00:00",
+                "deleted": None,
+                "id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+                "lang": "en,en-US",
+                "primary_email": "my-fxa-acct@example.com",
+                "service": "sync",
+            }
+        }
 
 
 ContactSchema.update_forward_refs()
@@ -232,8 +358,14 @@ class CTMSResponse(BaseModel):
     fpn: ContactFirefoxPrivateNetworkSchema
     fsa: ContactFirefoxStudentAmbassadorSchema
     fxa: ContactFirefoxAccountsSchema
-    newsletters: List[str]
-    status: Literal["ok"]
+    newsletters: List[str] = Field(
+        default=[],
+        description="List of identifiers for newsletters for which the contact is subscribed",
+        example=(["firefox-welcome", "mozilla-welcome"]),
+    )
+    status: Literal["ok"] = Field(
+        default="ok", description="Request was successful", example="ok"
+    )
 
 
 class IdentityResponse(BaseModel):

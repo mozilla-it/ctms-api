@@ -1,11 +1,13 @@
 import json
 from difflib import ndiff
+from uuid import UUID
 
 from behave import given, step, then, when
 from fastapi.testclient import TestClient
 from pytest import fail
 
 from ctms.app import app
+from ctms.sample_data import SAMPLE_CONTACTS
 
 
 @given("the TestClient is setup")
@@ -18,12 +20,12 @@ def setup_test_client(context):
 @given("the test contact {contact_id} is setup")
 def setup_test_contact(context, contact_id):
     """TODO: Setup the test contact with a POST to /ctms"""
-    assert contact_id == "93db83d4-4119-4e0c-af87-a713786fa81d"
+    assert UUID(contact_id) in SAMPLE_CONTACTS
     context.contact_id = contact_id
 
 
 @given("the contact_id {contact_id}")
-def contact_id_setup(context, contact_id):
+def set_contact_id(context, contact_id):
     context.contact_id = contact_id
 
 
