@@ -23,10 +23,10 @@ copyright = "2021, Bryan Sieber  <bsieber@mozilla.com>"
 author = "Bryan Sieber  <bsieber@mozilla.com>"
 
 # The short X.Y version
-version = "0.0.1"
+version = "0.4.0"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.1"
+release = "0.4.0"
 
 
 # -- General configuration ---------------------------------------------------

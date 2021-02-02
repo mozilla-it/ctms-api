@@ -24,7 +24,7 @@ from .sample_data import SAMPLE_CONTACTS
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="0.0.1",
+    version="0.4.0",
 )
 
 
