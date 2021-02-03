@@ -80,7 +80,7 @@ Build images with:
 > docker build --tag ctms-api --file docker/Dockerfile .
 
 Stop the build at optional stages (development, lint, test, production) with the --target option:
-> docker build --name ctms-api --file docker/Dockerfile . --target <stage>
+> docker build --tag ctms-api --file docker/Dockerfile . --target <stage>
 
 #### Optional
 It is also possible to build the full image through the provided scripts:

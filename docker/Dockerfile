@@ -22,8 +22,8 @@ ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 FROM python-base as builder-base
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
-        curl \
-        build-essential
+    curl \
+    build-essential
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
 ENV POETRY_VERSION=1.0.5
@@ -66,6 +66,8 @@ CMD ["uvicorn", "--reload", "--host=0.0.0.0", "--port=8000", "main:app"]
 FROM development AS lint
 RUN isort --settings-path ./pyproject.toml --recursive --check-only
 RUN black --config ./pyproject.toml --check ctms tests
+RUN mypy --no-strict-optional --ignore-missing-imports ctms
+RUN bandit -lll --recursive ctms --exclude "ctms/poetry.lock,ctms/.venv,ctms/.mypy,ctms/build"
 CMD ["tail", "-f", "/dev/null"]
 
 
