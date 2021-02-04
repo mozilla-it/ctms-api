@@ -14,26 +14,26 @@ from ctms.sample_data import SAMPLE_CONTACTS
 def setup_test_client(context):
     context.test_client = TestClient(app=app)
     context.post_body = None
-    context.contact_id = None
+    context.email_id = None
 
 
-@given("the test contact {contact_id} is setup")
-def setup_test_contact(context, contact_id):
+@given("the test contact {email_id} is setup")
+def setup_test_contact(context, email_id):
     """TODO: Setup the test contact with a POST to /ctms"""
-    assert UUID(contact_id) in SAMPLE_CONTACTS
-    context.contact_id = contact_id
+    assert UUID(email_id) in SAMPLE_CONTACTS
+    context.email_id = email_id
 
 
-@given("the contact_id {contact_id}")
-def set_contact_id(context, contact_id):
-    context.contact_id = contact_id
+@given("the email_id {email_id}")
+def set_email_id(context, email_id):
+    context.email_id = email_id
 
 
 @given("the desired endpoint {endpoint}")
 def endpoint_setup(context, endpoint):
-    if "(contact_id)" in endpoint:
-        assert context.contact_id
-        endpoint = endpoint.replace("(contact_id)", context.contact_id)
+    if "(email_id)" in endpoint:
+        assert context.email_id
+        endpoint = endpoint.replace("(email_id)", context.email_id)
     context.test_endpoint = endpoint
 
 

@@ -28,16 +28,16 @@ app = FastAPI(
 )
 
 
-async def get_contact_or_404(contact_id) -> ContactSchema:
+async def get_contact_or_404(email_id) -> ContactSchema:
     """
-    Get a contact by ID, or raise a 404 exception.
+    Get a contact by email_ID, or raise a 404 exception.
 
     TODO: implement a database backend
     """
     try:
-        return SAMPLE_CONTACTS[contact_id]
+        return SAMPLE_CONTACTS[email_id]
     except KeyError:
-        raise HTTPException(status_code=404, detail="Unknown contact_id")
+        raise HTTPException(status_code=404, detail="Unknown email_id")
 
 
 @app.get("/", include_in_schema=False)
@@ -54,16 +54,15 @@ async def root():
 
 
 @app.get(
-    "/ctms/{contact_id}",
+    "/ctms/{email_id}",
     summary="Get all contact details in basket format",
     response_model=CTMSResponse,
     responses={404: {"model": NotFoundResponse}},
     tags=["Public"],
 )
-async def read_ctms(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
+    contact = await get_contact_or_404(email_id)
     return CTMSResponse(
-        id=contact.id,
         amo=contact.amo or ContactAddonsSchema(),
         contact=contact.contact or ContactMainSchema(),
         cv=contact.cv or ContactCommonVoiceSchema(),
@@ -76,86 +75,86 @@ async def read_ctms(contact_id: UUID = Path(..., title="The Contact ID")):
 
 
 @app.get(
-    "/identity/{contact_id}",
+    "/identity/{email_id}",
     summary="Get identities associated with the ID",
     response_model=IdentityResponse,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_identity(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_identity(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.as_identity_response()
 
 
 @app.get(
-    "/contact/main/{contact_id}",
+    "/contact/main/{email_id}",
     summary="Get contact's main details",
     response_model=ContactMainSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_main(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.contact or ContactMainSchema()
 
 
 @app.get(
-    "/contact/amo/{contact_id}",
+    "/contact/amo/{email_id}",
     summary="Get contact's add-ons details",
     response_model=ContactAddonsSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_amo(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.amo or ContactAddonsSchema()
 
 
 @app.get(
-    "/contact/cv/{contact_id}",
+    "/contact/cv/{email_id}",
     summary="Get contact's Common Voice details",
     response_model=ContactCommonVoiceSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_cv(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_contact_cv(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.cv or ContactCommonVoiceSchema()
 
 
 @app.get(
-    "/contact/fpn/{contact_id}",
+    "/contact/fpn/{email_id}",
     summary="Get contact's Firefox Private Network details",
     response_model=ContactFirefoxPrivateNetworkSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_fpn(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.fpn or ContactFirefoxPrivateNetworkSchema()
 
 
 @app.get(
-    "/contact/fsa/{contact_id}",
+    "/contact/fsa/{email_id}",
     summary="Get contact's FSA details",
     response_model=ContactFirefoxStudentAmbassadorSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_fsa(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_contact_fsa(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.fsa or ContactFirefoxStudentAmbassadorSchema()
 
 
 @app.get(
-    "/contact/fxa/{contact_id}",
+    "/contact/fxa/{email_id}",
     summary="Get contact's Firefox Account details",
     response_model=ContactFirefoxAccountsSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_fxa(contact_id: UUID = Path(..., title="The Contact ID")):
-    contact = await get_contact_or_404(contact_id)
+async def read_contact_fxa(email_id: UUID = Path(..., title="The email ID")):
+    contact = await get_contact_or_404(email_id)
     return contact.fxa or ContactFirefoxAccountsSchema()
 
 
