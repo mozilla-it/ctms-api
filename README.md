@@ -78,7 +78,7 @@ The project is structured with the following in mind:
     - Operational source code exists here
     - .../app.py
         - FastAPI Handling of HTTP Requests and routing to services
-    - .../models.py
+    - .../schemas.py
         - Pydantic Models for Data Modeling, and Contract Validation
 - tests/behave/
     - BDD feature testing with Behave and Gherkin feature files

@@ -1,7 +1,7 @@
 from typing import Dict
 from uuid import UUID
 
-from .models import (
+from .schemas import (
     ContactAddonsSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
