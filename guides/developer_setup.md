@@ -5,6 +5,7 @@ Technologies and tools in use:
 - Docker: https://www.docker.com/
 - FastAPI: https://fastapi.tiangolo.com/
 - Pydantic: https://pydantic-docs.helpmanual.io/
+- PostgreSQL: https://www.postgresql.org/
 - ...
 
 ---
@@ -100,6 +101,34 @@ also provides OpenAPI and JSON Schema portals for API viewing.
 ### Details
 Data Modeling and validation package that enforces type hints at
 runtime and provides friendly errors for easy debugging.
+
+---
+## PostgreSQL
+
+### Details
+To set up a development environment with postgres, your best bet
+will be to use docker.
+
+```shell
+docker run -ti -p 127.0.0.1:5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e LC_COLLATE=en_US.UTF8 -e LC_CTYPE=en_US.UTF8 --rm postgres:12
+```
+
+This will run Docker in the foreground in that terminal (so you'll need to use another terminal for your work, or add the `-d` flag to daemonize the container) and make that available on TCP port 5432, the "normal" Postgres port.
+
+It can be helpful to log all queries run by the test suite:
+
+```shell
+docker run -ti -p 127.0.0.1:5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e LC_COLLATE=en_US.UTF8 -e LC_CTYPE=en_US.UTF8 --rm postgres:12 -c log_statement=all
+```
+
+However you decide to run Postgres, you will need a DB URL, as defined by [SQLAlchemy](https://docs.sqlalchemy.org/en/13/core/engines.html).
+For the docker container described above, this is `postgresql://postgres@localhost/postgres`.
+
+To access the psql command-line prompt in your docker container, determine the container ID (such as with `docker container ls`) and run
+
+```shell
+docker exec -ti $CONTAINER_ID psql -U postgres
+```
 
 ---
 ## Next Steps
