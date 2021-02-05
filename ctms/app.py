@@ -9,10 +9,8 @@ from pydantic import EmailStr
 
 from .models import (
     ContactAddonsSchema,
-    ContactCommonVoiceSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
-    ContactFirefoxStudentAmbassadorSchema,
     ContactSchema,
     CTMSResponse,
     EmailSchema,
@@ -65,9 +63,7 @@ async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     return CTMSResponse(
         amo=contact.amo or ContactAddonsSchema(),
         email=contact.email or EmailSchema(),
-        cv=contact.cv or ContactCommonVoiceSchema(),
         fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
-        fsa=contact.fsa or ContactFirefoxStudentAmbassadorSchema(),
         fxa=contact.fxa or ContactFirefoxAccountsSchema(),
         newsletters=contact.newsletters or [],
         status="ok",
@@ -111,18 +107,6 @@ async def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
 
 
 @app.get(
-    "/contact/cv/{email_id}",
-    summary="Get contact's Common Voice details",
-    response_model=ContactCommonVoiceSchema,
-    responses={404: {"model": NotFoundResponse}},
-    tags=["Private"],
-)
-async def read_contact_cv(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
-    return contact.cv or ContactCommonVoiceSchema()
-
-
-@app.get(
     "/contact/fpn/{email_id}",
     summary="Get contact's Firefox Private Network details",
     response_model=ContactFirefoxPrivateNetworkSchema,
@@ -132,18 +116,6 @@ async def read_contact_cv(email_id: UUID = Path(..., title="The email ID")):
 async def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
     contact = await get_contact_or_404(email_id)
     return contact.fpn or ContactFirefoxPrivateNetworkSchema()
-
-
-@app.get(
-    "/contact/fsa/{email_id}",
-    summary="Get contact's FSA details",
-    response_model=ContactFirefoxStudentAmbassadorSchema,
-    responses={404: {"model": NotFoundResponse}},
-    tags=["Private"],
-)
-async def read_contact_fsa(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
-    return contact.fsa or ContactFirefoxStudentAmbassadorSchema()
 
 
 @app.get(

@@ -22,14 +22,6 @@ Feature: Getting the test user's information works
           "location": null,
           "user": false
         },
-        "cv": {
-          "created_at": null,
-          "days_interval": null,
-          "first_contribution_date": null,
-          "goal_reached_at": null,
-          "last_active_date": null,
-          "two_day_streak": null
-        },
         "email": {
           "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
           "browser_locale": null,
@@ -52,14 +44,6 @@ Feature: Getting the test user's information works
         "fpn": {
           "country": null,
           "platform": null
-        },
-        "fsa": {
-          "allow_share": null,
-          "city": null,
-          "current_status": null,
-          "grad_year": null,
-          "major": null,
-          "school": null
         },
         "fxa": {
           "create_date": null,
@@ -95,14 +79,6 @@ Feature: Getting the test user's information works
           "location": "The Internet",
           "user": true
         },
-        "cv": {
-          "created_at": "2020-10-14T16:05:21.423000+00:00",
-          "days_interval": 12,
-          "first_contribution_date": "2020-10-15T10:07:00+00:00",
-          "goal_reached_at": "2020-11-02T11:15:19.008000+00:00",
-          "last_active_date": "2021-01-10T11:15:19.008000+00:00",
-          "two_day_streak": true
-        },
         "email": {
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
           "browser_locale": "fr-CA",
@@ -125,14 +101,6 @@ Feature: Getting the test user's information works
         "fpn": {
           "country": "Canada",
           "platform": "Windows"
-        },
-        "fsa": {
-          "allow_share": false,
-          "city": "Montreal",
-          "current_status": "Graduate",
-          "grad_year": 2011,
-          "major": "Library & Information Management",
-          "school": "McGill University"
         },
         "fxa": {
           "create_date": "2019-05-22T08:29:31.906094+00:00",
@@ -212,14 +180,6 @@ Feature: Getting the test user's information works
           "location": "California, USA, Earth",
           "user": true
         },
-        "cv": {
-          "created_at": "2019-02-14T16:05:21.423000+00:00",
-          "days_interval": 10,
-          "first_contribution_date": "2019-02-15T10:07:00+00:00",
-          "goal_reached_at": "2019-03-15T11:15:19+00:00",
-          "last_active_date": "2020-12-10T16:56:00+00:00",
-          "two_day_streak": true
-        },
         "email": {
           "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
           "browser_locale": null,
@@ -242,14 +202,6 @@ Feature: Getting the test user's information works
         "fpn": {
           "country": "France",
           "platform": "Chrome"
-        },
-        "fsa": {
-          "allow_share": true,
-          "city": "Dehradun",
-          "current_status": "Student",
-          "grad_year": 2012,
-          "major": "Computer Science",
-          "school": "DIT University, Makkawala, Salon gaon, Dehradun"
         },
         "fxa": {
           "create_date": "2021-01-29T18:43:49.082375+00:00",
@@ -360,23 +312,6 @@ Feature: Getting the test user's information works
       }
       """
 
-  Scenario: User wants to read the CV data for the minimal contact
-    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/cv/(email_id)
-    When the user invokes the client via GET
-    Then the user expects the response to have a status of 200
-    And the response JSON is
-      """
-      {
-        "created_at": null,
-        "days_interval": null,
-        "first_contribution_date": null,
-        "goal_reached_at": null,
-        "last_active_date": null,
-        "two_day_streak": null
-      }
-      """
-
   Scenario: User wants to read the FPN data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
     And the desired endpoint /contact/fpn/(email_id)
@@ -387,23 +322,6 @@ Feature: Getting the test user's information works
       {
         "country": null,
         "platform": null
-      }
-      """
-
-  Scenario: User wants to read the FSA data for the minimal contact
-    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/fsa/(email_id)
-    When the user invokes the client via GET
-    Then the user expects the response to have a status of 200
-    And the response JSON is
-      """
-      {
-        "allow_share": null,
-        "city": null,
-        "current_status": null,
-        "grad_year": null,
-        "major": null,
-        "school": null
       }
       """
 
@@ -441,8 +359,6 @@ Feature: Getting the test user's information works
       | ctms            |
       | identity        |
       | contact/amo     |
-      | contact/cv      |
       | contact/email   |
       | contact/fpn     |
-      | contact/fsa     |
       | contact/fxa     |

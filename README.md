@@ -23,7 +23,6 @@ Next features for the read-only version:
 * [ ] Review rounds
 * [ ] Flesh out the rest of the read-only API
 * [ ] Implement the ``/identity`` APIs with alternate IDs
-* [ ] Add more sample contacts
 
 Future features:
 

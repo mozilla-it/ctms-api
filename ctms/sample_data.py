@@ -3,10 +3,8 @@ from uuid import UUID
 
 from .models import (
     ContactAddonsSchema,
-    ContactCommonVoiceSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
-    ContactFirefoxStudentAmbassadorSchema,
     ContactSchema,
     EmailSchema,
 )
@@ -39,14 +37,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         location="The Internet",
         user=True,
     ),
-    cv=ContactCommonVoiceSchema(
-        created_at="2020-10-14T16:05:21.423Z",
-        days_interval=12,
-        first_contribution_date="2020-10-15T10:07Z",
-        goal_reached_at="2020-11-2T11:15:19.008Z",
-        last_active_date="2021-1-10T11:15:19.008Z",
-        two_day_streak=True,
-    ),
     email=EmailSchema(
         email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
         primary_email="mozilla-fan@example.com",
@@ -66,14 +56,6 @@ SAMPLE_MAXIMAL = ContactSchema(
     fpn=ContactFirefoxPrivateNetworkSchema(
         country="Canada",
         platform="Windows",
-    ),
-    fsa=ContactFirefoxStudentAmbassadorSchema(
-        allow_share=False,
-        city="Montreal",
-        current_status="Graduate",
-        grad_year=2011,
-        major="Library & Information Management",
-        school="McGill University",
     ),
     fxa=ContactFirefoxAccountsSchema(
         create_date="2019-05-22T08:29:31.906094+00:00",
@@ -147,15 +129,9 @@ def _gather_examples(schema_class) -> Dict[str, str]:
 # A sample user that has the OpenAPI schema examples
 SAMPLE_EXAMPLE = ContactSchema(
     amo=ContactAddonsSchema(**ContactAddonsSchema.Config.schema_extra["example"]),
-    cv=ContactCommonVoiceSchema(
-        **ContactCommonVoiceSchema.Config.schema_extra["example"]
-    ),
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
-    ),
-    fsa=ContactFirefoxStudentAmbassadorSchema(
-        **ContactFirefoxStudentAmbassadorSchema.Config.schema_extra["example"]
     ),
     fxa=ContactFirefoxAccountsSchema(
         **ContactFirefoxAccountsSchema.Config.schema_extra["example"]
