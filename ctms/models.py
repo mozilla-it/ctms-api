@@ -9,7 +9,7 @@ class ContactSchema(BaseModel):
     """A complete contact."""
 
     amo: Optional["ContactAddonsSchema"] = None
-    contact: Optional["ContactMainSchema"] = None
+    email: Optional["ContactMainSchema"] = None
     cv: Optional["ContactCommonVoiceSchema"] = None
     fpn: Optional["ContactFirefoxPrivateNetworkSchema"] = None
     fsa: Optional["ContactFirefoxStudentAmbassadorSchema"] = None
@@ -19,12 +19,12 @@ class ContactSchema(BaseModel):
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
         return IdentityResponse(
-            id=getattr(self.contact, "id", None),
-            email_id=self.contact.email_id,
+            id=getattr(self.email, "id", None),
+            email_id=self.email.email_id,
             amo_id=getattr(self.amo, "id", None),
             fxa_id=getattr(self.fxa, "id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
-            token=getattr(self.contact, "token", None),
+            token=getattr(self.email, "token", None),
         )
 
 
@@ -354,7 +354,7 @@ class CTMSResponse(BaseModel):
     """ContactSchema but sub-schemas are required."""
 
     amo: ContactAddonsSchema
-    contact: ContactMainSchema
+    email: ContactMainSchema
     cv: ContactCommonVoiceSchema
     fpn: ContactFirefoxPrivateNetworkSchema
     fsa: ContactFirefoxStudentAmbassadorSchema

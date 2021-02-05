@@ -22,7 +22,15 @@ Feature: Getting the test user's information works
           "location": null,
           "user": false
         },
-        "contact": {
+        "cv": {
+          "created_at": null,
+          "days_interval": null,
+          "first_contribution_date": null,
+          "goal_reached_at": null,
+          "last_active_date": null,
+          "two_day_streak": null
+        },
+        "email": {
           "country": "us",
           "created_date": "2014-01-22T15:24:00+00:00",
           "email": "ctms-user@example.com",
@@ -41,14 +49,6 @@ Feature: Getting the test user's information works
           "record_type": "0124A0000001aABCDE",
           "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
           "source_url": null
-        },
-        "cv": {
-          "created_at": null,
-          "days_interval": null,
-          "first_contribution_date": null,
-          "goal_reached_at": null,
-          "last_active_date": null,
-          "two_day_streak": null
         },
         "fpn": {
           "country": null,
@@ -96,7 +96,15 @@ Feature: Getting the test user's information works
           "location": "The Internet",
           "user": true
         },
-        "contact": {
+        "cv": {
+          "created_at": "2020-10-14T16:05:21.423000+00:00",
+          "days_interval": 12,
+          "first_contribution_date": "2020-10-15T10:07:00+00:00",
+          "goal_reached_at": "2020-11-02T11:15:19.008000+00:00",
+          "last_active_date": "2021-01-10T11:15:19.008000+00:00",
+          "two_day_streak": true
+        },
+        "email": {
           "country": "ca",
           "created_date": "2010-01-01T08:04:00+00:00",
           "email": "mozilla-fan@example.com",
@@ -115,14 +123,6 @@ Feature: Getting the test user's information works
           "record_type": "0124A0000001aABCDE",
           "source_url": "https://developer.mozilla.org/fr/",
           "token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69"
-        },
-        "cv": {
-          "created_at": "2020-10-14T16:05:21.423000+00:00",
-          "days_interval": 12,
-          "first_contribution_date": "2020-10-15T10:07:00+00:00",
-          "goal_reached_at": "2020-11-02T11:15:19.008000+00:00",
-          "last_active_date": "2021-01-10T11:15:19.008000+00:00",
-          "two_day_streak": true
         },
         "fpn": {
           "country": "Canada",
@@ -214,7 +214,15 @@ Feature: Getting the test user's information works
           "location": "California, USA, Earth",
           "user": true
         },
-        "contact": {
+        "cv": {
+          "created_at": "2019-02-14T16:05:21.423000+00:00",
+          "days_interval": 10,
+          "first_contribution_date": "2019-02-15T10:07:00+00:00",
+          "goal_reached_at": "2019-03-15T11:15:19+00:00",
+          "last_active_date": "2020-12-10T16:56:00+00:00",
+          "two_day_streak": true
+        },
+        "email": {
           "country": "us",
           "created_date": "2020-03-28T15:41:00+00:00",
           "email": "contact@example.com",
@@ -233,14 +241,6 @@ Feature: Getting the test user's information works
           "record_type": "0124A0000001aABCDE",
           "source_url": "https://www.mozilla.org/en-US/",
           "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"
-        },
-        "cv": {
-          "created_at": "2019-02-14T16:05:21.423000+00:00",
-          "days_interval": 10,
-          "first_contribution_date": "2019-02-15T10:07:00+00:00",
-          "goal_reached_at": "2019-03-15T11:15:19+00:00",
-          "last_active_date": "2020-12-10T16:56:00+00:00",
-          "two_day_streak": true
         },
         "fpn": {
           "country": "France",

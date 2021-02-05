@@ -64,7 +64,7 @@ async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     contact = await get_contact_or_404(email_id)
     return CTMSResponse(
         amo=contact.amo or ContactAddonsSchema(),
-        contact=contact.contact or ContactMainSchema(),
+        email=contact.email or ContactMainSchema(),
         cv=contact.cv or ContactCommonVoiceSchema(),
         fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
         fsa=contact.fsa or ContactFirefoxStudentAmbassadorSchema(),
@@ -95,7 +95,7 @@ async def read_identity(email_id: UUID = Path(..., title="The email ID")):
 )
 async def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
     contact = await get_contact_or_404(email_id)
-    return contact.contact or ContactMainSchema()
+    return contact.email or ContactMainSchema()
 
 
 @app.get(

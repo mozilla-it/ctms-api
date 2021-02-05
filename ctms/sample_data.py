@@ -12,7 +12,7 @@ from .models import (
 
 # A contact that has just some of the fields entered
 SAMPLE_MINIMAL = ContactSchema(
-    contact=ContactMainSchema(
+    email=ContactMainSchema(
         email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
         id="001A000001aABcDEFG",
         country="us",
@@ -44,7 +44,15 @@ SAMPLE_MAXIMAL = ContactSchema(
         location="The Internet",
         user=True,
     ),
-    contact=ContactMainSchema(
+    cv=ContactCommonVoiceSchema(
+        created_at="2020-10-14T16:05:21.423Z",
+        days_interval=12,
+        first_contribution_date="2020-10-15T10:07Z",
+        goal_reached_at="2020-11-2T11:15:19.008Z",
+        last_active_date="2021-1-10T11:15:19.008Z",
+        two_day_streak=True,
+    ),
+    email=ContactMainSchema(
         country="ca",
         created_date="2010-01-01T08:04:00+00:00",
         email="mozilla-fan@example.com",
@@ -63,14 +71,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         record_type="0124A0000001aABCDE",
         source_url="https://developer.mozilla.org/fr/",
         token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
-    ),
-    cv=ContactCommonVoiceSchema(
-        created_at="2020-10-14T16:05:21.423Z",
-        days_interval=12,
-        first_contribution_date="2020-10-15T10:07Z",
-        goal_reached_at="2020-11-2T11:15:19.008Z",
-        last_active_date="2021-1-10T11:15:19.008Z",
-        two_day_streak=True,
     ),
     fpn=ContactFirefoxPrivateNetworkSchema(
         country="Canada",
@@ -146,10 +146,10 @@ SAMPLE_MAXIMAL = ContactSchema(
 # A sample user that has the OpenAPI schema examples
 SAMPLE_EXAMPLE = ContactSchema(
     amo=ContactAddonsSchema(**ContactAddonsSchema.Config.schema_extra["example"]),
-    contact=ContactMainSchema(**ContactMainSchema.Config.schema_extra["example"]),
     cv=ContactCommonVoiceSchema(
         **ContactCommonVoiceSchema.Config.schema_extra["example"]
     ),
+    email=ContactMainSchema(**ContactMainSchema.Config.schema_extra["example"]),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
     ),
@@ -163,7 +163,7 @@ SAMPLE_EXAMPLE = ContactSchema(
 
 
 SAMPLE_CONTACTS = {
-    SAMPLE_MINIMAL.contact.email_id: SAMPLE_MINIMAL,
-    SAMPLE_MAXIMAL.contact.email_id: SAMPLE_MAXIMAL,
-    SAMPLE_EXAMPLE.contact.email_id: SAMPLE_EXAMPLE,
+    SAMPLE_MINIMAL.email.email_id: SAMPLE_MINIMAL,
+    SAMPLE_MAXIMAL.email.email_id: SAMPLE_MAXIMAL,
+    SAMPLE_EXAMPLE.email.email_id: SAMPLE_EXAMPLE,
 }
