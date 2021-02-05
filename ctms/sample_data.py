@@ -12,8 +12,8 @@ from .models import (
 
 # A contact that has just some of the fields entered
 SAMPLE_MINIMAL = ContactSchema(
-    id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
     contact=ContactMainSchema(
+        email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
         id="001A000001aABcDEFG",
         country="us",
         created_date="2014-01-22T15:24:00+00:00",
@@ -36,7 +36,6 @@ SAMPLE_MINIMAL = ContactSchema(
 
 # A contact that has all of the fields set
 SAMPLE_MAXIMAL = ContactSchema(
-    id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
     amo=ContactAddonsSchema(
         display_name="#1 Mozilla Fan",
         homepage="https://www.mozilla.org/en-US/firefox/new/",
@@ -49,6 +48,7 @@ SAMPLE_MAXIMAL = ContactSchema(
         country="ca",
         created_date="2010-01-01T08:04:00+00:00",
         email="mozilla-fan@example.com",
+        email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
         first_name="Fan of",
         format="H",
         id="001A000001aMozFan",
@@ -145,7 +145,6 @@ SAMPLE_MAXIMAL = ContactSchema(
 
 # A sample user that has the OpenAPI schema examples
 SAMPLE_EXAMPLE = ContactSchema(
-    id=UUID("332de237-cab7-4461-bcc3-48e68f42bd5c"),
     amo=ContactAddonsSchema(**ContactAddonsSchema.Config.schema_extra["example"]),
     contact=ContactMainSchema(**ContactMainSchema.Config.schema_extra["example"]),
     cv=ContactCommonVoiceSchema(
@@ -164,7 +163,7 @@ SAMPLE_EXAMPLE = ContactSchema(
 
 
 SAMPLE_CONTACTS = {
-    SAMPLE_MINIMAL.id: SAMPLE_MINIMAL,
-    SAMPLE_MAXIMAL.id: SAMPLE_MAXIMAL,
-    SAMPLE_EXAMPLE.id: SAMPLE_EXAMPLE,
+    SAMPLE_MINIMAL.contact.email_id: SAMPLE_MINIMAL,
+    SAMPLE_MAXIMAL.contact.email_id: SAMPLE_MAXIMAL,
+    SAMPLE_EXAMPLE.contact.email_id: SAMPLE_EXAMPLE,
 }

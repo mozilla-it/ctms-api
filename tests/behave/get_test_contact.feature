@@ -7,14 +7,13 @@ Feature: Getting the test user's information works
     And the test contact 332de237-cab7-4461-bcc3-48e68f42bd5c is setup
 
   Scenario: User wants to get full contact info for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /ctms/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /ctms/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
-        "id": "93db83d4-4119-4e0c-af87-a713786fa81d",
         "amo": {
           "display_name": null,
           "homepage": null,
@@ -27,6 +26,7 @@ Feature: Getting the test user's information works
           "country": "us",
           "created_date": "2014-01-22T15:24:00+00:00",
           "email": "ctms-user@example.com",
+          "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
           "first_name": null,
           "format": "H",
           "id": "001A000001aABcDEFG",
@@ -81,14 +81,13 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to get full contact info for the maximal contact
-    Given the contact_id 67e52c77-950f-4f28-accb-bb3ea1a2c51a
-    And the desired endpoint /ctms/(contact_id)
+    Given the email_id 67e52c77-950f-4f28-accb-bb3ea1a2c51a
+    And the desired endpoint /ctms/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
-        "id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
         "amo": {
           "display_name": "#1 Mozilla Fan",
           "homepage": "https://www.mozilla.org/en-US/firefox/new/",
@@ -101,6 +100,7 @@ Feature: Getting the test user's information works
           "country": "ca",
           "created_date": "2010-01-01T08:04:00+00:00",
           "email": "mozilla-fan@example.com",
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "first_name": "Fan of",
           "format": "H",
           "id": "001A000001aMozFan",
@@ -199,14 +199,13 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to get full contact info for the example contact
-    Given the contact_id 332de237-cab7-4461-bcc3-48e68f42bd5c
-    And the desired endpoint /ctms/(contact_id)
+    Given the email_id 332de237-cab7-4461-bcc3-48e68f42bd5c
+    And the desired endpoint /ctms/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
-        "id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
         "amo": {
           "display_name": "Add-ons Author",
           "homepage": "https://my-mozilla-addon.example.org/",
@@ -219,6 +218,7 @@ Feature: Getting the test user's information works
           "country": "us",
           "created_date": "2020-03-28T15:41:00+00:00",
           "email": "contact@example.com",
+          "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
           "first_name": null,
           "format": "H",
           "id": "001A000023aABcDEFG",
@@ -268,30 +268,32 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read identity data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /identity/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /identity/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
-        "id": "001A000001aABcDEFG",
         "amo_id": null,
+        "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
         "fxa_id": null,
         "fxa_primary_email": null,
+        "id": "001A000001aABcDEFG",
         "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7"
       }
       """
 
   Scenario: User wants to read identity data for the maximal contact
-    Given the contact_id 67e52c77-950f-4f28-accb-bb3ea1a2c51a
-    And the desired endpoint /identity/(contact_id)
+    Given the email_id 67e52c77-950f-4f28-accb-bb3ea1a2c51a
+    And the desired endpoint /identity/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
         "amo_id": 123,
+        "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
         "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
         "fxa_primary_email": "fxa-firefox-fan@example.com",
         "id": "001A000001aMozFan",
@@ -300,14 +302,15 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read identity data for the example contact
-    Given the contact_id 332de237-cab7-4461-bcc3-48e68f42bd5c
-    And the desired endpoint /identity/(contact_id)
+    Given the email_id 332de237-cab7-4461-bcc3-48e68f42bd5c
+    And the desired endpoint /identity/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
         "amo_id": 98765,
+        "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
         "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
         "fxa_primary_email": "my-fxa-acct@example.com",
         "id": "001A000023aABcDEFG",
@@ -316,8 +319,8 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read the main contact data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/main/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /contact/main/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
@@ -326,6 +329,7 @@ Feature: Getting the test user's information works
         "country": "us",
         "created_date": "2014-01-22T15:24:00+00:00",
         "email": "ctms-user@example.com",
+        "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
         "first_name": null,
         "format": "H",
         "id": "001A000001aABcDEFG",
@@ -344,8 +348,8 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read the AMO data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/amo/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /contact/amo/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
@@ -361,8 +365,8 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read the CV data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/cv/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /contact/cv/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
@@ -378,8 +382,8 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read the FPN data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/fpn/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /contact/fpn/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
@@ -391,8 +395,8 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read the FSA data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/fsa/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /contact/fsa/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
@@ -408,8 +412,8 @@ Feature: Getting the test user's information works
       """
 
   Scenario: User wants to read the FXA data for the minimal contact
-    Given the contact_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/fxa/(contact_id)
+    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
+    And the desired endpoint /contact/fxa/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
@@ -425,14 +429,14 @@ Feature: Getting the test user's information works
       """
 
   Scenario Outline: Unknown contacts IDs are not found
-    Given the contact_id cad092ec-a71a-4df5-aa92-517959caeecb
-    And the desired endpoint /<endpoint_prefix>/(contact_id)
+    Given the email_id cad092ec-a71a-4df5-aa92-517959caeecb
+    And the desired endpoint /<endpoint_prefix>/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 404
     And the response JSON is
     """
     {
-      "detail": "Unknown contact_id"
+      "detail": "Unknown email_id"
     }
     """
 

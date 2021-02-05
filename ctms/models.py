@@ -1,14 +1,13 @@
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
 
 
 class ContactSchema(BaseModel):
     """A complete contact."""
 
-    id: UUID
     amo: Optional["ContactAddonsSchema"] = None
     contact: Optional["ContactMainSchema"] = None
     cv: Optional["ContactCommonVoiceSchema"] = None
@@ -21,6 +20,7 @@ class ContactSchema(BaseModel):
         """Return the identities of a contact"""
         return IdentityResponse(
             id=getattr(self.contact, "id", None),
+            email_id=self.contact.email_id,
             amo_id=getattr(self.amo, "id", None),
             fxa_id=getattr(self.fxa, "id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
@@ -100,6 +100,7 @@ class ContactMainSchema(BaseModel):
     email: Optional[EmailStr] = Field(
         default=None, description="Contact email address, Email in Salesforce"
     )
+    email_id: UUID4 = Field(default_factory=uuid4, description="ID for email")
     first_name: Optional[str] = Field(
         default=None,
         max_length=40,
@@ -168,6 +169,7 @@ class ContactMainSchema(BaseModel):
                 "email": "contact@example.com",
                 "first_name": None,
                 "format": "H",
+                "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
                 "id": "001A000023aABcDEFG",
                 "lang": "en",
                 "last_modified_date": "2021-01-28T21:26:57.511Z",
@@ -351,7 +353,6 @@ ContactSchema.update_forward_refs()
 class CTMSResponse(BaseModel):
     """ContactSchema but sub-schemas are required."""
 
-    id: UUID
     amo: ContactAddonsSchema
     contact: ContactMainSchema
     cv: ContactCommonVoiceSchema
@@ -371,6 +372,7 @@ class CTMSResponse(BaseModel):
 class IdentityResponse(BaseModel):
     """The identity keys for a contact."""
 
+    email_id: UUID
     id: Optional[str] = None
     amo_id: Optional[int] = None
     fxa_id: Optional[str] = None
