@@ -31,24 +31,23 @@ Feature: Getting the test user's information works
           "two_day_streak": null
         },
         "email": {
-          "country": "us",
-          "created_date": "2014-01-22T15:24:00+00:00",
-          "email": "ctms-user@example.com",
+          "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+          "browser_locale": null,
+          "create_timestamp": "2014-01-22T15:24:00+00:00",
+          "email_format": "H",
           "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
-          "first_name": null,
-          "format": "H",
-          "id": "001A000001aABcDEFG",
-          "lang": "en",
-          "last_modified_date": "2020-01-22T15:24:00+00:00",
-          "last_name": "_",
-          "optin": true,
-          "optout": false,
-          "payee_id": null,
-          "postal_code": "666",
-          "reason": null,
-          "record_type": "0124A0000001aABCDE",
-          "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
-          "source_url": null
+          "email_lang": "en",
+          "has_opted_out_of_email": false,
+          "mailing_country": "us",
+          "mofo_relevant": false,
+          "name": null,
+          "pmt_cust_id": null,
+          "primary_email": "ctms-user@example.com",
+          "signup_source": null,
+          "subscriber": false,
+          "unengaged": false,
+          "unsubscribe_reason": null,
+          "update_timestamp": "2020-01-22T15:24:00+00:00"
         },
         "fpn": {
           "country": null,
@@ -105,24 +104,23 @@ Feature: Getting the test user's information works
           "two_day_streak": true
         },
         "email": {
-          "country": "ca",
-          "created_date": "2010-01-01T08:04:00+00:00",
-          "email": "mozilla-fan@example.com",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "browser_locale": "fr-CA",
+          "create_timestamp": "2010-01-01T08:04:00+00:00",
+          "email_format": "H",
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
-          "first_name": "Fan of",
-          "format": "H",
-          "id": "001A000001aMozFan",
-          "lang": "fr",
-          "last_modified_date": "2020-01-28T14:50:00+00:00",
-          "last_name": "Mozilla",
-          "optin": true,
-          "optout": false,
-          "payee_id": "cust_012345",
-          "postal_code": "H2L",
-          "reason": "done with this mailing list",
-          "record_type": "0124A0000001aABCDE",
-          "source_url": "https://developer.mozilla.org/fr/",
-          "token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69"
+          "email_lang": "fr",
+          "has_opted_out_of_email": false,
+          "mailing_country": "ca",
+          "mofo_relevant": true,
+          "name": "Fan of Mozilla",
+          "pmt_cust_id": "cust_012345",
+          "primary_email": "mozilla-fan@example.com",
+          "signup_source": "https://developer.mozilla.org/fr/",
+          "subscriber": true,
+          "unengaged": false,
+          "unsubscribe_reason": "done with this mailing list",
+          "update_timestamp": "2020-01-28T14:50:00+00:00"
         },
         "fpn": {
           "country": "Canada",
@@ -223,24 +221,23 @@ Feature: Getting the test user's information works
           "two_day_streak": true
         },
         "email": {
-          "country": "us",
-          "created_date": "2020-03-28T15:41:00+00:00",
-          "email": "contact@example.com",
+          "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
+          "browser_locale": null,
+          "create_timestamp": "2020-03-28T15:41:00+00:00",
+          "email_format": "H",
           "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
-          "first_name": null,
-          "format": "H",
-          "id": "001A000023aABcDEFG",
-          "lang": "en",
-          "last_modified_date": "2021-01-28T21:26:57.511000+00:00",
-          "last_name": "_",
-          "optin": true,
-          "optout": false,
-          "payee_id": null,
-          "postal_code": "94041",
-          "reason": null,
-          "record_type": "0124A0000001aABCDE",
-          "source_url": "https://www.mozilla.org/en-US/",
-          "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"
+          "email_lang": "en",
+          "has_opted_out_of_email": false,
+          "mailing_country": "us",
+          "mofo_relevant": false,
+          "name": "Mozilla Subscriber",
+          "pmt_cust_id": null,
+          "primary_email": "contact@example.com",
+          "signup_source": "https://www.mozilla.org/en-US/",
+          "subscriber": false,
+          "unengaged": false,
+          "unsubscribe_reason": null,
+          "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
         },
         "fpn": {
           "country": "France",
@@ -275,12 +272,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "amo_id": null,
         "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
+        "primary_email": "ctms-user@example.com",
+        "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+        "amo_id": null,
         "fxa_id": null,
-        "fxa_primary_email": null,
-        "id": "001A000001aABcDEFG",
-        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7"
+        "fxa_primary_email": null
       }
       """
 
@@ -292,12 +289,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "amo_id": 123,
         "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+        "primary_email": "mozilla-fan@example.com",
+        "amo_id": 123,
+        "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
         "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-        "fxa_primary_email": "fxa-firefox-fan@example.com",
-        "id": "001A000001aMozFan",
-        "token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69"
+        "fxa_primary_email": "fxa-firefox-fan@example.com"
       }
       """
 
@@ -309,41 +306,40 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "amo_id": 98765,
         "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+        "primary_email": "contact@example.com",
+        "amo_id": 98765,
+        "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
         "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
-        "fxa_primary_email": "my-fxa-acct@example.com",
-        "id": "001A000023aABcDEFG",
-        "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"
+        "fxa_primary_email": "my-fxa-acct@example.com"
       }
       """
 
-  Scenario: User wants to read the main contact data for the minimal contact
+  Scenario: User wants to read the main email data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/main/(email_id)
+    And the desired endpoint /contact/email/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
-        "country": "us",
-        "created_date": "2014-01-22T15:24:00+00:00",
-        "email": "ctms-user@example.com",
+        "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+        "browser_locale": null,
+        "create_timestamp": "2014-01-22T15:24:00+00:00",
+        "email_format": "H",
         "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
-        "first_name": null,
-        "format": "H",
-        "id": "001A000001aABcDEFG",
-        "lang": "en",
-        "last_modified_date": "2020-01-22T15:24:00+00:00",
-        "last_name": "_",
-        "optin": true,
-        "optout": false,
-        "payee_id": null,
-        "postal_code": "666",
-        "reason": null,
-        "record_type": "0124A0000001aABCDE",
-        "source_url": null,
-        "token": "142e20b6-1ef5-43d8-b5f4-597430e956d7"
+        "email_lang": "en",
+        "has_opted_out_of_email": false,
+        "mailing_country": "us",
+        "mofo_relevant": false,
+        "name": null,
+        "pmt_cust_id": null,
+        "primary_email": "ctms-user@example.com",
+        "signup_source": null,
+        "subscriber": false,
+        "unengaged": false,
+        "unsubscribe_reason": null,
+        "update_timestamp": "2020-01-22T15:24:00+00:00"
       }
       """
 
@@ -444,9 +440,9 @@ Feature: Getting the test user's information works
       | endpoint_prefix |
       | ctms            |
       | identity        |
-      | contact/main    |
       | contact/amo     |
       | contact/cv      |
+      | contact/email   |
       | contact/fpn     |
       | contact/fsa     |
       | contact/fxa     |

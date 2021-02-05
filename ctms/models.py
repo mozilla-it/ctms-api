@@ -9,7 +9,7 @@ class ContactSchema(BaseModel):
     """A complete contact."""
 
     amo: Optional["ContactAddonsSchema"] = None
-    email: Optional["ContactMainSchema"] = None
+    email: Optional["EmailSchema"] = None
     cv: Optional["ContactCommonVoiceSchema"] = None
     fpn: Optional["ContactFirefoxPrivateNetworkSchema"] = None
     fsa: Optional["ContactFirefoxStudentAmbassadorSchema"] = None
@@ -19,12 +19,12 @@ class ContactSchema(BaseModel):
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
         return IdentityResponse(
-            id=getattr(self.email, "id", None),
-            email_id=self.email.email_id,
             amo_id=getattr(self.amo, "id", None),
+            basket_token=getattr(self.email, "basket_token", None),
+            email_id=self.email.email_id,
             fxa_id=getattr(self.fxa, "id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
-            token=getattr(self.email, "token", None),
+            primary_email=getattr(self.email, "primary_email", None),
         )
 
 
@@ -80,110 +80,86 @@ class ContactAddonsSchema(BaseModel):
         }
 
 
-class SourceUrl(HttpUrl):
-    max_length = 255
+class EmailSchema(BaseModel):
+    """The primary email and related data."""
 
-
-class ContactMainSchema(BaseModel):
-    """The "main" contact schema."""
-
-    country: Optional[str] = Field(
+    email_id: UUID4 = Field(
+        default_factory=uuid4,
+        description="ID for email",
+        example="332de237-cab7-4461-bcc3-48e68f42bd5c",
+    )
+    primary_email: EmailStr = Field(
+        ...,
+        description="Contact email address, Email in Salesforce",
+        example="contact@example.com",
+    )
+    basket_token: Optional[UUID] = Field(
+        ...,
+        description="Basket token, Token__c in Salesforce",
+        example="c4a7d759-bb52-457b-896b-90f1d3ef8433",
+    )
+    name: Optional[str] = Field(
         default=None,
-        min_length=2,
-        max_length=2,
-        regex="^[a-z][a-z]$",
+        max_length=255,
+        description="Name of contact, Name in Salesforce",
+        example="Mozilla Subscriber",
+    )
+    mailing_country: Optional[str] = Field(
+        default=None,
+        max_length=255,
         description="Mailing country code, 2 lowercase letters, MailingCountryCode in Salesforce",
+        example="us",
     )
-    created_date: Optional[datetime] = Field(
-        default=None, description="Contact creation date, CreatedDate in Salesforce"
-    )
-    email: Optional[EmailStr] = Field(
-        default=None, description="Contact email address, Email in Salesforce"
-    )
-    email_id: UUID4 = Field(default_factory=uuid4, description="ID for email")
-    first_name: Optional[str] = Field(
-        default=None,
-        max_length=40,
-        description="First name of contact, FirstName in Salesforce",
-    )
-    format: Literal["H", "T"] = Field(
+    email_format: Optional[str] = Field(
         default="H",
+        max_length=2,
         description="Email format, H=HTML, T=Plain Text, Email_Format__c in Salesforce",
     )
-    id: Optional[str] = Field(
-        default=None, description="Salesforce record ID, Id in Salesforce"
-    )
-    lang: Optional[str] = Field(
+    email_lang: Optional[str] = Field(
         default="en",
-        min_length=2,
-        max_length=2,
-        regex="^[a-z][a-z]$",
+        max_length=3,
         description="Email language code, 2 lowercase letters, Email_Language__c in Salesforce",
     )
-    last_modified_date: Optional[datetime] = Field(
+    browser_locale: Optional[str] = Field(
+        max_length=5, description="TODO: add description"
+    )
+    mofo_relevant: bool = Field(
+        default=False, description="Mozilla Foundation is tracking this email"
+    )
+    signup_source: Optional[HttpUrl] = Field(
         default=None,
-        description="Contact last modified date, LastModifiedDate in Salesforce",
+        description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
+        example="https://www.mozilla.org/en-US/",
     )
-    last_name: str = Field(
-        default="_",
-        max_length=80,
-        description="Last name, '_' for blank, LastName in Salesforce",
-    )
-    optin: bool = Field(
-        default=False,
-        description="Double opt-in complete or skipped, Double_Opt_In__c in Salesforce",
-    )
-    optout: bool = Field(
+    has_opted_out_of_email: bool = Field(
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",
     )
-    payee_id: Optional[str] = Field(
+    pmt_cust_id: Optional[str] = Field(
         default=None,
+        max_length=50,
         description="Payment system ID (Stripe or other), in basket IGNORE_USER_FIELDS, PMT_Cust_Id__c in Salesforce",
     )
-    postal_code: Optional[str] = Field(
-        default=None, description="Mailing postal code, MailingPostalCode in Salesforce"
+    subscriber: bool = Field(
+        default=False, description="TODO: add description. Subscriber__c in Salesforce"
     )
-    reason: Optional[str] = Field(
+    unengaged: bool = Field(
+        default=False, description="TODO: add description. Unengaged__c in Salesforce"
+    )
+    unsubscribe_reason: Optional[str] = Field(
         default=None,
-        max_length=1000,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
-    record_type: Optional[str] = Field(
+    create_timestamp: Optional[datetime] = Field(
         default=None,
-        description="Salesforce record type, may be used to identify Foundation contacts, RecordTypeId in Salesforce",
+        description="Contact creation date, CreatedDate in Salesforce",
+        example="2020-03-28T15:41:00.000Z",
     )
-    source_url: Optional[SourceUrl] = Field(
+    update_timestamp: Optional[datetime] = Field(
         default=None,
-        description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
+        description="Contact last modified date, LastModifiedDate in Salesforce",
+        example="2021-01-28T21:26:57.511Z",
     )
-    token: Optional[UUID] = Field(
-        default=None, description="Basket token, Token__c in Salesforce"
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "country": "us",
-                "created_date": "2020-03-28T15:41:00.000Z",
-                "email": "contact@example.com",
-                "first_name": None,
-                "format": "H",
-                "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
-                "id": "001A000023aABcDEFG",
-                "lang": "en",
-                "last_modified_date": "2021-01-28T21:26:57.511Z",
-                "last_name": "_",
-                "optin": True,
-                "optout": False,
-                "payee_id": None,
-                "postal_code": "94041",
-                "reason": None,
-                "record_type": "0124A0000001aABCDE",
-                "source_url": "https://www.mozilla.org/en-US/",
-                "token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
-            }
-        }
 
 
 class ContactCommonVoiceSchema(BaseModel):
@@ -354,7 +330,7 @@ class CTMSResponse(BaseModel):
     """ContactSchema but sub-schemas are required."""
 
     amo: ContactAddonsSchema
-    email: ContactMainSchema
+    email: EmailSchema
     cv: ContactCommonVoiceSchema
     fpn: ContactFirefoxPrivateNetworkSchema
     fsa: ContactFirefoxStudentAmbassadorSchema
@@ -373,11 +349,11 @@ class IdentityResponse(BaseModel):
     """The identity keys for a contact."""
 
     email_id: UUID
-    id: Optional[str] = None
+    primary_email: EmailStr
+    basket_token: UUID
     amo_id: Optional[int] = None
     fxa_id: Optional[str] = None
     fxa_primary_email: Optional[EmailStr] = None
-    token: Optional[UUID] = None
 
 
 class NotFoundResponse(BaseModel):

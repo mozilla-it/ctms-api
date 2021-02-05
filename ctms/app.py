@@ -13,9 +13,9 @@ from .models import (
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactFirefoxStudentAmbassadorSchema,
-    ContactMainSchema,
     ContactSchema,
     CTMSResponse,
+    EmailSchema,
     IdentityResponse,
     NotFoundResponse,
 )
@@ -64,7 +64,7 @@ async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     contact = await get_contact_or_404(email_id)
     return CTMSResponse(
         amo=contact.amo or ContactAddonsSchema(),
-        email=contact.email or ContactMainSchema(),
+        email=contact.email or EmailSchema(),
         cv=contact.cv or ContactCommonVoiceSchema(),
         fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
         fsa=contact.fsa or ContactFirefoxStudentAmbassadorSchema(),
@@ -87,15 +87,15 @@ async def read_identity(email_id: UUID = Path(..., title="The email ID")):
 
 
 @app.get(
-    "/contact/main/{email_id}",
+    "/contact/email/{email_id}",
     summary="Get contact's main details",
-    response_model=ContactMainSchema,
+    response_model=EmailSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
 async def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
     contact = await get_contact_or_404(email_id)
-    return contact.email or ContactMainSchema()
+    return contact.email or EmailSchema()
 
 
 @app.get(
