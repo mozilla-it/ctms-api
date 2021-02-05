@@ -3,7 +3,6 @@ from uuid import UUID
 
 from .models import (
     ContactAddonsSchema,
-    ContactCommonVoiceSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactFirefoxStudentAmbassadorSchema,
@@ -38,14 +37,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         last_login="2020-01-27T14:21:00.000+0000",
         location="The Internet",
         user=True,
-    ),
-    cv=ContactCommonVoiceSchema(
-        created_at="2020-10-14T16:05:21.423Z",
-        days_interval=12,
-        first_contribution_date="2020-10-15T10:07Z",
-        goal_reached_at="2020-11-2T11:15:19.008Z",
-        last_active_date="2021-1-10T11:15:19.008Z",
-        two_day_streak=True,
     ),
     email=EmailSchema(
         email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
@@ -147,9 +138,6 @@ def _gather_examples(schema_class) -> Dict[str, str]:
 # A sample user that has the OpenAPI schema examples
 SAMPLE_EXAMPLE = ContactSchema(
     amo=ContactAddonsSchema(**ContactAddonsSchema.Config.schema_extra["example"]),
-    cv=ContactCommonVoiceSchema(
-        **ContactCommonVoiceSchema.Config.schema_extra["example"]
-    ),
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]

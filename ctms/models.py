@@ -10,7 +10,6 @@ class ContactSchema(BaseModel):
 
     amo: Optional["ContactAddonsSchema"] = None
     email: Optional["EmailSchema"] = None
-    cv: Optional["ContactCommonVoiceSchema"] = None
     fpn: Optional["ContactFirefoxPrivateNetworkSchema"] = None
     fsa: Optional["ContactFirefoxStudentAmbassadorSchema"] = None
     fxa: Optional["ContactFirefoxAccountsSchema"] = None
@@ -162,53 +161,6 @@ class EmailSchema(BaseModel):
     )
 
 
-class ContactCommonVoiceSchema(BaseModel):
-    """
-    The CommonVoice schema.
-
-    With the Jan 2021 adoption of the project by the Mozilla Foundation,
-    this data may move out of CTMS.
-
-    All of this data is in basket's IGNORE_USER_FIELDS, ignored by default
-    when displaying or updating contact data.
-    """
-
-    created_at: Optional[datetime] = Field(
-        default=None,
-        description="Creation date of common voice account, cv_created_at__c in Salesforce",
-    )
-    days_interval: Optional[int] = Field(
-        default=None, description="Unknown, cv_days_interval__c in Salesforce"
-    )
-    first_contribution_date: Optional[datetime] = Field(
-        default=None,
-        description="Date of first contribution, cv_days_interval__c in Salesforce",
-    )
-    goal_reached_at: Optional[datetime] = Field(
-        default=None, description="Unknown, cv_goal_reached_at__c in Salesforce"
-    )
-    last_active_date: Optional[datetime] = Field(
-        default=None,
-        description="Last day the user was active on CV, cv_last_active_dt__c in Salesforce <em>(not on retain list)</em>",
-    )
-    two_day_streak: Optional[bool] = Field(
-        default=None,
-        description="Unknown, cv_two_day_streak in Salesforce <em>(not on retain list)</em>",
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "created_at": "2019-02-14T16:05:21.423Z",
-                "days_interval": 10,
-                "first_contribution_date": "2019-02-15T10:07Z",
-                "goal_reached_at": "2019-03-15T11:15:19Z",
-                "last_active_date": "2020-12-10T16:56Z",
-                "two_day_streak": True,
-            }
-        }
-
-
 class ContactFirefoxPrivateNetworkSchema(BaseModel):
     """
     The Firefox Private Network schema.
@@ -331,7 +283,6 @@ class CTMSResponse(BaseModel):
 
     amo: ContactAddonsSchema
     email: EmailSchema
-    cv: ContactCommonVoiceSchema
     fpn: ContactFirefoxPrivateNetworkSchema
     fsa: ContactFirefoxStudentAmbassadorSchema
     fxa: ContactFirefoxAccountsSchema
