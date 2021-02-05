@@ -10,11 +10,11 @@ from pydantic import EmailStr
 from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
     AddOnsSchema,
-    ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactSchema,
     CTMSResponse,
     EmailSchema,
+    FirefoxAccountsSchema,
     IdentityResponse,
     NotFoundResponse,
 )
@@ -64,7 +64,7 @@ def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
         amo=contact.amo or AddOnsSchema(),
         email=contact.email or EmailSchema(),
         fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
-        fxa=contact.fxa or ContactFirefoxAccountsSchema(),
+        fxa=contact.fxa or FirefoxAccountsSchema(),
         newsletters=contact.newsletters or [],
         status="ok",
     )
@@ -121,13 +121,13 @@ def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
 @app.get(
     "/contact/fxa/{email_id}",
     summary="Get contact's Firefox Account details",
-    response_model=ContactFirefoxAccountsSchema,
+    response_model=FirefoxAccountsSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
 def read_contact_fxa(email_id: UUID = Path(..., title="The email ID")):
     contact = get_contact_or_404(email_id)
-    return contact.fxa or ContactFirefoxAccountsSchema()
+    return contact.fxa or FirefoxAccountsSchema()
 
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a
