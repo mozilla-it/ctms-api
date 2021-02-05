@@ -115,6 +115,12 @@ docker run -ti -p 127.0.0.1:5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -e LC_C
 
 This will run Docker in the foreground in that terminal (so you'll need to use another terminal for your work, or add the `-d` flag to daemonize the container) and make that available on TCP port 5432, the "normal" Postgres port.
 
+For tests or running locally, set:
+
+```shell
+export CTMS_DB_URL=postgresql://postgres@localhost/postgres
+```
+
 It can be helpful to log all queries run by the test suite:
 
 ```shell
