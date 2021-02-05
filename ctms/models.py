@@ -96,12 +96,12 @@ class AddOnsSchema(BaseModel):
     )
     create_timestamp: Optional[datetime] = Field(
         default=None,
-        description="Contact creation date, CreatedDate in Salesforce",
+        description="AMO data creation timestamp",
         example="2020-12-05T19:21:50.908000+00:00",
     )
     update_timestamp: Optional[datetime] = Field(
         default=None,
-        description="Contact last modified date, LastModifiedDate in Salesforce",
+        description="AMO data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
     )
 
