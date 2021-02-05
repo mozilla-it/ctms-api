@@ -24,12 +24,13 @@ Next features for v0.5:
 * [x] Move ``contact_id`` into ``email`` group
 * [x] Drop the ``cv`` (Common Voice) group
 * [x] Drop the ``fsa`` (Firefox Student Ambassador) group
-* [ ] Sync ``amo`` group with Acoustic schema
+* [x] Sync ``amo`` group with Acoustic schema
 * [ ] Sync ``fxa`` group with Acoustic schema
 * [ ] Rename ``vpn`` group to ``vpn_waitlist``, sync with Acoustic schema
 * [ ] Expand ``newsletter`` schema to sync with Acoustic
 * [ ] Add ``employee`` schema
-* [ ] Clarify new/changed fields in "email" group
+* [ ] Add ``acoustic_sync`` schema
+* [ ] Clarify new/changed fields in ``email`` group
   * [ ] Should we have a separate ``email_id`` and ``basket_token``, or merge?
   * [ ] Should ``basket_token`` be required?
   * [ ] ``mailing_country``: Was 2-letter lowercase ISO, now 255-character string. Can we constrain?
@@ -38,7 +39,19 @@ Next features for v0.5:
   * [ ] ``browser_locale``: What kind of data is this?
   * [ ] ``subscriber``: What does this signify?
   * [ ] ``unengaged``: What does this signify?
+* [ ] Clarify new/changed fields in ``amo`` group:
+  * [ ] ``add_on_ids``: What does a valid value look like?
+  * [ ] ``last_login``: What does a valid value look like?
+  * [ ] ``location``: What does a valid valid look like? On site, they are "Potsdam, Germany"
+  * [ ] ``profile_url``: What does a valid value look like? Why this and not homepage?
+  * [ ] ``user_id``: Is this a string version of an int?
 * [ ] Implement the ``/identity`` APIs with alternate IDs
+* [ ] Implement ``/ctms`` lookup with alternate IDs
+* [ ] Add a database backend
+* [ ] Implement Create / Update / Upsert methods
+* [ ] Implement Delete method
+* [ ] Select API authorization method
+* [ ] Implement API authorization
 * [ ] Your favorite missing feature
 * [ ] All the great features
 

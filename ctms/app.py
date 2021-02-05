@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
 
 from .models import (
-    ContactAddonsSchema,
+    AddOnsSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactSchema,
@@ -61,7 +61,7 @@ async def root():
 async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     contact = await get_contact_or_404(email_id)
     return CTMSResponse(
-        amo=contact.amo or ContactAddonsSchema(),
+        amo=contact.amo or AddOnsSchema(),
         email=contact.email or EmailSchema(),
         fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
         fxa=contact.fxa or ContactFirefoxAccountsSchema(),
@@ -97,13 +97,13 @@ async def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
 @app.get(
     "/contact/amo/{email_id}",
     summary="Get contact's add-ons details",
-    response_model=ContactAddonsSchema,
+    response_model=AddOnsSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
 async def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
     contact = await get_contact_or_404(email_id)
-    return contact.amo or ContactAddonsSchema()
+    return contact.amo or AddOnsSchema()
 
 
 @app.get(
