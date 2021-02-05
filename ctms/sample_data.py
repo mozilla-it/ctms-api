@@ -1,3 +1,4 @@
+from typing import Dict
 from uuid import UUID
 
 from .models import (
@@ -6,25 +7,19 @@ from .models import (
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactFirefoxStudentAmbassadorSchema,
-    ContactMainSchema,
     ContactSchema,
+    EmailSchema,
 )
 
 # A contact that has just some of the fields entered
 SAMPLE_MINIMAL = ContactSchema(
-    contact=ContactMainSchema(
+    email=EmailSchema(
+        basket_token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
+        create_timestamp="2014-01-22T15:24:00+00:00",
         email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
-        id="001A000001aABcDEFG",
-        country="us",
-        created_date="2014-01-22T15:24:00+00:00",
-        email="ctms-user@example.com",
-        lang="en",
-        last_modified_date="2020-01-22T15:24:00.000+0000",
-        optin=True,
-        optout=False,
-        postal_code="666",
-        record_type="0124A0000001aABCDE",
-        token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
+        mailing_country="us",
+        primary_email="ctms-user@example.com",
+        update_timestamp="2020-01-22T15:24:00.000+0000",
     ),
     newsletters=[
         "app-dev",
@@ -44,26 +39,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         location="The Internet",
         user=True,
     ),
-    contact=ContactMainSchema(
-        country="ca",
-        created_date="2010-01-01T08:04:00+00:00",
-        email="mozilla-fan@example.com",
-        email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
-        first_name="Fan of",
-        format="H",
-        id="001A000001aMozFan",
-        lang="fr",
-        last_modified_date="2020-01-28T14:50:00.000+0000",
-        last_name="Mozilla",
-        optin=True,
-        optout=False,
-        payee_id="cust_012345",
-        postal_code="H2L",
-        reason="done with this mailing list",
-        record_type="0124A0000001aABCDE",
-        source_url="https://developer.mozilla.org/fr/",
-        token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
-    ),
     cv=ContactCommonVoiceSchema(
         created_at="2020-10-14T16:05:21.423Z",
         days_interval=12,
@@ -71,6 +46,22 @@ SAMPLE_MAXIMAL = ContactSchema(
         goal_reached_at="2020-11-2T11:15:19.008Z",
         last_active_date="2021-1-10T11:15:19.008Z",
         two_day_streak=True,
+    ),
+    email=EmailSchema(
+        email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
+        primary_email="mozilla-fan@example.com",
+        basket_token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        name="Fan of Mozilla",
+        mailing_country="ca",
+        email_lang="fr",
+        browser_locale="fr-CA",
+        mofo_relevant=True,
+        signup_source="https://developer.mozilla.org/fr/",
+        pmt_cust_id="cust_012345",
+        subscriber=True,
+        unsubscribe_reason="done with this mailing list",
+        create_timestamp="2010-01-01T08:04:00+00:00",
+        update_timestamp="2020-01-28T14:50:00.000+0000",
     ),
     fpn=ContactFirefoxPrivateNetworkSchema(
         country="Canada",
@@ -143,13 +134,23 @@ SAMPLE_MAXIMAL = ContactSchema(
     ],
 )
 
+
+def _gather_examples(schema_class) -> Dict[str, str]:
+    """Gather the examples from a schema definition"""
+    examples = dict()
+    for key, props in schema_class.schema()["properties"].items():
+        if "example" in props:
+            examples[key] = props["example"]
+    return examples
+
+
 # A sample user that has the OpenAPI schema examples
 SAMPLE_EXAMPLE = ContactSchema(
     amo=ContactAddonsSchema(**ContactAddonsSchema.Config.schema_extra["example"]),
-    contact=ContactMainSchema(**ContactMainSchema.Config.schema_extra["example"]),
     cv=ContactCommonVoiceSchema(
         **ContactCommonVoiceSchema.Config.schema_extra["example"]
     ),
+    email=EmailSchema(**_gather_examples(EmailSchema)),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
     ),
@@ -163,7 +164,7 @@ SAMPLE_EXAMPLE = ContactSchema(
 
 
 SAMPLE_CONTACTS = {
-    SAMPLE_MINIMAL.contact.email_id: SAMPLE_MINIMAL,
-    SAMPLE_MAXIMAL.contact.email_id: SAMPLE_MAXIMAL,
-    SAMPLE_EXAMPLE.contact.email_id: SAMPLE_EXAMPLE,
+    SAMPLE_MINIMAL.email.email_id: SAMPLE_MINIMAL,
+    SAMPLE_MAXIMAL.email.email_id: SAMPLE_MAXIMAL,
+    SAMPLE_EXAMPLE.email.email_id: SAMPLE_EXAMPLE,
 }
