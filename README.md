@@ -18,17 +18,29 @@ The API is read-only with some sample test contacts with fake data:
   - Basket token ``c4a7d759-bb52-457b-896b-90f1d3ef8433``
   - AMO ID: 98765
 
-Next features for the read-only version:
+Next features for v0.5:
 
-* [ ] Review rounds
-* [ ] Flesh out the rest of the read-only API
+* [x] Rename ``contact`` group to ``email``, sync with Acoustic schema
+* [x] Move ``contact_id`` into ``email`` group
+* [x] Drop the ``cv`` (Common Voice) group
+* [x] Drop the ``fsa`` (Firefox Student Ambassador) group
+* [ ] Sync ``amo`` group with Acoustic schema
+* [ ] Sync ``fxa`` group with Acoustic schema
+* [ ] Rename ``vpn`` group to ``vpn_waitlist``, sync with Acoustic schema
+* [ ] Expand ``newsletter`` schema to sync with Acoustic
+* [ ] Add ``employee`` schema
+* [ ] Clarify new/changed fields in "email" group
+  * [ ] Should we have a separate ``email_id`` and ``basket_token``, or merge?
+  * [ ] Should ``basket_token`` be required?
+  * [ ] ``mailing_country``: Was 2-letter lowercase ISO, now 255-character string. Can we constrain?
+  * [ ] ``email_format``: Was "H" or "T", now 2-char. Can we constrain?
+  * [ ] ``email_lang``: Was 2-letter lowercase code, now 3-char string. Can we constrain?
+  * [ ] ``browser_locale``: What kind of data is this?
+  * [ ] ``subscriber``: What does this signify?
+  * [ ] ``unengaged``: What does this signify?
 * [ ] Implement the ``/identity`` APIs with alternate IDs
-
-Future features:
-
-* [ ] Backing database for development
-* [ ] Create / Update / Delete endpoints
-* [ ] Convert template docs to CTMS docs
+* [ ] Your favorite missing feature
+* [ ] All the great features
 
 # Based on containerized-microservice-template
 
