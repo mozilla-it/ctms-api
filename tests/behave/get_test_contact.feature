@@ -45,14 +45,6 @@ Feature: Getting the test user's information works
           "country": null,
           "platform": null
         },
-        "fsa": {
-          "allow_share": null,
-          "city": null,
-          "current_status": null,
-          "grad_year": null,
-          "major": null,
-          "school": null
-        },
         "fxa": {
           "create_date": null,
           "deleted": null,
@@ -109,14 +101,6 @@ Feature: Getting the test user's information works
         "fpn": {
           "country": "Canada",
           "platform": "Windows"
-        },
-        "fsa": {
-          "allow_share": false,
-          "city": "Montreal",
-          "current_status": "Graduate",
-          "grad_year": 2011,
-          "major": "Library & Information Management",
-          "school": "McGill University"
         },
         "fxa": {
           "create_date": "2019-05-22T08:29:31.906094+00:00",
@@ -218,14 +202,6 @@ Feature: Getting the test user's information works
         "fpn": {
           "country": "France",
           "platform": "Chrome"
-        },
-        "fsa": {
-          "allow_share": true,
-          "city": "Dehradun",
-          "current_status": "Student",
-          "grad_year": 2012,
-          "major": "Computer Science",
-          "school": "DIT University, Makkawala, Salon gaon, Dehradun"
         },
         "fxa": {
           "create_date": "2021-01-29T18:43:49.082375+00:00",
@@ -349,23 +325,6 @@ Feature: Getting the test user's information works
       }
       """
 
-  Scenario: User wants to read the FSA data for the minimal contact
-    Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/fsa/(email_id)
-    When the user invokes the client via GET
-    Then the user expects the response to have a status of 200
-    And the response JSON is
-      """
-      {
-        "allow_share": null,
-        "city": null,
-        "current_status": null,
-        "grad_year": null,
-        "major": null,
-        "school": null
-      }
-      """
-
   Scenario: User wants to read the FXA data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
     And the desired endpoint /contact/fxa/(email_id)
@@ -402,5 +361,4 @@ Feature: Getting the test user's information works
       | contact/amo     |
       | contact/email   |
       | contact/fpn     |
-      | contact/fsa     |
       | contact/fxa     |

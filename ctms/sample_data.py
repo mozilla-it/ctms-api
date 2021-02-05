@@ -5,7 +5,6 @@ from .models import (
     ContactAddonsSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
-    ContactFirefoxStudentAmbassadorSchema,
     ContactSchema,
     EmailSchema,
 )
@@ -57,14 +56,6 @@ SAMPLE_MAXIMAL = ContactSchema(
     fpn=ContactFirefoxPrivateNetworkSchema(
         country="Canada",
         platform="Windows",
-    ),
-    fsa=ContactFirefoxStudentAmbassadorSchema(
-        allow_share=False,
-        city="Montreal",
-        current_status="Graduate",
-        grad_year=2011,
-        major="Library & Information Management",
-        school="McGill University",
     ),
     fxa=ContactFirefoxAccountsSchema(
         create_date="2019-05-22T08:29:31.906094+00:00",
@@ -141,9 +132,6 @@ SAMPLE_EXAMPLE = ContactSchema(
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
-    ),
-    fsa=ContactFirefoxStudentAmbassadorSchema(
-        **ContactFirefoxStudentAmbassadorSchema.Config.schema_extra["example"]
     ),
     fxa=ContactFirefoxAccountsSchema(
         **ContactFirefoxAccountsSchema.Config.schema_extra["example"]
