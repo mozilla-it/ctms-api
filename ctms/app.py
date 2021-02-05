@@ -6,9 +6,10 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .crud import get_contact_by_email_id
+from .crud import create_email, get_contact_by_email_id
 from .db import SessionLocal, engine
 from .models import Base as ModelBase
 from .schemas import (
@@ -22,7 +23,25 @@ from .schemas import (
     NotFoundResponse,
 )
 
+### TODO: temporary until we have migrations, etc ###
 ModelBase.metadata.create_all(bind=engine)
+
+try:
+    create_email(
+        SessionLocal(),
+        EmailSchema(
+            basket_token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
+            create_timestamp="2014-01-22T15:24:00+00:00",
+            email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
+            mailing_country="us",
+            primary_email="ctms-user@example.com",
+            update_timestamp="2020-01-22T15:24:00.000+0000",
+        ),
+    )
+except IntegrityError:
+    print("Demo data already loaded")
+
+#####################################################
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
