@@ -2,7 +2,7 @@ from typing import Dict
 from uuid import UUID
 
 from .models import (
-    ContactAddonsSchema,
+    AddOnsSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactSchema,
@@ -29,13 +29,19 @@ SAMPLE_MINIMAL = ContactSchema(
 
 # A contact that has all of the fields set
 SAMPLE_MAXIMAL = ContactSchema(
-    amo=ContactAddonsSchema(
+    amo=AddOnsSchema(
+        add_on_ids="fanfox,foxfan",
         display_name="#1 Mozilla Fan",
-        homepage="https://www.mozilla.org/en-US/firefox/new/",
-        id=123,
+        email_opt_in=True,
+        language="fr,en",
         last_login="2020-01-27T14:21:00.000+0000",
-        location="The Internet",
+        location="The Inter",
+        profile_url="firefox/user/14508209",
         user=True,
+        user_id="123",
+        username="Mozilla1Fan",
+        create_timestamp="2017-05-12T15:16:00+00:00",
+        update_timestamp="2020-01-27T14:25:43+00:00",
     ),
     email=EmailSchema(
         email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
@@ -128,7 +134,7 @@ def _gather_examples(schema_class) -> Dict[str, str]:
 
 # A sample user that has the OpenAPI schema examples
 SAMPLE_EXAMPLE = ContactSchema(
-    amo=ContactAddonsSchema(**ContactAddonsSchema.Config.schema_extra["example"]),
+    amo=AddOnsSchema(**_gather_examples(AddOnsSchema)),
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]

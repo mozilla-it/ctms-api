@@ -11,24 +11,49 @@ The API is read-only with some sample test contacts with fake data:
   sample contact with all data:
   - email ``mozilla-fan@example.com``
   - Basket token ``d9ba6182-f5dd-4728-a477-2cc11bf62b69``
-  - AMO ID: 123
+  - AMO User ID: ``123``
   - Payee ID: ``cust_012345``
 * [332de237-cab7-4461-bcc3-48e68f42bd5c](http://ctms-api.api.data.allizom.org/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c):
   - email ``contact@example.com``
   - Basket token ``c4a7d759-bb52-457b-896b-90f1d3ef8433``
-  - AMO ID: 98765
+  - AMO User ID: ``98765``
 
-Next features for the read-only version:
+Next features for v0.5:
 
-* [ ] Review rounds
-* [ ] Flesh out the rest of the read-only API
+* [x] Rename ``contact`` group to ``email``, sync with Acoustic schema
+* [x] Move ``contact_id`` into ``email`` group
+* [x] Drop the ``cv`` (Common Voice) group
+* [x] Drop the ``fsa`` (Firefox Student Ambassador) group
+* [x] Sync ``amo`` group with Acoustic schema
+* [ ] Sync ``fxa`` group with Acoustic schema
+* [ ] Rename ``vpn`` group to ``vpn_waitlist``, sync with Acoustic schema
+* [ ] Expand ``newsletter`` schema to sync with Acoustic
+* [ ] Add ``employee`` schema
+* [ ] Add ``acoustic_sync`` schema
+* [ ] Clarify new/changed fields in ``email`` group
+  * [ ] Should we have a separate ``email_id`` and ``basket_token``, or merge?
+  * [ ] Should ``basket_token`` be required?
+  * [ ] ``mailing_country``: Was 2-letter lowercase ISO, now 255-character string. Can we constrain?
+  * [ ] ``email_format``: Was "H" or "T", now 2-char. Can we constrain?
+  * [ ] ``email_lang``: Was 2-letter lowercase code, now 3-char string. Can we constrain?
+  * [ ] ``browser_locale``: What kind of data is this?
+  * [ ] ``subscriber``: What does this signify?
+  * [ ] ``unengaged``: What does this signify?
+* [ ] Clarify new/changed fields in ``amo`` group:
+  * [ ] ``add_on_ids``: What does a valid value look like?
+  * [ ] ``last_login``: What does a valid value look like?
+  * [ ] ``location``: What does a valid valid look like? On site, they are "Potsdam, Germany"
+  * [ ] ``profile_url``: What does a valid value look like? Why this and not homepage?
+  * [ ] ``user_id``: Is this a string version of an int?
 * [ ] Implement the ``/identity`` APIs with alternate IDs
-
-Future features:
-
-* [ ] Backing database for development
-* [ ] Create / Update / Delete endpoints
-* [ ] Convert template docs to CTMS docs
+* [ ] Implement ``/ctms`` lookup with alternate IDs
+* [ ] Add a database backend
+* [ ] Implement Create / Update / Upsert methods
+* [ ] Implement Delete method
+* [ ] Select API authorization method
+* [ ] Implement API authorization
+* [ ] Your favorite missing feature
+* [ ] All the great features
 
 # Based on containerized-microservice-template
 

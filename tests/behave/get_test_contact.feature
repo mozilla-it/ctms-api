@@ -15,12 +15,18 @@ Feature: Getting the test user's information works
       """
       {
         "amo": {
+          "add_on_ids": null,
+          "create_timestamp": null,
           "display_name": null,
-          "homepage": null,
-          "id": null,
+          "email_opt_in": false,
+          "language": null,
           "last_login": null,
           "location": null,
-          "user": false
+          "profile_url": null,
+          "update_timestamp": null,
+          "user": false,
+          "user_id": null,
+          "username": null
         },
         "email": {
           "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
@@ -72,12 +78,18 @@ Feature: Getting the test user's information works
       """
       {
         "amo": {
+          "add_on_ids": "fanfox,foxfan",
+          "create_timestamp": "2017-05-12T15:16:00+00:00",
           "display_name": "#1 Mozilla Fan",
-          "homepage": "https://www.mozilla.org/en-US/firefox/new/",
-          "id": 123,
-          "last_login": "2020-01-27T14:21:00+00:00",
-          "location": "The Internet",
-          "user": true
+          "email_opt_in": true,
+          "language": "fr,en",
+          "last_login": "2020-01-27T14:21:00.000+0000",
+          "location": "The Inter",
+          "profile_url": "firefox/user/14508209",
+          "update_timestamp": "2020-01-27T14:25:43+00:00",
+          "user": true,
+          "user_id": "123",
+          "username": "Mozilla1Fan"
         },
         "email": {
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
@@ -173,12 +185,18 @@ Feature: Getting the test user's information works
       """
       {
         "amo": {
+          "add_on_ids": "add-on-1,add-on-2",
+          "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
           "display_name": "Add-ons Author",
-          "homepage": "https://my-mozilla-addon.example.org/",
-          "id": 98765,
-          "last_login": "2021-01-28T19:21:50.908000+00:00",
-          "location": "California, USA, Earth",
-          "user": true
+          "email_opt_in": false,
+          "language": "en",
+          "last_login": "2021-01-28T19:21:50.908Z",
+          "location": "California",
+          "profile_url": "firefox/user/98765",
+          "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+          "user": true,
+          "user_id": "98765",
+          "username": "AddOnAuthor"
         },
         "email": {
           "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
@@ -227,7 +245,7 @@ Feature: Getting the test user's information works
         "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
         "primary_email": "ctms-user@example.com",
         "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
-        "amo_id": null,
+        "amo_user_id": null,
         "fxa_id": null,
         "fxa_primary_email": null
       }
@@ -243,7 +261,7 @@ Feature: Getting the test user's information works
       {
         "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
         "primary_email": "mozilla-fan@example.com",
-        "amo_id": 123,
+        "amo_user_id": "123",
         "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
         "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
         "fxa_primary_email": "fxa-firefox-fan@example.com"
@@ -260,7 +278,7 @@ Feature: Getting the test user's information works
       {
         "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
         "primary_email": "contact@example.com",
-        "amo_id": 98765,
+        "amo_user_id": "98765",
         "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
         "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
         "fxa_primary_email": "my-fxa-acct@example.com"
@@ -303,12 +321,18 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
+        "add_on_ids": null,
+        "create_timestamp": null,
         "display_name": null,
-        "homepage": null,
-        "id": null,
+        "email_opt_in": false,
+        "language": null,
         "last_login": null,
         "location": null,
-        "user": false
+        "profile_url": null,
+        "update_timestamp": null,
+        "user": false,
+        "user_id": null,
+        "username": null
       }
       """
 
