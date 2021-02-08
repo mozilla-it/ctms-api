@@ -11,7 +11,7 @@ class ContactSchema(BaseModel):
     amo: Optional["AddOnsSchema"] = None
     email: Optional["EmailSchema"] = None
     fpn: Optional["ContactFirefoxPrivateNetworkSchema"] = None
-    fxa: Optional["ContactFirefoxAccountsSchema"] = None
+    fxa: Optional["FirefoxAccountsSchema"] = None
     newsletters: List[str] = []
 
     def as_identity_response(self) -> "IdentityResponse":
@@ -20,7 +20,7 @@ class ContactSchema(BaseModel):
             amo_user_id=getattr(self.amo, "user_id", None),
             basket_token=getattr(self.email, "basket_token", None),
             email_id=self.email.email_id,
-            fxa_id=getattr(self.fxa, "id", None),
+            fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
             primary_email=getattr(self.email, "primary_email", None),
         )
@@ -216,47 +216,44 @@ class ContactFirefoxPrivateNetworkSchema(BaseModel):
         }
 
 
-class ContactFirefoxAccountsSchema(BaseModel):
+class FirefoxAccountsSchema(BaseModel):
     """The Firefox Account schema."""
 
-    create_date: Optional[datetime] = Field(
+    fxa_id: Optional[str] = Field(
+        default=None,
+        description="Firefox Accounts foreign ID, FxA_Id__c in Salesforce",
+        max_length=50,
+        example="6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+    )
+    primary_email: Optional[EmailStr] = Field(
+        default=None,
+        description="FxA Email, can be foreign ID, FxA_Primary_Email__c in Salesforce",
+        example="my-fxa-acct@example.com",
+    )
+    created_date: Optional[str] = Field(
         default=None,
         description="Source is unix timestamp, FxA_Created_Date__c in Salesforce",
+        example="2021-01-29T18:43:49.082375+00:00",
     )
-    deleted: Optional[bool] = Field(
+    lang: Optional[str] = Field(
         default=None,
+        max_length=10,
+        description="FxA Locale, FxA_Language__c in Salesforce",
+        example="en,en-US",
+    )
+    first_service: Optional[str] = Field(
+        default=None,
+        max_length=50,
+        description="First service that an FxA user used, FirstService__c in Salesforce",
+        example="sync",
+    )
+    deleted: bool = Field(
+        default=False,
         description=(
             "Set to True when FxA account deleted or dupe,"
             " FxA_Account_Deleted__c in Salesforce"
         ),
     )
-    id: Optional[str] = Field(
-        default=None, description="Firefox Accounts foreign ID, FxA_Id__c in Salesforce"
-    )
-    lang: Optional[str] = Field(
-        default=None,
-        description="FxA Locale like 'en,en-US', FxA_Language__c in Salesforce",
-    )
-    primary_email: Optional[str] = Field(
-        default=None,
-        description="FxA Email, can be foreign ID, FxA_Primary_Email__c in Salesforce",
-    )
-    service: Optional[str] = Field(
-        default=None,
-        description="First service that an FxA user used, FirstService__c in Salesforce",
-    )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "create_date": "2021-01-29T18:43:49.082375+00:00",
-                "deleted": None,
-                "id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
-                "lang": "en,en-US",
-                "primary_email": "my-fxa-acct@example.com",
-                "service": "sync",
-            }
-        }
 
 
 ContactSchema.update_forward_refs()
@@ -268,7 +265,7 @@ class CTMSResponse(BaseModel):
     amo: AddOnsSchema
     email: EmailSchema
     fpn: ContactFirefoxPrivateNetworkSchema
-    fxa: ContactFirefoxAccountsSchema
+    fxa: FirefoxAccountsSchema
     newsletters: List[str] = Field(
         default=[],
         description="List of identifiers for newsletters for which the contact is subscribed",

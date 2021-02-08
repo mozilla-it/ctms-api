@@ -3,10 +3,10 @@ from uuid import UUID
 
 from .schemas import (
     AddOnsSchema,
-    ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
     ContactSchema,
     EmailSchema,
+    FirefoxAccountsSchema,
 )
 
 # A contact that has just some of the fields entered
@@ -63,12 +63,12 @@ SAMPLE_MAXIMAL = ContactSchema(
         country="Canada",
         platform="Windows",
     ),
-    fxa=ContactFirefoxAccountsSchema(
-        create_date="2019-05-22T08:29:31.906094+00:00",
-        id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+    fxa=FirefoxAccountsSchema(
+        created_date="2019-05-22T08:29:31.906094+00:00",
+        fxa_id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
         lang="fr,fr-CA",
         primary_email="fxa-firefox-fan@example.com",
-        service="monitor",
+        first_service="monitor",
     ),
     newsletters=[
         "about-addons",
@@ -139,9 +139,7 @@ SAMPLE_EXAMPLE = ContactSchema(
     fpn=ContactFirefoxPrivateNetworkSchema(
         **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
     ),
-    fxa=ContactFirefoxAccountsSchema(
-        **ContactFirefoxAccountsSchema.Config.schema_extra["example"]
-    ),
+    fxa=FirefoxAccountsSchema(**_gather_examples(FirefoxAccountsSchema)),
 )
 
 

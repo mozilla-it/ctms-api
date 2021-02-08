@@ -52,12 +52,12 @@ Feature: Getting the test user's information works
           "platform": null
         },
         "fxa": {
-          "create_date": null,
-          "deleted": null,
-          "id": null,
+          "created_date": null,
+          "deleted": false,
+          "first_service": null,
+          "fxa_id": null,
           "lang": null,
-          "primary_email": null,
-          "service": null
+          "primary_email": null
         },
         "newsletters": [
             "app-dev",
@@ -115,12 +115,12 @@ Feature: Getting the test user's information works
           "platform": "Windows"
         },
         "fxa": {
-          "create_date": "2019-05-22T08:29:31.906094+00:00",
-          "deleted": null,
-          "id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "created_date": "2019-05-22T08:29:31.906094+00:00",
+          "deleted": false,
+          "first_service": "monitor",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
           "lang": "fr,fr-CA",
-          "primary_email": "fxa-firefox-fan@example.com",
-          "service": "monitor"
+          "primary_email": "fxa-firefox-fan@example.com"
         },
         "newsletters": [
             "about-addons",
@@ -222,12 +222,12 @@ Feature: Getting the test user's information works
           "platform": "Chrome"
         },
         "fxa": {
-          "create_date": "2021-01-29T18:43:49.082375+00:00",
-          "deleted": null,
-          "id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+          "created_date": "2021-01-29T18:43:49.082375+00:00",
+          "deleted": false,
+          "first_service": "sync",
+          "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
           "lang": "en,en-US",
-          "primary_email": "my-fxa-acct@example.com",
-          "service": "sync"
+          "primary_email": "my-fxa-acct@example.com"
         },
         "newsletters": [],
         "status": "ok"
@@ -357,12 +357,12 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "create_date": null,
-        "deleted": null,
-        "id": null,
+        "created_date": null,
+        "deleted": false,
+        "first_service": null,
+        "fxa_id": null,
         "lang": null,
-        "primary_email": null,
-        "service": null
+        "primary_email": null
       }
       """
 
