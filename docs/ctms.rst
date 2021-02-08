@@ -12,10 +12,10 @@ ctms.app module
    :undoc-members:
    :show-inheritance:
 
-ctms.models module
+ctms.schemas module
 ------------------
 
-.. automodule:: ctms.models
+.. automodule:: ctms.schemas
    :members:
    :undoc-members:
    :show-inheritance:

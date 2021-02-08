@@ -7,7 +7,8 @@ from fastapi import FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
 
-from .models import (
+from .sample_data import SAMPLE_CONTACTS
+from .schemas import (
     AddOnsSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
@@ -17,7 +18,6 @@ from .models import (
     IdentityResponse,
     NotFoundResponse,
 )
-from .sample_data import SAMPLE_CONTACTS
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
@@ -26,7 +26,7 @@ app = FastAPI(
 )
 
 
-async def get_contact_or_404(email_id) -> ContactSchema:
+def get_contact_or_404(email_id) -> ContactSchema:
     """
     Get a contact by email_ID, or raise a 404 exception.
 
@@ -39,7 +39,7 @@ async def get_contact_or_404(email_id) -> ContactSchema:
 
 
 @app.get("/", include_in_schema=False)
-async def root():
+def root():
     """GET via root redirects to /docs.
 
     - Args:
@@ -58,8 +58,8 @@ async def root():
     responses={404: {"model": NotFoundResponse}},
     tags=["Public"],
 )
-async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
-    contact = await get_contact_or_404(email_id)
+def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
+    contact = get_contact_or_404(email_id)
     return CTMSResponse(
         amo=contact.amo or AddOnsSchema(),
         email=contact.email or EmailSchema(),
@@ -77,8 +77,8 @@ async def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_identity(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
+def read_identity(email_id: UUID = Path(..., title="The email ID")):
+    contact = get_contact_or_404(email_id)
     return contact.as_identity_response()
 
 
@@ -89,8 +89,8 @@ async def read_identity(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
+def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
+    contact = get_contact_or_404(email_id)
     return contact.email or EmailSchema()
 
 
@@ -101,8 +101,8 @@ async def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
+def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
+    contact = get_contact_or_404(email_id)
     return contact.amo or AddOnsSchema()
 
 
@@ -113,8 +113,8 @@ async def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
+def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
+    contact = get_contact_or_404(email_id)
     return contact.fpn or ContactFirefoxPrivateNetworkSchema()
 
 
@@ -125,15 +125,15 @@ async def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-async def read_contact_fxa(email_id: UUID = Path(..., title="The email ID")):
-    contact = await get_contact_or_404(email_id)
+def read_contact_fxa(email_id: UUID = Path(..., title="The email ID")):
+    contact = get_contact_or_404(email_id)
     return contact.fxa or ContactFirefoxAccountsSchema()
 
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a
 # better proxy for application availability as opposed to health.
 @app.get("/health", tags=["Platform"])
-async def health():
+def health():
     return {"health": "OK"}, 200
 
 
