@@ -10,13 +10,13 @@ from pydantic import EmailStr
 from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
     AddOnsSchema,
-    ContactFirefoxPrivateNetworkSchema,
     ContactSchema,
     CTMSResponse,
     EmailSchema,
     FirefoxAccountsSchema,
     IdentityResponse,
     NotFoundResponse,
+    VpnWaitlistSchema,
 )
 
 app = FastAPI(
@@ -63,9 +63,9 @@ def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     return CTMSResponse(
         amo=contact.amo or AddOnsSchema(),
         email=contact.email or EmailSchema(),
-        fpn=contact.fpn or ContactFirefoxPrivateNetworkSchema(),
         fxa=contact.fxa or FirefoxAccountsSchema(),
         newsletters=contact.newsletters or [],
+        vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
         status="ok",
     )
 
@@ -107,15 +107,15 @@ def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
 
 
 @app.get(
-    "/contact/fpn/{email_id}",
-    summary="Get contact's Firefox Private Network details",
-    response_model=ContactFirefoxPrivateNetworkSchema,
+    "/contact/vpn_waitlist/{email_id}",
+    summary="Get contact's Mozilla VPN Waitlist details",
+    response_model=VpnWaitlistSchema,
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
 def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
     contact = get_contact_or_404(email_id)
-    return contact.fpn or ContactFirefoxPrivateNetworkSchema()
+    return contact.vpn_waitlist or VpnWaitlistSchema()
 
 
 @app.get(

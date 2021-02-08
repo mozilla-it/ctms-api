@@ -3,10 +3,10 @@ from uuid import UUID
 
 from .schemas import (
     AddOnsSchema,
-    ContactFirefoxPrivateNetworkSchema,
     ContactSchema,
     EmailSchema,
     FirefoxAccountsSchema,
+    VpnWaitlistSchema,
 )
 
 # A contact that has just some of the fields entered
@@ -58,10 +58,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         unsubscribe_reason="done with this mailing list",
         create_timestamp="2010-01-01T08:04:00+00:00",
         update_timestamp="2020-01-28T14:50:00.000+0000",
-    ),
-    fpn=ContactFirefoxPrivateNetworkSchema(
-        country="Canada",
-        platform="Windows",
     ),
     fxa=FirefoxAccountsSchema(
         created_date="2019-05-22T08:29:31.906094+00:00",
@@ -120,6 +116,10 @@ SAMPLE_MAXIMAL = ContactSchema(
         "view-source-conference-north-america",
         "webmaker",
     ],
+    vpn_waitlist=VpnWaitlistSchema(
+        geo="ca",
+        platform="windows,android",
+    ),
 )
 
 
@@ -136,10 +136,8 @@ def _gather_examples(schema_class) -> Dict[str, str]:
 SAMPLE_EXAMPLE = ContactSchema(
     amo=AddOnsSchema(**_gather_examples(AddOnsSchema)),
     email=EmailSchema(**_gather_examples(EmailSchema)),
-    fpn=ContactFirefoxPrivateNetworkSchema(
-        **ContactFirefoxPrivateNetworkSchema.Config.schema_extra["example"]
-    ),
     fxa=FirefoxAccountsSchema(**_gather_examples(FirefoxAccountsSchema)),
+    vpn_waitlist=VpnWaitlistSchema(**_gather_examples(VpnWaitlistSchema)),
 )
 
 
