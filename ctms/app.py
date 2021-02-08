@@ -7,7 +7,8 @@ from fastapi import FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
 
-from .models import (
+from .sample_data import SAMPLE_CONTACTS
+from .schemas import (
     AddOnsSchema,
     ContactFirefoxAccountsSchema,
     ContactFirefoxPrivateNetworkSchema,
@@ -17,7 +18,6 @@ from .models import (
     IdentityResponse,
     NotFoundResponse,
 )
-from .sample_data import SAMPLE_CONTACTS
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
