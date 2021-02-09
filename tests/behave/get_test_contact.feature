@@ -47,10 +47,6 @@ Feature: Getting the test user's information works
           "unsubscribe_reason": null,
           "update_timestamp": "2020-01-22T15:24:00+00:00"
         },
-        "fpn": {
-          "country": null,
-          "platform": null
-        },
         "fxa": {
           "created_date": null,
           "deleted": false,
@@ -65,7 +61,11 @@ Feature: Getting the test user's information works
             "mozilla-foundation",
             "mozilla-learning-network"
         ],
-        "status": "ok"
+        "status": "ok",
+        "vpn_waitlist": {
+          "geo": null,
+          "platform": null
+        }
       }
       """
 
@@ -109,10 +109,6 @@ Feature: Getting the test user's information works
           "unengaged": false,
           "unsubscribe_reason": "done with this mailing list",
           "update_timestamp": "2020-01-28T14:50:00+00:00"
-        },
-        "fpn": {
-          "country": "Canada",
-          "platform": "Windows"
         },
         "fxa": {
           "created_date": "2019-05-22T08:29:31.906094+00:00",
@@ -172,7 +168,11 @@ Feature: Getting the test user's information works
             "view-source-conference-north-america",
             "webmaker"
         ],
-        "status": "ok"
+        "status": "ok",
+        "vpn_waitlist": {
+          "geo": "ca",
+          "platform": "windows,android"
+        }
       }
       """
 
@@ -217,10 +217,6 @@ Feature: Getting the test user's information works
           "unsubscribe_reason": null,
           "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
         },
-        "fpn": {
-          "country": "France",
-          "platform": "Chrome"
-        },
         "fxa": {
           "created_date": "2021-01-29T18:43:49.082375+00:00",
           "deleted": false,
@@ -230,7 +226,11 @@ Feature: Getting the test user's information works
           "primary_email": "my-fxa-acct@example.com"
         },
         "newsletters": [],
-        "status": "ok"
+        "status": "ok",
+        "vpn_waitlist": {
+          "geo": "fr",
+          "platform": "ios,mac"
+        }
       }
       """
 
@@ -336,15 +336,15 @@ Feature: Getting the test user's information works
       }
       """
 
-  Scenario: User wants to read the FPN data for the minimal contact
+  Scenario: User wants to read the VPN waitlist data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
-    And the desired endpoint /contact/fpn/(email_id)
+    And the desired endpoint /contact/vpn_waitlist/(email_id)
     When the user invokes the client via GET
     Then the user expects the response to have a status of 200
     And the response JSON is
       """
       {
-        "country": null,
+        "geo": null,
         "platform": null
       }
       """
@@ -384,5 +384,5 @@ Feature: Getting the test user's information works
       | identity        |
       | contact/amo     |
       | contact/email   |
-      | contact/fpn     |
       | contact/fxa     |
+      | contact/vpn_waitlist |

@@ -10,9 +10,9 @@ class ContactSchema(BaseModel):
 
     amo: Optional["AddOnsSchema"] = None
     email: Optional["EmailSchema"] = None
-    fpn: Optional["ContactFirefoxPrivateNetworkSchema"] = None
     fxa: Optional["FirefoxAccountsSchema"] = None
     newsletters: List[str] = []
+    vpn_waitlist: Optional["VpnWaitlistSchema"] = None
 
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
@@ -188,32 +188,29 @@ class EmailSchema(BaseModel):
     )
 
 
-class ContactFirefoxPrivateNetworkSchema(BaseModel):
+class VpnWaitlistSchema(BaseModel):
     """
-    The Firefox Private Network schema.
+    The Mozilla VPN Waitlist schema.
 
-    These fields are present in Basket but might not be in SFDC.
-    Requested in https://github.com/mozmeao/basket/issues/384
+    This was previously the Firefox Private Network (fpn) waitlist data,
+    with a similar purpose.
     """
 
-    country: Optional[str] = Field(
+    geo: Optional[str] = Field(
         default=None,
-        max_length=120,
-        description="FPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
+        max_length=100,
+        description="VPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
+        example="fr",
     )
     platform: Optional[str] = Field(
         default=None,
-        max_length=120,
-        description="FPRM waitlist, FPN_Waitlist_Platform__c in Salesforce",
+        max_length=100,
+        description=(
+            "VPN waitlist platforms as comma-separated list,"
+            " FPN_Waitlist_Platform__c in Salesforce"
+        ),
+        example="ios,mac",
     )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "country": "France",
-                "platform": "Chrome",
-            }
-        }
 
 
 class FirefoxAccountsSchema(BaseModel):
@@ -264,7 +261,6 @@ class CTMSResponse(BaseModel):
 
     amo: AddOnsSchema
     email: EmailSchema
-    fpn: ContactFirefoxPrivateNetworkSchema
     fxa: FirefoxAccountsSchema
     newsletters: List[str] = Field(
         default=[],
@@ -274,6 +270,7 @@ class CTMSResponse(BaseModel):
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
     )
+    vpn_waitlist: VpnWaitlistSchema
 
 
 class IdentityResponse(BaseModel):
