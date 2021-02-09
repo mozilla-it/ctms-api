@@ -27,7 +27,7 @@ from .schemas import (
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="0.4.0",
+    version="0.5.0",
 )
 
 
