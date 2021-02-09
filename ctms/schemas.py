@@ -256,8 +256,7 @@ class FirefoxAccountsSchema(BaseModel):
 class NewsletterSchema(BaseModel):
     """The newsletter subscriptions schema."""
 
-    name: Optional[str] = Field(
-        default=None,
+    name: str = Field(
         description="Basket slug for the newsletter",
         example="mozilla-welcome",
     )
