@@ -149,7 +149,7 @@ class EmailSchema(BaseModel):
     )
     email_lang: Optional[str] = Field(
         default="en",
-        max_length=3,
+        max_length=2,
         description="Email language code, 2 lowercase letters, Email_Language__c in Salesforce",
     )
     mofo_relevant: bool = Field(
