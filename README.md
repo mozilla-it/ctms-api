@@ -25,11 +25,10 @@ Next features for v0.5:
 * [x] Drop the ``cv`` (Common Voice) group
 * [x] Drop the ``fsa`` (Firefox Student Ambassador) group
 * [x] Sync ``amo`` group with Acoustic schema
-* [ ] Sync ``fxa`` group with Acoustic schema
-* [ ] Rename ``vpn`` group to ``vpn_waitlist``, sync with Acoustic schema
-* [ ] Expand ``newsletter`` schema to sync with Acoustic
+* [x] Sync ``fxa`` group with Acoustic schema
+* [x] Rename ``vpn`` group to ``vpn_waitlist``, sync with Acoustic schema
+* [x] Expand ``newsletter`` schema to sync with Acoustic
 * [ ] Add ``employee`` schema
-* [ ] Add ``acoustic_sync`` schema
 * [ ] Clarify new/changed fields in ``email`` group
   * [ ] Should we have a separate ``email_id`` and ``basket_token``, or merge?
   * [ ] Should ``basket_token`` be required?
@@ -40,14 +39,15 @@ Next features for v0.5:
   * [ ] ``subscriber``: What does this signify?
   * [x] ``unengaged``: What does this signify?
 * [ ] Clarify new/changed fields in ``amo`` group:
-  * [ ] ``add_on_ids``: What does a valid value look like?
+  * [x] ``add_on_ids``: What does a valid value look like?
   * [ ] ``last_login``: What does a valid value look like?
   * [ ] ``location``: What does a valid valid look like? On site, they are "Potsdam, Germany"
   * [ ] ``profile_url``: What does a valid value look like? Why this and not homepage?
-  * [ ] ``user_id``: Is this a string version of an int?
+  * [ ] ``user_id``: Is this a string version of an int? Can we make int?
 * [ ] Implement the ``/identity`` APIs with alternate IDs
 * [ ] Implement ``/ctms`` lookup with alternate IDs
 * [x] Add a database backend
+* [ ] Add ``acoustic_sync`` model
 * [ ] Implement Create / Update / Upsert methods
 * [ ] Implement Delete method
 * [ ] Select API authorization method
