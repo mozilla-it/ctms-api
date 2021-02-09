@@ -23,6 +23,7 @@ class ContactSchema(BaseModel):
             fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
             primary_email=getattr(self.email, "primary_email", None),
+            sfdc_id=getattr(self.email, "sfdc_id", None),
         )
 
 
@@ -123,6 +124,12 @@ class EmailSchema(BaseModel):
         ...,
         description="Basket token, Token__c in Salesforce",
         example="c4a7d759-bb52-457b-896b-90f1d3ef8433",
+    )
+    sfdc_id: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Salesforce legacy ID, Id in Salesforce",
+        example="001A000023aABcDEFG",
     )
     name: Optional[str] = Field(
         default=None,
@@ -306,6 +313,7 @@ class IdentityResponse(BaseModel):
     email_id: UUID
     primary_email: EmailStr
     basket_token: UUID
+    sfdc_id: Optional[str] = None
     amo_user_id: Optional[str] = None
     fxa_id: Optional[str] = None
     fxa_primary_email: Optional[EmailStr] = None

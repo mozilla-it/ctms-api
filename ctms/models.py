@@ -11,6 +11,7 @@ class Email(Base):
     email_id = Column(UUID(as_uuid=True), primary_key=True)
     primary_email = Column(String(255), unique=True, nullable=False)
     basket_token = Column(String(255), unique=True)
+    sfdc_id = Column(String(255))
     name = Column(String(255))
     mailing_country = Column(String(255))
     email_format = Column(String(1))
