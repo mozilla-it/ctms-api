@@ -294,7 +294,7 @@ class CTMSResponse(BaseModel):
     fxa: FirefoxAccountsSchema
     newsletters: List[NewsletterSchema] = Field(
         default=[],
-        description="List of identifiers for newsletters for which the contact is subscribed",
+        description="List of newsletters for which the contact is or was subscribed",
         example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
     )
     status: Literal["ok"] = Field(
