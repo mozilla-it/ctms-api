@@ -56,10 +56,38 @@ Feature: Getting the test user's information works
           "primary_email": null
         },
         "newsletters": [
-            "app-dev",
-            "maker-party",
-            "mozilla-foundation",
-            "mozilla-learning-network"
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "app-dev",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "maker-party",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "mozilla-foundation",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "mozilla-learning-network",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          }
         ],
         "status": "ok",
         "vpn_waitlist": {
@@ -119,54 +147,62 @@ Feature: Getting the test user's information works
           "primary_email": "fxa-firefox-fan@example.com"
         },
         "newsletters": [
-            "about-addons",
-            "about-mozilla",
-            "ambassadors",
-            "app-dev",
-            "common-voice",
-            "connected-devices",
-            "developer-events",
-            "firefox-accounts-journey",
-            "firefox-desktop",
-            "firefox-friends",
-            "firefox-ios",
-            "firefox-os",
-            "firefox-welcome",
-            "game-developer-conference",
-            "get-involved",
-            "guardian-vpn-waitlist",
-            "hubs",
-            "inhuman",
-            "internet-health-report",
-            "ios-beta-test-flight",
-            "knowledge-is-power",
-            "maker-party",
-            "member-comm",
-            "member-idealo",
-            "member-tech",
-            "member-tk",
-            "miti",
-            "mixed-reality",
-            "mobile",
-            "mozilla-and-you",
-            "mozilla-fellowship-awardee-alumni",
-            "mozilla-festival",
-            "mozilla-foundation",
-            "mozilla-general",
-            "mozilla-leadership-network",
-            "mozilla-learning-network",
-            "mozilla-phone",
-            "mozilla-technology",
-            "mozilla-welcome",
-            "mozillians-nda",
-            "open-innovation-challenge",
-            "open-leadership",
-            "shape-web",
-            "take-action-for-the-internet",
-            "test-pilot",
-            "view-source-conference-global",
-            "view-source-conference-north-america",
-            "webmaker"
+            {
+              "format": "H",
+              "lang": "en",
+              "name": "ambassadors",
+              "source": "https://www.mozilla.org/en-US/contribute/studentambassadors/",
+              "subscribed": false,
+              "unsub_reason": "Graduated, don't have time for FSA"
+            },
+            {
+              "format": "T",
+              "lang": "fr",
+              "name": "common-voice",
+              "source": "https://commonvoice.mozilla.org/fr",
+              "subscribed": true,
+              "unsub_reason": null
+            },
+            {
+              "format": "H",
+              "lang": "fr",
+              "name": "firefox-accounts-journey",
+              "source": "https://www.mozilla.org/fr/firefox/accounts/",
+              "subscribed": false,
+              "unsub_reason": "done with this mailing list"
+            },
+            {
+              "format": "H",
+              "lang": "en",
+              "name": "firefox-os",
+              "source": null,
+              "subscribed": true,
+              "unsub_reason": null
+            },
+            {
+              "format": "H",
+              "lang": "fr",
+              "name": "hubs",
+              "source": null,
+              "subscribed": true,
+              "unsub_reason": null
+            },
+            {
+              "format": "H",
+              "lang": "en",
+              "name": "mozilla-festival",
+              "source": null,
+              "subscribed": true,
+              "unsub_reason": null
+            },
+            {
+              "format": "H",
+              "lang": "fr",
+              "name": "mozilla-foundation",
+              "source": null,
+              "subscribed": true,
+              "unsub_reason": null
+            }
         ],
         "status": "ok",
         "vpn_waitlist": {
