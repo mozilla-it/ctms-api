@@ -11,7 +11,7 @@ class ContactSchema(BaseModel):
     amo: Optional["AddOnsSchema"] = None
     email: Optional["EmailSchema"] = None
     fxa: Optional["FirefoxAccountsSchema"] = None
-    newsletters: List[str] = []
+    newsletters: List["NewsletterSchema"] = []
     vpn_waitlist: Optional["VpnWaitlistSchema"] = None
 
     def as_identity_response(self) -> "IdentityResponse":
@@ -253,6 +253,37 @@ class FirefoxAccountsSchema(BaseModel):
     )
 
 
+class NewsletterSchema(BaseModel):
+    """The newsletter subscriptions schema."""
+
+    name: Optional[str] = Field(
+        default=None,
+        description="Basket slug for the newsletter",
+        example="mozilla-welcome",
+    )
+    subscribed: bool = Field(
+        default=True, description="True if subscribed, False when formerly subscribed"
+    )
+    format: Literal["H", "T"] = Field(
+        default="H", description="Newsletter format, H=HTML, T=Plain Text"
+    )
+    lang: Optional[str] = Field(
+        default="en",
+        min_length=2,
+        max_length=2,
+        regex="^[a-z][a-z]$",
+        description="Newsletter language code, 2 lowercase letters",
+    )
+    source: Optional[HttpUrl] = Field(
+        default=None,
+        description="Source URL of subscription",
+        example="https://www.mozilla.org/en-US/",
+    )
+    unsub_reason: Optional[str] = Field(
+        default=None, description="Reason for unsubscribing"
+    )
+
+
 ContactSchema.update_forward_refs()
 
 
@@ -262,10 +293,10 @@ class CTMSResponse(BaseModel):
     amo: AddOnsSchema
     email: EmailSchema
     fxa: FirefoxAccountsSchema
-    newsletters: List[str] = Field(
+    newsletters: List[NewsletterSchema] = Field(
         default=[],
         description="List of identifiers for newsletters for which the contact is subscribed",
-        example=(["firefox-welcome", "mozilla-welcome"]),
+        example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
     )
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
