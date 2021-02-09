@@ -14,3 +14,13 @@ services:
     # Let the init system handle signals for us.
     # among other things this helps shutdown be fast
     init: true
+    environment:
+      CTMS_DB_URL: postgresql://postgres@postgres/postgres
+  postgres:
+    image: postgres:12
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      LC_COLLATE: en_US.UTF8
+      LC_CTYPE: en_US.UTF8
