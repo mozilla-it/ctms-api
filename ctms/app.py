@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
 
+from .database import SessionLocal, engine
+from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
     AddOnsSchema,
@@ -24,6 +26,11 @@ app = FastAPI(
     description="CTMS API (work in progress)",
     version="0.4.0",
 )
+
+
+### TODO: temporary until we have migrations, etc ###
+ModelBase.metadata.create_all(bind=engine)
+#####################################################
 
 
 def get_contact_or_404(email_id) -> ContactSchema:

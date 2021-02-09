@@ -105,6 +105,8 @@ The project is structured with the following in mind:
         - FastAPI Handling of HTTP Requests and routing to services
     - .../schemas.py
         - Pydantic Models for Data Modeling, and Contract Validation
+    - .../models.py
+        - SQLAlchemy models
 - tests/behave/
     - BDD feature testing with Behave and Gherkin feature files
 - tests/resources/
