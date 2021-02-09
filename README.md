@@ -36,7 +36,7 @@ Next features for v0.5:
   * [ ] Should we have a separate ``email_id`` and ``basket_token``, or merge?
   * [ ] Should ``basket_token`` be required?
   * [ ] ``mailing_country``: Was 2-letter lowercase ISO, now 255-character string. Can we constrain?
-  * [ ] ``email_format``: Was "H" or "T", now 2-char. Can we constrain?
+  * [X] ``email_format``: Was "H" or "T", now 2-char. Can we constrain? (existing data includes 'N' and ' ')
   * [ ] ``email_lang``: Was 2-letter lowercase code, now 3-char string. Can we constrain?
   * [x] ``browser_locale``: What kind of data is this?
   * [ ] ``subscriber``: What does this signify?
@@ -51,6 +51,7 @@ Next features for v0.5:
 * [ ] Implement ``/ctms`` lookup with alternate IDs
 * [x] Add a database backend
 * [ ] Add ``acoustic_sync`` model
+* [ ] Decide: Loose API and data model, Strict API and data model, something else?
 * [ ] Implement Create / Update / Upsert methods
 * [ ] Implement Delete method
 * [ ] Select API authorization method
