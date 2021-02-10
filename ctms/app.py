@@ -9,7 +9,7 @@ from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .crud import create_email, get_contact_by_email_id
+from .crud import create_email, get_email_by_email_id
 from .database import SessionLocal, engine
 from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS
@@ -32,23 +32,16 @@ app = FastAPI(
 
 
 ### TODO: temporary until we have migrations, etc ###
+ModelBase.metadata.drop_all(bind=engine)
 ModelBase.metadata.create_all(bind=engine)
 
-
-try:
-    create_email(
-        SessionLocal(),
-        EmailSchema(
-            basket_token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
-            create_timestamp="2014-01-22T15:24:00+00:00",
-            email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
-            mailing_country="us",
-            primary_email="ctms-user@example.com",
-            update_timestamp="2020-01-22T15:24:00.000+0000",
-        ),
-    )
-except IntegrityError:
-    print("Demo data already loaded")
+for contact in SAMPLE_CONTACTS.values():
+    if not contact.email:
+        raise Exception("SAMPLE_CONTACTS must all include emails")
+    try:
+        create_email(SessionLocal(), contact.email)
+    except IntegrityError:
+        print("Demo data already loaded")
 #####################################################
 
 
@@ -65,9 +58,10 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     Get a contact by email_ID, or raise a 404 exception.
 
     """
-    contact = get_contact_by_email_id(db, email_id)
+    contact = SAMPLE_CONTACTS.get(email_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Unknown email_id")
+    contact.email = EmailSchema.from_orm(get_email_by_email_id(db, email_id))
     return contact
 
 
@@ -129,7 +123,8 @@ def read_identity(
 def read_contact_main(
     email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
 ):
-    return get_contact_or_404(db, email_id)
+    contact = get_contact_or_404(db, email_id)
+    return contact.email
 
 
 @app.get(
