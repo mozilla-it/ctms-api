@@ -40,6 +40,7 @@ Feature: Getting the test user's information works
           "name": null,
           "pmt_cust_id": null,
           "primary_email": "ctms-user@example.com",
+          "sfdc_id": "001A000001aABcDEFG",
           "signup_source": null,
           "subscriber": false,
           "unsubscribe_reason": null,
@@ -129,6 +130,7 @@ Feature: Getting the test user's information works
           "name": "Fan of Mozilla",
           "pmt_cust_id": "cust_012345",
           "primary_email": "mozilla-fan@example.com",
+          "sfdc_id": "001A000001aMozFan",
           "signup_source": "https://developer.mozilla.org/fr/",
           "subscriber": true,
           "unsubscribe_reason": "done with this mailing list",
@@ -242,6 +244,7 @@ Feature: Getting the test user's information works
           "name": "Mozilla Subscriber",
           "pmt_cust_id": null,
           "primary_email": "contact@example.com",
+          "sfdc_id": "001A000023aABcDEFG",
           "signup_source": "https://www.mozilla.org/en-US/",
           "subscriber": false,
           "unsubscribe_reason": null,
@@ -275,6 +278,7 @@ Feature: Getting the test user's information works
         "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
         "primary_email": "ctms-user@example.com",
         "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+        "sfdc_id": "001A000001aABcDEFG",
         "amo_user_id": null,
         "fxa_id": null,
         "fxa_primary_email": null
@@ -294,7 +298,8 @@ Feature: Getting the test user's information works
         "amo_user_id": "123",
         "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
         "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-        "fxa_primary_email": "fxa-firefox-fan@example.com"
+        "fxa_primary_email": "fxa-firefox-fan@example.com",
+        "sfdc_id": "001A000001aMozFan"
       }
       """
 
@@ -311,7 +316,8 @@ Feature: Getting the test user's information works
         "amo_user_id": "98765",
         "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
         "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
-        "fxa_primary_email": "my-fxa-acct@example.com"
+        "fxa_primary_email": "my-fxa-acct@example.com",
+        "sfdc_id": "001A000023aABcDEFG"
       }
       """
 
@@ -334,6 +340,7 @@ Feature: Getting the test user's information works
         "name": null,
         "pmt_cust_id": null,
         "primary_email": "ctms-user@example.com",
+        "sfdc_id": "001A000001aABcDEFG",
         "signup_source": null,
         "subscriber": false,
         "unsubscribe_reason": null,
