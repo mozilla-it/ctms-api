@@ -36,7 +36,7 @@ Next features for v0.5:
   * [ ] Should we have a separate ``email_id`` and ``basket_token``, or merge?
   * [ ] Should ``basket_token`` be required?
   * [ ] ``mailing_country``: Was 2-letter lowercase ISO, now 255-character string. Can we constrain?
-  * [X] ``email_format``: Was "H" or "T", now 2-char. Can we constrain? (existing data includes 'N' and ' ')
+  * [X] ``email_format``: Was "H" or "T", now 2-char. Can we constrain? (existing data includes 'N' and '')
   * [x] ``email_lang``: Was 2-letter lowercase code, now 3-char string. Can we constrain? *Back to 2 char*
   * [x] ``browser_locale``: What kind of data is this?
   * [ ] ``subscriber``: What does this signify?
