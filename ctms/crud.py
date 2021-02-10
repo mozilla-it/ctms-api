@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 
 from .models import Email
 from .schemas import (
-    FirefoxAccountsSchema,
-    VpnWaitlistSchema,
     ContactSchema,
     EmailSchema,
+    FirefoxAccountsSchema,
+    VpnWaitlistSchema,
 )
 
 

@@ -19,7 +19,7 @@ class ContactSchema(BaseModel):
         return IdentityResponse(
             amo_user_id=getattr(self.amo, "user_id", None),
             basket_token=getattr(self.email, "basket_token", None),
-            email_id=self.email.email_id,
+            email_id=getattr(self.email, "email_id", None),
             fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
             primary_email=getattr(self.email, "primary_email", None),
