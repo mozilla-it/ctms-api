@@ -19,7 +19,7 @@ class ContactSchema(BaseModel):
         return IdentityResponse(
             amo_user_id=getattr(self.amo, "user_id", None),
             basket_token=getattr(self.email, "basket_token", None),
-            email_id=self.email.email_id,
+            email_id=getattr(self.email, "email_id", None),
             fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
             primary_email=getattr(self.email, "primary_email", None),
@@ -146,9 +146,6 @@ class EmailSchema(BaseModel):
         max_length=3,
         description="Email language code, 2 lowercase letters, Email_Language__c in Salesforce",
     )
-    browser_locale: Optional[str] = Field(
-        max_length=5, description="TODO: add description"
-    )
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
     )
@@ -169,9 +166,6 @@ class EmailSchema(BaseModel):
     subscriber: bool = Field(
         default=False, description="TODO: add description. Subscriber__c in Salesforce"
     )
-    unengaged: bool = Field(
-        default=False, description="TODO: add description. Unengaged__c in Salesforce"
-    )
     unsubscribe_reason: Optional[str] = Field(
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
@@ -186,6 +180,9 @@ class EmailSchema(BaseModel):
         description="Contact last modified date, LastModifiedDate in Salesforce",
         example="2021-01-28T21:26:57.511Z",
     )
+
+    class Config:
+        orm_mode = True
 
 
 class VpnWaitlistSchema(BaseModel):

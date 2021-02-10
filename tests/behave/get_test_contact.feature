@@ -30,7 +30,6 @@ Feature: Getting the test user's information works
         },
         "email": {
           "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
-          "browser_locale": null,
           "create_timestamp": "2014-01-22T15:24:00+00:00",
           "email_format": "H",
           "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
@@ -43,7 +42,6 @@ Feature: Getting the test user's information works
           "primary_email": "ctms-user@example.com",
           "signup_source": null,
           "subscriber": false,
-          "unengaged": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2020-01-22T15:24:00+00:00"
         },
@@ -121,7 +119,6 @@ Feature: Getting the test user's information works
         },
         "email": {
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
-          "browser_locale": "fr-CA",
           "create_timestamp": "2010-01-01T08:04:00+00:00",
           "email_format": "H",
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
@@ -134,7 +131,6 @@ Feature: Getting the test user's information works
           "primary_email": "mozilla-fan@example.com",
           "signup_source": "https://developer.mozilla.org/fr/",
           "subscriber": true,
-          "unengaged": false,
           "unsubscribe_reason": "done with this mailing list",
           "update_timestamp": "2020-01-28T14:50:00+00:00"
         },
@@ -236,7 +232,6 @@ Feature: Getting the test user's information works
         },
         "email": {
           "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
-          "browser_locale": null,
           "create_timestamp": "2020-03-28T15:41:00+00:00",
           "email_format": "H",
           "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
@@ -249,7 +244,6 @@ Feature: Getting the test user's information works
           "primary_email": "contact@example.com",
           "signup_source": "https://www.mozilla.org/en-US/",
           "subscriber": false,
-          "unengaged": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
         },
@@ -330,7 +324,6 @@ Feature: Getting the test user's information works
       """
       {
         "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
-        "browser_locale": null,
         "create_timestamp": "2014-01-22T15:24:00+00:00",
         "email_format": "H",
         "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
@@ -343,7 +336,6 @@ Feature: Getting the test user's information works
         "primary_email": "ctms-user@example.com",
         "signup_source": null,
         "subscriber": false,
-        "unengaged": false,
         "unsubscribe_reason": null,
         "update_timestamp": "2020-01-22T15:24:00+00:00"
       }

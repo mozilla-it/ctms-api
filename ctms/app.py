@@ -3,10 +3,15 @@ from typing import Dict
 from uuid import UUID
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Path
+from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
+from .crud import create_email, get_email_by_email_id
+from .database import SessionLocal, engine
+from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
     AddOnsSchema,
@@ -26,16 +31,38 @@ app = FastAPI(
 )
 
 
-def get_contact_or_404(email_id) -> ContactSchema:
+### TODO: temporary until we have migrations, etc ###
+ModelBase.metadata.drop_all(bind=engine)
+ModelBase.metadata.create_all(bind=engine)
+
+for contact in SAMPLE_CONTACTS.values():
+    if not contact.email:
+        raise Exception("SAMPLE_CONTACTS must all include emails")
+    try:
+        create_email(SessionLocal(), contact.email)
+    except IntegrityError:
+        print("Demo data already loaded")
+#####################################################
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     """
     Get a contact by email_ID, or raise a 404 exception.
 
-    TODO: implement a database backend
     """
-    try:
-        return SAMPLE_CONTACTS[email_id]
-    except KeyError:
+    contact = SAMPLE_CONTACTS.get(email_id)
+    if contact is None:
         raise HTTPException(status_code=404, detail="Unknown email_id")
+    contact.email = EmailSchema.from_orm(get_email_by_email_id(db, email_id))
+    return contact
 
 
 @app.get("/", include_in_schema=False)
@@ -58,8 +85,10 @@ def root():
     responses={404: {"model": NotFoundResponse}},
     tags=["Public"],
 )
-def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
-    contact = get_contact_or_404(email_id)
+def read_ctms(
+    email_id: UUID = Path(..., title="The Email ID"), db: Session = Depends(get_db)
+):
+    contact = get_contact_or_404(db, email_id)
     return CTMSResponse(
         amo=contact.amo or AddOnsSchema(),
         email=contact.email or EmailSchema(),
@@ -77,8 +106,10 @@ def read_ctms(email_id: UUID = Path(..., title="The Email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-def read_identity(email_id: UUID = Path(..., title="The email ID")):
-    contact = get_contact_or_404(email_id)
+def read_identity(
+    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+):
+    contact = get_contact_or_404(db, email_id)
     return contact.as_identity_response()
 
 
@@ -89,9 +120,11 @@ def read_identity(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
-    contact = get_contact_or_404(email_id)
-    return contact.email or EmailSchema()
+def read_contact_main(
+    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+):
+    contact = get_contact_or_404(db, email_id)
+    return contact.email
 
 
 @app.get(
@@ -101,8 +134,10 @@ def read_contact_main(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
-    contact = get_contact_or_404(email_id)
+def read_contact_amo(
+    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+):
+    contact = get_contact_or_404(db, email_id)
     return contact.amo or AddOnsSchema()
 
 
@@ -113,8 +148,10 @@ def read_contact_amo(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
-    contact = get_contact_or_404(email_id)
+def read_contact_fpn(
+    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+):
+    contact = get_contact_or_404(db, email_id)
     return contact.vpn_waitlist or VpnWaitlistSchema()
 
 
@@ -125,8 +162,10 @@ def read_contact_fpn(email_id: UUID = Path(..., title="The email ID")):
     responses={404: {"model": NotFoundResponse}},
     tags=["Private"],
 )
-def read_contact_fxa(email_id: UUID = Path(..., title="The email ID")):
-    contact = get_contact_or_404(email_id)
+def read_contact_fxa(
+    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+):
+    contact = get_contact_or_404(db, email_id)
     return contact.fxa or FirefoxAccountsSchema()
 
 

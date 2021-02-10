@@ -74,8 +74,7 @@ CMD ["tail", "-f", "/dev/null"]
 # 'test' stage runs our unit tests with pytest and
 # coverage.  Build will fail if test coverage is under 80%
 FROM development AS test
-RUN coverage run --rcfile ./pyproject.toml --branch -m behave -D BEHAVE_DEBUG_ON_ERROR=no ./tests/behave
-RUN coverage report --rcfile ./pyproject.toml -m --show-missing --fail-under=80
+CMD ./scripts/test.sh
 
 
 # 'production' stage uses the clean 'python-base' stage and copyies

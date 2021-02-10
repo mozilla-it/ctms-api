@@ -36,9 +36,9 @@ Next features for v0.5:
   * [ ] ``mailing_country``: Was 2-letter lowercase ISO, now 255-character string. Can we constrain?
   * [ ] ``email_format``: Was "H" or "T", now 2-char. Can we constrain?
   * [ ] ``email_lang``: Was 2-letter lowercase code, now 3-char string. Can we constrain?
-  * [ ] ``browser_locale``: What kind of data is this?
+  * [x] ``browser_locale``: What kind of data is this?
   * [ ] ``subscriber``: What does this signify?
-  * [ ] ``unengaged``: What does this signify?
+  * [x] ``unengaged``: What does this signify?
 * [ ] Clarify new/changed fields in ``amo`` group:
   * [ ] ``add_on_ids``: What does a valid value look like?
   * [ ] ``last_login``: What does a valid value look like?
@@ -47,7 +47,7 @@ Next features for v0.5:
   * [ ] ``user_id``: Is this a string version of an int?
 * [ ] Implement the ``/identity`` APIs with alternate IDs
 * [ ] Implement ``/ctms`` lookup with alternate IDs
-* [ ] Add a database backend
+* [x] Add a database backend
 * [ ] Implement Create / Update / Upsert methods
 * [ ] Implement Delete method
 * [ ] Select API authorization method
@@ -105,6 +105,8 @@ The project is structured with the following in mind:
         - FastAPI Handling of HTTP Requests and routing to services
     - .../schemas.py
         - Pydantic Models for Data Modeling, and Contract Validation
+    - .../models.py
+        - SQLAlchemy models
 - tests/behave/
     - BDD feature testing with Behave and Gherkin feature files
 - tests/resources/

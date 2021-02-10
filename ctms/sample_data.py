@@ -51,7 +51,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         name="Fan of Mozilla",
         mailing_country="ca",
         email_lang="fr",
-        browser_locale="fr-CA",
         mofo_relevant=True,
         signup_source="https://developer.mozilla.org/fr/",
         pmt_cust_id="cust_012345",
