@@ -143,9 +143,9 @@ class EmailSchema(BaseModel):
         description="Mailing country code, 2 lowercase letters, MailingCountryCode in Salesforce",
         example="us",
     )
-    email_format: Literal["H", "T", "N", " "] = Field(
+    email_format: Literal["H", "T", "N", ""] = Field(
         default="H",
-        description="Email format, H=HTML, T=Plain Text, N and Space=No selection, Email_Format__c in Salesforce",
+        description="Email format, H=HTML, T=Plain Text, N and Empty=No selection, Email_Format__c in Salesforce",
     )
     email_lang: Optional[str] = Field(
         default="en",
