@@ -47,7 +47,7 @@ Next features for v0.5:
   * [ ] ``location``: What does a valid valid look like? On site, they are "Potsdam, Germany"
   * [ ] ``profile_url``: What does a valid value look like? Why this and not homepage?
   * [ ] ``user_id``: Is this a string version of an int? Can we make int?
-* [ ] Implement the ``/identity`` APIs with alternate IDs
+* [x] Implement the ``/identities`` APIs with alternate IDs
 * [ ] Implement ``/ctms`` lookup with alternate IDs
 * [x] Add a database backend
 * [ ] Add ``acoustic_sync`` model

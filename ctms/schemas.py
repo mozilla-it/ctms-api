@@ -318,10 +318,21 @@ class IdentityResponse(BaseModel):
     fxa_primary_email: Optional[EmailStr] = None
 
 
+class BadRequestResponse(BaseModel):
+    """The client called the endpoint incorrectly."""
+
+    detail: str = Field(
+        ...,
+        description="A human-readable summary of the client error.",
+        example="No identifiers provided, at least one is needed.",
+    )
+
+
 class NotFoundResponse(BaseModel):
-    """The content of the 404 Not Found message."""
+    """No existing record was found for the indentifier."""
 
-    detail: str
-
-    class Config:
-        schema_extra = {"example": {"detail": "Unknown contact_id"}}
+    detail: str = Field(
+        ...,
+        description="A human-readable summary of the issue.",
+        example="Unknown contact_id",
+    )
