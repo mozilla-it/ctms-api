@@ -2,7 +2,7 @@ steps:
 - name: 'gcr.io/$PROJECT_ID/docker-compose'
   args: ['-f', './docker-compose.yaml', '-f', './tests/docker-compose.test.yaml', 'run', 'tests']
 - name: 'gcr.io/$PROJECT_ID/docker-compose'
-  args: ['up']
+  args: ['push']
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'bash'
   env:
