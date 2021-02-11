@@ -258,7 +258,24 @@ Feature: Getting the test user's information works
           "lang": "en,en-US",
           "primary_email": "my-fxa-acct@example.com"
         },
-        "newsletters": [],
+        "newsletters": [
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "firefox-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "mozilla-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          }
+        ],
         "status": "ok",
         "vpn_waitlist": {
           "geo": "fr",
@@ -315,7 +332,24 @@ Feature: Getting the test user's information works
           "lang": "en,en-US",
           "primary_email": "my-fxa-acct@example.com"
         },
-        "newsletters": [],
+        "newsletters": [
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "firefox-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "mozilla-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          }
+        ],
         "vpn_waitlist": {
           "geo": "fr",
           "platform": "ios,mac"

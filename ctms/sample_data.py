@@ -116,6 +116,7 @@ SAMPLE_EXAMPLE = ContactSchema(
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fxa=FirefoxAccountsSchema(**_gather_examples(FirefoxAccountsSchema)),
     vpn_waitlist=VpnWaitlistSchema(**_gather_examples(VpnWaitlistSchema)),
+    **_gather_examples(ContactSchema)  # Newsletters
 )
 
 
