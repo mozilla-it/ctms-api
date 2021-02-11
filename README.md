@@ -48,7 +48,7 @@ Next features for v0.5:
   * [ ] ``profile_url``: What does a valid value look like? Why this and not homepage?
   * [ ] ``user_id``: Is this a string version of an int? Can we make int?
 * [x] Implement the ``/identities`` APIs with alternate IDs
-* [ ] Implement ``/ctms`` lookup with alternate IDs
+* [x] Implement ``/ctms`` lookup with alternate IDs
 * [x] Add a database backend
 * [ ] Add ``acoustic_sync`` model
 * [ ] Decide: Loose API and data model, Strict API and data model, something else?

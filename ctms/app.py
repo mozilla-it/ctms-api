@@ -154,13 +154,39 @@ def root():
 
 
 @app.get(
+    "/ctms",
+    summary="Get all contacts matching alternate IDs",
+    response_model=List[ContactSchema],
+    responses={400: {"model": BadRequestResponse}},
+    tags=["Public"],
+)
+def read_ctms_by_any_id(db: Session = Depends(get_db), ids=Depends(all_ids)):
+    if not any(ids.values()):
+        detail = (
+            f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
+        )
+        raise HTTPException(status_code=400, detail=detail)
+    contacts = get_contacts_by_ids(db, **ids)
+    return [
+        ContactSchema(
+            amo=contact.amo or AddOnsSchema(),
+            email=contact.email or EmailSchema(),
+            fxa=contact.fxa or FirefoxAccountsSchema(),
+            newsletters=contact.newsletters or [],
+            vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+        )
+        for contact in contacts
+    ]
+
+
+@app.get(
     "/ctms/{email_id}",
-    summary="Get all contact details in basket format",
+    summary="Get a contact by email_id",
     response_model=CTMSResponse,
     responses={404: {"model": NotFoundResponse}},
     tags=["Public"],
 )
-def read_ctms(
+def read_ctms_by_email_id(
     email_id: UUID = Path(..., title="The Email ID"), db: Session = Depends(get_db)
 ):
     contact = get_contact_or_404(db, email_id)
