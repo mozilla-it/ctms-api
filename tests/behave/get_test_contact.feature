@@ -258,7 +258,24 @@ Feature: Getting the test user's information works
           "lang": "en,en-US",
           "primary_email": "my-fxa-acct@example.com"
         },
-        "newsletters": [],
+        "newsletters": [
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "firefox-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "mozilla-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          }
+        ],
         "status": "ok",
         "vpn_waitlist": {
           "geo": "fr",
@@ -266,6 +283,91 @@ Feature: Getting the test user's information works
         }
       }
       """
+
+  Scenario: User wants to get contact data by alternate ID Firefox Accounts email
+    Given the desired endpoint /ctms?fxa_primary_email=my-fxa-acct@example.com
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+    """
+    [
+      {
+        "amo": {
+          "add_on_ids": "add-on-1,add-on-2",
+          "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+          "display_name": "Add-ons Author",
+          "email_opt_in": false,
+          "language": "en",
+          "last_login": "2021-01-28T19:21:50.908Z",
+          "location": "California",
+          "profile_url": "firefox/user/98765",
+          "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+          "user": true,
+          "user_id": "98765",
+          "username": "AddOnAuthor"
+        },
+        "email": {
+          "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
+          "create_timestamp": "2020-03-28T15:41:00+00:00",
+          "email_format": "H",
+          "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+          "email_lang": "en",
+          "has_opted_out_of_email": false,
+          "mailing_country": "us",
+          "mofo_relevant": false,
+          "name": "Mozilla Subscriber",
+          "pmt_cust_id": null,
+          "primary_email": "contact@example.com",
+          "sfdc_id": "001A000023aABcDEFG",
+          "signup_source": "https://www.mozilla.org/en-US/",
+          "subscriber": false,
+          "unsubscribe_reason": null,
+          "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
+        },
+        "fxa": {
+          "created_date": "2021-01-29T18:43:49.082375+00:00",
+          "deleted": false,
+          "first_service": "sync",
+          "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+          "lang": "en,en-US",
+          "primary_email": "my-fxa-acct@example.com"
+        },
+        "newsletters": [
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "firefox-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          },
+          {
+            "format": "H",
+            "lang": "en",
+            "name": "mozilla-welcome",
+            "source": null,
+            "subscribed": true,
+            "unsub_reason": null
+          }
+        ],
+        "vpn_waitlist": {
+          "geo": "fr",
+          "platform": "ios,mac"
+        }
+      }
+    ]
+    """
+
+  Scenario: User receives a bad requst error when finding contacts with no alternate IDs
+    Given the desired endpoint /ctms
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 400
+    And the response JSON is
+    """
+    {
+      "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, amo_user_id, fxa_id, fxa_primary_email"
+    }
+    """
 
   Scenario: User wants to read identity data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
