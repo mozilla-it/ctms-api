@@ -55,7 +55,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         mailing_country="ca",
         email_lang="fr",
         mofo_relevant=True,
-        pmt_cust_id="cust_012345",
         sfdc_id="001A000001aMozFan",
         subscriber=True,
         unsubscribe_reason="done with this mailing list",

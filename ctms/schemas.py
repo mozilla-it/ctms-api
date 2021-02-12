@@ -169,11 +169,6 @@ class EmailSchema(BaseModel):
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",
     )
-    pmt_cust_id: Optional[str] = Field(
-        default=None,
-        max_length=50,
-        description="Payment system ID (Stripe or other), in basket IGNORE_USER_FIELDS, PMT_Cust_Id__c in Salesforce",
-    )
     subscriber: bool = Field(
         default=False, description="TODO: add description. Subscriber__c in Salesforce"
     )
