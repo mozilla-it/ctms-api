@@ -9,7 +9,7 @@ class ContactSchema(BaseModel):
     """A complete contact."""
 
     amo: Optional["AddOnsSchema"] = None
-    email: Optional["EmailSchema"] = None
+    email: "EmailSchema" = None
     fxa: Optional["FirefoxAccountsSchema"] = None
     newsletters: List["NewsletterSchema"] = Field(
         default=[],
