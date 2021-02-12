@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Optional
 from uuid import UUID
 
 import uvicorn
@@ -15,6 +15,7 @@ from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
     AddOnsSchema,
+    BadRequestResponse,
     ContactSchema,
     CTMSResponse,
     EmailSchema,
@@ -65,6 +66,80 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     return contact
 
 
+def all_ids(
+    email_id: Optional[UUID] = None,
+    primary_email: Optional[EmailStr] = None,
+    basket_token: Optional[UUID] = None,
+    sfdc_id: Optional[str] = None,
+    amo_user_id: Optional[str] = None,
+    fxa_id: Optional[str] = None,
+    fxa_primary_email: Optional[EmailStr] = None,
+):
+    """Alternate IDs, injected as a dependency."""
+    return {
+        "email_id": email_id,
+        "primary_email": primary_email,
+        "basket_token": basket_token,
+        "sfdc_id": sfdc_id,
+        "amo_user_id": amo_user_id,
+        "fxa_id": fxa_id,
+        "fxa_primary_email": fxa_primary_email,
+    }
+
+
+def get_contacts_by_ids(
+    db: Session,
+    email_id: Optional[UUID] = None,
+    primary_email: Optional[EmailStr] = None,
+    basket_token: Optional[UUID] = None,
+    sfdc_id: Optional[str] = None,
+    amo_user_id: Optional[str] = None,
+    fxa_id: Optional[str] = None,
+    fxa_primary_email: Optional[EmailStr] = None,
+) -> List[ContactSchema]:
+    """Get contacts by any ID.
+
+    Callers are expected to set just one ID, but if multiple are set, a contact
+    must match all IDs.
+    """
+    assert any(
+        (
+            email_id,
+            primary_email,
+            basket_token,
+            sfdc_id,
+            amo_user_id,
+            fxa_id,
+            fxa_primary_email,
+        )
+    )
+
+    # TODO: Replace with database query
+    contacts = []
+    for contact_email_id, contact in SAMPLE_CONTACTS.items():
+        if (
+            (email_id is None or contact.email.email_id == email_id)
+            and (primary_email is None or contact.email.primary_email == primary_email)
+            and (basket_token is None or contact.email.basket_token == basket_token)
+            and (sfdc_id is None or contact.email.sfdc_id == sfdc_id)
+            and (
+                amo_user_id is None
+                or bool(contact.amo and contact.amo.user_id == amo_user_id)
+            )
+            and (fxa_id is None or bool(contact.fxa and contact.fxa.fxa_id == fxa_id))
+            and (
+                fxa_primary_email is None
+                or bool(contact.fxa and contact.fxa.primary_email == fxa_primary_email)
+            )
+        ):
+            contact.email = EmailSchema.from_orm(
+                get_email_by_email_id(db, contact_email_id)
+            )
+            contacts.append(contact)
+
+    return contacts
+
+
 @app.get("/", include_in_schema=False)
 def root():
     """GET via root redirects to /docs.
@@ -97,6 +172,23 @@ def read_ctms(
         vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
         status="ok",
     )
+
+
+@app.get(
+    "/identities",
+    summary="Get identities associated with alternate IDs",
+    response_model=List[IdentityResponse],
+    responses={400: {"model": BadRequestResponse}},
+    tags=["Private"],
+)
+def read_identities(db: Session = Depends(get_db), ids=Depends(all_ids)):
+    if not any(ids.values()):
+        detail = (
+            f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
+        )
+        raise HTTPException(status_code=400, detail=detail)
+    contacts = get_contacts_by_ids(db, **ids)
+    return [contact.as_identity_response() for contact in contacts]
 
 
 @app.get(

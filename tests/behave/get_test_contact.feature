@@ -321,6 +321,206 @@ Feature: Getting the test user's information works
       }
       """
 
+  Scenario: User wants to find an identity by email_id
+        Given the desired endpoint /identities?email_id=332de237-cab7-4461-bcc3-48e68f42bd5c
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+          "primary_email": "contact@example.com",
+          "amo_user_id": "98765",
+          "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
+          "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+          "fxa_primary_email": "my-fxa-acct@example.com",
+          "sfdc_id": "001A000023aABcDEFG"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by primary email
+    Given the desired endpoint /identities?primary_email=ctms-user@example.com
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
+          "primary_email": "ctms-user@example.com",
+          "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+          "sfdc_id": "001A000001aABcDEFG",
+          "amo_user_id": null,
+          "fxa_id": null,
+          "fxa_primary_email": null
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by basket token
+    Given the desired endpoint /identities?basket_token=d9ba6182-f5dd-4728-a477-2cc11bf62b69
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+          "primary_email": "mozilla-fan@example.com",
+          "amo_user_id": "123",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "fxa_primary_email": "fxa-firefox-fan@example.com",
+          "sfdc_id": "001A000001aMozFan"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by legacy Salesforce ID
+    Given the desired endpoint /identities?sfdc_id=001A000001aABcDEFG
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
+          "primary_email": "ctms-user@example.com",
+          "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
+          "sfdc_id": "001A000001aABcDEFG",
+          "amo_user_id": null,
+          "fxa_id": null,
+          "fxa_primary_email": null
+        }
+      ]
+      """
+  Scenario: User wants to find an identity by ID on addons.mozilla.org
+    Given the desired endpoint /identities?amo_user_id=123
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+          "primary_email": "mozilla-fan@example.com",
+          "amo_user_id": "123",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "fxa_primary_email": "fxa-firefox-fan@example.com",
+          "sfdc_id": "001A000001aMozFan"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by Firefox Accounts ID
+    Given the desired endpoint /identities?fxa_id=611b6788-2bba-42a6-98c9-9ce6eb9cbd34
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+          "primary_email": "mozilla-fan@example.com",
+          "amo_user_id": "123",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "fxa_primary_email": "fxa-firefox-fan@example.com",
+          "sfdc_id": "001A000001aMozFan"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by Firefox Accounts primary email
+    Given the desired endpoint /identities?fxa_primary_email=fxa-firefox-fan@example.com
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+          "primary_email": "mozilla-fan@example.com",
+          "amo_user_id": "123",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "fxa_primary_email": "fxa-firefox-fan@example.com",
+          "sfdc_id": "001A000001aMozFan"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by two alternate IDs
+    Given the desired endpoint /identities?sfdc_id=001A000001aMozFan&fxa_primary_email=fxa-firefox-fan@example.com
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+          "primary_email": "mozilla-fan@example.com",
+          "amo_user_id": "123",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "fxa_primary_email": "fxa-firefox-fan@example.com",
+          "sfdc_id": "001A000001aMozFan"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by two alternate IDs, but one does not match
+    Given the desired endpoint /identities?primary_email=ctms-user@example.com&amo_user_id=404
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      []
+      """
+
+  Scenario: User wants to find an identity by two alternate IDs, but one is empty
+    Given the desired endpoint /identities?primary_email=ctms-user@example.com&fxa_id=
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      []
+      """
+
+  Scenario: User receives a bad request error when finding identities with no alternate IDs
+    Given the desired endpoint /identities
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 400
+    And the response JSON is
+      """
+      {
+        "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, amo_user_id, fxa_id, fxa_primary_email"
+      }
+      """
+
+  Scenario Outline: Unknown alternate IDs are not found
+    Given the email_id cad092ec-a71a-4df5-aa92-517959caeecb
+    And the desired endpoint /identities?<alt_id>=<alt_value>
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+    """
+    []
+    """
+
+    Examples: Alternate IDs
+      | alt_id            | alt_value                            |
+      | email_id          | cad092ec-a71a-4df5-aa92-517959caeecb |
+      | primary_email     | unknown-user@example.com             |
+      | amo_user_id       | 404                                  |
+      | basket_token      | cad092ec-a71a-4df5-aa92-517959caeecb |
+      | fxa_id            | cad092ec-a71a-4df5-aa92-517959caeecb |
+      | fxa_primary_email | unknown-user@example.com             |
+      | sfdc_id           | 001A000404aUnknown                   |
+
   Scenario: User wants to read the main email data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d
     And the desired endpoint /contact/email/(email_id)
