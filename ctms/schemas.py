@@ -135,11 +135,17 @@ class EmailSchema(BaseModel):
         description="Salesforce legacy ID, Id in Salesforce",
         example="001A000023aABcDEFG",
     )
-    name: Optional[str] = Field(
+    first_name: Optional[str] = Field(
         default=None,
         max_length=255,
-        description="Name of contact, Name in Salesforce",
-        example="Mozilla Subscriber",
+        description="First name of contact, FirstName in Salesforce",
+        example="Jane",
+    )
+    last_name: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Last name of contact, LastName in Salesforce",
+        example="Doe",
     )
     mailing_country: Optional[str] = Field(
         default=None,

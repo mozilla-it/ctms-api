@@ -34,10 +34,11 @@ Feature: Getting the test user's information works
           "email_format": "H",
           "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
           "email_lang": "en",
+          "first_name": null,
           "has_opted_out_of_email": false,
+          "last_name": null,
           "mailing_country": "us",
           "mofo_relevant": false,
-          "name": null,
           "pmt_cust_id": null,
           "primary_email": "ctms-user@example.com",
           "sfdc_id": "001A000001aABcDEFG",
@@ -124,10 +125,11 @@ Feature: Getting the test user's information works
           "email_format": "H",
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "email_lang": "fr",
+          "first_name": "Fan",
           "has_opted_out_of_email": false,
+          "last_name": "of Mozilla",
           "mailing_country": "ca",
           "mofo_relevant": true,
-          "name": "Fan of Mozilla",
           "pmt_cust_id": "cust_012345",
           "primary_email": "mozilla-fan@example.com",
           "sfdc_id": "001A000001aMozFan",
@@ -238,10 +240,11 @@ Feature: Getting the test user's information works
           "email_format": "H",
           "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
           "email_lang": "en",
+          "first_name": "Jane",
           "has_opted_out_of_email": false,
+          "last_name": "Doe",
           "mailing_country": "us",
           "mofo_relevant": false,
-          "name": "Mozilla Subscriber",
           "pmt_cust_id": null,
           "primary_email": "contact@example.com",
           "sfdc_id": "001A000023aABcDEFG",
@@ -312,10 +315,11 @@ Feature: Getting the test user's information works
           "email_format": "H",
           "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
           "email_lang": "en",
+          "first_name": "Jane",
           "has_opted_out_of_email": false,
+          "last_name": "Doe",
           "mailing_country": "us",
           "mofo_relevant": false,
-          "name": "Mozilla Subscriber",
           "pmt_cust_id": null,
           "primary_email": "contact@example.com",
           "sfdc_id": "001A000023aABcDEFG",
@@ -358,7 +362,7 @@ Feature: Getting the test user's information works
     ]
     """
 
-  Scenario: User receives a bad requst error when finding contacts with no alternate IDs
+  Scenario: User receives a bad request error when finding contacts with no alternate IDs
     Given the desired endpoint /ctms
     When the user invokes the client via GET
     Then the user expects the response to have a status of 400
@@ -636,10 +640,11 @@ Feature: Getting the test user's information works
         "email_format": "H",
         "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
         "email_lang": "en",
+        "first_name": null,
         "has_opted_out_of_email": false,
+        "last_name": null,
         "mailing_country": "us",
         "mofo_relevant": false,
-        "name": null,
         "pmt_cust_id": null,
         "primary_email": "ctms-user@example.com",
         "sfdc_id": "001A000001aABcDEFG",
