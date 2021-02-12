@@ -1,8 +1,8 @@
 steps:
-- name: 'docker'
-  args: ['build', '-t', 'gcr.io/$PROJECT_ID/github.com/mozilla-it/$REPO_NAME:$SHORT_SHA', '--file', 'docker/Dockerfile',  '.']
-- name: "docker"
-  args: ["push", "gcr.io/$PROJECT_ID/github.com/mozilla-it/$REPO_NAME:$SHORT_SHA"]
+- name: 'gcr.io/$PROJECT_ID/docker-compose'
+  args: ['-f', './docker-compose.yaml', '-f', './tests/docker-compose.test.yaml', 'run', 'tests']
+- name: 'gcr.io/$PROJECT_ID/docker-compose'
+  args: ['push', '-f', './docker-compose.yaml', '-p', "gcr.io/$PROJECT_ID/github.com/mozilla-it/$REPO_NAME:$SHORT_SHA"]
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'bash'
   env:
