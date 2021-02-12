@@ -165,11 +165,6 @@ class EmailSchema(BaseModel):
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
     )
-    signup_source: Optional[HttpUrl] = Field(
-        default=None,
-        description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
-        example="https://www.mozilla.org/en-US/",
-    )
     has_opted_out_of_email: bool = Field(
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",

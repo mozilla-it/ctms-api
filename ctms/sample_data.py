@@ -57,7 +57,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         mofo_relevant=True,
         pmt_cust_id="cust_012345",
         sfdc_id="001A000001aMozFan",
-        signup_source="https://developer.mozilla.org/fr/",
         subscriber=True,
         unsubscribe_reason="done with this mailing list",
         create_timestamp="2010-01-01T08:04:00+00:00",

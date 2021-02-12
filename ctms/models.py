@@ -18,7 +18,6 @@ class Email(Base):
     email_format = Column(String(1))
     email_lang = Column(String(2))
     mofo_relevant = Column(Boolean)
-    signup_source = Column(Text)
     has_opted_out_of_email = Column(Boolean)
     pmt_cust_id = Column(String(50))
     subscriber = Column(Boolean)

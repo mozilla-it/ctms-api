@@ -42,7 +42,6 @@ Feature: Getting the test user's information works
           "pmt_cust_id": null,
           "primary_email": "ctms-user@example.com",
           "sfdc_id": "001A000001aABcDEFG",
-          "signup_source": null,
           "subscriber": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2020-01-22T15:24:00+00:00"
@@ -133,7 +132,6 @@ Feature: Getting the test user's information works
           "pmt_cust_id": "cust_012345",
           "primary_email": "mozilla-fan@example.com",
           "sfdc_id": "001A000001aMozFan",
-          "signup_source": "https://developer.mozilla.org/fr/",
           "subscriber": true,
           "unsubscribe_reason": "done with this mailing list",
           "update_timestamp": "2020-01-28T14:50:00+00:00"
@@ -248,7 +246,6 @@ Feature: Getting the test user's information works
           "pmt_cust_id": null,
           "primary_email": "contact@example.com",
           "sfdc_id": "001A000023aABcDEFG",
-          "signup_source": "https://www.mozilla.org/en-US/",
           "subscriber": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
@@ -323,7 +320,6 @@ Feature: Getting the test user's information works
           "pmt_cust_id": null,
           "primary_email": "contact@example.com",
           "sfdc_id": "001A000023aABcDEFG",
-          "signup_source": "https://www.mozilla.org/en-US/",
           "subscriber": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
@@ -648,7 +644,6 @@ Feature: Getting the test user's information works
         "pmt_cust_id": null,
         "primary_email": "ctms-user@example.com",
         "sfdc_id": "001A000001aABcDEFG",
-        "signup_source": null,
         "subscriber": false,
         "unsubscribe_reason": null,
         "update_timestamp": "2020-01-22T15:24:00+00:00"
