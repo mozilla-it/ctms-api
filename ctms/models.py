@@ -12,15 +12,13 @@ class Email(Base):
     primary_email = Column(String(255), unique=True, nullable=False)
     basket_token = Column(String(255), unique=True)
     sfdc_id = Column(String(255))
-    name = Column(String(255))
+    first_name = Column(String(255))
+    last_name = Column(String(255))
     mailing_country = Column(String(255))
     email_format = Column(String(1))
     email_lang = Column(String(2))
     mofo_relevant = Column(Boolean)
-    signup_source = Column(Text)
     has_opted_out_of_email = Column(Boolean)
-    pmt_cust_id = Column(String(50))
-    subscriber = Column(Boolean)
     unsubscribe_reason = Column(Text)
 
     # TODO: not null, default now(), update on update

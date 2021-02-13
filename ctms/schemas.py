@@ -135,11 +135,17 @@ class EmailSchema(BaseModel):
         description="Salesforce legacy ID, Id in Salesforce",
         example="001A000023aABcDEFG",
     )
-    name: Optional[str] = Field(
+    first_name: Optional[str] = Field(
         default=None,
         max_length=255,
-        description="Name of contact, Name in Salesforce",
-        example="Mozilla Subscriber",
+        description="First name of contact, FirstName in Salesforce",
+        example="Jane",
+    )
+    last_name: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Last name of contact, LastName in Salesforce",
+        example="Doe",
     )
     mailing_country: Optional[str] = Field(
         default=None,
@@ -159,22 +165,9 @@ class EmailSchema(BaseModel):
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
     )
-    signup_source: Optional[HttpUrl] = Field(
-        default=None,
-        description="URL where the contact first signed up, Signup_Source_URL__c in Salesforce",
-        example="https://www.mozilla.org/en-US/",
-    )
     has_opted_out_of_email: bool = Field(
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",
-    )
-    pmt_cust_id: Optional[str] = Field(
-        default=None,
-        max_length=50,
-        description="Payment system ID (Stripe or other), in basket IGNORE_USER_FIELDS, PMT_Cust_Id__c in Salesforce",
-    )
-    subscriber: bool = Field(
-        default=False, description="TODO: add description. Subscriber__c in Salesforce"
     )
     unsubscribe_reason: Optional[str] = Field(
         default=None,
