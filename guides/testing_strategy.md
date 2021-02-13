@@ -37,12 +37,21 @@ See Behave https://behave.readthedocs.io/en/latest/
 ---
 
 ### How to run the tests:
-You can run the suite by shelling into poetry:
-> poetry shell
+You can run the suite by entering the web container:
+> make test-shell
 
 And then running the installed behave with the folder path:
 > behave tests/behave/
 
+To stop on the first failure:
+> behave tests/behave/ --stop
+
 ### Using script
 You could also opt to use this script to perform the tests locally:
 > poetry run scripts/test.sh
+
+or in the web container:
+
+> make test
+
+This will also calculate the code coverage.
