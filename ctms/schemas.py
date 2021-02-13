@@ -169,9 +169,6 @@ class EmailSchema(BaseModel):
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",
     )
-    subscriber: bool = Field(
-        default=False, description="TODO: add description. Subscriber__c in Salesforce"
-    )
     unsubscribe_reason: Optional[str] = Field(
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",

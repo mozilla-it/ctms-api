@@ -19,7 +19,6 @@ class Email(Base):
     email_lang = Column(String(2))
     mofo_relevant = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
-    subscriber = Column(Boolean)
     unsubscribe_reason = Column(Text)
 
     # TODO: not null, default now(), update on update

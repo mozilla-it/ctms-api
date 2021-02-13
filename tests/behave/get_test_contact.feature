@@ -41,7 +41,6 @@ Feature: Getting the test user's information works
           "mofo_relevant": false,
           "primary_email": "ctms-user@example.com",
           "sfdc_id": "001A000001aABcDEFG",
-          "subscriber": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2020-01-22T15:24:00+00:00"
         },
@@ -130,7 +129,6 @@ Feature: Getting the test user's information works
           "mofo_relevant": true,
           "primary_email": "mozilla-fan@example.com",
           "sfdc_id": "001A000001aMozFan",
-          "subscriber": true,
           "unsubscribe_reason": "done with this mailing list",
           "update_timestamp": "2020-01-28T14:50:00+00:00"
         },
@@ -243,7 +241,6 @@ Feature: Getting the test user's information works
           "mofo_relevant": false,
           "primary_email": "contact@example.com",
           "sfdc_id": "001A000023aABcDEFG",
-          "subscriber": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
         },
@@ -316,7 +313,6 @@ Feature: Getting the test user's information works
           "mofo_relevant": false,
           "primary_email": "contact@example.com",
           "sfdc_id": "001A000023aABcDEFG",
-          "subscriber": false,
           "unsubscribe_reason": null,
           "update_timestamp": "2021-01-28T21:26:57.511000+00:00"
         },
@@ -639,7 +635,6 @@ Feature: Getting the test user's information works
         "mofo_relevant": false,
         "primary_email": "ctms-user@example.com",
         "sfdc_id": "001A000001aABcDEFG",
-        "subscriber": false,
         "unsubscribe_reason": null,
         "update_timestamp": "2020-01-22T15:24:00+00:00"
       }

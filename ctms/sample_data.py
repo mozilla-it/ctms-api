@@ -56,7 +56,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         email_lang="fr",
         mofo_relevant=True,
         sfdc_id="001A000001aMozFan",
-        subscriber=True,
         unsubscribe_reason="done with this mailing list",
         create_timestamp="2010-01-01T08:04:00+00:00",
         update_timestamp="2020-01-28T14:50:00.000+0000",
