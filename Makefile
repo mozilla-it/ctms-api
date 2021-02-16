@@ -1,3 +1,7 @@
+.PHONY: build
+build:
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml build
+
 .PHONY: test
 test:
 	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run tests

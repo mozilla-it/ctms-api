@@ -39,7 +39,9 @@ def get_settings():
     return config.Settings()
 
 
-engine, SessionLocal = get_db_engine(get_settings())
+@app.on_event("startup")
+def startup_event():
+    engine, SessionLocal = get_db_engine(get_settings())
 
 
 def get_db():

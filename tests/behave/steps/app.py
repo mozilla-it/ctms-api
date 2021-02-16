@@ -2,16 +2,40 @@ import json
 from difflib import ndiff
 from uuid import UUID
 
-from behave import given, step, then, when
+import testing.postgresql
+from behave import fixture, given, step, then, use_fixture, when
 from fastapi.testclient import TestClient
 from pytest import fail
 
-from ctms.app import app
+from ctms import config
+from ctms.app import app, get_db
+from ctms.database import get_db_engine
+from ctms.models import Base as ModelBase
 from ctms.sample_data import SAMPLE_CONTACTS
+
+
+@fixture
+def with_postgres(context):
+    settings = config.Settings()
+    engine, SessionLocal = get_db_engine(settings)
+    ModelBase.metadata.drop_all(bind=engine)
+    ModelBase.metadata.create_all(bind=engine)
+    yield SessionLocal
 
 
 @given("the TestClient is setup")
 def setup_test_client(context):
+    SessionLocal = use_fixture(with_postgres, context)
+
+    def override_get_db():
+        try:
+            db = SessionLocal()
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+
     context.test_client = TestClient(app=app)
     context.post_body = None
     context.email_id = None
