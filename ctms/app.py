@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import lru_cache
 from typing import Dict, List, Optional
 from uuid import UUID
 
@@ -9,8 +10,9 @@ from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from . import config
 from .crud import create_email, get_email_by_email_id
-from .database import SessionLocal, engine
+from .database import get_db_engine
 from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
@@ -32,18 +34,12 @@ app = FastAPI(
 )
 
 
-### TODO: temporary until we have migrations, etc ###
-ModelBase.metadata.drop_all(bind=engine)
-ModelBase.metadata.create_all(bind=engine)
+@lru_cache()
+def get_settings():
+    return config.Settings()
 
-for contact in SAMPLE_CONTACTS.values():
-    if not contact.email:
-        raise Exception("SAMPLE_CONTACTS must all include emails")
-    try:
-        create_email(SessionLocal(), contact.email)
-    except IntegrityError:
-        print("Demo data already loaded")
-#####################################################
+
+engine, SessionLocal = get_db_engine(get_settings())
 
 
 def get_db():
