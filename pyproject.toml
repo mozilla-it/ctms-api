@@ -44,7 +44,7 @@ bandit = "^1.7.0"
 python_files = "*.py"
 python_functions = "test_*"
 testpaths = [
-    "tests",
+    "tests/unit",
 ]
 
 [tool.black]
