@@ -298,13 +298,17 @@ class NewsletterSchema(BaseModel):
 ContactSchema.update_forward_refs()
 
 
-class CTMSResponse(ContactSchema):
-    """ContactSchema but sub-schemas are required."""
+class CTMSResponse(BaseModel):
+    """
+    Response for /ctms/<email_id>
+
+    Similar to ContactSchema, but groups are required and includes status: OK
+    """
 
     amo: AddOnsSchema
     email: EmailSchema
     fxa: FirefoxAccountsSchema
-    # newsletters - Default is already an empty list, no changes needed
+    newsletters: List[NewsletterSchema]
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
     )
