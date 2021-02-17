@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config
-from .crud import create_email, get_email_by_email_id
+from .crud import get_email_by_email_id
 from .database import get_db_engine
 from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS

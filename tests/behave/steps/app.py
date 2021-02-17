@@ -2,13 +2,14 @@ import json
 from difflib import ndiff
 from uuid import UUID
 
-import testing.postgresql
 from behave import fixture, given, step, then, use_fixture, when
 from fastapi.testclient import TestClient
 from pytest import fail
+from sqlalchemy.orm.session import close_all_sessions
 
 from ctms import config
 from ctms.app import app, get_db
+from ctms.crud import create_email
 from ctms.database import get_db_engine
 from ctms.models import Base as ModelBase
 from ctms.sample_data import SAMPLE_CONTACTS
@@ -16,20 +17,23 @@ from ctms.sample_data import SAMPLE_CONTACTS
 
 @fixture
 def with_postgres(context):
-    settings = config.Settings()
-    engine, SessionLocal = get_db_engine(settings)
-    ModelBase.metadata.drop_all(bind=engine)
-    ModelBase.metadata.create_all(bind=engine)
-    yield SessionLocal
+    try:
+        settings = config.Settings()
+        engine, SessionLocal = get_db_engine(settings)
+        ModelBase.metadata.drop_all(bind=engine)
+        ModelBase.metadata.create_all(bind=engine)
+        yield SessionLocal
+    finally:
+        close_all_sessions()
 
 
 @given("the TestClient is setup")
 def setup_test_client(context):
-    SessionLocal = use_fixture(with_postgres, context)
+    context.SessionLocal = use_fixture(with_postgres, context)
 
     def override_get_db():
         try:
-            db = SessionLocal()
+            db = context.SessionLocal()
             yield db
         finally:
             db.close()
@@ -45,6 +49,12 @@ def setup_test_client(context):
 def setup_test_contact(context, email_id):
     """TODO: Setup the test contact with a POST to /ctms"""
     assert UUID(email_id) in SAMPLE_CONTACTS
+
+    contact = SAMPLE_CONTACTS.get(UUID(email_id))
+    if not contact:
+        raise Exception("Missing contact {}".format(email_id))
+    if contact.email:
+        create_email(context.SessionLocal(), contact.email)
     context.email_id = email_id
 
 
