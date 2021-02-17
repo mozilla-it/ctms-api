@@ -46,7 +46,7 @@ Feature: Getting the test user's information works
         },
         "fxa": {
           "created_date": null,
-          "deleted": false,
+          "account_deleted": false,
           "first_service": null,
           "fxa_id": null,
           "lang": null,
@@ -134,7 +134,7 @@ Feature: Getting the test user's information works
         },
         "fxa": {
           "created_date": "2019-05-22T08:29:31.906094+00:00",
-          "deleted": false,
+          "account_deleted": false,
           "first_service": "monitor",
           "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
           "lang": "fr,fr-CA",
@@ -246,7 +246,7 @@ Feature: Getting the test user's information works
         },
         "fxa": {
           "created_date": "2021-01-29T18:43:49.082375+00:00",
-          "deleted": false,
+          "account_deleted": false,
           "first_service": "sync",
           "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
           "lang": "en,en-US",
@@ -318,7 +318,7 @@ Feature: Getting the test user's information works
         },
         "fxa": {
           "created_date": "2021-01-29T18:43:49.082375+00:00",
-          "deleted": false,
+          "account_deleted": false,
           "first_service": "sync",
           "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
           "lang": "en,en-US",
@@ -685,7 +685,7 @@ Feature: Getting the test user's information works
       """
       {
         "created_date": null,
-        "deleted": false,
+        "account_deleted": false,
         "first_service": null,
         "fxa_id": null,
         "lang": null,
