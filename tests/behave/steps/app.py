@@ -9,7 +9,13 @@ from sqlalchemy.orm.session import close_all_sessions
 
 from ctms import config
 from ctms.app import app, get_db
-from ctms.crud import create_email
+from ctms.crud import (
+    create_amo,
+    create_email,
+    create_fxa,
+    create_newsletter,
+    create_vpn_waitlist,
+)
 from ctms.database import get_db_engine
 from ctms.models import Base as ModelBase
 from ctms.sample_data import SAMPLE_CONTACTS
@@ -55,6 +61,15 @@ def setup_test_contact(context, email_id):
         raise Exception("Missing contact {}".format(email_id))
     if contact.email:
         create_email(context.SessionLocal(), contact.email)
+    if contact.amo:
+        create_amo(context.SessionLocal(), contact.amo)
+    if contact.fxa:
+        create_fxa(context.SessionLocal(), contact.fxa)
+    if contact.newsletters:
+        for newsletter in contact.newsletters:
+            create_newsletter(context.SessionLocal(), newsletter)
+    if contact.vpn_waitlist:
+        create_vpn_waitlist(context.SessionLocal(), contact.vpn_waitlist)
     context.email_id = email_id
 
 

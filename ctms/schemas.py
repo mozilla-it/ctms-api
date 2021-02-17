@@ -9,7 +9,7 @@ class ContactSchema(BaseModel):
     """A complete contact."""
 
     amo: Optional["AddOnsSchema"] = None
-    email: "EmailSchema" = None
+    email: Optional["EmailSchema"] = None
     fxa: Optional["FirefoxAccountsSchema"] = None
     newsletters: List["NewsletterSchema"] = Field(
         default=[],
@@ -109,6 +109,9 @@ class AddOnsSchema(BaseModel):
         description="AMO data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
     )
+
+    class Config:
+        orm_mode = True
 
 
 class EmailSchema(BaseModel):
@@ -212,6 +215,9 @@ class VpnWaitlistSchema(BaseModel):
         example="ios,mac",
     )
 
+    class Config:
+        orm_mode = True
+
 
 class FirefoxAccountsSchema(BaseModel):
     """The Firefox Account schema."""
@@ -244,13 +250,16 @@ class FirefoxAccountsSchema(BaseModel):
         description="First service that an FxA user used, FirstService__c in Salesforce",
         example="sync",
     )
-    deleted: bool = Field(
+    account_deleted: bool = Field(
         default=False,
         description=(
             "Set to True when FxA account deleted or dupe,"
             " FxA_Account_Deleted__c in Salesforce"
         ),
     )
+
+    class Config:
+        orm_mode = True
 
 
 class NewsletterSchema(BaseModel):
@@ -281,6 +290,9 @@ class NewsletterSchema(BaseModel):
     unsub_reason: Optional[str] = Field(
         default=None, description="Reason for unsubscribing"
     )
+
+    class Config:
+        orm_mode = True
 
 
 ContactSchema.update_forward_refs()
