@@ -32,8 +32,8 @@ app = FastAPI(
     description="CTMS API (work in progress)",
     version="0.5.0",
 )
-engine = None
 SessionLocal = None
+TestSessionLocal = None
 
 
 @lru_cache()
@@ -43,12 +43,21 @@ def get_settings():
 
 @app.on_event("startup")
 def startup_event():
-    global engine, SessionLocal
+    global SessionLocal
     engine, SessionLocal = get_db_engine(get_settings())
 
 
+def set_test_session(test_session):
+    """Set the database session for tests."""
+    global TestSessionLocal
+    TestSessionLocal = test_session
+
+
 def get_db():
-    db = SessionLocal()
+    if TestSessionLocal:
+        db = TestSessionLocal()
+    else:
+        db = SessionLocal()
     try:
         yield db
     finally:
