@@ -1,4 +1,13 @@
-from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    TIMESTAMP,
+    Boolean,
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -79,7 +88,7 @@ class AmoAccount(Base):
     display_name = Column(String(255))
     email_opt_in = Column(Boolean)
     language = Column(String(5))
-    last_login = Column(String(40))
+    last_login = Column(Date)
     location = Column(String(10))
     profile_url = Column(String(40))
     user = Column(Boolean)

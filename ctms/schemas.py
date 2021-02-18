@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID, uuid4
 
@@ -64,11 +64,10 @@ class AddOnsSchema(BaseModel):
         description="Account language, AMO_Language__c in Salesforce",
         example="en",
     )
-    last_login: Optional[str] = Field(
+    last_login: Optional[date] = Field(
         default=None,
-        max_length=40,
-        description="Last login on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
-        example="2021-01-28T19:21:50.908Z",
+        description="Last login date on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
+        example="2021-01-28",
     )
     location: Optional[str] = Field(
         default=None,
