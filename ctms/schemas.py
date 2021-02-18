@@ -239,8 +239,8 @@ class FirefoxAccountsSchema(BaseModel):
     )
     lang: Optional[str] = Field(
         default=None,
-        max_length=10,
-        description="FxA Locale, FxA_Language__c in Salesforce",
+        max_length=255,
+        description="FxA Locale (from browser Accept-Language header), FxA_Language__c in Salesforce",
         example="en,en-US",
     )
     first_service: Optional[str] = Field(

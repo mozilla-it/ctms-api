@@ -68,7 +68,7 @@ class FirefoxAccount(Base):
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id))
     primary_email = Column(String(255))
     created_date = Column(String(50))
-    lang = Column(String(10))
+    lang = Column(String(255))
     first_service = Column(String(50))
     account_deleted = Column(Boolean)
 
