@@ -72,6 +72,7 @@ def all_ids(
     primary_email: Optional[EmailStr] = None,
     basket_token: Optional[UUID] = None,
     sfdc_id: Optional[str] = None,
+    mofo_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
@@ -82,6 +83,7 @@ def all_ids(
         "primary_email": primary_email,
         "basket_token": basket_token,
         "sfdc_id": sfdc_id,
+        "mofo_id": mofo_id,
         "amo_user_id": amo_user_id,
         "fxa_id": fxa_id,
         "fxa_primary_email": fxa_primary_email,
@@ -94,6 +96,7 @@ def get_contacts_by_ids(
     primary_email: Optional[EmailStr] = None,
     basket_token: Optional[UUID] = None,
     sfdc_id: Optional[str] = None,
+    mofo_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
@@ -109,6 +112,7 @@ def get_contacts_by_ids(
             primary_email,
             basket_token,
             sfdc_id,
+            mofo_id,
             amo_user_id,
             fxa_id,
             fxa_primary_email,
@@ -123,6 +127,7 @@ def get_contacts_by_ids(
             and (primary_email is None or contact.email.primary_email == primary_email)
             and (basket_token is None or contact.email.basket_token == basket_token)
             and (sfdc_id is None or contact.email.sfdc_id == sfdc_id)
+            and (mofo_id is None or contact.email.mofo_id == mofo_id)
             and (
                 amo_user_id is None
                 or bool(contact.amo and contact.amo.user_id == amo_user_id)

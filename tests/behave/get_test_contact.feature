@@ -361,7 +361,7 @@ Feature: Getting the test user's information works
     And the response JSON is
     """
     {
-      "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, amo_user_id, fxa_id, fxa_primary_email"
+      "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, mofo_id, amo_user_id, fxa_id, fxa_primary_email"
     }
     """
 
@@ -377,6 +377,7 @@ Feature: Getting the test user's information works
         "primary_email": "ctms-user@example.com",
         "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
         "sfdc_id": "001A000001aABcDEFG",
+        "mofo_id": null,
         "amo_user_id": null,
         "fxa_id": null,
         "fxa_primary_email": null
@@ -393,11 +394,12 @@ Feature: Getting the test user's information works
       {
         "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
         "primary_email": "mozilla-fan@example.com",
-        "amo_user_id": "123",
         "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        "sfdc_id": "001A000001aMozFan",
+        "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+        "amo_user_id": "123",
         "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-        "fxa_primary_email": "fxa-firefox-fan@example.com",
-        "sfdc_id": "001A000001aMozFan"
+        "fxa_primary_email": "fxa-firefox-fan@example.com"
       }
       """
 
@@ -411,11 +413,12 @@ Feature: Getting the test user's information works
       {
         "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
         "primary_email": "contact@example.com",
-        "amo_user_id": "98765",
         "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
+        "sfdc_id": "001A000023aABcDEFG",
+        "mofo_id": null,
+        "amo_user_id": "98765",
         "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
-        "fxa_primary_email": "my-fxa-acct@example.com",
-        "sfdc_id": "001A000023aABcDEFG"
+        "fxa_primary_email": "my-fxa-acct@example.com"
       }
       """
 
@@ -429,11 +432,12 @@ Feature: Getting the test user's information works
         {
           "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
           "primary_email": "contact@example.com",
-          "amo_user_id": "98765",
           "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
+          "sfdc_id": "001A000023aABcDEFG",
+          "mofo_id": null,
+          "amo_user_id": "98765",
           "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
-          "fxa_primary_email": "my-fxa-acct@example.com",
-          "sfdc_id": "001A000023aABcDEFG"
+          "fxa_primary_email": "my-fxa-acct@example.com"
         }
       ]
       """
@@ -450,6 +454,7 @@ Feature: Getting the test user's information works
           "primary_email": "ctms-user@example.com",
           "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
           "sfdc_id": "001A000001aABcDEFG",
+          "mofo_id": null,
           "amo_user_id": null,
           "fxa_id": null,
           "fxa_primary_email": null
@@ -467,11 +472,12 @@ Feature: Getting the test user's information works
         {
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "primary_email": "mozilla-fan@example.com",
-          "amo_user_id": "123",
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "sfdc_id": "001A000001aMozFan",
+          "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+          "amo_user_id": "123",
           "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-          "fxa_primary_email": "fxa-firefox-fan@example.com",
-          "sfdc_id": "001A000001aMozFan"
+          "fxa_primary_email": "fxa-firefox-fan@example.com"
         }
       ]
       """
@@ -488,6 +494,7 @@ Feature: Getting the test user's information works
           "primary_email": "ctms-user@example.com",
           "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
           "sfdc_id": "001A000001aABcDEFG",
+          "mofo_id": null,
           "amo_user_id": null,
           "fxa_id": null,
           "fxa_primary_email": null
@@ -504,11 +511,12 @@ Feature: Getting the test user's information works
         {
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "primary_email": "mozilla-fan@example.com",
-          "amo_user_id": "123",
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "sfdc_id": "001A000001aMozFan",
+          "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+          "amo_user_id": "123",
           "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-          "fxa_primary_email": "fxa-firefox-fan@example.com",
-          "sfdc_id": "001A000001aMozFan"
+          "fxa_primary_email": "fxa-firefox-fan@example.com"
         }
       ]
       """
@@ -523,11 +531,12 @@ Feature: Getting the test user's information works
         {
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "primary_email": "mozilla-fan@example.com",
-          "amo_user_id": "123",
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "sfdc_id": "001A000001aMozFan",
+          "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+          "amo_user_id": "123",
           "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-          "fxa_primary_email": "fxa-firefox-fan@example.com",
-          "sfdc_id": "001A000001aMozFan"
+          "fxa_primary_email": "fxa-firefox-fan@example.com"
         }
       ]
       """
@@ -542,11 +551,32 @@ Feature: Getting the test user's information works
         {
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "primary_email": "mozilla-fan@example.com",
-          "amo_user_id": "123",
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "sfdc_id": "001A000001aMozFan",
+          "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+          "amo_user_id": "123",
           "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-          "fxa_primary_email": "fxa-firefox-fan@example.com",
-          "sfdc_id": "001A000001aMozFan"
+          "fxa_primary_email": "fxa-firefox-fan@example.com"
+        }
+      ]
+      """
+
+  Scenario: User wants to find an identity by Mozilla Foundation ID
+    Given the desired endpoint /identities?mofo_id=195207d2-63f2-4c9f-b149-80e9c408477a
+    When the user invokes the client via GET
+    Then the user expects the response to have a status of 200
+    And the response JSON is
+      """
+      [
+        {
+          "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+          "primary_email": "mozilla-fan@example.com",
+          "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "sfdc_id": "001A000001aMozFan",
+          "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+          "amo_user_id": "123",
+          "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+          "fxa_primary_email": "fxa-firefox-fan@example.com"
         }
       ]
       """
@@ -561,11 +591,12 @@ Feature: Getting the test user's information works
         {
           "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
           "primary_email": "mozilla-fan@example.com",
-          "amo_user_id": "123",
           "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+          "sfdc_id": "001A000001aMozFan",
+          "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+          "amo_user_id": "123",
           "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
-          "fxa_primary_email": "fxa-firefox-fan@example.com",
-          "sfdc_id": "001A000001aMozFan"
+          "fxa_primary_email": "fxa-firefox-fan@example.com"
         }
       ]
       """
@@ -595,7 +626,7 @@ Feature: Getting the test user's information works
     And the response JSON is
       """
       {
-        "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, amo_user_id, fxa_id, fxa_primary_email"
+        "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, mofo_id, amo_user_id, fxa_id, fxa_primary_email"
       }
       """
 
@@ -618,6 +649,7 @@ Feature: Getting the test user's information works
       | fxa_id            | cad092ec-a71a-4df5-aa92-517959caeecb |
       | fxa_primary_email | unknown-user@example.com             |
       | sfdc_id           | 001A000404aUnknown                   |
+      | mofo_id           | cad092ec-a71a-4df5-aa92-517959caeecb |
 
   Scenario: User wants to read the main email data for the minimal contact
     Given the email_id 93db83d4-4119-4e0c-af87-a713786fa81d

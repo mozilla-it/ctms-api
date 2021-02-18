@@ -26,6 +26,7 @@ class ContactSchema(BaseModel):
             email_id=getattr(self.email, "email_id", None),
             fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
+            mofo_id=getattr(self.email, "mofo_id", None),
             primary_email=getattr(self.email, "primary_email", None),
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
@@ -325,6 +326,7 @@ class IdentityResponse(BaseModel):
     primary_email: EmailStr
     basket_token: UUID
     sfdc_id: Optional[str] = None
+    mofo_id: Optional[str] = None
     amo_user_id: Optional[str] = None
     fxa_id: Optional[str] = None
     fxa_primary_email: Optional[EmailStr] = None
