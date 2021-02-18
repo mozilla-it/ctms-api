@@ -137,6 +137,11 @@ class EmailSchema(BaseModel):
         description="Salesforce legacy ID, Id in Salesforce",
         example="001A000023aABcDEFG",
     )
+    mofo_id: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Foriegn key to MoFo contact database",
+    )
     first_name: Optional[str] = Field(
         default=None,
         max_length=255,
