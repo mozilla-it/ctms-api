@@ -17,7 +17,7 @@ class Email(Base):
     last_name = Column(String(255))
     mailing_country = Column(String(255))
     email_format = Column(String(1))
-    email_lang = Column(String(2))
+    email_lang = Column(String(5))
     mofo_relevant = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
@@ -40,7 +40,7 @@ class Newsletter(Base):
     name = Column(String(255), nullable=False)
     subscribed = Column(Boolean)
     format = Column(String(1))
-    lang = Column(String(2))
+    lang = Column(String(5))
     source = Column(Text)
     unsub_reason = Column(Text)
 

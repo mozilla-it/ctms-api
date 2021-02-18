@@ -162,8 +162,8 @@ class EmailSchema(BaseModel):
     )
     email_lang: Optional[str] = Field(
         default="en",
-        max_length=2,
-        description="Email language code, 2 lowercase letters, Email_Language__c in Salesforce",
+        max_length=5,
+        description="Email language code, usually 2 lowercase letters, Email_Language__c in Salesforce",
     )
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
@@ -278,9 +278,8 @@ class NewsletterSchema(BaseModel):
     lang: Optional[str] = Field(
         default="en",
         min_length=2,
-        max_length=2,
-        regex="^[a-z][a-z]$",
-        description="Newsletter language code, 2 lowercase letters",
+        max_length=5,
+        description="Newsletter language code, usually 2 lowercase letters",
     )
     source: Optional[HttpUrl] = Field(
         default=None,
