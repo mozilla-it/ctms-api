@@ -56,20 +56,10 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     Get a contact by email_ID, or raise a 404 exception.
 
     """
-    contact = get_contact_by_email_id(db, email_id)
-    if contact is None:
+    data = get_contact_by_email_id(db, email_id)
+    if data is None:
         raise HTTPException(status_code=404, detail="Unknown email_id")
-    contact = ContactSchema(
-        amo=AddOnsSchema.from_orm(contact["amo"]),
-        email=EmailSchema.from_orm(contact["email"]),
-        fxa=FirefoxAccountsSchema.from_orm(contact["fxa"]),
-        newsletters=[
-            NewsletterSchema.from_orm(newsletter)
-            for newsletter in contact["newsletters"]
-        ],
-        vpn_waitlist=VpnWaitlistSchema.from_orm(contact["vpn_waitlist"]),
-    )
-    return contact
+    return ContactSchema(**data)
 
 
 def all_ids(
