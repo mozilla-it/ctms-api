@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config
-from .crud import get_email_by_email_id
+from .crud import get_contact_by_email_id, get_email_by_email_id
 from .database import get_db_engine
 from .models import Base as ModelBase
 from .sample_data import SAMPLE_CONTACTS
@@ -23,6 +23,7 @@ from .schemas import (
     EmailSchema,
     FirefoxAccountsSchema,
     IdentityResponse,
+    NewsletterSchema,
     NotFoundResponse,
     VpnWaitlistSchema,
 )
@@ -59,10 +60,19 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     Get a contact by email_ID, or raise a 404 exception.
 
     """
-    contact = SAMPLE_CONTACTS.get(email_id)
+    contact = get_contact_by_email_id(db, email_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Unknown email_id")
-    contact.email = EmailSchema.from_orm(get_email_by_email_id(db, email_id))
+    contact = ContactSchema(
+        amo=AddOnsSchema.from_orm(contact["amo"]),
+        email=EmailSchema.from_orm(contact["email"]),
+        fxa=FirefoxAccountsSchema.from_orm(contact["fxa"]),
+        newsletters=[
+            NewsletterSchema.from_orm(newsletter)
+            for newsletter in contact["newsletters"]
+        ],
+        vpn_waitlist=VpnWaitlistSchema.from_orm(contact["vpn_waitlist"]),
+    )
     return contact
 
 

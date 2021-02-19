@@ -17,6 +17,29 @@ def get_email_by_email_id(db: Session, email_id: UUID):
     return db.query(Email).filter(Email.email_id == email_id).first()
 
 
+def get_contact_by_email_id(db: Session, email_id: UUID):
+    """Get all the data for a contact."""
+    result = (
+        db.query(Email, AmoAccount, FirefoxAccount, VpnWaitlist)
+        .outerjoin(AmoAccount, Email.email_id == AmoAccount.email_id)
+        .outerjoin(FirefoxAccount, Email.email_id == FirefoxAccount.email_id)
+        .outerjoin(VpnWaitlist, Email.email_id == VpnWaitlist.email_id)
+        .filter(Email.email_id == email_id)
+        .first()
+    )
+    if result is None:
+        return None
+    email, amo, fxa, vpn_waitlist = result
+    newsletters = db.query(Newsletter).filter(Newsletter.email_id == email_id).all()
+    return {
+        "amo": amo,
+        "email": email,
+        "fxa": fxa,
+        "newsletters": newsletters,
+        "vpn_waitlist": vpn_waitlist,
+    }
+
+
 def create_amo(db: Session, email_id: UUID, amo: AddOnsSchema):
     db_amo = AmoAccount(email_id=email_id, **amo.dict())
     db.add(db_amo)
