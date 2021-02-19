@@ -1,4 +1,6 @@
 """pytest fixtures for the CTMS app"""
+from uuid import UUID
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import PostgresDsn
@@ -8,7 +10,15 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 
 from ctms.app import app, get_db
 from ctms.config import Settings
+from ctms.crud import (
+    create_amo,
+    create_email,
+    create_fxa,
+    create_newsletter,
+    create_vpn_waitlist,
+)
 from ctms.models import Base
+from ctms.sample_data import SAMPLE_CONTACTS
 
 
 @pytest.fixture
@@ -78,3 +88,51 @@ def dbsession(connection):
     app.dependency_overrides[get_db] = test_get_db
     yield db
     del app.dependency_overrides[get_db]
+
+
+@pytest.fixture
+def minimal_contact(dbsession):
+    email_id = UUID("93db83d4-4119-4e0c-af87-a713786fa81d")
+    contact = SAMPLE_CONTACTS[email_id]
+    create_email(dbsession, contact.email)
+    assert contact.amo is None
+    assert contact.fxa is None
+    assert contact.vpn_waitlist is None
+    for newsletter in contact.newsletters:
+        create_newsletter(dbsession, email_id, newsletter)
+    return contact
+
+
+@pytest.fixture
+def maximal_contact(dbsession):
+    email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
+    contact = SAMPLE_CONTACTS[email_id]
+    create_email(dbsession, contact.email)
+    create_amo(dbsession, email_id, contact.amo)
+    create_fxa(dbsession, email_id, contact.fxa)
+    create_vpn_waitlist(dbsession, email_id, contact.vpn_waitlist)
+    for newsletter in contact.newsletters:
+        create_newsletter(dbsession, email_id, newsletter)
+    return contact
+
+
+@pytest.fixture
+def example_contact(dbsession):
+    email_id = UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")
+    contact = SAMPLE_CONTACTS[email_id]
+    create_email(dbsession, contact.email)
+    create_amo(dbsession, email_id, contact.amo)
+    create_fxa(dbsession, email_id, contact.fxa)
+    create_vpn_waitlist(dbsession, email_id, contact.vpn_waitlist)
+    for newsletter in contact.newsletters:
+        create_newsletter(dbsession, email_id, newsletter)
+    return contact
+
+
+@pytest.fixture
+def sample_contacts(minimal_contact, maximal_contact, example_contact):
+    return {
+        "minimal": (minimal_contact.email.email_id, minimal_contact),
+        "maximal": (maximal_contact.email.email_id, maximal_contact),
+        "example": (example_contact.email.email_id, example_contact),
+    }

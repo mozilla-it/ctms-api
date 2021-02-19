@@ -1,20 +1,16 @@
-from datetime import datetime
 from functools import lru_cache
-from typing import Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config
-from .crud import get_contact_by_email_id, get_email_by_email_id
+from .crud import get_contact_by_email_id, get_contacts_by_any_id, get_email_by_email_id
 from .database import get_db_engine
-from .models import Base as ModelBase
-from .sample_data import SAMPLE_CONTACTS
 from .schemas import (
     AddOnsSchema,
     BadRequestResponse,
@@ -115,44 +111,18 @@ def get_contacts_by_ids(
     Callers are expected to set just one ID, but if multiple are set, a contact
     must match all IDs.
     """
-    assert any(
-        (
-            email_id,
-            primary_email,
-            basket_token,
-            sfdc_id,
-            mofo_id,
-            amo_user_id,
-            fxa_id,
-            fxa_primary_email,
-        )
+    rows = get_contacts_by_any_id(
+        db,
+        email_id,
+        primary_email,
+        basket_token,
+        sfdc_id,
+        mofo_id,
+        amo_user_id,
+        fxa_id,
+        fxa_primary_email,
     )
-
-    # TODO: Replace with database query
-    contacts = []
-    for contact_email_id, contact in SAMPLE_CONTACTS.items():
-        if (
-            (email_id is None or contact.email.email_id == email_id)
-            and (primary_email is None or contact.email.primary_email == primary_email)
-            and (basket_token is None or contact.email.basket_token == basket_token)
-            and (sfdc_id is None or contact.email.sfdc_id == sfdc_id)
-            and (mofo_id is None or contact.email.mofo_id == mofo_id)
-            and (
-                amo_user_id is None
-                or bool(contact.amo and contact.amo.user_id == amo_user_id)
-            )
-            and (fxa_id is None or bool(contact.fxa and contact.fxa.fxa_id == fxa_id))
-            and (
-                fxa_primary_email is None
-                or bool(contact.fxa and contact.fxa.primary_email == fxa_primary_email)
-            )
-        ):
-            contact.email = EmailSchema.from_orm(
-                get_email_by_email_id(db, contact_email_id)
-            )
-            contacts.append(contact)
-
-    return contacts
+    return [ContactSchema(**data) for data in rows]
 
 
 @app.get("/", include_in_schema=False)
