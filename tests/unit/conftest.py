@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
-from ctms.app import app, set_test_session
+from ctms.app import app, get_db
 from ctms.config import Settings
 from ctms.models import Base
 
@@ -69,6 +69,11 @@ def connection(engine):
 def dbsession(connection):
     """Return a database session that rolls back."""
     test_sessionmaker = sessionmaker(bind=connection)
-    set_test_session(test_sessionmaker)
-    yield test_sessionmaker()
-    set_test_session(None)
+    db = test_sessionmaker()
+
+    def test_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = test_get_db
+    yield db
+    del app.dependency_overrides[get_db]

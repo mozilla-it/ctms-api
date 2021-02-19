@@ -33,7 +33,6 @@ app = FastAPI(
     version="0.5.0",
 )
 SessionLocal = None
-TestSessionLocal = None
 
 
 @lru_cache()
@@ -47,17 +46,8 @@ def startup_event():
     engine, SessionLocal = get_db_engine(get_settings())
 
 
-def set_test_session(test_session):
-    """Set the database session for tests."""
-    global TestSessionLocal
-    TestSessionLocal = test_session
-
-
 def get_db():
-    if TestSessionLocal:
-        db = TestSessionLocal()
-    else:
-        db = SessionLocal()
+    db = SessionLocal()
     try:
         yield db
     finally:
