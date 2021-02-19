@@ -7,6 +7,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -36,16 +37,16 @@ class Email(Base):
     update_timestamp = Column(TIMESTAMP(timezone=True))
 
     newsletters = relationship("Newsletter", back_populates="email")
-    fxa = relationship("FirefoxAccount", back_populates="email")
-    amo = relationship("AmoAccount", back_populates="email")
-    vpn_waitlist = relationship("VpnWaitlist", back_populates="email")
+    fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
+    amo = relationship("AmoAccount", back_populates="email", uselist=False)
+    vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
 
 
 class Newsletter(Base):
     __tablename__ = "newsletters"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id))
+    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     name = Column(String(255), nullable=False)
     subscribed = Column(Boolean)
     format = Column(String(1))
@@ -57,7 +58,9 @@ class Newsletter(Base):
     create_timestamp = Column(TIMESTAMP(timezone=True))
     update_timestamp = Column(TIMESTAMP(timezone=True))
 
-    email = relationship("Email", back_populates="newsletters")
+    email = relationship("Email", back_populates="newsletters", uselist=False)
+
+    UniqueConstraint("email_id", "name", name="uix_email_name")
 
 
 class FirefoxAccount(Base):
@@ -65,7 +68,9 @@ class FirefoxAccount(Base):
 
     id = Column(Integer, primary_key=True)
     fxa_id = Column(String(255), unique=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id))
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
     primary_email = Column(String(255))
     created_date = Column(String(50))
     lang = Column(String(255))
@@ -76,14 +81,16 @@ class FirefoxAccount(Base):
     create_timestamp = Column(TIMESTAMP(timezone=True))
     update_timestamp = Column(TIMESTAMP(timezone=True))
 
-    email = relationship("Email", back_populates="fxa")
+    email = relationship("Email", back_populates="fxa", uselist=False)
 
 
 class AmoAccount(Base):
     __tablename__ = "amo"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id))
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
     add_on_ids = Column(String(500))
     display_name = Column(String(255))
     email_opt_in = Column(Boolean)
@@ -99,14 +106,16 @@ class AmoAccount(Base):
     create_timestamp = Column(TIMESTAMP(timezone=True))
     update_timestamp = Column(TIMESTAMP(timezone=True))
 
-    email = relationship("Email", back_populates="amo")
+    email = relationship("Email", back_populates="amo", uselist=False)
 
 
 class VpnWaitlist(Base):
     __tablename__ = "vpn_waitlist"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id))
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
     geo = Column(String(100))
     platform = Column(String(100))
 
@@ -114,4 +123,4 @@ class VpnWaitlist(Base):
     create_timestamp = Column(TIMESTAMP(timezone=True))
     update_timestamp = Column(TIMESTAMP(timezone=True))
 
-    email = relationship("Email", back_populates="vpn_waitlist")
+    email = relationship("Email", back_populates="vpn_waitlist", uselist=False)

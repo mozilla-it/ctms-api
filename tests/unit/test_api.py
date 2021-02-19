@@ -14,13 +14,14 @@ from ctms.sample_data import SAMPLE_CONTACTS
 
 def test_api_example(dbsession, client):
     """Test that the API examples are valid."""
-    example = SAMPLE_CONTACTS[UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")]
+    email_id = UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")
+    example = SAMPLE_CONTACTS[email_id]
     create_email(dbsession, example.email)
-    create_amo(dbsession, example.amo)
-    create_fxa(dbsession, example.fxa)
-    create_vpn_waitlist(dbsession, example.vpn_waitlist)
+    create_amo(dbsession, email_id, example.amo)
+    create_fxa(dbsession, email_id, example.fxa)
+    create_vpn_waitlist(dbsession, email_id, example.vpn_waitlist)
     for newsletter in example.newsletters:
-        create_newsletter(dbsession, newsletter)
+        create_newsletter(dbsession, email_id, newsletter)
 
     resp = client.get("/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c")
     assert resp.status_code == 200

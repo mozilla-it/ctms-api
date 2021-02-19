@@ -54,22 +54,17 @@ def setup_test_client(context):
 @given("the test contact {email_id} is setup")
 def setup_test_contact(context, email_id):
     """TODO: Setup the test contact with a POST to /ctms"""
-    assert UUID(email_id) in SAMPLE_CONTACTS
-
-    contact = SAMPLE_CONTACTS.get(UUID(email_id))
-    if not contact:
-        raise Exception("Missing contact {}".format(email_id))
-    if contact.email:
-        create_email(context.SessionLocal(), contact.email)
+    contact = SAMPLE_CONTACTS[UUID(email_id)]
+    assert contact.email
+    create_email(context.SessionLocal(), contact.email)
     if contact.amo:
-        create_amo(context.SessionLocal(), contact.amo)
+        create_amo(context.SessionLocal(), email_id, contact.amo)
     if contact.fxa:
-        create_fxa(context.SessionLocal(), contact.fxa)
-    if contact.newsletters:
-        for newsletter in contact.newsletters:
-            create_newsletter(context.SessionLocal(), newsletter)
+        create_fxa(context.SessionLocal(), email_id, contact.fxa)
+    for newsletter in contact.newsletters:
+        create_newsletter(context.SessionLocal(), email_id, newsletter)
     if contact.vpn_waitlist:
-        create_vpn_waitlist(context.SessionLocal(), contact.vpn_waitlist)
+        create_vpn_waitlist(context.SessionLocal(), email_id, contact.vpn_waitlist)
     context.email_id = email_id
 
 
