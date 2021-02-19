@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID, uuid4
 
@@ -26,6 +26,7 @@ class ContactSchema(BaseModel):
             email_id=getattr(self.email, "email_id", None),
             fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
+            mofo_id=getattr(self.email, "mofo_id", None),
             primary_email=getattr(self.email, "primary_email", None),
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
@@ -64,11 +65,10 @@ class AddOnsSchema(BaseModel):
         description="Account language, AMO_Language__c in Salesforce",
         example="en",
     )
-    last_login: Optional[str] = Field(
+    last_login: Optional[date] = Field(
         default=None,
-        max_length=40,
-        description="Last login on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
-        example="2021-01-28T19:21:50.908Z",
+        description="Last login date on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
+        example="2021-01-28",
     )
     location: Optional[str] = Field(
         default=None,
@@ -138,6 +138,11 @@ class EmailSchema(BaseModel):
         description="Salesforce legacy ID, Id in Salesforce",
         example="001A000023aABcDEFG",
     )
+    mofo_id: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Foriegn key to MoFo contact database",
+    )
     first_name: Optional[str] = Field(
         default=None,
         max_length=255,
@@ -162,8 +167,8 @@ class EmailSchema(BaseModel):
     )
     email_lang: Optional[str] = Field(
         default="en",
-        max_length=2,
-        description="Email language code, 2 lowercase letters, Email_Language__c in Salesforce",
+        max_length=5,
+        description="Email language code, usually 2 lowercase letters, Email_Language__c in Salesforce",
     )
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
@@ -240,8 +245,8 @@ class FirefoxAccountsSchema(BaseModel):
     )
     lang: Optional[str] = Field(
         default=None,
-        max_length=10,
-        description="FxA Locale, FxA_Language__c in Salesforce",
+        max_length=255,
+        description="FxA Locale (from browser Accept-Language header), FxA_Language__c in Salesforce",
         example="en,en-US",
     )
     first_service: Optional[str] = Field(
@@ -278,9 +283,8 @@ class NewsletterSchema(BaseModel):
     lang: Optional[str] = Field(
         default="en",
         min_length=2,
-        max_length=2,
-        regex="^[a-z][a-z]$",
-        description="Newsletter language code, 2 lowercase letters",
+        max_length=5,
+        description="Newsletter language code, usually 2 lowercase letters",
     )
     source: Optional[HttpUrl] = Field(
         default=None,
@@ -322,6 +326,7 @@ class IdentityResponse(BaseModel):
     primary_email: EmailStr
     basket_token: UUID
     sfdc_id: Optional[str] = None
+    mofo_id: Optional[str] = None
     amo_user_id: Optional[str] = None
     fxa_id: Optional[str] = None
     fxa_primary_email: Optional[EmailStr] = None

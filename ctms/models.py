@@ -1,4 +1,13 @@
-from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    TIMESTAMP,
+    Boolean,
+    Column,
+    Date,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -17,7 +26,7 @@ class Email(Base):
     last_name = Column(String(255))
     mailing_country = Column(String(255))
     email_format = Column(String(1))
-    email_lang = Column(String(2))
+    email_lang = Column(String(5))
     mofo_relevant = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
@@ -40,7 +49,7 @@ class Newsletter(Base):
     name = Column(String(255), nullable=False)
     subscribed = Column(Boolean)
     format = Column(String(1))
-    lang = Column(String(2))
+    lang = Column(String(5))
     source = Column(Text)
     unsub_reason = Column(Text)
 
@@ -59,7 +68,7 @@ class FirefoxAccount(Base):
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id))
     primary_email = Column(String(255))
     created_date = Column(String(50))
-    lang = Column(String(10))
+    lang = Column(String(255))
     first_service = Column(String(50))
     account_deleted = Column(Boolean)
 
@@ -79,7 +88,7 @@ class AmoAccount(Base):
     display_name = Column(String(255))
     email_opt_in = Column(Boolean)
     language = Column(String(5))
-    last_login = Column(String(40))
+    last_login = Column(Date)
     location = Column(String(10))
     profile_url = Column(String(40))
     user = Column(Boolean)
