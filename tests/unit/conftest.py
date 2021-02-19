@@ -17,7 +17,7 @@ def client():
 
 
 @pytest.fixture(scope="session")
-def engine():
+def engine(pytestconfig):
     """Return a SQLAlchemy engine for a fresh test database."""
 
     orig_db_url = Settings().db_url
@@ -45,7 +45,8 @@ def engine():
             drop_database(test_db_url)
         create_database(test_db_url)
 
-    test_engine = create_engine(test_db_url)
+    echo = pytestconfig.getoption("verbose") > 1
+    test_engine = create_engine(test_db_url, echo=echo)
 
     # TODO: Convert to running alembic migrations
     Base.metadata.create_all(bind=test_engine)
