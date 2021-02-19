@@ -5,7 +5,7 @@ build:
 
 .PHONY: db-only
 db-only:
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run postgres
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --service-ports postgres
 
 .PHONY: test
 test:
