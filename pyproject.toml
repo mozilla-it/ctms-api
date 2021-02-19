@@ -39,12 +39,13 @@ coverage = {extras = ["toml"], version = "^5.3"}
 mypy = "^0.782"
 detect-secrets = "^0.14.3"
 bandit = "^1.7.0"
+SQLAlchemy-Utils = "^0.36.8"
 
 [tool.pytest.ini_options]
 python_files = "*.py"
 python_functions = "test_*"
 testpaths = [
-    "tests",
+    "tests/unit",
 ]
 
 [tool.black]

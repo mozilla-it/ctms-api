@@ -32,7 +32,6 @@ app = FastAPI(
     description="CTMS API (work in progress)",
     version="0.5.0",
 )
-engine = None
 SessionLocal = None
 
 
@@ -43,7 +42,7 @@ def get_settings():
 
 @app.on_event("startup")
 def startup_event():
-    global engine, SessionLocal
+    global SessionLocal
     engine, SessionLocal = get_db_engine(get_settings())
 
 
