@@ -5,6 +5,8 @@ Technologies and tools in use:
 - Docker: https://www.docker.com/
 - FastAPI: https://fastapi.tiangolo.com/
 - Pydantic: https://pydantic-docs.helpmanual.io/
+- SQLAlchemy: https://www.sqlalchemy.org/
+- Alembic: https://alembic.sqlalchemy.org
 - ...
 
 ---
@@ -100,6 +102,14 @@ also provides OpenAPI and JSON Schema portals for API viewing.
 ### Details
 Data Modeling and validation package that enforces type hints at
 runtime and provides friendly errors for easy debugging.
+
+---
+## SQLAlchemy and Alembic
+
+### Details
+The usage of these tools is complex and extends beyond this document. The
+best place to read to understand how to create/apply migrations and such things
+is [the Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html#create-a-migration-script).
 
 ---
 ## Next Steps

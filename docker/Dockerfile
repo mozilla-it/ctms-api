@@ -26,14 +26,14 @@ RUN apt-get update \
     build-essential
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
-ENV POETRY_VERSION=1.0.5
+ENV POETRY_VERSION=1.1.4
 RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 
 # We copy our Python requirements here to cache them
 # and install only runtime deps using poetry
 WORKDIR $PYSETUP_PATH
 COPY ./poetry.lock ./pyproject.toml ./
-RUN poetry install --no-dev
+RUN poetry install --no-dev --no-root
 
 
 # 'development' stage installs all dev deps and can be used to develop code.
@@ -51,7 +51,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # venv already has runtime deps installed we get a quicker install
 WORKDIR $PYSETUP_PATH
-RUN poetry install
+RUN poetry install --no-root
 
 WORKDIR /app
 COPY . .
