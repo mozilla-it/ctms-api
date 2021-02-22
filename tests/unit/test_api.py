@@ -1,6 +1,8 @@
 """pytest tests for API functionality"""
 from uuid import UUID
 
+import pytest
+
 from ctms.crud import (
     create_amo,
     create_email,
@@ -12,18 +14,10 @@ from ctms.models import Email
 from ctms.sample_data import SAMPLE_CONTACTS
 
 
-def test_api_example(dbsession, client):
+def test_api_example(client, example_contact):
     """Test that the API examples are valid."""
-    email_id = UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")
-    example = SAMPLE_CONTACTS[email_id]
-    create_email(dbsession, example.email)
-    create_amo(dbsession, email_id, example.amo)
-    create_fxa(dbsession, email_id, example.fxa)
-    create_vpn_waitlist(dbsession, email_id, example.vpn_waitlist)
-    for newsletter in example.newsletters:
-        create_newsletter(dbsession, email_id, newsletter)
-
-    resp = client.get("/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c")
+    email_id = example_contact.email.email_id
+    resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == 200
     assert resp.json() == {
         "amo": {
@@ -86,6 +80,51 @@ def test_api_example(dbsession, client):
         "status": "ok",
         "vpn_waitlist": {"geo": "fr", "platform": "ios,mac"},
     }
+
+
+@pytest.mark.parametrize(
+    "alt_id_name,alt_id_value",
+    [
+        ("email_id", "67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
+        ("primary_email", "mozilla-fan@example.com"),
+        ("amo_user_id", 123),
+        ("basket_token", "d9ba6182-f5dd-4728-a477-2cc11bf62b69"),
+        ("fxa_id", "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"),
+        ("fxa_primary_email", "fxa-firefox-fan@example.com"),
+        ("sfdc_id", "001A000001aMozFan"),
+        ("mofo_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
+    ],
+)
+def test_ctms_by_alt_id(sample_contacts, client, alt_id_name, alt_id_value):
+    """The desired contact can be fetched by alternate ID."""
+    maximal_id, contact = sample_contacts["maximal"]
+    resp = client.get("/ctms", params={alt_id_name: alt_id_value})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["email"]["email_id"] == str(maximal_id)
+
+
+@pytest.mark.parametrize(
+    "alt_id_name,alt_id_value",
+    [
+        ("email_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("primary_email", "unknown-user@example.com"),
+        ("amo_user_id", 404),
+        ("basket_token", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("fxa_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("fxa_primary_email", "unknown-user@example.com"),
+        ("sfdc_id", "001A000404aUnknown"),
+        ("mofo_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+    ],
+)
+def test_ctms_by_alt_id_none_found(sample_contacts, client, alt_id_name, alt_id_value):
+    """An empty list is returned when no contacts have the alternate ID."""
+    maximal_id, contact = sample_contacts["maximal"]
+    resp = client.get("/ctms", params={alt_id_name: alt_id_value})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 0
 
 
 def test_empty_db(dbsession):
