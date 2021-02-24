@@ -3,19 +3,19 @@
 This is a work-in-progress for the Contact Management System (CTMS) API.
 The API is read-only with some sample test contacts with fake data:
 
-* [93db83d4-4119-4e0c-af87-a713786fa81d](http://ctms-api.api.data.allizom.org/ctms/93db83d4-4119-4e0c-af87-a713786fa81d):
+* ``93db83d4-4119-4e0c-af87-a713786fa81d``:
   sample contact with minimal data:
   - email ``ctms-user@example.com``
   - Basket token ``142e20b6-1ef5-43d8-b5f4-597430e956d7``
   - SalesForce ID ``001A000001aABcDEFG``
-* [67e52c77-950f-4f28-accb-bb3ea1a2c51a](http://ctms-api.api.data.allizom.org/ctms/67e52c77-950f-4f28-accb-bb3ea1a2c51a):
+* ``67e52c77-950f-4f28-accb-bb3ea1a2c51a``:
   sample contact with all data:
   - email ``mozilla-fan@example.com``
   - Basket token ``d9ba6182-f5dd-4728-a477-2cc11bf62b69``
   - SalesForce ID ``001A000001aMozFan``
   - AMO User ID: ``123``
   - Payee ID: ``cust_012345``
-* [332de237-cab7-4461-bcc3-48e68f42bd5c](http://ctms-api.api.data.allizom.org/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c):
+* ``332de237-cab7-4461-bcc3-48e68f42bd5c``:
   - email ``contact@example.com``
   - Basket token ``c4a7d759-bb52-457b-896b-90f1d3ef8433``
   - SalesForce ID ``001A000023aABcDEFG``
