@@ -73,10 +73,8 @@ The project is structured with the following in mind:
         - Pydantic Models for Data Modeling, and Contract Validation
     - .../models.py
         - SQLAlchemy models
-- tests/behave/
-    - BDD feature testing with Behave and Gherkin feature files
-- tests/resources/
-    - Resources of various files types, exist here
+- tests/unit/
+    - pytest tests
 
 ---
 ## References & Regards

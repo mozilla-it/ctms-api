@@ -9,7 +9,6 @@ build
 .venv
 reports/
 .coverage
-behave-reports/
 htmlcov/
 .isort.cfg
 docs/_build
