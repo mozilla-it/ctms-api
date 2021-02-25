@@ -46,8 +46,6 @@ SQLAlchemy-Utils = "^0.36.8"
 alembic = "^1.5.4"
 
 [tool.pytest.ini_options]
-python_files = "*.py"
-python_functions = "test_*"
 testpaths = [
     "tests/unit",
 ]
