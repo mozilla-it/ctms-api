@@ -3,13 +3,6 @@ from uuid import UUID
 
 import pytest
 
-from ctms.crud import (
-    create_amo,
-    create_email,
-    create_fxa,
-    create_newsletter,
-    create_vpn_waitlist,
-)
 from ctms.models import Email
 from ctms.sample_data import SAMPLE_CONTACTS
 
