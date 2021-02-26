@@ -37,6 +37,7 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
         "email": {
             "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
             "create_timestamp": "2014-01-22T15:24:00+00:00",
+            "double_opt_in": False,
             "email_format": "H",
             "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
             "email_lang": "en",
@@ -121,6 +122,7 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
         "email": {
             "basket_token": "d9ba6182-f5dd-4728-a477-2cc11bf62b69",
             "create_timestamp": "2010-01-01T08:04:00+00:00",
+            "double_opt_in": True,
             "email_format": "H",
             "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
             "email_lang": "fr",
@@ -230,6 +232,7 @@ def test_get_ctms_for_api_example(client, example_contact):
         "email": {
             "basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433",
             "create_timestamp": "2020-03-28T15:41:00+00:00",
+            "double_opt_in": True,
             "email_format": "H",
             "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
             "email_lang": "en",

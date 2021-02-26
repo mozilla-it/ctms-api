@@ -89,6 +89,25 @@ It is also possible to build the full image through the provided scripts:
 > poetry run scripts/build.sh
 
 ---
+## Using Docker Compose and the Makefile
+`docker-compose` is a tool for configuring and running Docker containers, and is
+useful for running PostgreSQL and CTMS together in a development environment.
+
+### Installation
+`docker-compose` is included with Docker Desktop for Mac and Windows. For other systems,
+see [Install Docker Compose](https://docs.docker.com/compose/install/).
+
+`make` is included on some operating systems and an optional install on others. For
+example, `make` is part of the Windows Subsystem for Linux on Windows 10 (see the
+[Installation Guide](https://docs.microsoft.com/en-us/windows/wsl/install-win10) for
+installing).
+
+To test that they are working:
+
+> make help  # Shows the CTMS make rules
+> make build # Build the docker containers
+
+---
 ## FastAPI
 
 ### Details
@@ -110,6 +129,32 @@ runtime and provides friendly errors for easy debugging.
 The usage of these tools is complex and extends beyond this document. The
 best place to read to understand how to create/apply migrations and such things
 is [the Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html#create-a-migration-script).
+
+To create or recreate a database with empty tables:
+
+> make setup
+
+To create a new migration file based on updated SQLAlchemy models:
+
+> make shell  # To enter the web container
+> python -m alembic revision -m "A short description of the change"
+> exit
+
+Edit the generated migration script, confirm it does what you meant,
+and adjust or delete and recreate as needed.
+
+The revision may be detected as secrets at compile time. You can mark
+them as allowed:
+
+```
+revision = "3f8a97b79852"  # pragma: allowlist secret
+```
+
+To run this and other migrations on an existing database:
+
+> make shell  # Enter the web container
+> python -m alembic upgrade head
+> exit
 
 ---
 ## Next Steps

@@ -29,6 +29,7 @@ class Email(Base):
     email_format = Column(String(1))
     email_lang = Column(String(5))
     mofo_relevant = Column(Boolean)
+    double_opt_in = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
 
