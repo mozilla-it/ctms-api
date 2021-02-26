@@ -19,6 +19,10 @@ def get_email_by_email_id(db: Session, email_id: UUID):
     return db.query(Email).filter(Email.email_id == email_id).first()
 
 
+def get_all_emails(db: Session):
+    return db.query(Email).all()
+
+
 def get_contact_by_email_id(db: Session, email_id: UUID):
     """Get all the data for a contact."""
     result = (
@@ -44,14 +48,14 @@ def get_contact_by_email_id(db: Session, email_id: UUID):
 
 def get_contacts_by_any_id(
     db: Session,
-    email_id: Optional[UUID],
-    primary_email: Optional[EmailStr],
-    basket_token: Optional[UUID],
-    sfdc_id: Optional[str],
-    mofo_id: Optional[str],
-    amo_user_id: Optional[str],
-    fxa_id: Optional[str],
-    fxa_primary_email: Optional[EmailStr],
+    email_id: Optional[UUID] = None,
+    primary_email: Optional[EmailStr] = None,
+    basket_token: Optional[UUID] = None,
+    sfdc_id: Optional[str] = None,
+    mofo_id: Optional[str] = None,
+    amo_user_id: Optional[str] = None,
+    fxa_id: Optional[str] = None,
+    fxa_primary_email: Optional[EmailStr] = None,
 ) -> List[Dict]:
     """Get all the data for multiple contacts by IDs."""
     assert any(

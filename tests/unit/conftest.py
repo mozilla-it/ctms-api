@@ -73,11 +73,15 @@ def connection(engine):
 @pytest.fixture
 def dbsession(connection):
     """Return a database session that rolls back."""
-    test_sessionmaker = sessionmaker(bind=connection)
+    test_sessionmaker = sessionmaker(autocommit=False, autoflush=False, bind=connection)
     db = test_sessionmaker()
 
     def test_get_db():
-        yield db
+        db.begin_nested()
+        try:
+            yield db
+        finally:
+            db.close()
 
     app.dependency_overrides[get_db] = test_get_db
     yield db

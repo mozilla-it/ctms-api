@@ -1,15 +1,21 @@
 from functools import lru_cache
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
-from pydantic import EmailStr
+from pydantic import UUID4, EmailStr
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config
-from .crud import get_contact_by_email_id, get_contacts_by_any_id, get_email_by_email_id
+from .crud import (
+    create_contact,
+    get_contact_by_email_id,
+    get_contacts_by_any_id,
+    get_email_by_email_id,
+)
 from .database import get_db_engine
 from .schemas import (
     AddOnsSchema,
@@ -173,6 +179,32 @@ def read_ctms_by_email_id(
         vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
         status="ok",
     )
+
+
+@app.post(
+    "/ctms",
+    summary="Create a contact, generating an id",
+)
+def create_ctms_contact(
+    contact: ContactSchema,
+    db: Session = Depends(get_db),
+):
+    email_id = contact.email.email_id
+    existing = get_contact_by_email_id(db, email_id)
+    if existing:
+        if ContactSchema(**existing) == contact:
+            return
+        else:
+            raise HTTPException(status_code=409, detail="Contact already exists")
+    try:
+        create_contact(db, email_id, contact)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if isinstance(e, IntegrityError):
+            raise HTTPException(status_code=409, detail="Contact already exists")
+        else:
+            raise
 
 
 @app.get(
