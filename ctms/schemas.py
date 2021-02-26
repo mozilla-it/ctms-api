@@ -173,6 +173,9 @@ class EmailSchema(BaseModel):
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
     )
+    double_opt_in: bool = Field(
+        default=False, description="User has clicked a confirmation link", example=True
+    )
     has_opted_out_of_email: bool = Field(
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",
