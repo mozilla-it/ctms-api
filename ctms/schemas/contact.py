@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
 
 from .addons import AddOnsSchema
-from .email import EmailSchema
+from .email import EmailInSchema, EmailSchema
 from .fxa import FirefoxAccountsSchema
 from .newsletter import NewsletterSchema
 from .vpn import VpnWaitlistSchema
@@ -39,6 +39,20 @@ class ContactSchema(BaseModel):
 
 
 ContactSchema.update_forward_refs()
+
+
+class ContactInSchema(BaseModel):
+    """A contact as provided by callers."""
+
+    amo: Optional["AddOnsSchema"] = None
+    email: "EmailInSchema"
+    fxa: Optional["FirefoxAccountsSchema"] = None
+    newsletters: List["NewsletterSchema"] = Field(
+        default=[],
+        description="List of newsletters for which the contact is or was subscribed",
+        example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
+    )
+    vpn_waitlist: Optional["VpnWaitlistSchema"] = None
 
 
 class CTMSResponse(BaseModel):

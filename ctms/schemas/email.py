@@ -4,15 +4,15 @@ from uuid import UUID, uuid4
 
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
 
+email_id_field: UUID4 = Field(
+    description="ID for email",
+    example="332de237-cab7-4461-bcc3-48e68f42bd5c",
+)
 
-class EmailSchema(BaseModel):
-    """The primary email and related data."""
 
-    email_id: UUID4 = Field(
-        default_factory=uuid4,
-        description="ID for email",
-        example="332de237-cab7-4461-bcc3-48e68f42bd5c",
-    )
+class EmailBase(BaseModel):
+    """Data that is included in input/output/db of a primary_email and such."""
+
     primary_email: EmailStr = Field(
         ...,
         description="Contact email address, Email in Salesforce",
@@ -72,6 +72,13 @@ class EmailSchema(BaseModel):
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
+
+    class Config:
+        orm_mode = True
+
+
+class EmailSchema(EmailBase):
+    email_id: UUID4 = email_id_field
     create_timestamp: Optional[datetime] = Field(
         default=None,
         description="Contact creation date, CreatedDate in Salesforce",
@@ -83,5 +90,6 @@ class EmailSchema(BaseModel):
         example="2021-01-28T21:26:57.511Z",
     )
 
-    class Config:
-        orm_mode = True
+
+class EmailInSchema(EmailBase):
+    email_id: Optional[UUID4] = email_id_field

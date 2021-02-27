@@ -20,6 +20,7 @@ from .database import get_db_engine
 from .schemas import (
     AddOnsSchema,
     BadRequestResponse,
+    ContactInSchema,
     ContactSchema,
     CTMSResponse,
     EmailSchema,
@@ -186,9 +187,10 @@ def read_ctms_by_email_id(
     summary="Create a contact, generating an id",
 )
 def create_ctms_contact(
-    contact: ContactSchema,
+    contact: ContactInSchema,
     db: Session = Depends(get_db),
 ):
+    contact.email.email_id = contact.email.email_id or uuid4()
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:

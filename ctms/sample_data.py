@@ -122,12 +122,10 @@ SAMPLE_EXAMPLE = ContactSchema(
 SAMPLE_TO_ADD = ContactSchema(
     email=EmailSchema(
         basket_token="21aeb466-4003-4c2b-a27e-e6651c13d231",
-        create_timestamp="2020-03-21T12:21:00+00:00",
         email_id=UUID("d1da1c99-fe09-44db-9c68-78a75752574d"),
         mailing_country="us",
         primary_email="ctms-user-to-be-created@example.com",
         sfdc_id="002A000001aBAcDEFA",
-        update_timestamp="2020-02-23T12:14:00.000+0000",
     )
 )
 

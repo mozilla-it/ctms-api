@@ -334,19 +334,6 @@ def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_va
     assert len(data) == 0
 
 
-# TODO: Make this pass. This test is the same as the following one but
-#       with no email_id. This _should_ work in my head because email_id
-#       has a default_factory and
-#       https://fastapi.tiangolo.com/tutorial/body/#create-your-data-model
-#       says that the defauls should get filled in but as it stands I think
-#       that is only working with regular defaults, not factories.
-#       Indeed https://github.com/tiangolo/fastapi/blob/5614b94ccc9f72f1de2f63aae63f5fe90b86c8b5/fastapi/dependencies/utils.py#L639
-#       does seem to not take that into account. Will leave this as
-#       xfail for now and discuss what we want to do in the PR.
-#       Perhaps if I am lucky we can just declare that clients must
-#       always genereate an id (this honestly makes senes to me for
-#       idempotency purposes anyway?)
-@pytest.mark.xfail
 def test_create_basic(client, dbsession):
     """Most straightforward contact creation succeeds."""
     sample_uuid = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
