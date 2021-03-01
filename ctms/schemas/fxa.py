@@ -12,7 +12,7 @@ class FirefoxAccountsSchema(BaseModel):
         default=None,
         description="Firefox Accounts foreign ID, FxA_Id__c in Salesforce",
         max_length=50,
-        example="6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+        example="6eb6ed6ac3b64259968aa490c6c0b9df",  # pragma: allowlist secret
     )
     primary_email: Optional[EmailStr] = Field(
         default=None,
