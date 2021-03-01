@@ -20,10 +20,6 @@ def get_email_by_email_id(db: Session, email_id: UUID4):
     return db.query(Email).filter(Email.email_id == email_id).first()
 
 
-def get_all_emails(db: Session):
-    return db.query(Email).all()
-
-
 def get_contact_by_email_id(db: Session, email_id: UUID4):
     """Get all the data for a contact."""
     result = (
