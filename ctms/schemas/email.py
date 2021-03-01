@@ -23,6 +23,9 @@ class EmailBase(BaseModel):
         description="Basket token, Token__c in Salesforce",
         example="c4a7d759-bb52-457b-896b-90f1d3ef8433",
     )
+    double_opt_in: bool = Field(
+        default=False, description="User has clicked a confirmation link", example=True
+    )
     sfdc_id: Optional[str] = Field(
         default=None,
         max_length=255,
