@@ -1,13 +1,14 @@
 from typing import Dict, List, Optional
-from uuid import UUID
 
-from pydantic import EmailStr
+from pydantic import UUID4, EmailStr
 from sqlalchemy.orm import Session
 
 from .models import AmoAccount, Email, FirefoxAccount, Newsletter, VpnWaitlist
 from .schemas import (
     AddOnsSchema,
+    ContactInSchema,
     ContactSchema,
+    EmailInSchema,
     EmailSchema,
     FirefoxAccountsSchema,
     NewsletterSchema,
@@ -15,11 +16,11 @@ from .schemas import (
 )
 
 
-def get_email_by_email_id(db: Session, email_id: UUID):
+def get_email_by_email_id(db: Session, email_id: UUID4):
     return db.query(Email).filter(Email.email_id == email_id).first()
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID):
+def get_contact_by_email_id(db: Session, email_id: UUID4):
     """Get all the data for a contact."""
     result = (
         db.query(Email, AmoAccount, FirefoxAccount, VpnWaitlist)
@@ -44,14 +45,14 @@ def get_contact_by_email_id(db: Session, email_id: UUID):
 
 def get_contacts_by_any_id(
     db: Session,
-    email_id: Optional[UUID],
-    primary_email: Optional[EmailStr],
-    basket_token: Optional[UUID],
-    sfdc_id: Optional[str],
-    mofo_id: Optional[str],
-    amo_user_id: Optional[str],
-    fxa_id: Optional[str],
-    fxa_primary_email: Optional[EmailStr],
+    email_id: Optional[UUID4] = None,
+    primary_email: Optional[EmailStr] = None,
+    basket_token: Optional[UUID4] = None,
+    sfdc_id: Optional[str] = None,
+    mofo_id: Optional[str] = None,
+    amo_user_id: Optional[str] = None,
+    fxa_id: Optional[str] = None,
+    fxa_primary_email: Optional[EmailStr] = None,
 ) -> List[Dict]:
     """Get all the data for multiple contacts by IDs."""
     assert any(
@@ -107,41 +108,38 @@ def get_contacts_by_any_id(
     return data
 
 
-def create_amo(db: Session, email_id: UUID, amo: AddOnsSchema):
+def create_amo(db: Session, email_id: UUID4, amo: AddOnsSchema):
     db_amo = AmoAccount(email_id=email_id, **amo.dict())
     db.add(db_amo)
-    db.commit()
-    db.refresh(db_amo)
-    return db_amo
 
 
-def create_email(db: Session, email: EmailSchema):
+def create_email(db: Session, email: EmailInSchema):
     db_email = Email(**email.dict())
     db.add(db_email)
-    db.commit()
-    db.refresh(db_email)
-    return db_email
 
 
-def create_fxa(db: Session, email_id: UUID, fxa: FirefoxAccountsSchema):
+def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsSchema):
     db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
     db.add(db_fxa)
-    db.commit()
-    db.refresh(db_fxa)
-    return db_fxa
 
 
-def create_vpn_waitlist(db: Session, email_id: UUID, vpn_waitlist: VpnWaitlistSchema):
+def create_vpn_waitlist(db: Session, email_id: UUID4, vpn_waitlist: VpnWaitlistSchema):
     db_vpn_waitlist = VpnWaitlist(email_id=email_id, **vpn_waitlist.dict())
     db.add(db_vpn_waitlist)
-    db.commit()
-    db.refresh(db_vpn_waitlist)
-    return db_vpn_waitlist
 
 
-def create_newsletter(db: Session, email_id: UUID, newsletter: NewsletterSchema):
+def create_newsletter(db: Session, email_id: UUID4, newsletter: NewsletterSchema):
     db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
     db.add(db_newsletter)
-    db.commit()
-    db.refresh(db_newsletter)
-    return db_newsletter
+
+
+def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
+    create_email(db, contact.email)
+    if contact.amo:
+        create_amo(db, email_id, contact.amo)
+    if contact.fxa:
+        create_fxa(db, email_id, contact.fxa)
+    if contact.vpn_waitlist:
+        create_vpn_waitlist(db, email_id, contact.vpn_waitlist)
+    for newsletter in contact.newsletters:
+        create_newsletter(db, email_id, newsletter)

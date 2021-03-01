@@ -3,15 +3,10 @@ from uuid import UUID
 
 import pytest
 
-from ctms.crud import (
-    create_amo,
-    create_email,
-    create_fxa,
-    create_newsletter,
-    create_vpn_waitlist,
-)
+from ctms.crud import get_contacts_by_any_id
 from ctms.models import Email
 from ctms.sample_data import SAMPLE_CONTACTS
+from ctms.schemas import ContactSchema
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -251,7 +246,7 @@ def test_get_ctms_for_api_example(client, example_contact):
             "account_deleted": False,
             "created_date": "2021-01-29T18:43:49.082375+00:00",
             "first_service": "sync",
-            "fxa_id": "6eb6ed6a-c3b6-4259-968a-a490c6c0b9df",
+            "fxa_id": "6eb6ed6ac3b64259968aa490c6c0b9df",
             "lang": "en,en-US",
             "primary_email": "my-fxa-acct@example.com",
         },
@@ -325,7 +320,7 @@ def test_get_ctms_by_no_ids_is_error(client, dbsession):
         ("primary_email", "unknown-user@example.com"),
         ("amo_user_id", 404),
         ("basket_token", "cad092ec-a71a-4df5-aa92-517959caeecb"),
-        ("fxa_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("fxa_id", "cad092eca71a-4df5-aa92-517959caeecb"),
         ("fxa_primary_email", "unknown-user@example.com"),
         ("sfdc_id", "001A000404aUnknown"),
         ("mofo_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
@@ -337,3 +332,119 @@ def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_va
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 0
+
+
+def test_create_basic_no_id(client, dbsession):
+    """Most straightforward contact creation succeeds."""
+    sample_uuid = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    sample = SAMPLE_CONTACTS[sample_uuid]
+    sample.email.email_id = None
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    saved = get_contacts_by_any_id(dbsession, primary_email=sample.email.primary_email)
+    assert len(saved) == 1
+
+    # this should be generated in this case
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email.email_id != sample_uuid
+    del saved_contact.email.email_id
+    del sample.email.email_id
+
+    assert saved_contact.email == sample.email
+
+
+def test_create_basic_with_id(client, dbsession):
+    """Most straightforward contact creation succeeds."""
+    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    sample = SAMPLE_CONTACTS[email_id]
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email == sample.email
+
+
+def test_create_basic_idempotent(client, dbsession):
+    """Creating a contact works across retries."""
+    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    sample = SAMPLE_CONTACTS[email_id]
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email == sample.email
+
+
+def test_create_basic_with_id_collision(client, dbsession):
+    """Creating a contact with the same id but different data fails."""
+    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    sample = SAMPLE_CONTACTS[email_id]
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    sample.email.mailing_country = "mx"
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 409
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email.mailing_country == "us"
+
+
+def test_create_basic_with_basket_collision(client, dbsession):
+    """Creating a contact with diff ids but same email fails.
+    We override the basket token so that we know we're not colliding on that here.
+    See other test for that check
+    """
+    email_id_1 = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    sample = SAMPLE_CONTACTS[email_id_1]
+    sample.email.email_id = email_id_1
+    sample.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email == sample.email
+
+    email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+    orig_sample = sample.copy(deep=True)
+    sample.email.email_id = email_id_2
+    sample.email.basket_token = UUID("0750f828-a52f-4579-8960-42a5e3674e5d")
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 409
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email == orig_sample.email
+
+
+def test_create_basic_with_email_collision(client, dbsession):
+    """Creating a contact with diff ids but same basket token fails.
+    We override the email so that we know we're not colliding on that here.
+    See other test for that check
+    """
+    email_id_1 = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    sample = SAMPLE_CONTACTS[email_id_1]
+    sample.email.email_id = email_id_1
+    sample.email.primary_email = "bar@foo.com"
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 200
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email == sample.email
+
+    email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+    orig_sample = sample.copy(deep=True)
+    sample.email.email_id = email_id_2
+    sample.email.primary_email = "foo@bar.com"
+    resp = client.post("/ctms", sample.json())
+    assert resp.status_code == 409
+    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
+    assert len(saved) == 1
+    saved_contact = ContactSchema(**saved[0])
+    assert saved_contact.email == orig_sample.email

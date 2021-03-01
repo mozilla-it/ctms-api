@@ -119,9 +119,27 @@ SAMPLE_EXAMPLE = ContactSchema(
     newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
 )
 
+SAMPLE_TO_ADD = ContactSchema(
+    email=EmailSchema(
+        basket_token="21aeb466-4003-4c2b-a27e-e6651c13d231",
+        email_id=UUID("d1da1c99-fe09-44db-9c68-78a75752574d"),
+        mailing_country="us",
+        primary_email="ctms-user-to-be-created@example.com",
+        sfdc_id="002A000001aBAcDEFA",
+    )
+)
 
-SAMPLE_CONTACTS = {
-    SAMPLE_MINIMAL.email.email_id: SAMPLE_MINIMAL,
-    SAMPLE_MAXIMAL.email.email_id: SAMPLE_MAXIMAL,
-    SAMPLE_EXAMPLE.email.email_id: SAMPLE_EXAMPLE,
-}
+
+class ContactVendor:
+    contacts = {
+        SAMPLE_MINIMAL.email.email_id: SAMPLE_MINIMAL,
+        SAMPLE_MAXIMAL.email.email_id: SAMPLE_MAXIMAL,
+        SAMPLE_EXAMPLE.email.email_id: SAMPLE_EXAMPLE,
+        SAMPLE_TO_ADD.email.email_id: SAMPLE_TO_ADD,
+    }
+
+    def __getitem__(self, key):
+        return self.contacts[key].copy(deep=True)
+
+
+SAMPLE_CONTACTS = ContactVendor()

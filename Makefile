@@ -43,6 +43,9 @@ start:
 .PHONY: test
 test:
 	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run tests
+	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
+	# rm all running containers
+	docker-compose down
 
 .PHONY: test-shell
 test-shell:
