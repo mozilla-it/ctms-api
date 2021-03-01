@@ -49,7 +49,7 @@ def engine(pytestconfig):
             drop_database(test_db_url)
         create_database(test_db_url)
 
-    echo = pytestconfig.getoption("verbose") > 1
+    echo = pytestconfig.getoption("verbose") > 2
     test_engine = create_engine(test_db_url, echo=echo)
 
     # TODO: Convert to running alembic migrations

@@ -90,6 +90,34 @@ class EmailSchema(EmailBase):
         example="2021-01-28T21:26:57.511Z",
     )
 
+    # TODO: Is overriding equality the best way
+    #       to add this specific comparison or should
+    #       we add it as a `.compare` or something?
+    def __eq__(self, other):
+        if not isinstance(other, EmailBase):
+            return False
+
+        # We exclude these fields because they are
+        # generated server-side and not useful
+        # for comparison in most cases. Check directly
+        # that these fields are equivalent if you want
+        # to do that
+        excluded_in_comparison = {"create_timestamp", "update_timestamp"}
+
+        return self.dict(exclude=excluded_in_comparison) == other.dict(
+            exclude=excluded_in_comparison
+        )
+
 
 class EmailInSchema(EmailBase):
     email_id: Optional[UUID4] = email_id_field
+
+    # TODO: Is overriding equality the best way
+    #       to add this specific comparison or should
+    #       we add it as a `.compare` or something?
+    def __eq__(self, other):
+        if not isinstance(other, EmailBase):
+            return False
+        if self.email_id is None or other.email_id is None:
+            raise BaseException("Cannot compare Email instances without email_id")
+        return super().__eq__(self, other)

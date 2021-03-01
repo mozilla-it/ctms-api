@@ -334,7 +334,7 @@ def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_va
     assert len(data) == 0
 
 
-def test_create_basic(client, dbsession):
+def test_create_basic_no_id(client, dbsession):
     """Most straightforward contact creation succeeds."""
     sample_uuid = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
     sample = SAMPLE_CONTACTS[sample_uuid]
@@ -343,11 +343,14 @@ def test_create_basic(client, dbsession):
     assert resp.status_code == 200
     saved = get_contacts_by_any_id(dbsession, primary_email=sample.email.primary_email)
     assert len(saved) == 1
+
     # this should be generated in this case
     saved_contact = ContactSchema(**saved[0])
     assert saved_contact.email.email_id != sample_uuid
     del saved_contact.email.email_id
-    assert saved_contact.email == sample
+    del sample.email.email_id
+
+    assert saved_contact.email == sample.email
 
 
 def test_create_basic_with_id(client, dbsession):
