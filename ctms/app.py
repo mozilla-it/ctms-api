@@ -185,6 +185,7 @@ def read_ctms_by_email_id(
 @app.post(
     "/ctms",
     summary="Create a contact, generating an id",
+    responses={409: {"model": BadRequestResponse}},
 )
 def create_ctms_contact(
     contact: ContactInSchema,
