@@ -3,7 +3,7 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry]
-name = "ctms-api"
+name = "ctms"
 version = "0.4.0"
 description = "Contact Management System API"
 authors = [
@@ -14,9 +14,6 @@ readme = "README.md"
 homepage = "https://github.com/mozilla-it/ctms-api"
 repository = "https://github.com/mozilla-it/ctms-api"
 documentation = "https://github.com/mozilla-it/ctms-api"
-packages = [
-    {include = "ctms"},
-]
 
 
 [tool.poetry.dependencies]
