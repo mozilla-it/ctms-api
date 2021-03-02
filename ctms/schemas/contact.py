@@ -14,15 +14,15 @@ from .vpn import VpnWaitlistSchema
 class ContactSchema(BaseModel):
     """A complete contact."""
 
-    amo: Optional["AddOnsSchema"] = None
-    email: "EmailSchema"
-    fxa: Optional["FirefoxAccountsSchema"] = None
-    newsletters: List["NewsletterSchema"] = Field(
+    amo: Optional[AddOnsSchema] = None
+    email: EmailSchema
+    fxa: Optional[FirefoxAccountsSchema] = None
+    newsletters: List[NewsletterSchema] = Field(
         default=[],
         description="List of newsletters for which the contact is or was subscribed",
         example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
     )
-    vpn_waitlist: Optional["VpnWaitlistSchema"] = None
+    vpn_waitlist: Optional[VpnWaitlistSchema] = None
 
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
@@ -36,9 +36,6 @@ class ContactSchema(BaseModel):
             primary_email=getattr(self.email, "primary_email", None),
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
-
-
-ContactSchema.update_forward_refs()
 
 
 class ContactInSchema(BaseModel):
