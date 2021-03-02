@@ -14,32 +14,50 @@ Technologies and tools in use:
 
 ## Installation
 Install Poetry for osx/linux:
-> curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+
+```sh
+curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+```
 
 ## Install Dependencies
 Install prod dependencies in pyproject.toml through poetry:
-> poetry install --no-dev
+
+```sh
+poetry install --no-dev
+```
 
 Install ALL deps including DEV dependencies:
-> poetry install
+```sh
+poetry install
+```
 
 ### In Use
 Opens shell with corresponding dependencies to the poetry(.lock) in the directory that you make the call:
-> poetry shell
 
-> `Provides access to all the dependencies installed`
+```sh
+poetry shell
+```
 
 Runs command with poetry venv:
-> poetry run {command}
+
+```sh
+poetry run {command}
+```
 
 ### Adding Dependencies
 Add new dependencies in pyproject.toml through poetry:
-> poetry add {pypi-package}
+
+```sh
+poetry add {pypi-package}
+```
 
 ### Exiting Poetry Shell
 
 Run the following command to exit `poetry shell` while in a shell.
-> exit
+
+```sh
+exit
+```
 
 The command `deactivate` will not work to full disengage the poetry shell as it does with `venv`.
 
@@ -51,19 +69,25 @@ The command `deactivate` will not work to full disengage the poetry shell as it 
 ### Install the Hooks
 Using poetry (pre-commit is located in the [pyproject.toml](../pyproject.toml) )
 
-> poetry shell
-> pre-commit install
+```sh
+poetry shell
+pre-commit install
+```
 
 You should get the following response after installing pre-commit into the githooks:
 
-> pre-commit installed at .git/hooks/pre-commit
+```
+pre-commit installed at .git/hooks/pre-commit
+```
 
 Reinstall the pre-commit hooks when there are changes to the `.pre-commit-config.yaml` file.
 
 ### Run on the Entire Codebase
 
 Run the following command where you installed pre-commit.
-> pre-commit run --all-files
+```sh
+pre-commit run --all-files
+```
 
 ### Passively Runs on Git "Commit"
 When you commit in git, the pre-commit hooks will engage and perform the outlined steps.
@@ -79,14 +103,20 @@ Install Docker here: https://docs.docker.com/get-docker/
 
 ### Building
 Build images with:
-> docker build --tag ctms-api --file docker/Dockerfile .
+```sh
+docker build --tag ctms-api --file docker/Dockerfile .
+```
 
 Stop the build at optional stages (development, lint, test, production) with the --target option:
-> docker build --tag ctms-api --file docker/Dockerfile . --target <stage>
+```sh
+docker build --tag ctms-api --file docker/Dockerfile . --target <stage>
+```
 
 #### Optional
 It is also possible to build the full image through the provided scripts:
-> poetry run scripts/build.sh
+```sh
+poetry run scripts/build.sh
+```
 
 ---
 ## Using Docker Compose and the Makefile
@@ -104,8 +134,10 @@ installing).
 
 To test that they are working:
 
-> make help  # Shows the CTMS make rules
-> make build # Build the docker containers
+```sh
+make help  # Shows the CTMS make rules
+make build # Build the docker containers
+```
 
 ---
 ## FastAPI
@@ -132,13 +164,17 @@ is [the Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html
 
 To create or recreate a database with empty tables:
 
-> make setup
+```sh
+make setup
+```
 
 To create a new migration file based on updated SQLAlchemy models:
 
-> make shell  # To enter the web container
-> python -m alembic revision -m "A short description of the change"
-> exit
+```sh
+make shell  # To enter the web container
+python -m alembic revision -m "A short description of the change"
+exit
+```
 
 Edit the generated migration script, confirm it does what you meant,
 and adjust or delete and recreate as needed.
@@ -146,15 +182,17 @@ and adjust or delete and recreate as needed.
 The revision may be detected as secrets at compile time. You can mark
 them as allowed:
 
-```
+```python
 revision = "3f8a97b79852"  # pragma: allowlist secret
 ```
 
 To run this and other migrations on an existing database:
 
-> make shell  # Enter the web container
-> python -m alembic upgrade head
-> exit
+```sh
+make shell  # Enter the web container
+python -m alembic upgrade head
+exit
+```
 
 ---
 ## Next Steps
