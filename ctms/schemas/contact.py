@@ -5,13 +5,14 @@ from uuid import UUID
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
 
 from .addons import AddOnsSchema
+from .base import ComparableBase
 from .email import EmailInSchema, EmailSchema
 from .fxa import FirefoxAccountsSchema
 from .newsletter import NewsletterSchema
 from .vpn import VpnWaitlistSchema
 
 
-class ContactSchema(BaseModel):
+class ContactSchema(ComparableBase):
     """A complete contact."""
 
     amo: Optional[AddOnsSchema] = None
@@ -38,7 +39,7 @@ class ContactSchema(BaseModel):
         )
 
 
-class ContactInSchema(BaseModel):
+class ContactInSchema(ComparableBase):
     """A contact as provided by callers."""
 
     amo: Optional["AddOnsSchema"] = None

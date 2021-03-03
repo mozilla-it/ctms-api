@@ -2,10 +2,12 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID, uuid4
 
-from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
+from pydantic import UUID4, EmailStr, Field, HttpUrl
+
+from .base import ComparableBase
 
 
-class VpnWaitlistSchema(BaseModel):
+class VpnWaitlistSchema(ComparableBase):
     """
     The Mozilla VPN Waitlist schema.
 

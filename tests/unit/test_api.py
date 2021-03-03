@@ -350,7 +350,7 @@ def test_create_basic_no_id(client, dbsession):
     del saved_contact.email.email_id
     del sample.email.email_id
 
-    assert saved_contact.email == sample.email
+    assert saved_contact.email.equivalent(sample.email)
 
 
 def test_create_basic_with_id(client, dbsession):
@@ -362,7 +362,7 @@ def test_create_basic_with_id(client, dbsession):
     saved = get_contacts_by_any_id(dbsession, email_id=email_id)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    assert saved_contact.email.equivalent(sample.email)
 
 
 def test_create_basic_idempotent(client, dbsession):
@@ -376,7 +376,7 @@ def test_create_basic_idempotent(client, dbsession):
     saved = get_contacts_by_any_id(dbsession, email_id=email_id)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    assert saved_contact.email.equivalent(sample.email)
 
 
 def test_create_basic_with_id_collision(client, dbsession):
@@ -408,7 +408,7 @@ def test_create_basic_with_basket_collision(client, dbsession):
     saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    assert saved_contact.email.equivalent(sample.email)
 
     email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
     orig_sample = sample.copy(deep=True)
@@ -419,7 +419,7 @@ def test_create_basic_with_basket_collision(client, dbsession):
     saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == orig_sample.email
+    assert saved_contact.email.equivalent(orig_sample.email)
 
 
 def test_create_basic_with_email_collision(client, dbsession):
@@ -436,7 +436,7 @@ def test_create_basic_with_email_collision(client, dbsession):
     saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    assert saved_contact.email.equivalent(sample.email)
 
     email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
     orig_sample = sample.copy(deep=True)
@@ -447,4 +447,4 @@ def test_create_basic_with_email_collision(client, dbsession):
     saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == orig_sample.email
+    assert saved_contact.email.equivalent(orig_sample.email)
