@@ -340,7 +340,7 @@ def test_create_basic_no_id(client, dbsession):
     sample = SAMPLE_CONTACTS[sample_uuid]
     sample.email.email_id = None
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
     saved = get_contacts_by_any_id(dbsession, primary_email=sample.email.primary_email)
     assert len(saved) == 1
 
@@ -358,7 +358,8 @@ def test_create_basic_with_id(client, dbsession):
     email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
     sample = SAMPLE_CONTACTS[email_id]
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/ctms/{email_id}"
     saved = get_contacts_by_any_id(dbsession, email_id=email_id)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
@@ -370,9 +371,11 @@ def test_create_basic_idempotent(client, dbsession):
     email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
     sample = SAMPLE_CONTACTS[email_id]
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/ctms/{email_id}"
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/ctms/{email_id}"
     saved = get_contacts_by_any_id(dbsession, email_id=email_id)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
@@ -384,7 +387,8 @@ def test_create_basic_with_id_collision(client, dbsession):
     email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
     sample = SAMPLE_CONTACTS[email_id]
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/ctms/{email_id}"
     sample.email.mailing_country = "mx"
     resp = client.post("/ctms", sample.json())
     assert resp.status_code == 409
@@ -404,7 +408,8 @@ def test_create_basic_with_basket_collision(client, dbsession):
     sample.email.email_id = email_id_1
     sample.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/ctms/{email_id_1}"
     saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])
@@ -432,7 +437,8 @@ def test_create_basic_with_email_collision(client, dbsession):
     sample.email.email_id = email_id_1
     sample.email.primary_email = "bar@foo.com"
     resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/ctms/{email_id_1}"
     saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
     assert len(saved) == 1
     saved_contact = ContactSchema(**saved[0])

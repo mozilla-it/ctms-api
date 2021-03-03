@@ -196,7 +196,7 @@ def create_ctms_contact(
     existing = get_contact_by_email_id(db, email_id)
     if existing:
         if ContactInSchema(**existing).equivalent(contact):
-            return
+            return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
         else:
             raise HTTPException(status_code=409, detail="Contact already exists")
     try:
@@ -208,6 +208,7 @@ def create_ctms_contact(
             raise HTTPException(status_code=409, detail="Contact already exists")
         else:
             raise
+    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
 
 
 @app.get(
