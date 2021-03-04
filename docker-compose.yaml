@@ -14,8 +14,9 @@ services:
     # Let the init system handle signals for us.
     # among other things this helps shutdown be fast
     init: true
-    environment:
-      CTMS_DB_URL: postgresql://postgres@postgres/postgres
+    env_file:
+      - docker/config/local_dev.env
+      - .env
     depends_on:
       - postgres
   postgres:

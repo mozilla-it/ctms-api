@@ -1,3 +1,8 @@
+# Include .env and export it so variables are available in the Makefile.
+include .env
+export
+
+
 .PHONY: help
 help:
 	@echo "Usage: make RULE"
@@ -16,37 +21,47 @@ help:
 	@echo "  help    - see this text"
 
 
+.env:
+	@if [ ! -f .env ]; \
+	then \
+	echo "Copying env.dist to .env..."; \
+	cp docker/config/env.dist .env; \
+	fi
+
+
 .PHONY: build
-build:
+build: .env
 	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml build
 
 .PHONY: db-only
-db-only:
+db-only: .env
 	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --service-ports postgres
 
 .PHONY: setup
-setup:
+setup: .env
 	docker-compose up -d postgres
 	docker-compose exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
 	docker-compose exec postgres dropdb postgres --user postgres
 	docker-compose exec postgres createdb postgres --user postgres
-	docker-compose run --rm web python -m alembic upgrade head
+	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} web python -m alembic upgrade head
 
 .PHONY: shell
-shell:
-	docker-compose -f ./docker-compose.yaml run --rm web bash
+shell: .env
+	docker-compose -f ./docker-compose.yaml run ${MK_WITH_SERVICE_PORTS} --rm web bash
 
 .PHONY: start
-start:
+start: .env
 	docker-compose up
 
 .PHONY: test
-test:
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run tests
+test: .env
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --rm ${MK_WITH_SERVICE_PORTS} tests
+ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
 	docker-compose down
+endif
 
 .PHONY: test-shell
-test-shell:
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --rm web bash
+test-shell: .env
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --rm ${MK_WITH_SERVICE_PORTS} web bash
