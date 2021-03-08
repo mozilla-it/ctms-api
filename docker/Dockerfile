@@ -33,7 +33,7 @@ RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poet
 # and install only runtime deps using poetry
 WORKDIR $PYSETUP_PATH
 COPY ./poetry.lock ./pyproject.toml ./
-RUN poetry install --no-dev --no-root
+RUN poetry install --no-dev
 
 
 # 'development' stage installs all dev deps and can be used to develop code.
@@ -51,7 +51,7 @@ RUN chmod +x /docker-entrypoint.sh
 
 # venv already has runtime deps installed we get a quicker install
 WORKDIR $PYSETUP_PATH
-RUN poetry install --no-root
+RUN poetry install
 
 WORKDIR /app
 COPY . .
