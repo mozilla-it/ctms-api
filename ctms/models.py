@@ -156,3 +156,24 @@ class VpnWaitlist(Base):
     )
 
     email = relationship("Email", back_populates="vpn_waitlist", uselist=False)
+
+
+class ApiClient(Base):
+    """An OAuth2 Client"""
+
+    __tablename__ = "api_client"
+
+    client_id = Column(String(255), primary_key=True)
+    email = Column(String(255), nullable=False)
+    enabled = Column(Boolean, default=True)
+    hashed_secret = Column(String, nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
