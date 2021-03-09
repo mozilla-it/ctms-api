@@ -12,3 +12,4 @@ reports/
 htmlcov/
 .isort.cfg
 docs/_build
+.env
