@@ -6,17 +6,33 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      SHORT_SHA: ${{ steps.short-sha.outputs.sha }}
+      FULL_IMAGE_TAG: ${{ steps.prefix.outputs.prefix }}${{ steps.short-sha.outputs.sha }}
     steps:
       - name: Get Short SHA
         uses: benjlevesque/short-sha@v1.2
         id: short-sha
+      - name: Set Prefix
+        id: prefix
+        run: |
+          if [ ${GITHUB_REF##*/} = "main" ]; then
+            echo "::set-output name=prefix::stg-"
+          else
+            echo "::set-output name=prefix::"
+          fi
 
   build-image:
     runs-on: ubuntu-latest
     needs: prepare
 
     steps:
+      - name: Echo tag
+        id: echotag
+        env:
+          IMAGE_TAG: ${{ needs.prepare.outputs.FULL_IMAGE_TAG }}
+        run: |
+          echo "Building an image with the following tag:"
+          echo $IMAGE_TAG 
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -39,7 +55,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ctms-api
-          IMAGE_TAG: ${{ needs.prepare.outputs.SHORT_SHA }}
+          IMAGE_TAG: ${{ needs.prepare.outputs.FULL_IMAGE_TAG }}
         run: |
           docker build --file docker/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker image tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
