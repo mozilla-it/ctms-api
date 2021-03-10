@@ -20,6 +20,22 @@ def get_email_by_email_id(db: Session, email_id: UUID4):
     return db.query(Email).filter(Email.email_id == email_id).first()
 
 
+def get_amo_by_email_id(db: Session, email_id: UUID4):
+    return db.query(AmoAccount).filter(AmoAccount.email_id == email_id).first()
+
+
+def get_fxa_by_email_id(db: Session, email_id: UUID4):
+    return db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).first()
+
+
+def get_newsletters_by_email_id(db: Session, email_id: UUID4):
+    return db.query(Newsletter).filter(Newsletter.email_id == email_id).first()
+
+
+def get_vpn_by_email_id(db: Session, email_id: UUID4):
+    return db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).first()
+
+
 def get_contact_by_email_id(db: Session, email_id: UUID4):
     """Get all the data for a contact."""
     result = (

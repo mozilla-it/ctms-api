@@ -16,3 +16,6 @@ class ComparableBase(BaseModel):
         return self.dict(exclude=excluded_in_comparison) == other.dict(
             exclude=excluded_in_comparison
         )
+
+    def is_default(self):
+        return len(self.dict(exclude_defaults=True)) == 0

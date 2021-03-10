@@ -1,4 +1,5 @@
 """pytest tests for API functionality"""
+from typing import Callable, List
 from uuid import UUID
 
 import pytest
@@ -334,123 +335,82 @@ def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_va
     assert len(data) == 0
 
 
-def test_create_basic_no_id(client, dbsession):
+def test_create_basic_no_id(add_contact):
     """Most straightforward contact creation succeeds."""
-    sample_uuid = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[sample_uuid]
-    sample.email.email_id = None
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    saved = get_contacts_by_any_id(dbsession, primary_email=sample.email.primary_email)
-    assert len(saved) == 1
 
-    # this should be generated in this case
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.email_id != sample_uuid
-    del saved_contact.email.email_id
+    def _remove_id(contact):
+        contact.email.email_id = None
+        return contact
+
+    saved_contacts, sample = add_contact(modifier=_remove_id, check_redirect=False)
+
+    assert saved_contacts[0].email.email_id != sample.email.email_id
+    del saved_contacts[0].email.email_id
     del sample.email.email_id
 
-    assert saved_contact.email.equivalent(sample.email)
+    assert saved_contacts[0].email.equivalent(sample.email)
 
 
-def test_create_basic_with_id(client, dbsession):
+def test_create_basic_with_id(add_contact):
     """Most straightforward contact creation succeeds."""
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id]
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    assert resp.headers["location"] == f"/ctms/{email_id}"
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.equivalent(sample.email)
+    saved_contacts, sample = add_contact()
+    assert saved_contacts[0].email.equivalent(sample.email)
 
 
-def test_create_basic_idempotent(client, dbsession):
+def test_create_basic_idempotent(add_contact):
     """Creating a contact works across retries."""
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id]
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    assert resp.headers["location"] == f"/ctms/{email_id}"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    assert resp.headers["location"] == f"/ctms/{email_id}"
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.equivalent(sample.email)
+    saved_contacts, sample = add_contact()
+    saved_contacts, sample = add_contact()
+    assert saved_contacts[0].email.equivalent(sample.email)
 
 
-def test_create_basic_with_id_collision(client, dbsession):
+def test_create_basic_with_id_collision(add_contact):
     """Creating a contact with the same id but different data fails."""
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id]
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    assert resp.headers["location"] == f"/ctms/{email_id}"
-    sample.email.mailing_country = "mx"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 409
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.mailing_country == "us"
+    add_contact()
+
+    def _change_mailing(contact):
+        contact.email.mailing_country = "mx"
+        return contact
+
+    saved_contacts, sample = add_contact(
+        modifier=_change_mailing, code=409, check_redirect=False
+    )
+    assert saved_contacts[0].email.mailing_country == "us"
 
 
-def test_create_basic_with_basket_collision(client, dbsession):
+def test_create_basic_with_basket_collision(add_contact):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
     See other test for that check
     """
-    email_id_1 = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id_1]
-    sample.email.email_id = email_id_1
-    sample.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    assert resp.headers["location"] == f"/ctms/{email_id_1}"
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.equivalent(sample.email)
+    saved_contacts, orig_sample = add_contact()
+    assert saved_contacts[0].email.equivalent(orig_sample.email)
 
-    email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-    orig_sample = sample.copy(deep=True)
-    sample.email.email_id = email_id_2
-    sample.email.basket_token = UUID("0750f828-a52f-4579-8960-42a5e3674e5d")
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 409
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.equivalent(orig_sample.email)
+    def _change_basket(contact):
+        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+        contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
+        return contact
+
+    saved_contacts, _ = add_contact(
+        modifier=_change_basket, code=409, check_redirect=False
+    )
+    assert saved_contacts[0].email.equivalent(orig_sample.email)
 
 
-def test_create_basic_with_email_collision(client, dbsession):
+def test_create_basic_with_email_collision(add_contact):
     """Creating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.
     See other test for that check
     """
-    email_id_1 = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id_1]
-    sample.email.email_id = email_id_1
-    sample.email.primary_email = "bar@foo.com"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 303
-    assert resp.headers["location"] == f"/ctms/{email_id_1}"
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.equivalent(sample.email)
+    saved_contacts, orig_sample = add_contact()
+    assert saved_contacts[0].email.equivalent(orig_sample.email)
 
-    email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-    orig_sample = sample.copy(deep=True)
-    sample.email.email_id = email_id_2
-    sample.email.primary_email = "foo@bar.com"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 409
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.equivalent(orig_sample.email)
+    def _change_primary_email(contact):
+        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+        contact.email.primary_email = "foo@bar.com"
+        return contact
+
+    saved_contacts, _ = add_contact(
+        modifier=_change_primary_email, code=409, check_redirect=False
+    )
+    assert saved_contacts[0].email.equivalent(orig_sample.email)

@@ -138,7 +138,7 @@ class ContactVendor:
         SAMPLE_TO_ADD.email.email_id: SAMPLE_TO_ADD,
     }
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> ContactSchema:
         return self.contacts[key].copy(deep=True)
 
 

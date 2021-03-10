@@ -1,4 +1,5 @@
 """pytest fixtures for the CTMS app"""
+from typing import Callable
 from uuid import UUID
 
 import pytest
@@ -10,9 +11,10 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 
 from ctms.app import app, get_db
 from ctms.config import Settings
-from ctms.crud import create_contact
+from ctms.crud import create_contact, get_contacts_by_any_id
 from ctms.models import Base
 from ctms.sample_data import SAMPLE_CONTACTS
+from ctms.schemas import ContactSchema
 
 
 @pytest.fixture
@@ -116,6 +118,34 @@ def example_contact(dbsession):
     create_contact(dbsession, email_id, contact)
     dbsession.commit()
     return contact
+
+
+@pytest.fixture
+def add_contact(client, dbsession):
+    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+    contact = SAMPLE_CONTACTS[email_id]
+
+    def _add(
+        modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
+        code: int = 303,
+        stored_contacts: int = 1,
+        check_redirect: bool = True,
+        query_fields: dict = {"primary_email": contact.email.primary_email},
+    ):
+        sample = contact.copy(deep=True)
+        sample = modifier(sample)
+        resp = client.post("/ctms", sample.json())
+        assert resp.status_code == code, resp.json()
+        if check_redirect:
+            assert resp.headers["location"] == f"/ctms/{email_id}"
+        saved = [
+            ContactSchema(**c)
+            for c in get_contacts_by_any_id(dbsession, **query_fields)
+        ]
+        assert len(saved) == stored_contacts
+        return saved, sample
+
+    return _add
 
 
 @pytest.fixture
