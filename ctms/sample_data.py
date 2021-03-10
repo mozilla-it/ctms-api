@@ -141,5 +141,8 @@ class ContactVendor:
     def __getitem__(self, key: str) -> ContactSchema:
         return self.contacts[key].copy(deep=True)
 
+    def keys(self):
+        return list(self.contacts.keys())
+
 
 SAMPLE_CONTACTS = ContactVendor()

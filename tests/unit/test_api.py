@@ -357,6 +357,14 @@ def test_create_basic_with_id(add_contact):
     assert saved_contacts[0].email.equivalent(sample.email)
 
 
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_id_complete(add_contact):
+    """Most straightforward contact creation succeeds."""
+    saved_contacts, sample = add_contact()
+    assert saved_contacts[0].email.equivalent(sample.email)
+
+
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_idempotent(add_contact):
     """Creating a contact works across retries."""
     saved_contacts, sample = add_contact()
@@ -364,20 +372,25 @@ def test_create_basic_idempotent(add_contact):
     assert saved_contacts[0].email.equivalent(sample.email)
 
 
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_with_id_collision(add_contact):
     """Creating a contact with the same id but different data fails."""
-    add_contact()
+    _, sample = add_contact()
 
     def _change_mailing(contact):
+        assert contact.email.mailing_country != "mx", "sample data has changed"
         contact.email.mailing_country = "mx"
         return contact
 
-    saved_contacts, sample = add_contact(
-        modifier=_change_mailing, code=409, check_redirect=False
+    # We set check_written to False because the rows it would check for normally
+    # are actually here due to the first write
+    saved_contacts, _ = add_contact(
+        modifier=_change_mailing, code=409, check_redirect=False, check_written=False
     )
-    assert saved_contacts[0].email.mailing_country == "us"
+    assert saved_contacts[0].email.mailing_country == sample.email.mailing_country
 
 
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_with_basket_collision(add_contact):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
@@ -397,6 +410,7 @@ def test_create_basic_with_basket_collision(add_contact):
     assert saved_contacts[0].email.equivalent(orig_sample.email)
 
 
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_with_email_collision(add_contact):
     """Creating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.

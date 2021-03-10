@@ -11,7 +11,14 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 
 from ctms.app import app, get_db
 from ctms.config import Settings
-from ctms.crud import create_contact, get_contacts_by_any_id
+from ctms.crud import (
+    create_contact,
+    get_amo_by_email_id,
+    get_contacts_by_any_id,
+    get_fxa_by_email_id,
+    get_newsletters_by_email_id,
+    get_vpn_by_email_id,
+)
 from ctms.models import Base
 from ctms.sample_data import SAMPLE_CONTACTS
 from ctms.schemas import ContactSchema
@@ -121,8 +128,13 @@ def example_contact(dbsession):
 
 
 @pytest.fixture
-def add_contact(client, dbsession):
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
+def add_contact(request, client, dbsession):
+    _id = (
+        request.param
+        if hasattr(request, "param")
+        else "d1da1c99-fe09-44db-9c68-78a75752574d"
+    )
+    email_id = UUID(str(_id))
     contact = SAMPLE_CONTACTS[email_id]
 
     def _add(
@@ -131,18 +143,39 @@ def add_contact(client, dbsession):
         stored_contacts: int = 1,
         check_redirect: bool = True,
         query_fields: dict = {"primary_email": contact.email.primary_email},
+        check_written: bool = True,
     ):
         sample = contact.copy(deep=True)
         sample = modifier(sample)
         resp = client.post("/ctms", sample.json())
         assert resp.status_code == code, resp.json()
         if check_redirect:
-            assert resp.headers["location"] == f"/ctms/{email_id}"
+            assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
         saved = [
             ContactSchema(**c)
             for c in get_contacts_by_any_id(dbsession, **query_fields)
         ]
         assert len(saved) == stored_contacts
+
+        # Now make sure that we skip writing default models
+
+        def _check_written(field, getter):
+            results = getter(dbsession, sample.email.email_id)
+            if sample.dict()[field] and code == 303:
+                assert (
+                    results
+                ), f"{email_id} has field `{field}` and it should have been written to db"
+            else:
+                assert (
+                    results is None
+                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+
+        if check_written:
+            _check_written("amo", get_amo_by_email_id)
+            _check_written("fxa", get_fxa_by_email_id)
+            _check_written("newsletters", get_newsletters_by_email_id)
+            _check_written("vpn_waitlist", get_vpn_by_email_id)
+
         return saved, sample
 
     return _add
