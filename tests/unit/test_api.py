@@ -1,6 +1,6 @@
 """pytest tests for API functionality"""
-from typing import Callable, List
-from uuid import UUID
+from typing import Any, Callable, List, Tuple
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -279,6 +279,48 @@ def test_get_ctms_for_api_example(client, example_contact):
         "status": "ok",
         "vpn_waitlist": {"geo": "fr", "platform": "ios,mac"},
     }
+
+
+API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
+    ("GET", "/ctms", {"primary_email": "contact@example.com"}),
+    ("GET", "/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c", None),
+    (
+        "POST",
+        "/ctms",
+        {
+            "email": {
+                "email_id": str(uuid4()),
+                "primary_email": "new@example.com",
+                "basket_token": str(uuid4()),
+            }
+        },
+    ),
+)
+
+
+@pytest.mark.parametrize("method,path,params", API_TEST_CASES)
+def test_unauthorized_api_call_fails(
+    anon_client, example_contact, method, path, params
+):
+    """Calling the API without credentials fails."""
+    if method == "GET":
+        resp = anon_client.get(path, params=params)
+    else:
+        assert method == "POST"
+        resp = anon_client.post(path, json=params)
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Not authenticated"}
+
+
+@pytest.mark.parametrize("method,path,params", API_TEST_CASES)
+def test_authorized_api_call_succeeds(client, example_contact, method, path, params):
+    """Calling the API without credentials fails."""
+    if method == "GET":
+        resp = client.get(path, params=params)
+    else:
+        assert method == "POST"
+        resp = client.post(path, json=params)
+    assert resp.status_code in {200, 303}
 
 
 def test_get_ctms_not_found(client, dbsession):
