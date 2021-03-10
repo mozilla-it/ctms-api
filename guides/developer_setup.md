@@ -195,6 +195,31 @@ exit
 ```
 
 ---
+## OAuth2 Client Credentials
+
+The API uses [OAuth 2 Client Credentials](https://oauth.net/2/grant-types/client-credentials/)
+for authentication. To generate credentials for your development environment:
+
+```sh
+make shell  # Enter the web container
+poetry install
+ctms/bin/client_credentials.py test --email test@example.com
+```
+
+This will print out new client credentials, such as:
+
+```
+Your OAuth2 client credentials are:
+
+      client_id: id_test
+  client_secret: secret_dGhpcyBpcyBubyBzZWNyZXQu
+
+...
+```
+
+You can use these on the interactive Swagger docs by clicking the "**Authorize**" button.
+
+---
 ## Next Steps
 
 ### Git Strategy
