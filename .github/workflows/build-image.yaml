@@ -16,8 +16,6 @@ jobs:
         run: |
           if [ ${GITHUB_REF##*/} = "main" ]; then
             echo "::set-output name=prefix::stg-"
-          elif [[ ${GITHUB_REF##*/} = "prod" ]]; then
-            echo "::set-output name=prefix::prod-"
           else
             echo "::set-output name=prefix::"
           fi
