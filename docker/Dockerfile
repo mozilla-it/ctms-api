@@ -95,4 +95,4 @@ ENTRYPOINT /docker-entrypoint.sh $0 $@
 
 EXPOSE 80
 
-CMD ["uvicorn", "ctms.app:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "ctms.app:app", "--host", "0.0.0.0", "--port", "8000"]
