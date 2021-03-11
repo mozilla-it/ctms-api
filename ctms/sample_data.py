@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Set, Tuple, Union
 from uuid import UUID
 
 from .schemas import (
@@ -131,29 +131,52 @@ SAMPLE_TO_ADD = ContactSchema(
     )
 )
 
-SAMPLE_WITH_DEFAULT = ContactSchema(
+SAMPLE_WITH_SIMPLE_DEFAULT = ContactSchema(
     email=EmailInSchema(
         basket_token="d3a827b5-747c-41c2-8381-59ce9ad63050",
         email_id=UUID("4f98b303-8863-421f-95d3-847cd4d83c9f"),
         mailing_country="us",
-        primary_email="ctms-user-with-defaults@example.com",
+        primary_email="with-defaults@example.com",
         sfdc_id="102A000001aBAcDEFA",
     ),
     amo=AddOnsInSchema(),
 )
 
+SAMPLE_WITH_DEFAULT_NEWSLETTER = ContactSchema(
+    email=EmailInSchema(
+        basket_token="b5487fbf-86ae-44b9-a638-bbb037ce61a6",
+        email_id=UUID("dd2bc52c-49e4-4df9-95a8-197d3a7794cd"),
+        mailing_country="us",
+        primary_email="with-default-newsletter@example.com",
+        sfdc_id="102A000001aBAcDEFA",
+    ),
+    newsletters=[],
+)
+
 
 class ContactVendor:
-    contacts = {
-        SAMPLE_MINIMAL.email.email_id: SAMPLE_MINIMAL,
-        SAMPLE_MAXIMAL.email.email_id: SAMPLE_MAXIMAL,
-        SAMPLE_EXAMPLE.email.email_id: SAMPLE_EXAMPLE,
-        SAMPLE_TO_ADD.email.email_id: SAMPLE_TO_ADD,
-        SAMPLE_WITH_DEFAULT.email.email_id: SAMPLE_WITH_DEFAULT,
+    # Second item of tuples is a set of keys that should _not_ be written
+    # to the db when this sample is posted
+    contacts: Dict[Union[UUID, str], Tuple[ContactSchema, Set[str]]] = {
+        SAMPLE_MINIMAL.email.email_id: (SAMPLE_MINIMAL, set()),
+        SAMPLE_MAXIMAL.email.email_id: (SAMPLE_MAXIMAL, set()),
+        SAMPLE_EXAMPLE.email.email_id: (SAMPLE_EXAMPLE, set()),
+        SAMPLE_TO_ADD.email.email_id: (SAMPLE_TO_ADD, set()),
+        SAMPLE_WITH_SIMPLE_DEFAULT.email.email_id: (
+            SAMPLE_WITH_SIMPLE_DEFAULT,
+            {"amo"},
+        ),
+        SAMPLE_WITH_DEFAULT_NEWSLETTER.email.email_id: (
+            SAMPLE_WITH_DEFAULT_NEWSLETTER,
+            {"newsletters"},
+        ),
     }
 
     def __getitem__(self, key: str) -> ContactSchema:
-        return self.contacts[key].copy(deep=True)
+        return self.contacts[key][0].copy(deep=True)
+
+    def get_not_written(self, key: str) -> Set[str]:
+        return self.contacts[key][1]
 
     def keys(self):
         return list(self.contacts.keys())

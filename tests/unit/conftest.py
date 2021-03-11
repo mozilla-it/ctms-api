@@ -1,5 +1,5 @@
 """pytest fixtures for the CTMS app"""
-from typing import Callable
+from typing import Callable, Set
 from uuid import UUID
 
 import pytest
@@ -21,7 +21,7 @@ from ctms.crud import (
 )
 from ctms.models import Base
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ContactSchema
+from ctms.schemas import ContactInSchema, ContactSchema
 
 
 @pytest.fixture
@@ -136,6 +136,7 @@ def add_contact(request, client, dbsession):
     )
     email_id = UUID(str(_id))
     contact = SAMPLE_CONTACTS[email_id]
+    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
 
     def _add(
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
@@ -148,7 +149,7 @@ def add_contact(request, client, dbsession):
         sample = contact.copy(deep=True)
         sample = modifier(sample)
         resp = client.post("/ctms", sample.json())
-        assert resp.status_code == code, resp.json()
+        assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
         saved = [
@@ -158,13 +159,17 @@ def add_contact(request, client, dbsession):
         assert len(saved) == stored_contacts
 
         # Now make sure that we skip writing default models
-
         def _check_written(field, getter):
             results = getter(dbsession, sample.email.email_id)
             if sample.dict()[field] and code == 303:
-                assert (
-                    results
-                ), f"{email_id} has field `{field}` and it should have been written to db"
+                if field in fields_not_written:
+                    assert (
+                        results is None
+                    ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                else:
+                    assert (
+                        results
+                    ), f"{email_id} has field `{field}` and it should have been written to db"
             else:
                 assert (
                     results is None
@@ -176,7 +181,7 @@ def add_contact(request, client, dbsession):
             _check_written("newsletters", get_newsletters_by_email_id)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
 
-        return saved, sample
+        return saved, sample, email_id
 
     return _add
 

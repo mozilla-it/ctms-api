@@ -52,6 +52,27 @@ class ContactInSchema(ComparableBase):
     )
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
 
+    def idempotent_equal(self, other):
+        # settings = {"exclude_defaults": True, "exclude_unset": True}
+        # print(self.dict(**settings), other.dict(**settings))
+        # return self.dict(**settings) == other.dict(**settings)
+        def _noneify(field):
+            if not field:
+                return None
+            return None if field.is_default() else field
+
+        if self.email != other.email:
+            return False
+        if _noneify(self.amo) != _noneify(other.amo):
+            return False
+        if _noneify(self.fxa) != _noneify(other.fxa):
+            return False
+        if _noneify(self.vpn_waitlist) != _noneify(other.vpn_waitlist):
+            return False
+        if sorted(self.newsletters) != sorted(other.newsletters):
+            return False
+        return True
+
 
 class CTMSResponse(BaseModel):
     """

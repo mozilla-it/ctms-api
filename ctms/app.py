@@ -195,7 +195,7 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
-        if ContactInSchema(**existing) == contact:
+        if ContactInSchema(**existing).idempotent_equal(contact):
             return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
         else:
             raise HTTPException(status_code=409, detail="Contact already exists")

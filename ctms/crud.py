@@ -5,13 +5,17 @@ from sqlalchemy.orm import Session
 
 from .models import AmoAccount, Email, FirefoxAccount, Newsletter, VpnWaitlist
 from .schemas import (
+    AddOnsInSchema,
     AddOnsSchema,
     ContactInSchema,
     ContactSchema,
     EmailInSchema,
     EmailSchema,
+    FirefoxAccountsInSchema,
     FirefoxAccountsSchema,
+    NewsletterInSchema,
     NewsletterSchema,
+    VpnWaitlistInSchema,
     VpnWaitlistSchema,
 )
 
@@ -124,7 +128,9 @@ def get_contacts_by_any_id(
     return data
 
 
-def create_amo(db: Session, email_id: UUID4, amo: AddOnsSchema):
+def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema):
+    if amo.is_default():
+        return
     db_amo = AmoAccount(email_id=email_id, **amo.dict())
     db.add(db_amo)
 
@@ -134,17 +140,25 @@ def create_email(db: Session, email: EmailInSchema):
     db.add(db_email)
 
 
-def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsSchema):
+def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema):
+    if fxa.is_default():
+        return
     db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
     db.add(db_fxa)
 
 
-def create_vpn_waitlist(db: Session, email_id: UUID4, vpn_waitlist: VpnWaitlistSchema):
+def create_vpn_waitlist(
+    db: Session, email_id: UUID4, vpn_waitlist: VpnWaitlistInSchema
+):
+    if vpn_waitlist.is_default():
+        return
     db_vpn_waitlist = VpnWaitlist(email_id=email_id, **vpn_waitlist.dict())
     db.add(db_vpn_waitlist)
 
 
-def create_newsletter(db: Session, email_id: UUID4, newsletter: NewsletterSchema):
+def create_newsletter(db: Session, email_id: UUID4, newsletter: NewsletterInSchema):
+    if newsletter.is_default():
+        return
     db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
     db.add(db_newsletter)
 

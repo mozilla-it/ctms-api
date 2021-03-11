@@ -35,6 +35,9 @@ class NewsletterBase(ComparableBase):
         default=None, description="Reason for unsubscribing"
     )
 
+    def __lt__(self, other):
+        return self.name < other.name
+
     class Config:
         orm_mode = True
 
