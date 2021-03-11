@@ -9,17 +9,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
-from ctms.app import app, get_db
+from ctms.app import app, get_api_client, get_db
 from ctms.config import Settings
 from ctms.crud import create_contact, get_contacts_by_any_id
 from ctms.models import Base
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ContactInSchema, ContactSchema
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
+from ctms.schemas import ApiClientSchema, ContactInSchema, ContactSchema
 
 
 @pytest.fixture(scope="session")
@@ -127,3 +122,23 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
         "maximal": (maximal_contact.email.email_id, maximal_contact),
         "example": (example_contact.email.email_id, example_contact),
     }
+
+
+@pytest.fixture
+def anon_client():
+    """A test client with no authorization."""
+    return TestClient(app)
+
+
+@pytest.fixture
+def client(anon_client):
+    """A test client that passed a valid OAuth2 token."""
+
+    def test_api_client():
+        return ApiClientSchema(
+            client_id="test_client", email="test_client@example.com", enabled=True
+        )
+
+    app.dependency_overrides[get_api_client] = test_api_client
+    yield anon_client
+    del app.dependency_overrides[get_api_client]

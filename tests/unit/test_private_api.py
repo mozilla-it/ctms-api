@@ -1,6 +1,31 @@
 """Tests for the private APIs that may be removed."""
+from typing import Any, Tuple
 
 import pytest
+
+API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
+    ("/identities", {"basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"}),
+    ("/identity/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
+    ("/contact/email/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
+    ("/contact/amo/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
+    ("/contact/vpn_waitlist/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
+    ("/contact/fxa/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
+)
+
+
+@pytest.mark.parametrize("path,params", API_TEST_CASES)
+def test_unauthorized_api_call_fails(anon_client, example_contact, path, params):
+    """Calling the API without credentials fails."""
+    resp = anon_client.get(path, params=params)
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Not authenticated"}
+
+
+@pytest.mark.parametrize("path,params", API_TEST_CASES)
+def test_authorized_api_call_succeeds(client, example_contact, path, params):
+    """Calling the API without credentials fails."""
+    resp = client.get(path, params=params)
+    assert resp.status_code == 200
 
 
 def identity_response_for_contact(contact):

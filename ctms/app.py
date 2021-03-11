@@ -1,17 +1,27 @@
+from datetime import timedelta
 from functools import lru_cache
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordRequestForm
 from pydantic import UUID4, EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config
+from .auth import (
+    OAuth2ClientCredentials,
+    OAuth2ClientCredentialsRequestForm,
+    create_access_token,
+    get_subject_from_token,
+    verify_password,
+)
 from .crud import (
     create_contact,
+    get_api_client_by_id,
     get_contact_by_email_id,
     get_contacts_by_any_id,
     get_email_by_email_id,
@@ -19,6 +29,7 @@ from .crud import (
 from .database import get_db_engine
 from .schemas import (
     AddOnsSchema,
+    ApiClientSchema,
     BadRequestResponse,
     ContactInSchema,
     ContactSchema,
@@ -28,6 +39,8 @@ from .schemas import (
     IdentityResponse,
     NewsletterSchema,
     NotFoundResponse,
+    TokenResponse,
+    UnauthorizedResponse,
     VpnWaitlistSchema,
 )
 
@@ -37,6 +50,8 @@ app = FastAPI(
     version="0.5.0",
 )
 SessionLocal = None
+oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
+token_scheme = HTTPBasic(auto_error=None)
 
 
 @lru_cache()
@@ -56,6 +71,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def token_settings(
+    settings: config.Settings = Depends(get_settings),
+) -> Dict[str, Union[str, timedelta]]:
+    return {
+        "expires_delta": settings.token_expiration,
+        "secret_key": settings.secret_key,
+    }
 
 
 def get_contact_or_404(db: Session, email_id) -> ContactSchema:
@@ -122,6 +146,36 @@ def get_contacts_by_ids(
     return [ContactSchema(**data) for data in rows]
 
 
+def get_api_client(
+    token: str = Depends(oauth2_scheme),
+    token_settings=Depends(token_settings),
+    db: Session = Depends(get_db),
+):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    namespace, name = get_subject_from_token(
+        token,
+        secret_key=token_settings["secret_key"],
+    )
+    if name is None:
+        raise credentials_exception
+    if namespace != "api_client":
+        raise credentials_exception
+    api_client = get_api_client_by_id(db, name)
+    if not api_client:
+        raise credentials_exception
+    return api_client
+
+
+def get_enabled_api_client(api_client: ApiClientSchema = Depends(get_api_client)):
+    if not api_client.enabled:
+        raise HTTPException(status_code=400, detail="API Client has been disabled")
+    return api_client
+
+
 @app.get("/", include_in_schema=False)
 def root():
     """GET via root redirects to /docs.
@@ -139,10 +193,17 @@ def root():
     "/ctms",
     summary="Get all contacts matching alternate IDs",
     response_model=List[ContactSchema],
-    responses={400: {"model": BadRequestResponse}},
+    responses={
+        400: {"model": BadRequestResponse},
+        401: {"model": UnauthorizedResponse},
+    },
     tags=["Public"],
 )
-def read_ctms_by_any_id(db: Session = Depends(get_db), ids=Depends(all_ids)):
+def read_ctms_by_any_id(
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    ids=Depends(all_ids),
+):
     if not any(ids.values()):
         detail = (
             f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
@@ -165,11 +226,16 @@ def read_ctms_by_any_id(db: Session = Depends(get_db), ids=Depends(all_ids)):
     "/ctms/{email_id}",
     summary="Get a contact by email_id",
     response_model=CTMSResponse,
-    responses={404: {"model": NotFoundResponse}},
+    responses={
+        401: {"model": UnauthorizedResponse},
+        404: {"model": NotFoundResponse},
+    },
     tags=["Public"],
 )
 def read_ctms_by_email_id(
-    email_id: UUID = Path(..., title="The Email ID"), db: Session = Depends(get_db)
+    email_id: UUID = Path(..., title="The Email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
     return CTMSResponse(
@@ -190,6 +256,7 @@ def read_ctms_by_email_id(
 def create_ctms_contact(
     contact: ContactInSchema,
     db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact.email.email_id = contact.email.email_id or uuid4()
     email_id = contact.email.email_id
@@ -215,10 +282,17 @@ def create_ctms_contact(
     "/identities",
     summary="Get identities associated with alternate IDs",
     response_model=List[IdentityResponse],
-    responses={400: {"model": BadRequestResponse}},
+    responses={
+        400: {"model": BadRequestResponse},
+        401: {"model": UnauthorizedResponse},
+    },
     tags=["Private"],
 )
-def read_identities(db: Session = Depends(get_db), ids=Depends(all_ids)):
+def read_identities(
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    ids=Depends(all_ids),
+):
     if not any(ids.values()):
         detail = (
             f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
@@ -232,11 +306,16 @@ def read_identities(db: Session = Depends(get_db), ids=Depends(all_ids)):
     "/identity/{email_id}",
     summary="Get identities associated with the ID",
     response_model=IdentityResponse,
-    responses={404: {"model": NotFoundResponse}},
+    responses={
+        401: {"model": UnauthorizedResponse},
+        404: {"model": NotFoundResponse},
+    },
     tags=["Private"],
 )
 def read_identity(
-    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+    email_id: UUID = Path(..., title="The email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
     return contact.as_identity_response()
@@ -246,11 +325,16 @@ def read_identity(
     "/contact/email/{email_id}",
     summary="Get contact's main details",
     response_model=EmailSchema,
-    responses={404: {"model": NotFoundResponse}},
+    responses={
+        401: {"model": UnauthorizedResponse},
+        404: {"model": NotFoundResponse},
+    },
     tags=["Private"],
 )
 def read_contact_main(
-    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+    email_id: UUID = Path(..., title="The email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
     return contact.email
@@ -260,11 +344,16 @@ def read_contact_main(
     "/contact/amo/{email_id}",
     summary="Get contact's add-ons details",
     response_model=AddOnsSchema,
-    responses={404: {"model": NotFoundResponse}},
+    responses={
+        401: {"model": UnauthorizedResponse},
+        404: {"model": NotFoundResponse},
+    },
     tags=["Private"],
 )
 def read_contact_amo(
-    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+    email_id: UUID = Path(..., title="The email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
     return contact.amo or AddOnsSchema()
@@ -274,11 +363,16 @@ def read_contact_amo(
     "/contact/vpn_waitlist/{email_id}",
     summary="Get contact's Mozilla VPN Waitlist details",
     response_model=VpnWaitlistSchema,
-    responses={404: {"model": NotFoundResponse}},
+    responses={
+        401: {"model": UnauthorizedResponse},
+        404: {"model": NotFoundResponse},
+    },
     tags=["Private"],
 )
 def read_contact_fpn(
-    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+    email_id: UUID = Path(..., title="The email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
     return contact.vpn_waitlist or VpnWaitlistSchema()
@@ -288,14 +382,59 @@ def read_contact_fpn(
     "/contact/fxa/{email_id}",
     summary="Get contact's Firefox Account details",
     response_model=FirefoxAccountsSchema,
-    responses={404: {"model": NotFoundResponse}},
+    responses={
+        401: {"model": UnauthorizedResponse},
+        404: {"model": NotFoundResponse},
+    },
     tags=["Private"],
 )
 def read_contact_fxa(
-    email_id: UUID = Path(..., title="The email ID"), db: Session = Depends(get_db)
+    email_id: UUID = Path(..., title="The email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
     return contact.fxa or FirefoxAccountsSchema()
+
+
+@app.post(
+    "/token",
+    include_in_schema=False,
+    summary="Get OAuth2 access token",
+    response_model=TokenResponse,
+    responses={400: {"model": BadRequestResponse}},
+)
+def login(
+    db: Session = Depends(get_db),
+    form_data: OAuth2ClientCredentialsRequestForm = Depends(),
+    basic_credentials: Optional[HTTPBasicCredentials] = Depends(token_scheme),
+    token_settings=Depends(token_settings),
+):
+    failedAuth = HTTPException(status_code=400, detail="Incorrect username or password")
+
+    if form_data.client_id and form_data.client_secret:
+        client_id = form_data.client_id
+        client_secret = form_data.client_secret
+    elif basic_credentials:
+        client_id = basic_credentials.username
+        client_secret = basic_credentials.password
+    else:
+        raise failedAuth
+
+    api_client = get_api_client_by_id(db, client_id)
+    if not api_client or not api_client.enabled:
+        raise failedAuth
+    if not verify_password(client_secret, api_client.hashed_secret):
+        raise failedAuth
+
+    access_token = create_access_token(
+        data={"sub": f"api_client:{client_id}"}, **token_settings
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": int(token_settings["expires_delta"].total_seconds()),
+    }
 
 
 # NOTE:  This endpoint should provide a better proxy of "health".  It presently is a
