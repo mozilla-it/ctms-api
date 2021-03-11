@@ -185,6 +185,7 @@ def read_ctms_by_email_id(
 @app.post(
     "/ctms",
     summary="Create a contact, generating an id",
+    responses={409: {"model": BadRequestResponse}},
 )
 def create_ctms_contact(
     contact: ContactInSchema,
@@ -194,8 +195,8 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
-        if ContactInSchema(**existing) == contact:
-            return
+        if ContactInSchema(**existing).idempotent_equal(contact):
+            return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
         else:
             raise HTTPException(status_code=409, detail="Contact already exists")
     try:
@@ -207,6 +208,7 @@ def create_ctms_contact(
             raise HTTPException(status_code=409, detail="Contact already exists")
         else:
             raise
+    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
 
 
 @app.get(

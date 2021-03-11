@@ -4,14 +4,15 @@ from uuid import UUID
 
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
 
-from .addons import AddOnsSchema
+from .addons import AddOnsInSchema, AddOnsSchema
+from .base import ComparableBase
 from .email import EmailInSchema, EmailSchema
-from .fxa import FirefoxAccountsSchema
-from .newsletter import NewsletterSchema
-from .vpn import VpnWaitlistSchema
+from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
+from .newsletter import NewsletterInSchema, NewsletterSchema
+from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
 
 
-class ContactSchema(BaseModel):
+class ContactSchema(ComparableBase):
     """A complete contact."""
 
     amo: Optional[AddOnsSchema] = None
@@ -38,18 +39,36 @@ class ContactSchema(BaseModel):
         )
 
 
-class ContactInSchema(BaseModel):
+class ContactInSchema(ComparableBase):
     """A contact as provided by callers."""
 
-    amo: Optional["AddOnsSchema"] = None
-    email: "EmailInSchema"
-    fxa: Optional["FirefoxAccountsSchema"] = None
-    newsletters: List["NewsletterSchema"] = Field(
+    amo: Optional[AddOnsInSchema] = None
+    email: EmailInSchema
+    fxa: Optional[FirefoxAccountsInSchema] = None
+    newsletters: List[NewsletterInSchema] = Field(
         default=[],
         description="List of newsletters for which the contact is or was subscribed",
         example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
     )
-    vpn_waitlist: Optional["VpnWaitlistSchema"] = None
+    vpn_waitlist: Optional[VpnWaitlistInSchema] = None
+
+    def idempotent_equal(self, other):
+        def _noneify(field):
+            if not field:
+                return None
+            return None if field.is_default() else field
+
+        if self.email != other.email:
+            return False
+        if _noneify(self.amo) != _noneify(other.amo):
+            return False
+        if _noneify(self.fxa) != _noneify(other.fxa):
+            return False
+        if _noneify(self.vpn_waitlist) != _noneify(other.vpn_waitlist):
+            return False
+        if sorted(self.newsletters) != sorted(other.newsletters):
+            return False
+        return True
 
 
 class CTMSResponse(BaseModel):

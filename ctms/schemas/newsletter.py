@@ -2,10 +2,12 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID, uuid4
 
-from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
+from pydantic import UUID4, EmailStr, Field, HttpUrl
+
+from .base import ComparableBase
 
 
-class NewsletterSchema(BaseModel):
+class NewsletterBase(ComparableBase):
     """The newsletter subscriptions schema."""
 
     name: str = Field(
@@ -33,5 +35,13 @@ class NewsletterSchema(BaseModel):
         default=None, description="Reason for unsubscribing"
     )
 
+    def __lt__(self, other):
+        return self.name < other.name
+
     class Config:
         orm_mode = True
+
+
+# No need to change anything, just extend if you want to
+NewsletterInSchema = NewsletterBase
+NewsletterSchema = NewsletterBase

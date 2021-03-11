@@ -1,12 +1,20 @@
 """pytest tests for API functionality"""
+from typing import Callable, List
 from uuid import UUID
 
 import pytest
 
-from ctms.crud import get_contacts_by_any_id
+from ctms.crud import (
+    create_contact,
+    get_amo_by_email_id,
+    get_contacts_by_any_id,
+    get_fxa_by_email_id,
+    get_newsletters_by_email_id,
+    get_vpn_by_email_id,
+)
 from ctms.models import Email
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ContactSchema
+from ctms.schemas import ContactInSchema, ContactSchema
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -334,117 +342,168 @@ def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_va
     assert len(data) == 0
 
 
-def test_create_basic_no_id(client, dbsession):
+@pytest.fixture
+def add_contact(request, client, dbsession):
+    _id = (
+        request.param
+        if hasattr(request, "param")
+        else "d1da1c99-fe09-44db-9c68-78a75752574d"
+    )
+    email_id = UUID(str(_id))
+    contact = SAMPLE_CONTACTS[email_id]
+    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
+
+    def _add(
+        modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
+        code: int = 303,
+        stored_contacts: int = 1,
+        check_redirect: bool = True,
+        query_fields: dict = {"primary_email": contact.email.primary_email},
+        check_written: bool = True,
+    ):
+        sample = contact.copy(deep=True)
+        sample = modifier(sample)
+        resp = client.post("/ctms", sample.json())
+        assert resp.status_code == code, resp.text
+        if check_redirect:
+            assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
+        saved = [
+            ContactSchema(**c)
+            for c in get_contacts_by_any_id(dbsession, **query_fields)
+        ]
+        assert len(saved) == stored_contacts
+
+        # Now make sure that we skip writing default models
+        def _check_written(field, getter):
+            results = getter(dbsession, sample.email.email_id)
+            if sample.dict()[field] and code == 303:
+                if field in fields_not_written:
+                    assert (
+                        results is None
+                    ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                else:
+                    assert (
+                        results
+                    ), f"{email_id} has field `{field}` and it should have been written to db"
+            else:
+                assert (
+                    results is None
+                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+
+        if check_written:
+            _check_written("amo", get_amo_by_email_id)
+            _check_written("fxa", get_fxa_by_email_id)
+            _check_written("newsletters", get_newsletters_by_email_id)
+            _check_written("vpn_waitlist", get_vpn_by_email_id)
+
+        return saved, sample, email_id
+
+    return _add
+
+
+def _compare_written_contacts(
+    contact, sample, email_id, ids_should_be_identical: bool = True
+):
+    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
+
+    saved_contact = ContactInSchema(**contact.dict())
+    sample = ContactInSchema(**sample.dict())
+
+    if not ids_should_be_identical:
+        assert saved_contact.email.email_id != sample.email.email_id
+        del saved_contact.email.email_id
+        del sample.email.email_id
+
+    for f in fields_not_written:
+        setattr(sample, f, [] if f == "newsletters" else None)
+
+    assert saved_contact == sample
+
+
+def test_create_basic_no_id(add_contact):
     """Most straightforward contact creation succeeds."""
-    sample_uuid = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[sample_uuid]
-    sample.email.email_id = None
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    saved = get_contacts_by_any_id(dbsession, primary_email=sample.email.primary_email)
-    assert len(saved) == 1
 
-    # this should be generated in this case
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.email_id != sample_uuid
-    del saved_contact.email.email_id
-    del sample.email.email_id
+    def _remove_id(contact):
+        contact.email.email_id = None
+        return contact
 
-    assert saved_contact.email == sample.email
+    saved_contacts, sample, email_id = add_contact(
+        modifier=_remove_id, check_redirect=False
+    )
+    _compare_written_contacts(
+        saved_contacts[0], sample, email_id, ids_should_be_identical=False
+    )
 
 
-def test_create_basic_with_id(client, dbsession):
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_id(add_contact):
     """Most straightforward contact creation succeeds."""
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id]
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    saved_contacts, sample, email_id = add_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-def test_create_basic_idempotent(client, dbsession):
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_idempotent(add_contact):
     """Creating a contact works across retries."""
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id]
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    saved_contacts, sample, email_id = add_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+    saved_contacts, _, _ = add_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-def test_create_basic_with_id_collision(client, dbsession):
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_id_collision(add_contact):
     """Creating a contact with the same id but different data fails."""
-    email_id = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id]
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    sample.email.mailing_country = "mx"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 409
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email.mailing_country == "us"
+    _, sample, _ = add_contact()
+
+    def _change_mailing(contact):
+        assert contact.email.mailing_country != "mx", "sample data has changed"
+        contact.email.mailing_country = "mx"
+        return contact
+
+    # We set check_written to False because the rows it would check for normally
+    # are actually here due to the first write
+    saved_contacts, _, _ = add_contact(
+        modifier=_change_mailing, code=409, check_redirect=False, check_written=False
+    )
+    assert saved_contacts[0].email.mailing_country == sample.email.mailing_country
 
 
-def test_create_basic_with_basket_collision(client, dbsession):
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_basket_collision(add_contact):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
-    See other test for that check
+    See test_create_basic_with_email_collision below for that check
     """
-    email_id_1 = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id_1]
-    sample.email.email_id = email_id_1
-    sample.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    saved_contacts, orig_sample, email_id = add_contact()
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
-    email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-    orig_sample = sample.copy(deep=True)
-    sample.email.email_id = email_id_2
-    sample.email.basket_token = UUID("0750f828-a52f-4579-8960-42a5e3674e5d")
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 409
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == orig_sample.email
+    def _change_basket(contact):
+        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+        contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
+        return contact
+
+    saved_contacts, _, _ = add_contact(
+        modifier=_change_basket, code=409, check_redirect=False
+    )
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_create_basic_with_email_collision(client, dbsession):
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_email_collision(add_contact):
     """Creating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.
     See other test for that check
     """
-    email_id_1 = UUID("d1da1c99-fe09-44db-9c68-78a75752574d")
-    sample = SAMPLE_CONTACTS[email_id_1]
-    sample.email.email_id = email_id_1
-    sample.email.primary_email = "bar@foo.com"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 200
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == sample.email
+    saved_contacts, orig_sample, email_id = add_contact()
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
-    email_id_2 = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-    orig_sample = sample.copy(deep=True)
-    sample.email.email_id = email_id_2
-    sample.email.primary_email = "foo@bar.com"
-    resp = client.post("/ctms", sample.json())
-    assert resp.status_code == 409
-    saved = get_contacts_by_any_id(dbsession, email_id=email_id_1)
-    assert len(saved) == 1
-    saved_contact = ContactSchema(**saved[0])
-    assert saved_contact.email == orig_sample.email
+    def _change_primary_email(contact):
+        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+        contact.email.primary_email = "foo@bar.com"
+        return contact
+
+    saved_contacts, _, _ = add_contact(
+        modifier=_change_primary_email, code=409, check_redirect=False
+    )
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
