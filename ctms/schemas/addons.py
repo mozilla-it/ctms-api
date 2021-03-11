@@ -7,7 +7,7 @@ from pydantic import UUID4, EmailStr, Field, HttpUrl
 from .base import ComparableBase
 
 
-class AddOnsSchema(ComparableBase):
+class AddOnsBase(ComparableBase):
     """
     The addons.mozilla.org (AMO) data for a contact.
 
@@ -74,6 +74,16 @@ class AddOnsSchema(ComparableBase):
         description="Username on AMO, AMO_Username__c in Salesforce",
         example="AddOnAuthor",
     )
+
+    class Config:
+        orm_mode = True
+
+
+# No need to change anything, just extend if you want to
+AddOnsInSchema = AddOnsBase
+
+
+class AddOnsSchema(AddOnsBase):
     create_timestamp: Optional[datetime] = Field(
         default=None,
         description="AMO data creation timestamp",
@@ -84,6 +94,3 @@ class AddOnsSchema(ComparableBase):
         description="AMO data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
     )
-
-    class Config:
-        orm_mode = True

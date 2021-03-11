@@ -7,7 +7,7 @@ import pytest
 from ctms.crud import get_contacts_by_any_id
 from ctms.models import Email
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ContactSchema
+from ctms.schemas import ContactInSchema, ContactSchema
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -344,24 +344,31 @@ def test_create_basic_no_id(add_contact):
 
     saved_contacts, sample = add_contact(modifier=_remove_id, check_redirect=False)
 
-    assert saved_contacts[0].email.email_id != sample.email.email_id
-    del saved_contacts[0].email.email_id
+    saved_contact = ContactInSchema(**saved_contacts[0].dict())
+    sample = ContactInSchema(**sample.dict())
+
+    assert saved_contact.email.email_id != sample.email.email_id
+    del saved_contact.email.email_id
     del sample.email.email_id
 
-    assert saved_contacts[0].email.equivalent(sample.email)
+    assert saved_contact == sample
 
 
 def test_create_basic_with_id(add_contact):
     """Most straightforward contact creation succeeds."""
     saved_contacts, sample = add_contact()
-    assert saved_contacts[0].email.equivalent(sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **sample.dict()
+    )
 
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_with_id_complete(add_contact):
     """Most straightforward contact creation succeeds."""
     saved_contacts, sample = add_contact()
-    assert saved_contacts[0].email.equivalent(sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **sample.dict()
+    )
 
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
@@ -369,7 +376,9 @@ def test_create_basic_idempotent(add_contact):
     """Creating a contact works across retries."""
     saved_contacts, sample = add_contact()
     saved_contacts, sample = add_contact()
-    assert saved_contacts[0].email.equivalent(sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **sample.dict()
+    )
 
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
@@ -397,7 +406,9 @@ def test_create_basic_with_basket_collision(add_contact):
     See other test for that check
     """
     saved_contacts, orig_sample = add_contact()
-    assert saved_contacts[0].email.equivalent(orig_sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **orig_sample.dict()
+    )
 
     def _change_basket(contact):
         contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
@@ -407,7 +418,9 @@ def test_create_basic_with_basket_collision(add_contact):
     saved_contacts, _ = add_contact(
         modifier=_change_basket, code=409, check_redirect=False
     )
-    assert saved_contacts[0].email.equivalent(orig_sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **orig_sample.dict()
+    )
 
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
@@ -417,7 +430,9 @@ def test_create_basic_with_email_collision(add_contact):
     See other test for that check
     """
     saved_contacts, orig_sample = add_contact()
-    assert saved_contacts[0].email.equivalent(orig_sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **orig_sample.dict()
+    )
 
     def _change_primary_email(contact):
         contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
@@ -427,4 +442,6 @@ def test_create_basic_with_email_collision(add_contact):
     saved_contacts, _ = add_contact(
         modifier=_change_primary_email, code=409, check_redirect=False
     )
-    assert saved_contacts[0].email.equivalent(orig_sample.email)
+    assert ContactInSchema(**saved_contacts[0].dict()) == ContactInSchema(
+        **orig_sample.dict()
+    )

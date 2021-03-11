@@ -7,7 +7,7 @@ from pydantic import UUID4, EmailStr, Field, HttpUrl
 from .base import ComparableBase
 
 
-class NewsletterSchema(ComparableBase):
+class NewsletterBase(ComparableBase):
     """The newsletter subscriptions schema."""
 
     name: str = Field(
@@ -37,3 +37,8 @@ class NewsletterSchema(ComparableBase):
 
     class Config:
         orm_mode = True
+
+
+# No need to change anything, just extend if you want to
+NewsletterInSchema = NewsletterBase
+NewsletterSchema = NewsletterBase

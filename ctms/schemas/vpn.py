@@ -7,7 +7,7 @@ from pydantic import UUID4, EmailStr, Field, HttpUrl
 from .base import ComparableBase
 
 
-class VpnWaitlistSchema(ComparableBase):
+class VpnWaitlistBase(ComparableBase):
     """
     The Mozilla VPN Waitlist schema.
 
@@ -33,3 +33,8 @@ class VpnWaitlistSchema(ComparableBase):
 
     class Config:
         orm_mode = True
+
+
+# No need to change anything, just extend if you want to
+VpnWaitlistInSchema = VpnWaitlistBase
+VpnWaitlistSchema = VpnWaitlistBase

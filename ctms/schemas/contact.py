@@ -4,12 +4,12 @@ from uuid import UUID
 
 from pydantic import UUID4, BaseModel, EmailStr, Field, HttpUrl
 
-from .addons import AddOnsSchema
+from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
 from .email import EmailInSchema, EmailSchema
-from .fxa import FirefoxAccountsSchema
-from .newsletter import NewsletterSchema
-from .vpn import VpnWaitlistSchema
+from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
+from .newsletter import NewsletterInSchema, NewsletterSchema
+from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
 
 
 class ContactSchema(ComparableBase):
@@ -42,15 +42,15 @@ class ContactSchema(ComparableBase):
 class ContactInSchema(ComparableBase):
     """A contact as provided by callers."""
 
-    amo: Optional["AddOnsSchema"] = None
-    email: "EmailInSchema"
-    fxa: Optional["FirefoxAccountsSchema"] = None
-    newsletters: List["NewsletterSchema"] = Field(
+    amo: Optional[AddOnsInSchema] = None
+    email: EmailInSchema
+    fxa: Optional[FirefoxAccountsInSchema] = None
+    newsletters: List[NewsletterInSchema] = Field(
         default=[],
         description="List of newsletters for which the contact is or was subscribed",
         example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
     )
-    vpn_waitlist: Optional["VpnWaitlistSchema"] = None
+    vpn_waitlist: Optional[VpnWaitlistInSchema] = None
 
 
 class CTMSResponse(BaseModel):

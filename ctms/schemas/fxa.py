@@ -7,7 +7,7 @@ from pydantic import UUID4, EmailStr, Field, HttpUrl
 from .base import ComparableBase
 
 
-class FirefoxAccountsSchema(ComparableBase):
+class FirefoxAccountsBase(ComparableBase):
     """The Firefox Account schema."""
 
     fxa_id: Optional[str] = Field(
@@ -20,11 +20,6 @@ class FirefoxAccountsSchema(ComparableBase):
         default=None,
         description="FxA Email, can be foreign ID, FxA_Primary_Email__c in Salesforce",
         example="my-fxa-acct@example.com",
-    )
-    created_date: Optional[str] = Field(
-        default=None,
-        description="Source is unix timestamp, FxA_Created_Date__c in Salesforce",
-        example="2021-01-29T18:43:49.082375+00:00",
     )
     lang: Optional[str] = Field(
         default=None,
@@ -48,3 +43,15 @@ class FirefoxAccountsSchema(ComparableBase):
 
     class Config:
         orm_mode = True
+
+
+# No need to change anything, just extend if you want to
+FirefoxAccountsInSchema = FirefoxAccountsBase
+
+
+class FirefoxAccountsSchema(FirefoxAccountsBase):
+    created_date: Optional[str] = Field(
+        default=None,
+        description="Source is unix timestamp, FxA_Created_Date__c in Salesforce",
+        example="2021-01-29T18:43:49.082375+00:00",
+    )

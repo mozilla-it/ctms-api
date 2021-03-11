@@ -2,8 +2,10 @@ from typing import Dict
 from uuid import UUID
 
 from .schemas import (
+    AddOnsInSchema,
     AddOnsSchema,
     ContactSchema,
+    EmailInSchema,
     EmailSchema,
     FirefoxAccountsSchema,
     NewsletterSchema,
@@ -120,13 +122,24 @@ SAMPLE_EXAMPLE = ContactSchema(
 )
 
 SAMPLE_TO_ADD = ContactSchema(
-    email=EmailSchema(
+    email=EmailInSchema(
         basket_token="21aeb466-4003-4c2b-a27e-e6651c13d231",
         email_id=UUID("d1da1c99-fe09-44db-9c68-78a75752574d"),
         mailing_country="us",
         primary_email="ctms-user-to-be-created@example.com",
         sfdc_id="002A000001aBAcDEFA",
     )
+)
+
+SAMPLE_WITH_DEFAULT = ContactSchema(
+    email=EmailInSchema(
+        basket_token="d3a827b5-747c-41c2-8381-59ce9ad63050",
+        email_id=UUID("4f98b303-8863-421f-95d3-847cd4d83c9f"),
+        mailing_country="us",
+        primary_email="ctms-user-with-defaults@example.com",
+        sfdc_id="102A000001aBAcDEFA",
+    ),
+    amo=AddOnsInSchema(),
 )
 
 
@@ -136,6 +149,7 @@ class ContactVendor:
         SAMPLE_MAXIMAL.email.email_id: SAMPLE_MAXIMAL,
         SAMPLE_EXAMPLE.email.email_id: SAMPLE_EXAMPLE,
         SAMPLE_TO_ADD.email.email_id: SAMPLE_TO_ADD,
+        SAMPLE_WITH_DEFAULT.email.email_id: SAMPLE_WITH_DEFAULT,
     }
 
     def __getitem__(self, key: str) -> ContactSchema:
