@@ -53,9 +53,6 @@ class ContactInSchema(ComparableBase):
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
 
     def idempotent_equal(self, other):
-        # settings = {"exclude_defaults": True, "exclude_unset": True}
-        # print(self.dict(**settings), other.dict(**settings))
-        # return self.dict(**settings) == other.dict(**settings)
         def _noneify(field):
             if not field:
                 return None
