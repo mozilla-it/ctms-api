@@ -407,7 +407,7 @@ def test_create_basic_with_id_collision(add_contact):
 def test_create_basic_with_basket_collision(add_contact):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
-    See other test for that check
+    See test_create_basic_with_email_collision below for that check
     """
     saved_contacts, orig_sample, email_id = add_contact()
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
