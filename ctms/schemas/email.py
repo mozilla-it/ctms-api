@@ -21,7 +21,7 @@ class EmailBase(ComparableBase):
         example="contact@example.com",
     )
     basket_token: Optional[UUID] = Field(
-        ...,
+        default=None,
         description="Basket token, Token__c in Salesforce",
         example="c4a7d759-bb52-457b-896b-90f1d3ef8433",
     )
