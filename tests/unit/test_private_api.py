@@ -6,10 +6,6 @@ import pytest
 API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
     ("/identities", {"basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"}),
     ("/identity/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
-    ("/contact/email/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
-    ("/contact/amo/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
-    ("/contact/vpn_waitlist/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
-    ("/contact/fxa/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
 )
 
 
@@ -146,24 +142,3 @@ def test_get_identities_with_unknown_ids_fails(
     resp = client.get(f"/identities?{alt_id_name}={alt_id_value}")
     assert resp.status_code == 200
     assert resp.json() == []
-
-
-@pytest.mark.parametrize("subgroup", ("email", "amo", "vpn_waitlist", "fxa"))
-def test_get_subgroup(client, minimal_contact, subgroup):
-    """GET /contact/{subgroup}/{email_id} returns the subgroup data."""
-    email_id = minimal_contact.email.email_id
-    full_resp = client.get(f"/ctms/{email_id}")
-    assert full_resp.status_code == 200
-    full_json = full_resp.json()
-    resp = client.get(f"/contact/{subgroup}/{email_id}")
-    assert resp.status_code == 200
-    assert resp.json() == full_json[subgroup]
-
-
-@pytest.mark.parametrize("subgroup", ("email", "amo", "vpn_waitlist", "fxa"))
-def test_get_subgroup_not_found(client, dbsession, subgroup):
-    """GET /contact/{subgroup}/{unknown email_id} returns a 404."""
-    email_id = "cad092ec-a71a-4df5-aa92-517959caeecb"
-    resp = client.get(f"/contact/{subgroup}/{email_id}")
-    assert resp.status_code == 404
-    assert resp.json() == {"detail": "Unknown email_id"}
