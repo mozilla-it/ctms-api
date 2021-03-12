@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
 from pydantic import UUID4, EmailStr
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .auth import hash_password
 from .models import (
@@ -49,26 +49,28 @@ def get_vpn_by_email_id(db: Session, email_id: UUID4):
     return db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).first()
 
 
+def _contact_base_query(db):
+    """Return a query that will fetch related contact data, ready to filter."""
+    return (
+        db.query(Email)
+        .options(joinedload(Email.amo))
+        .options(joinedload(Email.fxa))
+        .options(joinedload(Email.vpn_waitlist))
+        .options(selectinload("newsletters"))
+    )
+
+
 def get_contact_by_email_id(db: Session, email_id: UUID4):
     """Get all the data for a contact."""
-    result = (
-        db.query(Email, AmoAccount, FirefoxAccount, VpnWaitlist)
-        .outerjoin(AmoAccount, Email.email_id == AmoAccount.email_id)
-        .outerjoin(FirefoxAccount, Email.email_id == FirefoxAccount.email_id)
-        .outerjoin(VpnWaitlist, Email.email_id == VpnWaitlist.email_id)
-        .filter(Email.email_id == email_id)
-        .first()
-    )
-    if result is None:
+    email = _contact_base_query(db).filter(Email.email_id == email_id).one_or_none()
+    if email is None:
         return None
-    email, amo, fxa, vpn_waitlist = result
-    newsletters = db.query(Newsletter).filter(Newsletter.email_id == email_id).all()
     return {
-        "amo": amo,
+        "amo": email.amo,
         "email": email,
-        "fxa": fxa,
-        "newsletters": newsletters,
-        "vpn_waitlist": vpn_waitlist,
+        "fxa": email.fxa,
+        "newsletters": email.newsletters,
+        "vpn_waitlist": email.vpn_waitlist,
     }
 
 
@@ -83,7 +85,12 @@ def get_contacts_by_any_id(
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
 ) -> List[Dict]:
-    """Get all the data for multiple contacts by IDs."""
+    """
+    Get all the data for multiple contacts by IDs.
+
+    Newsletters are retrieved in batches of 500 email_ids, so it will be two
+    queries for most calls.
+    """
     assert any(
         (
             email_id,
@@ -96,12 +103,7 @@ def get_contacts_by_any_id(
             fxa_primary_email,
         )
     )
-    statement = (
-        db.query(Email, AmoAccount, FirefoxAccount, VpnWaitlist)
-        .outerjoin(AmoAccount, Email.email_id == AmoAccount.email_id)
-        .outerjoin(FirefoxAccount, Email.email_id == FirefoxAccount.email_id)
-        .outerjoin(VpnWaitlist, Email.email_id == VpnWaitlist.email_id)
-    )
+    statement = _contact_base_query(db)
     if email_id is not None:
         statement = statement.filter(Email.email_id == email_id)
     if primary_email is not None:
@@ -113,25 +115,23 @@ def get_contacts_by_any_id(
     if mofo_id is not None:
         statement = statement.filter(Email.mofo_id == mofo_id)
     if amo_user_id is not None:
-        statement = statement.filter(AmoAccount.user_id == amo_user_id)
+        statement = statement.join(Email.amo).filter(AmoAccount.user_id == amo_user_id)
     if fxa_id is not None:
-        statement = statement.filter(FirefoxAccount.fxa_id == fxa_id)
+        statement = statement.join(Email.fxa).filter(FirefoxAccount.fxa_id == fxa_id)
     if fxa_primary_email is not None:
-        statement = statement.filter(FirefoxAccount.primary_email == fxa_primary_email)
+        statement = statement.join(Email.fxa).filter(
+            FirefoxAccount.primary_email == fxa_primary_email
+        )
     results = statement.all()
     data = []
-    for result in results:
-        email, amo, fxa, vpn_waitlist = result
-        newsletters = (
-            db.query(Newsletter).filter(Newsletter.email_id == email.email_id).all()
-        )
+    for email in results:
         data.append(
             {
-                "amo": amo,
+                "amo": email.amo,
                 "email": email,
-                "fxa": fxa,
-                "newsletters": newsletters,
-                "vpn_waitlist": vpn_waitlist,
+                "fxa": email.fxa,
+                "newsletters": email.newsletters,
+                "vpn_waitlist": email.vpn_waitlist,
             }
         )
     return data

@@ -118,7 +118,7 @@ def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
 def test_get_multiple_contacts_by_any_id(
     dbsession, sample_contacts, alt_id_name, alt_id_value
 ):
-    """N contacts are retrieved in N+1 queries."""
+    """2 contacts are retrieved in 2 queries."""
 
     dupe_id = str(uuid4())
     create_email(
@@ -145,5 +145,5 @@ def test_get_multiple_contacts_by_any_id(
 
     with StatementWatcher(dbsession.connection()) as sw:
         contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert sw.count == 3
+    assert sw.count == 2
     assert len(contacts) == 2
