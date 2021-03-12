@@ -252,6 +252,7 @@ def read_ctms_by_email_id(
     "/ctms",
     summary="Create a contact, generating an id",
     responses={409: {"model": BadRequestResponse}},
+    tags=["Public"],
 )
 def create_ctms_contact(
     contact: ContactInSchema,
