@@ -50,10 +50,18 @@ testpaths = [
     "tests/unit",
 ]
 
-# https://black.readthedocs.io/en/stable/compatible_configs.html
 [tool.pylint]
     [tool.pylint.'MESSAGES CONTROL']
-    disable = "C0330, C0326, R0801"
+    disable = [
+        # https://black.readthedocs.io/en/stable/compatible_configs.html
+        "C0330",
+        "C0326",
+
+        "R0801", # sqla has a lot of duplicate code and it is work to "fix" this
+        "C0114", # mozilla-it/ctms-api#100
+        "C0115", # mozilla-it/ctms-api#100
+        "C0116", # mozilla-it/ctms-api#100
+    ]
     [tool.pylint.FORMAT]
     max-line-length = 88
     [tool.pylint.REPORTS]
