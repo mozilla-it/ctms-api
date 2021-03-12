@@ -58,6 +58,8 @@ testpaths = [
     max-line-length = 88
     [tool.pylint.REPORTS]
     output-format = 'colorized'
+    [tool.pylint.MASTER]
+    extension-pkg-whitelist='pydantic'
 
 [tool.black]
 line-length = 88
