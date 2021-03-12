@@ -59,6 +59,7 @@ testpaths = [
 
         "R0801", # sqla has a lot of duplicate code and it is work to "fix" this
         "C0301", # if black is happy with the line-length, let's not mess with it
+        "R0903", # this is triggered by pydantic's config and is really just a taste thing anyway
 
         "C0114", # mozilla-it/ctms-api#100
         "C0115", # mozilla-it/ctms-api#100
