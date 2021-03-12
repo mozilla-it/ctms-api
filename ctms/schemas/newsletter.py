@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from pydantic import UUID4, EmailStr, Field, HttpUrl
+from pydantic import Field, HttpUrl
 
 from .base import ComparableBase
 

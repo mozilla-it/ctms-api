@@ -5,14 +5,12 @@ from uuid import UUID, uuid4
 import pytest
 
 from ctms.crud import (
-    create_contact,
     get_amo_by_email_id,
     get_contacts_by_any_id,
     get_fxa_by_email_id,
     get_newsletters_by_email_id,
     get_vpn_by_email_id,
 )
-from ctms.models import Email
 from ctms.sample_data import SAMPLE_CONTACTS
 from ctms.schemas import ContactInSchema, ContactSchema
 

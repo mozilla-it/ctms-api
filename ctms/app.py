@@ -6,8 +6,8 @@ from uuid import UUID, uuid4
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordRequestForm
-from pydantic import UUID4, EmailStr
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,6 @@ from .crud import (
     get_api_client_by_id,
     get_contact_by_email_id,
     get_contacts_by_any_id,
-    get_email_by_email_id,
 )
 from .database import get_db_engine
 from .schemas import (
@@ -37,7 +36,6 @@ from .schemas import (
     EmailSchema,
     FirefoxAccountsSchema,
     IdentityResponse,
-    NewsletterSchema,
     NotFoundResponse,
     TokenResponse,
     UnauthorizedResponse,

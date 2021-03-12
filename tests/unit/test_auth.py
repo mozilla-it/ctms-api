@@ -9,7 +9,6 @@ from requests.auth import HTTPBasicAuth
 from ctms.app import app, token_settings
 from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import create_api_client, get_api_client_by_id
-from ctms.models import ApiClient
 from ctms.schemas import ApiClientSchema
 
 
