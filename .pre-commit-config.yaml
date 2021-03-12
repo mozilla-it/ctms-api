@@ -15,12 +15,11 @@ repos:
         ]
         exclude: 'k8s/secret.json'
       - id: trailing-whitespace
-  - repo: https://github.com/pre-commit/mirrors-pylint
-    rev: v2.5.3
+  - repo: https://github.com/pycqa/pylint
+    rev: pylint-2.7.2
     hooks:
       - id: pylint
         additional_dependencies: [pylint-venv]
-        args: ['--disable=all']
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.782
     hooks:
