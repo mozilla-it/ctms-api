@@ -58,12 +58,12 @@ testpaths = [
         "C0326",
 
         "R0801", # sqla has a lot of duplicate code and it is work to "fix" this
+        "C0301", # if black is happy with the line-length, let's not mess with it
+
         "C0114", # mozilla-it/ctms-api#100
         "C0115", # mozilla-it/ctms-api#100
         "C0116", # mozilla-it/ctms-api#100
     ]
-    [tool.pylint.FORMAT]
-    max-line-length = 88
     [tool.pylint.REPORTS]
     output-format = 'colorized'
     [tool.pylint.MASTER]
