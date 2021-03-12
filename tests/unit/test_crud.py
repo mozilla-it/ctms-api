@@ -147,3 +147,6 @@ def test_get_multiple_contacts_by_any_id(
         contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
     assert sw.count == 2
     assert len(contacts) == 2
+    for contact in contacts:
+        newsletter_names = [nl.name for nl in contacts[0]["newsletters"]]
+        assert sorted(newsletter_names) == newsletter_names

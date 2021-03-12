@@ -44,7 +44,9 @@ class Email(Base):
         server_onupdate=now(),
     )
 
-    newsletters = relationship("Newsletter", back_populates="email")
+    newsletters = relationship(
+        "Newsletter", back_populates="email", order_by="Newsletter.name"
+    )
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
     vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
