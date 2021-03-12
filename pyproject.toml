@@ -43,11 +43,21 @@ mypy = "^0.782"
 detect-secrets = "^0.14.3"
 bandit = "^1.7.0"
 SQLAlchemy-Utils = "^0.36.8"
+pylint = "^2.7.2"
 
 [tool.pytest.ini_options]
 testpaths = [
     "tests/unit",
 ]
+
+# https://black.readthedocs.io/en/stable/compatible_configs.html
+[tool.pylint]
+    [tool.pylint.'MESSAGES CONTROL']
+    disable = "C0330, C0326, R0801"
+    [tool.pylint.FORMAT]
+    max-line-length = 88
+    [tool.pylint.REPORTS]
+    output-format = 'colorized'
 
 [tool.black]
 line-length = 88
