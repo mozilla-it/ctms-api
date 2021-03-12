@@ -29,7 +29,6 @@ def create_client(db, client_id, email, enabled=True):
 def update_client(db, client, email=None, enabled=None, new_secret=None):
     """Update an existing OAuth2 client."""
     assert not (email is None and enabled is None and new_secret is None)
-    secret = None
     if email is not None:
         client.email = email
     if enabled is not None:

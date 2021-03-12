@@ -1,5 +1,5 @@
 """pytest tests for API functionality"""
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, Tuple
 from uuid import UUID, uuid4
 
 import pytest

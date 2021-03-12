@@ -1,5 +1,4 @@
 """pytest fixtures for the CTMS app"""
-from typing import Callable, Set
 from uuid import UUID
 
 import pytest
