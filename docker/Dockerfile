@@ -13,7 +13,8 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1 \
     PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv"
+    VENV_PATH="/opt/pysetup/.venv" \
+    PORT=8000
 
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
@@ -56,9 +57,9 @@ RUN poetry install
 WORKDIR /app
 COPY . .
 
-EXPOSE 8000
-ENTRYPOINT /docker-entrypoint.sh $0 $@
-CMD ["uvicorn", "--reload", "--host=0.0.0.0", "--port=8000", "ctms.app:app"]
+EXPOSE $PORT
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 
 
 # 'lint' stage runs black and isort
@@ -91,8 +92,6 @@ RUN chmod +x /docker-entrypoint.sh
 COPY . /app
 WORKDIR /app
 
-ENTRYPOINT /docker-entrypoint.sh $0 $@
-
-EXPOSE 80
-
-CMD ["uvicorn", "ctms.app:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE $PORT
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD uvicorn ctms.app:app --host=0.0.0.0 --port=${PORT}
