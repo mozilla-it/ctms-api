@@ -63,6 +63,7 @@ testpaths = [
         "R0913", # we have too-many-arguments in too many places to easily fix
         "R0912", # Same idea as above, let's leave it since it is a matter of taste
         "W0511", # Let us have our TODOs
+        "W0613", # sometimes unused arguments are nice for symmetry and also api methods
 
         "C0114", # mozilla-it/ctms-api#100
         "C0115", # mozilla-it/ctms-api#100
@@ -71,7 +72,7 @@ testpaths = [
     [tool.pylint.REPORTS]
     output-format = 'colorized'
     [tool.pylint.FORMAT]
-    good-names = 'db,SessionLocal' # Normally pylint objects to these due to not being snake_case
+    good-names = 'e,db,SessionLocal' # Normally pylint objects to these due to not being snake_case
     [tool.pylint.MASTER]
     extension-pkg-whitelist='pydantic'
 
