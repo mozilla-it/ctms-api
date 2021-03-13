@@ -19,6 +19,19 @@ ENV PYTHONPATH=/app \
 
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
+# Set up user and group
+ARG userid=10001
+ARG groupid=10001
+WORKDIR /app
+RUN groupadd --gid $groupid app && \
+    useradd -g app --uid $userid --shell /usr/sbin/nologin --create-home app
+
+RUN mkdir -p $POETRY_HOME && \
+    chown app:app /opt/poetry && \
+    mkdir -p $PYSETUP_PATH && \
+    chown app:app $PYSETUP_PATH && \
+    mkdir -p /app && \
+    chown app:app /app
 
 # builder-base is used to build dependencies
 FROM python-base as builder-base
@@ -28,14 +41,15 @@ RUN apt-get update \
     build-essential
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
+USER app
 ENV POETRY_VERSION=1.1.5
 RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 
 # We copy our Python requirements here to cache them
 # and install only runtime deps using poetry
 WORKDIR $PYSETUP_PATH
-COPY ./poetry.lock ./pyproject.toml ./
-RUN poetry install --no-dev
+COPY --chown=app:app ./poetry.lock ./pyproject.toml ./
+RUN poetry install --no-dev --no-root
 
 
 # 'development' stage installs all dev deps and can be used to develop code.
@@ -44,19 +58,20 @@ FROM python-base as development
 ENV FASTAPI_ENV=development
 
 # Copying poetry and venv into image
+USER app
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
 # Copying in our entrypoint
-COPY ./docker/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=app:app ./docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # venv already has runtime deps installed we get a quicker install
 WORKDIR $PYSETUP_PATH
-RUN poetry install
+RUN poetry install --no-root
 
 WORKDIR /app
-COPY . .
+COPY --chown=app:app . .
 
 EXPOSE $PORT
 ENTRYPOINT ["/docker-entrypoint.sh"]

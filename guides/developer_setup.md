@@ -101,6 +101,29 @@ The option `--no-verify` should allow a committer to bypass the hooks.
 ### Installation
 Install Docker here: https://docs.docker.com/get-docker/
 
+### Linux Users
+Linux users will want to set the user ID and group ID used in the container.
+User of Docker Desktop for Mac or Windows and skip this step.
+
+Create a ``.env`` environment file, if it isn't already created:
+
+```sh
+make .env
+```
+
+Edit this file, and set these variables:
+```sh
+CTMS_UID=1000
+CTMS_GID=1000
+```
+
+Set these to your user ID and group ID. These commands might return them:
+
+```sh
+id -u # Your user ID
+id -g # Your group ID
+```
+
 ### Building
 Build images with:
 ```sh
