@@ -43,7 +43,7 @@ setup: .env
 	docker-compose exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
 	docker-compose exec postgres dropdb postgres --user postgres
 	docker-compose exec postgres createdb postgres --user postgres
-	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} web python -m alembic upgrade head
+	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} web alembic upgrade head
 
 .PHONY: shell
 shell: .env

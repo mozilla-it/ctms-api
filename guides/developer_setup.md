@@ -172,7 +172,7 @@ To create a new migration file based on updated SQLAlchemy models:
 
 ```sh
 make shell  # To enter the web container
-python -m alembic revision -m "A short description of the change"
+alembic revision -m "A short description of the change"
 exit
 ```
 
@@ -190,7 +190,7 @@ To run this and other migrations on an existing database:
 
 ```sh
 make shell  # Enter the web container
-python -m alembic upgrade head
+alembic upgrade head
 exit
 ```
 
@@ -202,7 +202,6 @@ for authentication. To generate credentials for your development environment:
 
 ```sh
 make shell  # Enter the web container
-poetry install
 ctms/bin/client_credentials.py test --email test@example.com
 ```
 
