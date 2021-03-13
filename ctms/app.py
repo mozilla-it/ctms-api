@@ -51,7 +51,7 @@ app = FastAPI(
 )
 SessionLocal = None
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
-token_scheme = HTTPBasic(auto_error=None)
+token_scheme = HTTPBasic(auto_error=False)
 
 
 @lru_cache()
