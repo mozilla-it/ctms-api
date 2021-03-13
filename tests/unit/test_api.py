@@ -1,5 +1,5 @@
 """pytest tests for API functionality"""
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, Optional, Tuple
 from uuid import UUID, uuid4
 
 import pytest
@@ -210,8 +210,8 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
 
 
 def test_get_ctms_for_api_example(client, example_contact):
-    """The API examples represent a valid contact with many fields set."""
-    """Test that the API examples are valid."""
+    """The API examples represent a valid contact with many fields set.
+    Test that the API examples are valid."""
     email_id = example_contact.email.email_id
     resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == 200
@@ -344,7 +344,7 @@ def test_get_ctms_not_found(client, dbsession):
 )
 def test_get_ctms_by_alt_id(sample_contacts, client, alt_id_name, alt_id_value):
     """The desired contact can be fetched by alternate ID."""
-    maximal_id, contact = sample_contacts["maximal"]
+    maximal_id, _ = sample_contacts["maximal"]
     resp = client.get("/ctms", params={alt_id_name: alt_id_value})
     assert resp.status_code == 200
     data = resp.json()
@@ -398,9 +398,11 @@ def add_contact(request, client, dbsession):
         code: int = 303,
         stored_contacts: int = 1,
         check_redirect: bool = True,
-        query_fields: dict = {"primary_email": contact.email.primary_email},
+        query_fields: Optional[dict] = None,
         check_written: bool = True,
     ):
+        if query_fields is None:
+            query_fields = {"primary_email": contact.email.primary_email}
         sample = contact.copy(deep=True)
         sample = modifier(sample)
         resp = client.post("/ctms", sample.json())
