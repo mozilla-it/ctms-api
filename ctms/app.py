@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Path
+from fastapi import Depends, FastAPI, HTTPException, Path, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import EmailStr
@@ -26,6 +26,7 @@ from .crud import (
     get_contacts_by_any_id,
 )
 from .database import get_db_engine
+from .monitor import check_database, get_version
 from .schemas import (
     AddOnsSchema,
     ApiClientSchema,
@@ -360,11 +361,25 @@ def login(
     }
 
 
-# NOTE:  This endpoint should provide a better proxy of "health".  It presently is a
-# better proxy for application availability as opposed to health.
-@app.get("/health", tags=["Platform"])
-def health():
-    return {"health": "OK"}, 200
+@app.get("/__version__", tags=["Platform"])
+def version():
+    """Return version.json, as required by Dockerflow."""
+    return get_version()
+
+
+@app.get("/__heartbeat__", tags=["Platform"])
+def heartbeat(response: Response, db: Session = Depends(get_db)):
+    """Return status of backing services, as required by Dockerflow."""
+    data = {"database": check_database(db)}
+    if not data["database"]["up"]:
+        response.status_code = 503
+    return data
+
+
+@app.get("/__lbheartbeat__", tags=["Platform"])
+def lbheartbeat():
+    """Return response when application is running, as required by Dockerflow."""
+    return {"status": "OK"}
 
 
 if __name__ == "__main__":
