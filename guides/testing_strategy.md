@@ -32,11 +32,10 @@ with the database.
 You can run the suite by first entering the web container:
 > make test-shell
 
-And then running the installed ``pytest`` through ``python``, which adds the
-current ``app`` folder to the system path first:
-> python -m pytest
+And then run the installed ``pytest``:
+> pytest
 
 To stop on the first failure and drop into [pdb][pdb]:
-> python -m pytest -sx --pdb
+> pytest -sx --pdb
 
 [pdb]: <https://docs.python.org/3/library/pdb.html> "pdb - The Python Debugger"

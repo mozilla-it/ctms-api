@@ -2,6 +2,11 @@
 include .env
 export
 
+# Set these in the environment to override them. This is helpful for
+# development if you have file ownership problems because the user
+# in the container doesn't match the user on your host.
+CTMS_UID ?= 10001
+CTMS_GID ?= 10001
 
 .PHONY: help
 help:
@@ -31,7 +36,8 @@ help:
 
 .PHONY: build
 build: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml build
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml build \
+		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: db-only
 db-only: .env
@@ -43,7 +49,7 @@ setup: .env
 	docker-compose exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
 	docker-compose exec postgres dropdb postgres --user postgres
 	docker-compose exec postgres createdb postgres --user postgres
-	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} web python -m alembic upgrade head
+	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} web alembic upgrade head
 
 .PHONY: shell
 shell: .env

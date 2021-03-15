@@ -10,7 +10,7 @@ services:
         source: .
         target: /app
     ports:
-      - 8000:8000
+      - ${PORT:-8000}:${PORT:-8000}
     # Let the init system handle signals for us.
     # among other things this helps shutdown be fast
     init: true

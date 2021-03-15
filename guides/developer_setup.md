@@ -101,6 +101,29 @@ The option `--no-verify` should allow a committer to bypass the hooks.
 ### Installation
 Install Docker here: https://docs.docker.com/get-docker/
 
+### Linux Users
+Linux users will want to set the user ID and group ID used in the container.
+User of Docker Desktop for Mac or Windows and skip this step.
+
+Create a ``.env`` environment file, if it isn't already created:
+
+```sh
+make .env
+```
+
+Edit this file, and set these variables:
+```sh
+CTMS_UID=1000
+CTMS_GID=1000
+```
+
+Set these to your user ID and group ID. These commands might return them:
+
+```sh
+id -u # Your user ID
+id -g # Your group ID
+```
+
 ### Building
 Build images with:
 ```sh
@@ -172,7 +195,7 @@ To create a new migration file based on updated SQLAlchemy models:
 
 ```sh
 make shell  # To enter the web container
-python -m alembic revision -m "A short description of the change"
+alembic revision -m "A short description of the change"
 exit
 ```
 
@@ -190,7 +213,7 @@ To run this and other migrations on an existing database:
 
 ```sh
 make shell  # Enter the web container
-python -m alembic upgrade head
+alembic upgrade head
 exit
 ```
 
@@ -202,7 +225,6 @@ for authentication. To generate credentials for your development environment:
 
 ```sh
 make shell  # Enter the web container
-poetry install
 ctms/bin/client_credentials.py test --email test@example.com
 ```
 

@@ -3,8 +3,9 @@
 # See https://docs.docker.com/develop/develop-images/multistage-build/
 
 # Creating a python base with shared environment variables
-FROM python:3.8.1-slim as python-base
-ENV PYTHONUNBUFFERED=1 \
+FROM python:3.8.2-slim as python-base
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
@@ -13,10 +14,24 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1 \
     PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv"
+    VENV_PATH="/opt/pysetup/.venv" \
+    PORT=8000
 
 ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 
+# Set up user and group
+ARG userid=10001
+ARG groupid=10001
+WORKDIR /app
+RUN groupadd --gid $groupid app && \
+    useradd -g app --uid $userid --shell /usr/sbin/nologin --create-home app
+
+RUN mkdir -p $POETRY_HOME && \
+    chown app:app /opt/poetry && \
+    mkdir -p $PYSETUP_PATH && \
+    chown app:app $PYSETUP_PATH && \
+    mkdir -p /app && \
+    chown app:app /app
 
 # builder-base is used to build dependencies
 FROM python-base as builder-base
@@ -26,14 +41,15 @@ RUN apt-get update \
     build-essential
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
-ENV POETRY_VERSION=1.1.4
+USER app
+ENV POETRY_VERSION=1.1.5
 RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
 
 # We copy our Python requirements here to cache them
 # and install only runtime deps using poetry
 WORKDIR $PYSETUP_PATH
-COPY ./poetry.lock ./pyproject.toml ./
-RUN poetry install --no-dev
+COPY --chown=app:app ./poetry.lock ./pyproject.toml ./
+RUN poetry install --no-dev --no-root
 
 
 # 'development' stage installs all dev deps and can be used to develop code.
@@ -42,23 +58,24 @@ FROM python-base as development
 ENV FASTAPI_ENV=development
 
 # Copying poetry and venv into image
+USER app
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
 # Copying in our entrypoint
-COPY ./docker/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=app:app ./docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # venv already has runtime deps installed we get a quicker install
 WORKDIR $PYSETUP_PATH
-RUN poetry install
+RUN poetry install --no-root
 
 WORKDIR /app
-COPY . .
+COPY --chown=app:app . .
 
-EXPOSE 8000
-ENTRYPOINT /docker-entrypoint.sh $0 $@
-CMD ["uvicorn", "--reload", "--host=0.0.0.0", "--port=8000", "ctms.app:app"]
+EXPOSE $PORT
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 
 
 # 'lint' stage runs black and isort
@@ -91,8 +108,6 @@ RUN chmod +x /docker-entrypoint.sh
 COPY . /app
 WORKDIR /app
 
-ENTRYPOINT /docker-entrypoint.sh $0 $@
-
-EXPOSE 80
-
-CMD ["uvicorn", "ctms.app:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE $PORT
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD uvicorn ctms.app:app --host=0.0.0.0 --port=${PORT}
