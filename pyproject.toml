@@ -43,11 +43,40 @@ mypy = "^0.782"
 detect-secrets = "^0.14.3"
 bandit = "^1.7.0"
 SQLAlchemy-Utils = "^0.36.8"
+pylint = "^2.7.2"
 
 [tool.pytest.ini_options]
 testpaths = [
     "tests/unit",
 ]
+
+[tool.pylint]
+    [tool.pylint.'MESSAGES CONTROL']
+    disable = [
+        # https://black.readthedocs.io/en/stable/compatible_configs.html
+        "C0330",
+        "C0326",
+
+        "R0801", # sqla has a lot of duplicate code and it is work to "fix" this
+        "C0301", # if black is happy with the line-length, let's not mess with it
+        "R0903", # this is triggered by pydantic's config and is really just a taste thing anyway
+        "R0913", # we have too-many-arguments in too many places to easily fix
+        "R0912", # Same idea as above, let's leave it since it is a matter of taste
+        "W0511", # Let us have our TODOs
+        "W0613", # sometimes unused arguments are nice for symmetry and also api methods
+
+        "C0114", # mozilla-it/ctms-api#100
+        "C0115", # mozilla-it/ctms-api#100
+        "C0116", # mozilla-it/ctms-api#100
+    ]
+    [tool.pylint.REPORTS]
+    output-format = 'colorized'
+    [tool.pylint.FORMAT]
+    good-names = 'e,db,SessionLocal' # Normally pylint objects to these due to not being snake_case
+    [tool.pylint.MASTER]
+    extension-pkg-whitelist='pydantic'
+    ignore='third_party'
+    ignore-patterns = "test_.*.py" # Not worth fixing yet
 
 [tool.black]
 line-length = 88

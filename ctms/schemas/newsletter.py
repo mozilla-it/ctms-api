@@ -1,8 +1,6 @@
-from datetime import date, datetime
-from typing import Any, Dict, List, Literal, Optional
-from uuid import UUID, uuid4
+from typing import Literal, Optional
 
-from pydantic import UUID4, EmailStr, Field, HttpUrl
+from pydantic import Field, HttpUrl
 
 from .base import ComparableBase
 

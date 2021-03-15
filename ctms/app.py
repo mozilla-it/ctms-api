@@ -6,8 +6,8 @@ from uuid import UUID, uuid4
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordRequestForm
-from pydantic import UUID4, EmailStr
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,6 @@ from .crud import (
     get_api_client_by_id,
     get_contact_by_email_id,
     get_contacts_by_any_id,
-    get_email_by_email_id,
 )
 from .database import get_db_engine
 from .schemas import (
@@ -37,7 +36,6 @@ from .schemas import (
     EmailSchema,
     FirefoxAccountsSchema,
     IdentityResponse,
-    NewsletterSchema,
     NotFoundResponse,
     TokenResponse,
     UnauthorizedResponse,
@@ -61,8 +59,8 @@ def get_settings():
 
 @app.on_event("startup")
 def startup_event():
-    global SessionLocal
-    engine, SessionLocal = get_db_engine(get_settings())
+    global SessionLocal  # pylint:disable = W0603
+    _, SessionLocal = get_db_engine(get_settings())
 
 
 def get_db():
@@ -73,7 +71,7 @@ def get_db():
         db.close()
 
 
-def token_settings(
+def _token_settings(
     settings: config.Settings = Depends(get_settings),
 ) -> Dict[str, Union[str, timedelta]]:
     return {
@@ -148,7 +146,7 @@ def get_contacts_by_ids(
 
 def get_api_client(
     token: str = Depends(oauth2_scheme),
-    token_settings=Depends(token_settings),
+    token_settings=Depends(_token_settings),
     db: Session = Depends(get_db),
 ):
     credentials_exception = HTTPException(
@@ -265,17 +263,15 @@ def create_ctms_contact(
     if existing:
         if ContactInSchema(**existing).idempotent_equal(contact):
             return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
-        else:
-            raise HTTPException(status_code=409, detail="Contact already exists")
+        raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact)
         db.commit()
-    except Exception as e:
+    except Exception as e:  # pylint:disable = W0703
         db.rollback()
         if isinstance(e, IntegrityError):
-            raise HTTPException(status_code=409, detail="Contact already exists")
-        else:
-            raise
+            raise HTTPException(status_code=409, detail="Contact already exists") from e
+        raise e from e
     return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
 
 
@@ -333,9 +329,11 @@ def login(
     db: Session = Depends(get_db),
     form_data: OAuth2ClientCredentialsRequestForm = Depends(),
     basic_credentials: Optional[HTTPBasicCredentials] = Depends(token_scheme),
-    token_settings=Depends(token_settings),
+    token_settings=Depends(_token_settings),
 ):
-    failedAuth = HTTPException(status_code=400, detail="Incorrect username or password")
+    failed_auth = HTTPException(
+        status_code=400, detail="Incorrect username or password"
+    )
 
     if form_data.client_id and form_data.client_secret:
         client_id = form_data.client_id
@@ -344,13 +342,13 @@ def login(
         client_id = basic_credentials.username
         client_secret = basic_credentials.password
     else:
-        raise failedAuth
+        raise failed_auth
 
     api_client = get_api_client_by_id(db, client_id)
     if not api_client or not api_client.enabled:
-        raise failedAuth
+        raise failed_auth
     if not verify_password(client_secret, api_client.hashed_secret):
-        raise failedAuth
+        raise failed_auth
 
     access_token = create_access_token(
         data={"sub": f"api_client:{client_id}"}, **token_settings

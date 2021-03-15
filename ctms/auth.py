@@ -65,8 +65,7 @@ def get_subject_from_token(token: str, secret_key: str):
     sub = payload["sub"]
     if ":" not in sub:
         return None, None
-    else:
-        return sub.split(":", 1)
+    return sub.split(":", 1)
 
 
 class OAuth2ClientCredentialsRequestForm:

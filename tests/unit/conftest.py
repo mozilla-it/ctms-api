@@ -1,5 +1,4 @@
 """pytest fixtures for the CTMS app"""
-from typing import Callable, Set
 from uuid import UUID
 
 import pytest
@@ -11,10 +10,10 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 
 from ctms.app import app, get_api_client, get_db
 from ctms.config import Settings
-from ctms.crud import create_contact, get_contacts_by_any_id
+from ctms.crud import create_contact
 from ctms.models import Base
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ApiClientSchema, ContactInSchema, ContactSchema
+from ctms.schemas import ApiClientSchema
 
 
 @pytest.fixture(scope="session")

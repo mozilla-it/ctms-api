@@ -6,10 +6,9 @@ import pytest
 from jose import jwt
 from requests.auth import HTTPBasicAuth
 
-from ctms.app import app, token_settings
+from ctms.app import _token_settings, app
 from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import create_api_client, get_api_client_by_id
-from ctms.models import ApiClient
 from ctms.schemas import ApiClientSchema
 
 
@@ -34,9 +33,9 @@ def test_token_settings():
         "secret_key": "AN_AWESOME_RANDOM_SECRET_KEY",
     }
 
-    app.dependency_overrides[token_settings] = lambda: settings
+    app.dependency_overrides[_token_settings] = lambda: settings
     yield settings
-    del app.dependency_overrides[token_settings]
+    del app.dependency_overrides[_token_settings]
 
 
 def test_post_token_header(anon_client, test_token_settings, client_id_and_secret):

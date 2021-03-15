@@ -14,18 +14,12 @@ from .models import (
 )
 from .schemas import (
     AddOnsInSchema,
-    AddOnsSchema,
     ApiClientSchema,
     ContactInSchema,
-    ContactSchema,
     EmailInSchema,
-    EmailSchema,
     FirefoxAccountsInSchema,
-    FirefoxAccountsSchema,
     NewsletterInSchema,
-    NewsletterSchema,
     VpnWaitlistInSchema,
-    VpnWaitlistSchema,
 )
 
 

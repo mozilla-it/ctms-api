@@ -29,7 +29,6 @@ def create_client(db, client_id, email, enabled=True):
 def update_client(db, client, email=None, enabled=None, new_secret=None):
     """Update an existing OAuth2 client."""
     assert not (email is None and enabled is None and new_secret is None)
-    secret = None
     if email is not None:
         client.email = email
     if enabled is not None:
@@ -125,7 +124,7 @@ def main(db, settings, test_args=None):
         return 1
 
     if enable and disable:
-        print(f"Can only pick one of --enable and --disable")
+        print("Can only pick one of --enable and --disable")
         return 1
 
     if name.startswith("id_"):
@@ -180,13 +179,13 @@ if __name__ == "__main__":
     import sys
 
     # Get the database
-    settings = config.Settings()
-    engine, session_factory = get_db_engine(settings)
-    db = session_factory()
+    config_settings = config.Settings()
+    engine, session_factory = get_db_engine(config_settings)
+    session = session_factory()
 
     try:
-        ret = main(db, settings)
+        ret = main(session, config_settings)  # pylint:disable = C0103
     finally:
-        db.close()
+        session.close()
 
     sys.exit(ret)
