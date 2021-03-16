@@ -470,7 +470,7 @@ def _compare_written_contacts(
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_no_id(add_contact):
-    """Most straightforward contact creation succeeds."""
+    """Most straightforward contact creation succeeds when email_id is not a key."""
 
     def _remove_id(contact):
         del contact.email.email_id
@@ -486,7 +486,7 @@ def test_create_basic_no_id(add_contact):
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_id_is_none(add_contact):
-    """Most straightforward contact creation succeeds."""
+    """Most straightforward contact creation succeeds when email_id is None."""
 
     def _remove_id(contact):
         contact.email.email_id = None
@@ -502,7 +502,7 @@ def test_create_basic_id_is_none(add_contact):
 
 @pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_with_id(add_contact):
-    """Most straightforward contact creation succeeds."""
+    """Most straightforward contact creation succeeds when email_id is specified."""
     saved_contacts, sample, email_id = add_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
