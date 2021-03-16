@@ -416,7 +416,7 @@ def add_contact(request, client, dbsession):
         assert len(saved) == stored_contacts
 
         # Now make sure that we skip writing default models
-        def _check_written(field, getter):
+        def _check_written(field, getter, result_list=False):
             # We delete this field in one test case so we have to check
             # to see if it is even there
             if hasattr(sample.email, "email_id") and sample.email.email_id is not None:
@@ -426,22 +426,32 @@ def add_contact(request, client, dbsession):
             results = getter(dbsession, written_id)
             if sample.dict()[field] and code == 303:
                 if field in fields_not_written:
-                    assert (
-                        results is None
-                    ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                    if result_list:
+                        assert (
+                            results == []
+                        ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                    else:
+                        assert (
+                            results is None
+                        ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                 else:
                     assert (
                         results
                     ), f"{email_id} has field `{field}` and it should have been written to db"
             else:
-                assert (
-                    results is None
-                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+                if result_list:
+                    assert (
+                        results == []
+                    ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+                else:
+                    assert (
+                        results is None
+                    ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
 
         if check_written:
             _check_written("amo", get_amo_by_email_id)
             _check_written("fxa", get_fxa_by_email_id)
-            _check_written("newsletters", get_newsletters_by_email_id)
+            _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
 
         return saved, sample, email_id
