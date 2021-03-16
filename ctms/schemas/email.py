@@ -6,10 +6,8 @@ from pydantic import UUID4, EmailStr, Field
 
 from .base import ComparableBase
 
-email_id_field: UUID4 = Field(
-    description="ID for email",
-    example="332de237-cab7-4461-bcc3-48e68f42bd5c",
-)
+EMAIL_ID_DESCRIPTION = "ID for email"
+EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
 
 
 class EmailBase(ComparableBase):
@@ -83,7 +81,10 @@ class EmailBase(ComparableBase):
 
 
 class EmailSchema(EmailBase):
-    email_id: UUID4 = email_id_field
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )
     create_timestamp: Optional[datetime] = Field(
         default=None,
         description="Contact creation date, CreatedDate in Salesforce",
@@ -97,4 +98,8 @@ class EmailSchema(EmailBase):
 
 
 class EmailInSchema(EmailBase):
-    email_id: Optional[UUID4] = email_id_field
+    email_id: Optional[UUID4] = Field(
+        default=None,
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )

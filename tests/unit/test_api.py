@@ -417,7 +417,13 @@ def add_contact(request, client, dbsession):
 
         # Now make sure that we skip writing default models
         def _check_written(field, getter):
-            results = getter(dbsession, sample.email.email_id)
+            # We delete this field in one test case so we have to check
+            # to see if it is even there
+            if hasattr(sample.email, "email_id") and sample.email.email_id is not None:
+                written_id = sample.email.email_id
+            else:
+                written_id = resp.headers["location"].split("/")[-1]
+            results = getter(dbsession, written_id)
             if sample.dict()[field] and code == 303:
                 if field in fields_not_written:
                     assert (
@@ -462,7 +468,24 @@ def _compare_written_contacts(
     assert saved_contact == sample
 
 
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_basic_no_id(add_contact):
+    """Most straightforward contact creation succeeds."""
+
+    def _remove_id(contact):
+        del contact.email.email_id
+        return contact
+
+    saved_contacts, sample, email_id = add_contact(
+        modifier=_remove_id, check_redirect=False
+    )
+    _compare_written_contacts(
+        saved_contacts[0], sample, email_id, ids_should_be_identical=False
+    )
+
+
+@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_id_is_none(add_contact):
     """Most straightforward contact creation succeeds."""
 
     def _remove_id(contact):
