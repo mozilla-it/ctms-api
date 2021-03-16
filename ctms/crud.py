@@ -40,7 +40,7 @@ def get_fxa_by_email_id(db: Session, email_id: UUID4):
 
 
 def get_newsletters_by_email_id(db: Session, email_id: UUID4):
-    return db.query(Newsletter).filter(Newsletter.email_id == email_id).first()
+    return db.query(Newsletter).filter(Newsletter.email_id == email_id).all()
 
 
 def get_vpn_by_email_id(db: Session, email_id: UUID4):
