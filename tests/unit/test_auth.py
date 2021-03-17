@@ -1,6 +1,6 @@
 """Test authentication"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from jose import jwt
@@ -56,8 +56,10 @@ def test_post_token_header(anon_client, test_token_settings, client_id_and_secre
     )
     assert payload["sub"] == f"api_client:{client_id}"
     expected_expires = (
-        datetime.utcnow() + test_token_settings["expires_delta"]
-    ).timestamp()
+        (datetime.utcnow() + test_token_settings["expires_delta"])
+        .replace(tzinfo=timezone.utc)
+        .timestamp()
+    )
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -82,8 +84,10 @@ def test_post_token_form_data(anon_client, test_token_settings, client_id_and_se
     )
     assert payload["sub"] == f"api_client:{client_id}"
     expected_expires = (
-        datetime.utcnow() + test_token_settings["expires_delta"]
-    ).timestamp()
+        (datetime.utcnow() + test_token_settings["expires_delta"])
+        .replace(tzinfo=timezone.utc)
+        .timestamp()
+    )
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
