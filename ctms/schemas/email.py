@@ -103,3 +103,10 @@ class EmailInSchema(EmailBase):
         description=EMAIL_ID_DESCRIPTION,
         example=EMAIL_ID_EXAMPLE,
     )
+
+
+class EmailPutSchema(EmailBase):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )

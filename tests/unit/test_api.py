@@ -383,7 +383,7 @@ def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_va
 
 
 @pytest.fixture
-def add_contact(request, client, dbsession):
+def post_contact(request, client, dbsession):
     _id = (
         request.param
         if hasattr(request, "param")
@@ -475,18 +475,18 @@ def _compare_written_contacts(
     for f in fields_not_written:
         setattr(sample, f, [] if f == "newsletters" else None)
 
-    assert saved_contact == sample
+    assert saved_contact.dict() == sample.dict()
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_no_id(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_no_id(post_contact):
     """Most straightforward contact creation succeeds when email_id is not a key."""
 
     def _remove_id(contact):
         del contact.email.email_id
         return contact
 
-    saved_contacts, sample, email_id = add_contact(
+    saved_contacts, sample, email_id = post_contact(
         modifier=_remove_id, check_redirect=False
     )
     _compare_written_contacts(
@@ -494,15 +494,15 @@ def test_create_basic_no_id(add_contact):
     )
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_id_is_none(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_id_is_none(post_contact):
     """Most straightforward contact creation succeeds when email_id is None."""
 
     def _remove_id(contact):
         contact.email.email_id = None
         return contact
 
-    saved_contacts, sample, email_id = add_contact(
+    saved_contacts, sample, email_id = post_contact(
         modifier=_remove_id, check_redirect=False
     )
     _compare_written_contacts(
@@ -510,26 +510,26 @@ def test_create_basic_id_is_none(add_contact):
     )
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_with_id(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_id(post_contact):
     """Most straightforward contact creation succeeds when email_id is specified."""
-    saved_contacts, sample, email_id = add_contact()
+    saved_contacts, sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_idempotent(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_idempotent(post_contact):
     """Creating a contact works across retries."""
-    saved_contacts, sample, email_id = add_contact()
+    saved_contacts, sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
-    saved_contacts, _, _ = add_contact()
+    saved_contacts, _, _ = post_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_with_id_collision(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_id_collision(post_contact):
     """Creating a contact with the same id but different data fails."""
-    _, sample, _ = add_contact()
+    _, sample, _ = post_contact()
 
     def _change_mailing(contact):
         assert contact.email.mailing_country != "mx", "sample data has changed"
@@ -538,19 +538,19 @@ def test_create_basic_with_id_collision(add_contact):
 
     # We set check_written to False because the rows it would check for normally
     # are actually here due to the first write
-    saved_contacts, _, _ = add_contact(
+    saved_contacts, _, _ = post_contact(
         modifier=_change_mailing, code=409, check_redirect=False, check_written=False
     )
     assert saved_contacts[0].email.mailing_country == sample.email.mailing_country
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_with_basket_collision(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_basket_collision(post_contact):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
     See test_create_basic_with_email_collision below for that check
     """
-    saved_contacts, orig_sample, email_id = add_contact()
+    saved_contacts, orig_sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
     def _change_basket(contact):
@@ -558,19 +558,19 @@ def test_create_basic_with_basket_collision(add_contact):
         contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
         return contact
 
-    saved_contacts, _, _ = add_contact(
+    saved_contacts, _, _ = post_contact(
         modifier=_change_basket, code=409, check_redirect=False
     )
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-@pytest.mark.parametrize("add_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_basic_with_email_collision(add_contact):
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_basic_with_email_collision(post_contact):
     """Creating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.
     See other test for that check
     """
-    saved_contacts, orig_sample, email_id = add_contact()
+    saved_contacts, orig_sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
     def _change_primary_email(contact):
@@ -578,7 +578,129 @@ def test_create_basic_with_email_collision(add_contact):
         contact.email.primary_email = "foo@bar.com"
         return contact
 
-    saved_contacts, _, _ = add_contact(
+    saved_contacts, _, _ = post_contact(
         modifier=_change_primary_email, code=409, check_redirect=False
     )
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+
+@pytest.fixture
+def put_contact(request, client, dbsession):
+    _id = (
+        request.param
+        if hasattr(request, "param")
+        else "d1da1c99-fe09-44db-9c68-78a75752574d"
+    )
+    email_id = UUID(str(_id))
+    contact = SAMPLE_CONTACTS[email_id]
+    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
+
+    def _add(
+        modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
+        code: int = 303,
+        stored_contacts: int = 1,
+        check_redirect: bool = True,
+        query_fields: Optional[dict] = None,
+        check_written: bool = True,
+    ):
+        if query_fields is None:
+            query_fields = {"primary_email": contact.email.primary_email}
+        sample = contact.copy(deep=True)
+        sample = modifier(sample)
+        resp = client.put("/ctms", sample.json())
+        assert resp.status_code == code, resp.text
+        if check_redirect:
+            assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
+        saved = [
+            ContactSchema(**c)
+            for c in get_contacts_by_any_id(dbsession, **query_fields)
+        ]
+        assert len(saved) == stored_contacts
+
+        # Now make sure that we skip writing default models
+        def _check_written(field, getter):
+            # We delete this field in one test case so we have to check
+            # to see if it is even there
+            if hasattr(sample.email, "email_id") and sample.email.email_id is not None:
+                written_id = sample.email.email_id
+            else:
+                written_id = resp.headers["location"].split("/")[-1]
+            results = getter(dbsession, written_id)
+            if sample.dict()[field] and code == 303:
+                if field in fields_not_written:
+                    assert (
+                        results is None
+                    ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                else:
+                    assert (
+                        results
+                    ), f"{email_id} has field `{field}` and it should have been written to db"
+            else:
+                assert (
+                    results is None
+                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+
+        if check_written:
+            _check_written("amo", get_amo_by_email_id)
+            _check_written("fxa", get_fxa_by_email_id)
+            _check_written("newsletters", get_newsletters_by_email_id)
+            _check_written("vpn_waitlist", get_vpn_by_email_id)
+
+        return saved, sample, email_id
+
+    return _add
+
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_basic_no_id(put_contact):
+    """This should fail since we required an email_id to PUT"""
+
+    def _remove_id(contact):
+        del contact.email.email_id
+        return contact
+
+    saved_contacts, sample, email_id = put_contact(
+        modifier=_remove_id,
+        check_redirect=False,
+        code=422,
+        stored_contacts=0,
+        check_written=False,
+    )
+
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_basic_id_is_none(put_contact):
+    """This should fail since we required an email_id to PUT"""
+
+    def _remove_id(contact):
+        contact.email.email_id = None
+        return contact
+
+    saved_contacts, sample, email_id = put_contact(
+        modifier=_remove_id,
+        check_redirect=False,
+        code=422,
+        stored_contacts=0,
+        check_written=False,
+    )
+
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_basic_empty_db(put_contact):
+    """Most straightforward contact creation succeeds when there is no collision"""
+    saved_contacts, sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_identical(put_contact):
+    """Writing the same thing twice works both times"""
+    saved_contacts, sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+    saved_contacts, sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+
+# TODO: get, modify, and put a record in tests
+
+# TODO: ensure that we test a PUT that is valid other than colliding with another record's primary_email

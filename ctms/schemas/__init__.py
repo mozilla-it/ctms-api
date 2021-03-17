@@ -1,7 +1,13 @@
 from .addons import AddOnsInSchema, AddOnsSchema
 from .api_client import ApiClientSchema
-from .contact import ContactInSchema, ContactSchema, CTMSResponse, IdentityResponse
-from .email import EmailInSchema, EmailSchema
+from .contact import (
+    ContactInSchema,
+    ContactPutSchema,
+    ContactSchema,
+    CTMSResponse,
+    IdentityResponse,
+)
+from .email import EmailInSchema, EmailPutSchema, EmailSchema
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema

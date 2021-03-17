@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 
 from pydantic import UUID4, EmailStr
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .auth import hash_password
@@ -16,7 +17,9 @@ from .schemas import (
     AddOnsInSchema,
     ApiClientSchema,
     ContactInSchema,
+    ContactPutSchema,
     EmailInSchema,
+    EmailPutSchema,
     FirefoxAccountsInSchema,
     NewsletterInSchema,
     VpnWaitlistInSchema,
@@ -138,9 +141,28 @@ def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema):
     db.add(db_amo)
 
 
+def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSchema]):
+    if not amo or amo.is_default():
+        db.query(AmoAccount).filter(AmoAccount.email_id == email_id).delete()
+        return
+    stmt = insert(AmoAccount).values(email_id=email_id, **amo.dict())
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[AmoAccount.email_id], set_=amo.dict()
+    )
+    db.execute(stmt)
+
+
 def create_email(db: Session, email: EmailInSchema):
     db_email = Email(**email.dict())
     db.add(db_email)
+
+
+def create_or_update_email(db: Session, email: EmailPutSchema):
+    stmt = insert(Email).values(**email.dict())
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[Email.email_id], set_=email.dict()
+    )
+    db.execute(stmt)
 
 
 def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema):
@@ -148,6 +170,19 @@ def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema):
         return
     db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
     db.add(db_fxa)
+
+
+def create_or_update_fxa(
+    db: Session, email_id: UUID4, fxa: Optional[FirefoxAccountsInSchema]
+):
+    if not fxa or fxa.is_default():
+        (db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete())
+        return
+    stmt = insert(FirefoxAccount).values(email_id=email_id, **fxa.dict())
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[FirefoxAccount.email_id], set_=fxa.dict()
+    )
+    db.execute(stmt)
 
 
 def create_vpn_waitlist(
@@ -159,11 +194,46 @@ def create_vpn_waitlist(
     db.add(db_vpn_waitlist)
 
 
+def create_or_update_vpn_waitlist(
+    db: Session, email_id: UUID4, vpn_waitlist: Optional[VpnWaitlistInSchema]
+):
+    if not vpn_waitlist or vpn_waitlist.is_default():
+        db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).delete()
+        return
+    stmt = insert(VpnWaitlist).values(email_id=email_id, **vpn_waitlist.dict())
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[VpnWaitlist.email_id], set_=vpn_waitlist.dict()
+    )
+    db.execute(stmt)
+
+
 def create_newsletter(db: Session, email_id: UUID4, newsletter: NewsletterInSchema):
     if newsletter.is_default():
         return
     db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
     db.add(db_newsletter)
+
+
+def create_or_update_newsletters(
+    db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
+):
+    names = [
+        newsletter.name for newsletter in newsletters if not newsletter.is_default()
+    ]
+    db.query(Newsletter).filter(
+        Newsletter.email_id == email_id, Newsletter.name.notin_(names)
+    ).delete(
+        synchronize_session="fetch"
+    )  # TODO: investigate if this is the right sync_session
+
+    # TODO: figure out on_conflict here
+
+    if newsletters:
+        stmt = insert(Newsletter).values(
+            [{"email_id": email_id, **n.dict()} for n in newsletters]
+        )
+
+        db.execute(stmt)
 
 
 def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
@@ -176,6 +246,14 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
         create_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     for newsletter in contact.newsletters:
         create_newsletter(db, email_id, newsletter)
+
+
+def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSchema):
+    create_or_update_email(db, contact.email)
+    create_or_update_amo(db, email_id, contact.amo)
+    create_or_update_fxa(db, email_id, contact.fxa)
+    create_or_update_vpn_waitlist(db, email_id, contact.vpn_waitlist)
+    create_or_update_newsletters(db, email_id, contact.newsletters)
 
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):

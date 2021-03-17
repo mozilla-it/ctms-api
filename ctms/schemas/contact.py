@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
-from .email import EmailInSchema, EmailSchema
+from .email import EmailBase, EmailInSchema, EmailPutSchema, EmailSchema
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
@@ -38,11 +38,11 @@ class ContactSchema(ComparableBase):
         )
 
 
-class ContactInSchema(ComparableBase):
+class ContactInBase(ComparableBase):
     """A contact as provided by callers."""
 
     amo: Optional[AddOnsInSchema] = None
-    email: EmailInSchema
+    email: EmailBase
     fxa: Optional[FirefoxAccountsInSchema] = None
     newsletters: List[NewsletterInSchema] = Field(
         default=[],
@@ -68,6 +68,20 @@ class ContactInSchema(ComparableBase):
         if sorted(self.newsletters) != sorted(other.newsletters):
             return False
         return True
+
+
+class ContactInSchema(ContactInBase):
+    """A contact as provided by callers."""
+
+    # TODO: Docuement these better
+    email: EmailInSchema
+
+
+class ContactPutSchema(ContactInBase):
+    """A contact as provided by callers."""
+
+    # TODO: Docuement these better
+    email: EmailPutSchema
 
 
 class CTMSResponse(BaseModel):

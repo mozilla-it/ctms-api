@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (
     TIMESTAMP,
     Boolean,
@@ -18,6 +20,7 @@ from .database import Base
 
 class Email(Base):
     __tablename__ = "emails"
+    __mapper_args__ = {"eager_defaults": True}
 
     email_id = Column(UUID(as_uuid=True), primary_key=True)
     primary_email = Column(String(255), unique=True, nullable=False)
@@ -35,13 +38,13 @@ class Email(Base):
     unsubscribe_reason = Column(Text)
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        TIMESTAMP(timezone=True), nullable=False, default=datetime.now()
     )
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=datetime.now(),
+        onupdate=datetime.now(),
     )
 
     newsletters = relationship(
