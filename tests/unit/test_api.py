@@ -460,9 +460,13 @@ def post_contact(request, client, dbsession):
 
 
 def _compare_written_contacts(
-    contact, sample, email_id, ids_should_be_identical: bool = True
+    contact,
+    sample,
+    email_id,
+    ids_should_be_identical: bool = True,
+    new_default_fields: set = set(),
 ):
-    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
+    fields_not_written = new_default_fields or SAMPLE_CONTACTS.get_not_written(email_id)
 
     saved_contact = ContactInSchema(**contact.dict())
     sample = ContactInSchema(**sample.dict())
@@ -591,9 +595,9 @@ def put_contact(request, client, dbsession):
         if hasattr(request, "param")
         else "d1da1c99-fe09-44db-9c68-78a75752574d"
     )
-    email_id = UUID(str(_id))
-    contact = SAMPLE_CONTACTS[email_id]
-    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
+    sample_email_id = UUID(str(_id))
+    _contact = SAMPLE_CONTACTS[sample_email_id]
+    fields_not_written = SAMPLE_CONTACTS.get_not_written(sample_email_id)
 
     def _add(
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
@@ -602,7 +606,13 @@ def put_contact(request, client, dbsession):
         check_redirect: bool = True,
         query_fields: Optional[dict] = None,
         check_written: bool = True,
+        record: Optional[ContactSchema] = None,
+        new_default_fields: set = set(),
     ):
+        if record:
+            contact = record
+        else:
+            contact = _contact
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
         sample = contact.copy(deep=True)
@@ -627,18 +637,18 @@ def put_contact(request, client, dbsession):
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
             if sample.dict()[field] and code == 303:
-                if field in fields_not_written:
+                if field in fields_not_written or field in new_default_fields:
                     assert (
                         results is None
-                    ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                    ), f"{sample_email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                 else:
                     assert (
                         results
-                    ), f"{email_id} has field `{field}` and it should have been written to db"
+                    ), f"{sample_email_id} has field `{field}` and it should have been written to db"
             else:
                 assert (
                     results is None
-                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+                ), f"{sample_email_id} does not have field `{field}` and it should _not_ have been written to db"
 
         if check_written:
             _check_written("amo", get_amo_by_email_id)
@@ -646,7 +656,7 @@ def put_contact(request, client, dbsession):
             _check_written("newsletters", get_newsletters_by_email_id)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
 
-        return saved, sample, email_id
+        return saved, sample, sample_email_id
 
     return _add
 
@@ -701,6 +711,56 @@ def test_create_or_update_identical(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-# TODO: get, modify, and put a record in tests
+# TODO: make sure to try out the newsletter logic a lot
 
-# TODO: ensure that we test a PUT that is valid other than colliding with another record's primary_email
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_change_primary_email(put_contact):
+    """We can update a primary_email given a ctms ID"""
+    saved_contacts, sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+    def _change_email(contact):
+        contact.email.primary_email = "something-new@whatever.com"
+        return contact
+
+    saved_contacts, sample, email_id = put_contact(
+        modifier=_change_email, query_fields={"email_id": email_id}
+    )
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_change_basket_token(put_contact):
+    """We can update a basket_token given a ctms ID"""
+    saved_contacts, sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+    def _change_basket(contact):
+        contact.email.basket_token = UUID("c97fb13b-3a19-4f4a-ac2d-abf0717b8df1")
+        return contact
+
+    saved_contacts, sample, email_id = put_contact(modifier=_change_basket)
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_post_get_put(client, post_contact, put_contact):
+    """This encompasses the entire expected flow for basket"""
+    saved_contacts, sample, email_id = post_contact()
+    _compare_written_contacts(saved_contacts[0], sample, email_id)
+
+    resp = client.get(f"/ctms/{email_id}")
+    assert resp.status_code == 200
+
+    fetched = ContactSchema(**resp.json())
+    new_default_fields = fetched.find_default_fields()
+    # We set new_default_fields here because the returned response above
+    # _includes_ defaults for many fields and we want to not write
+    # them when the record is PUT again
+    saved_contacts, sample, email_id = put_contact(
+        record=fetched, new_default_fields=new_default_fields
+    )
+    _compare_written_contacts(
+        saved_contacts[0], sample, email_id, new_default_fields=new_default_fields
+    )

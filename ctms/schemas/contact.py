@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Set
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -36,6 +36,19 @@ class ContactSchema(ComparableBase):
             primary_email=getattr(self.email, "primary_email", None),
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
+
+    def find_default_fields(self) -> Set[str]:
+        """Return names of fields that contain default values only"""
+        default_fields = set()
+        if self.amo and self.amo.is_default():
+            default_fields.add("amo")
+        if self.fxa and self.fxa.is_default():
+            default_fields.add("fxa")
+        if self.vpn_waitlist and self.vpn_waitlist.is_default():
+            default_fields.add("vpn_waitlist")
+        if all(n.is_default() for n in self.newsletters):
+            default_fields.add("newsletters")
+        return default_fields
 
 
 class ContactInBase(ComparableBase):
