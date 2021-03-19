@@ -232,6 +232,9 @@ def create_or_update_newsletters(
         stmt = insert(Newsletter).values(
             [{"email_id": email_id, **n.dict()} for n in newsletters]
         )
+        stmt = stmt.on_conflict_do_update(
+            constraint="uix_email_name", set_=dict(stmt.excluded)
+        )
 
         db.execute(stmt)
 

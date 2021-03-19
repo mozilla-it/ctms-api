@@ -79,7 +79,7 @@ class Newsletter(Base):
 
     email = relationship("Email", back_populates="newsletters", uselist=False)
 
-    UniqueConstraint("email_id", "name", name="uix_email_name")
+    __table_args__ = (UniqueConstraint("email_id", "name", name="uix_email_name"),)
 
 
 class FirefoxAccount(Base):
