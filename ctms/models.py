@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import (
     TIMESTAMP,
     Boolean,
@@ -38,13 +36,13 @@ class Email(Base):
     unsubscribe_reason = Column(Text)
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, default=datetime.now()
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
     )
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        default=datetime.now(),
-        onupdate=datetime.now(),
+        server_default=now(),
+        server_onupdate=now(),
     )
 
     newsletters = relationship(
