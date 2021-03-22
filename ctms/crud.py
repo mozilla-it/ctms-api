@@ -223,10 +223,8 @@ def create_or_update_newsletters(
     db.query(Newsletter).filter(
         Newsletter.email_id == email_id, Newsletter.name.notin_(names)
     ).delete(
-        synchronize_session="fetch"
-    )  # TODO: investigate if this is the right sync_session
-
-    # TODO: figure out on_conflict here
+        synchronize_session=False
+    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
 
     if newsletters:
         stmt = insert(Newsletter).values(

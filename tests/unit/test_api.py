@@ -12,7 +12,7 @@ from ctms.crud import (
     get_vpn_by_email_id,
 )
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ContactInSchema, ContactSchema
+from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -424,7 +424,7 @@ def post_contact(request, client, dbsession):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict()[field] and code == 303:
+            if sample.dict().get(field) and code == 303:
                 if field in fields_not_written:
                     if result_list:
                         assert (
@@ -479,7 +479,7 @@ def _compare_written_contacts(
     for f in fields_not_written:
         setattr(sample, f, [] if f == "newsletters" else None)
 
-    assert saved_contact.dict() == sample.dict()
+    assert saved_contact.idempotent_equal(sample)
 
 
 @pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
@@ -636,7 +636,7 @@ def put_contact(request, client, dbsession):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict()[field] and code == 303:
+            if sample.dict().get(field) and code == 303:
                 if field in fields_not_written or field in new_default_fields:
                     assert (
                         results is None
@@ -711,9 +711,6 @@ def test_create_or_update_identical(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-# TODO: make sure to try out the newsletter logic a lot
-
-
 @pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_or_update_change_primary_email(put_contact):
     """We can update a primary_email given a ctms ID"""
@@ -744,8 +741,50 @@ def test_create_or_update_change_basket_token(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
+def _subscribe(contact):
+    contact.newsletters.append(NewsletterInSchema(name="new-newsletter"))
+
+
+def _unsubscribe(contact):
+    contact.newsletters = contact.newsletters[0:-1]
+
+
+def _subscribe_and_change(contact):
+    if contact.newsletters:
+        contact.newsletters[-1].subscribed = not contact.newsletters[-1].subscribed
+    contact.newsletters.append(
+        NewsletterInSchema(name="a-newsletter", subscribed=False)
+    )
+    contact.newsletters.append(
+        NewsletterInSchema(name="another-newsletter", subscribed=True)
+    )
+
+
+def _un_amo(contact):
+    if contact.amo:
+        del contact.amo
+
+
+def _change_email(contact):
+    contact.email.primary_email = "something-new@some-website.com"
+
+
+_test_get_put_modifiers = [
+    _subscribe,
+    _unsubscribe,
+    _un_amo,
+    _change_email,
+    _subscribe_and_change,
+]
+
+
+@pytest.fixture(params=_test_get_put_modifiers)
+def update_fetched(request):
+    return request.param
+
+
 @pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_post_get_put(client, post_contact, put_contact):
+def test_post_get_put(client, post_contact, put_contact, update_fetched):
     """This encompasses the entire expected flow for basket"""
     saved_contacts, sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
@@ -754,6 +793,7 @@ def test_post_get_put(client, post_contact, put_contact):
     assert resp.status_code == 200
 
     fetched = ContactSchema(**resp.json())
+    update_fetched(fetched)
     new_default_fields = fetched.find_default_fields()
     # We set new_default_fields here because the returned response above
     # _includes_ defaults for many fields and we want to not write

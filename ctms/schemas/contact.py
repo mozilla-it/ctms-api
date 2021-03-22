@@ -40,11 +40,15 @@ class ContactSchema(ComparableBase):
     def find_default_fields(self) -> Set[str]:
         """Return names of fields that contain default values only"""
         default_fields = set()
-        if self.amo and self.amo.is_default():
+        if hasattr(self, "amo") and self.amo and self.amo.is_default():
             default_fields.add("amo")
-        if self.fxa and self.fxa.is_default():
+        if hasattr(self, "fxa") and self.fxa and self.fxa.is_default():
             default_fields.add("fxa")
-        if self.vpn_waitlist and self.vpn_waitlist.is_default():
+        if (
+            hasattr(self, "vpn_waitlist")
+            and self.vpn_waitlist
+            and self.vpn_waitlist.is_default()
+        ):
             default_fields.add("vpn_waitlist")
         if all(n.is_default() for n in self.newsletters):
             default_fields.add("newsletters")
@@ -84,16 +88,14 @@ class ContactInBase(ComparableBase):
 
 
 class ContactInSchema(ContactInBase):
-    """A contact as provided by callers."""
+    """A contact as provided by callers when using POST. This is nearly identical to the ContactPutSchema but doesn't require an email_id."""
 
-    # TODO: Docuement these better
     email: EmailInSchema
 
 
 class ContactPutSchema(ContactInBase):
-    """A contact as provided by callers."""
+    """A contact as provided by callers when using POST. This is nearly identical to the ContactInSchema but does require an email_id."""
 
-    # TODO: Docuement these better
     email: EmailPutSchema
 
 

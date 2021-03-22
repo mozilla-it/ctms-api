@@ -98,6 +98,8 @@ class EmailSchema(EmailBase):
 
 
 class EmailInSchema(EmailBase):
+    """Nearly identical to EmailPutSchema but the email_id is not required."""
+
     email_id: Optional[UUID4] = Field(
         default=None,
         description=EMAIL_ID_DESCRIPTION,
@@ -106,6 +108,8 @@ class EmailInSchema(EmailBase):
 
 
 class EmailPutSchema(EmailBase):
+    """Nearly identical to EmailInSchema but the email_id is required."""
+
     email_id: UUID4 = Field(
         description=EMAIL_ID_DESCRIPTION,
         example=EMAIL_ID_EXAMPLE,
