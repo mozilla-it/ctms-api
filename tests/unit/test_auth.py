@@ -56,10 +56,8 @@ def test_post_token_header(anon_client, test_token_settings, client_id_and_secre
     )
     assert payload["sub"] == f"api_client:{client_id}"
     expected_expires = (
-        (datetime.utcnow() + test_token_settings["expires_delta"])
-        .replace(tzinfo=timezone.utc)
-        .timestamp()
-    )
+        datetime.now(timezone.utc) + test_token_settings["expires_delta"]
+    ).timestamp()
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -84,10 +82,8 @@ def test_post_token_form_data(anon_client, test_token_settings, client_id_and_se
     )
     assert payload["sub"] == f"api_client:{client_id}"
     expected_expires = (
-        (datetime.utcnow() + test_token_settings["expires_delta"])
-        .replace(tzinfo=timezone.utc)
-        .timestamp()
-    )
+        datetime.now(timezone.utc) + test_token_settings["expires_delta"]
+    ).timestamp()
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -209,7 +205,7 @@ def test_get_ctms_with_expired_token_fails(
     example_contact, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with an expired token is an error"""
-    yesterday = datetime.utcnow() - timedelta(days=1)
+    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     client_id, client_secret = client_id_and_secret
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings, now=yesterday

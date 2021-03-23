@@ -7,7 +7,7 @@ header. A JWT token is returned that expires after a short time. To renew,
 the client POSTs to /token again.
 """
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 from fastapi.exceptions import HTTPException
@@ -46,7 +46,7 @@ def create_access_token(
 ) -> str:
     """Create a JWT string to act as an OAuth2 access token."""
     to_encode = data.copy()
-    expire = (now or datetime.utcnow()) + expires_delta
+    expire = (now or datetime.now(timezone.utc)) + expires_delta
     to_encode["exp"] = expire
     encoded_jwt = jwt.encode(to_encode, secret_key, algorithm="HS256")
     return encoded_jwt
