@@ -638,16 +638,16 @@ def put_contact(request, client, dbsession):
             results = getter(dbsession, written_id)
             if sample.dict().get(field) and code == 303:
                 if field in fields_not_written or field in new_default_fields:
-                    assert (
-                        results is None
+                    assert results is None or (
+                        isinstance(results, list) and len(results) == 0
                     ), f"{sample_email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                 else:
                     assert (
                         results
                     ), f"{sample_email_id} has field `{field}` and it should have been written to db"
             else:
-                assert (
-                    results is None
+                assert results is None or (
+                    isinstance(results, list) and len(results) == 0
                 ), f"{sample_email_id} does not have field `{field}` and it should _not_ have been written to db"
 
         if check_written:
