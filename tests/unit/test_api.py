@@ -663,7 +663,7 @@ def put_contact(request, client, dbsession):
 
 @pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_or_update_basic_no_id(put_contact):
-    """This should fail since we required an email_id to PUT"""
+    """This should fail since we require an email_id to PUT"""
 
     def _remove_id(contact):
         del contact.email.email_id
@@ -680,7 +680,7 @@ def test_create_or_update_basic_no_id(put_contact):
 
 @pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
 def test_create_or_update_basic_id_is_none(put_contact):
-    """This should fail since we required an email_id to PUT"""
+    """This should fail since we require an email_id to PUT"""
 
     def _remove_id(contact):
         contact.email.email_id = None
