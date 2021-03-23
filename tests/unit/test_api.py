@@ -617,7 +617,7 @@ def put_contact(request, client, dbsession):
             query_fields = {"primary_email": contact.email.primary_email}
         sample = contact.copy(deep=True)
         sample = modifier(sample)
-        resp = client.put("/ctms", sample.json())
+        resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
         assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
@@ -661,21 +661,14 @@ def put_contact(request, client, dbsession):
     return _add
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
-def test_create_or_update_basic_no_id(put_contact):
+def test_create_or_update_basic_id_is_different(client, minimal_contact):
     """This should fail since we require an email_id to PUT"""
 
-    def _remove_id(contact):
-        del contact.email.email_id
-        return contact
-
-    saved_contacts, sample, email_id = put_contact(
-        modifier=_remove_id,
-        check_redirect=False,
-        code=422,
-        stored_contacts=0,
-        check_written=False,
+    # This id is different from the one in the contact
+    resp = client.put(
+        f"/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7", minimal_contact.json()
     )
+    assert resp.status_code == 422, resp.text
 
 
 @pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)

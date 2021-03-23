@@ -279,20 +279,28 @@ def create_ctms_contact(
 
 
 @app.put(
-    "/ctms",
+    "/ctms/{email_id}",
     summary="""Create or replace a contact, an email_id must be provided.
                Compare this to POST where we will generate one for you if you want.
                This is intended to be used to send back a contact you have modified locally
                and therefore the input schema is a full Contact.""",
-    responses={409: {"model": BadRequestResponse}},
+    responses={409: {"model": BadRequestResponse}, 422: {"model": BadRequestResponse}},
     tags=["Public"],
 )
 def create_or_update_ctms_contact(
     contact: ContactPutSchema,
+    email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
-    email_id = contact.email.email_id
+    if contact.email.email_id:
+        if contact.email.email_id != email_id:
+            raise HTTPException(
+                status_code=422,
+                detail="email_id in path must match email_id in contact",
+            )
+    else:
+        contact.email.email_id = email_id
     try:
         create_or_update_contact(db, email_id, contact)
         db.commit()
