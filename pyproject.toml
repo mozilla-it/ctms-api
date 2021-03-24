@@ -74,10 +74,12 @@ testpaths = [
     output-format = 'colorized'
     [tool.pylint.FORMAT]
     good-names = 'e,db,SessionLocal' # Normally pylint objects to these due to not being snake_case
+    [tool.pylint.TYPECHECK]
+    generated-members='alembic.*'
     [tool.pylint.MASTER]
     extension-pkg-whitelist='pydantic'
     ignore='third_party'
-    ignore-patterns = "test_.*.py" # Not worth fixing yet
+    ignore-patterns = "migrations/.*,tests/.*/.*" # Not worth fixing yet
 
 [tool.black]
 line-length = 88

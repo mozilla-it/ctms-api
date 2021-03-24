@@ -1,11 +1,11 @@
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Set
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
-from .email import EmailInSchema, EmailSchema
+from .email import EmailBase, EmailInSchema, EmailPutSchema, EmailSchema
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
@@ -37,12 +37,29 @@ class ContactSchema(ComparableBase):
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
 
+    def find_default_fields(self) -> Set[str]:
+        """Return names of fields that contain default values only"""
+        default_fields = set()
+        if hasattr(self, "amo") and self.amo and self.amo.is_default():
+            default_fields.add("amo")
+        if hasattr(self, "fxa") and self.fxa and self.fxa.is_default():
+            default_fields.add("fxa")
+        if (
+            hasattr(self, "vpn_waitlist")
+            and self.vpn_waitlist
+            and self.vpn_waitlist.is_default()
+        ):
+            default_fields.add("vpn_waitlist")
+        if all(n.is_default() for n in self.newsletters):
+            default_fields.add("newsletters")
+        return default_fields
 
-class ContactInSchema(ComparableBase):
+
+class ContactInBase(ComparableBase):
     """A contact as provided by callers."""
 
     amo: Optional[AddOnsInSchema] = None
-    email: EmailInSchema
+    email: EmailBase
     fxa: Optional[FirefoxAccountsInSchema] = None
     newsletters: List[NewsletterInSchema] = Field(
         default=[],
@@ -68,6 +85,18 @@ class ContactInSchema(ComparableBase):
         if sorted(self.newsletters) != sorted(other.newsletters):
             return False
         return True
+
+
+class ContactInSchema(ContactInBase):
+    """A contact as provided by callers when using POST. This is nearly identical to the ContactPutSchema but doesn't require an email_id."""
+
+    email: EmailInSchema
+
+
+class ContactPutSchema(ContactInBase):
+    """A contact as provided by callers when using POST. This is nearly identical to the ContactInSchema but does require an email_id."""
+
+    email: EmailPutSchema
 
 
 class CTMSResponse(BaseModel):
