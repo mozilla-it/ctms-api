@@ -1,4 +1,4 @@
-name: Run test
+name: Run tests
 
 on: pull_request
 
@@ -6,11 +6,27 @@ jobs:
   run_test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          LC_COLLATE: en_US.UTF8
+          LC_CTYPE: en_US.UTF8
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Build and test
+      - name: Build test image
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -18,3 +34,13 @@ jobs:
           push: false
           target: "test"
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+      - name: Run tests
+        run: |-
+          docker run --rm \
+          -e CTMS_DB_URL \
+          -e CTMS_SECRET_KEY \
+          ghcr.io/${{ github.repository }}:${{ github.sha }}
+        env:
+          CTMS_DB_URL: postgresql://postgres:postgres@172.17.0.1:5432/postgres
+          CTMS_SECRET_KEY: secret_${{ github.sha }}
