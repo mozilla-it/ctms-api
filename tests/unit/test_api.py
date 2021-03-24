@@ -734,6 +734,46 @@ def test_create_or_update_change_basket_token(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_with_basket_collision(put_contact):
+    """Updating a contact with diff ids but same email fails.
+    We override the basket token so that we know we're not colliding on that here.
+    See test_create_basic_with_email_collision below for that check
+    """
+    saved_contacts, orig_sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+    def _change_basket(contact):
+        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+        contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
+        return contact
+
+    saved_contacts, _, _ = put_contact(
+        modifier=_change_basket, code=409, check_redirect=False
+    )
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+
+@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+def test_create_or_update_with_email_collision(put_contact):
+    """Updating a contact with diff ids but same basket token fails.
+    We override the email so that we know we're not colliding on that here.
+    See other test for that check
+    """
+    saved_contacts, orig_sample, email_id = put_contact()
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+    def _change_primary_email(contact):
+        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
+        contact.email.primary_email = "foo@bar.com"
+        return contact
+
+    saved_contacts, _, _ = put_contact(
+        modifier=_change_primary_email, code=409, check_redirect=False
+    )
+    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+
 def _subscribe(contact):
     contact.newsletters.append(NewsletterInSchema(name="new-newsletter"))
 
