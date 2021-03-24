@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, scoped_session
 
 from . import config
 from .auth import (
@@ -63,7 +63,8 @@ def get_settings():
 @app.on_event("startup")
 def startup_event():
     global SessionLocal  # pylint:disable = W0603
-    _, SessionLocal = get_db_engine(get_settings())
+    _, session_factory = get_db_engine(get_settings())
+    SessionLocal = scoped_session(session_factory)
 
 
 def get_db():
@@ -72,6 +73,7 @@ def get_db():
         yield db
     finally:
         db.close()
+        SessionLocal.remove()
 
 
 def _token_settings(
