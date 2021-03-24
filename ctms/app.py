@@ -21,6 +21,7 @@ from .auth import (
 )
 from .crud import (
     create_contact,
+    create_or_update_contact,
     get_api_client_by_id,
     get_contact_by_email_id,
     get_contacts_by_any_id,
@@ -32,6 +33,7 @@ from .schemas import (
     ApiClientSchema,
     BadRequestResponse,
     ContactInSchema,
+    ContactPutSchema,
     ContactSchema,
     CTMSResponse,
     EmailSchema,
@@ -249,7 +251,7 @@ def read_ctms_by_email_id(
 
 @app.post(
     "/ctms",
-    summary="Create a contact, generating an id",
+    summary="Create a contact, generating an id if not specified.",
     responses={409: {"model": BadRequestResponse}},
     tags=["Public"],
 )
@@ -272,6 +274,43 @@ def create_ctms_contact(
         db.rollback()
         if isinstance(e, IntegrityError):
             raise HTTPException(status_code=409, detail="Contact already exists") from e
+        raise e from e
+    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+
+
+@app.put(
+    "/ctms/{email_id}",
+    summary="""Create or replace a contact, an email_id must be provided.
+               Compare this to POST where we will generate one for you if you want.
+               This is intended to be used to send back a contact you have modified locally
+               and therefore the input schema is a full Contact.""",
+    responses={409: {"model": BadRequestResponse}, 422: {"model": BadRequestResponse}},
+    tags=["Public"],
+)
+def create_or_update_ctms_contact(
+    contact: ContactPutSchema,
+    email_id: UUID = Path(..., title="The Email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+):
+    if contact.email.email_id:
+        if contact.email.email_id != email_id:
+            raise HTTPException(
+                status_code=422,
+                detail="email_id in path must match email_id in contact",
+            )
+    else:
+        contact.email.email_id = email_id
+    try:
+        create_or_update_contact(db, email_id, contact)
+        db.commit()
+    except Exception as e:  # pylint:disable = W0703
+        db.rollback()
+        if isinstance(e, IntegrityError):
+            raise HTTPException(
+                status_code=409,
+                detail="Contact with primary_email or basket_token already exists",
+            ) from e
         raise e from e
     return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
 
