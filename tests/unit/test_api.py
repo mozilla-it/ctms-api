@@ -367,7 +367,17 @@ def test_get_ctms_by_no_ids_is_error(client, dbsession):
     resp = client.get("/ctms")
     assert resp.status_code == 400
     assert resp.json() == {
-        "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, mofo_id, amo_user_id, fxa_id, fxa_primary_email"
+        "detail": (
+            "No identifiers provided, at least one is needed: "
+            "email_id, "
+            "primary_email, "
+            "basket_token, "
+            "sfdc_id, "
+            "mofo_id, "
+            "amo_user_id, "
+            "fxa_id, "
+            "fxa_primary_email"
+        )
     }
 
 

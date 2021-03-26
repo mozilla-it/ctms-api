@@ -118,7 +118,17 @@ def test_get_identities_with_no_alt_ids_fails(client, dbsession):
     resp = client.get(f"/identities")
     assert resp.status_code == 400
     assert resp.json() == {
-        "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, mofo_id, amo_user_id, fxa_id, fxa_primary_email"
+        "detail": (
+            "No identifiers provided, at least one is needed: "
+            "email_id, "
+            "primary_email, "
+            "basket_token, "
+            "sfdc_id, "
+            "mofo_id, "
+            "amo_user_id, "
+            "fxa_id, "
+            "fxa_primary_email"
+        )
     }
 
 
