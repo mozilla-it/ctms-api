@@ -5,6 +5,7 @@ from .contact import (
     ContactPutSchema,
     ContactSchema,
     CTMSResponse,
+    CTMSSingleResponse,
     IdentityResponse,
 )
 from .email import EmailInSchema, EmailPutSchema, EmailSchema

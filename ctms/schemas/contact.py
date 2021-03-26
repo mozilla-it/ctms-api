@@ -97,19 +97,28 @@ class ContactPutSchema(ContactInBase):
 
 class CTMSResponse(BaseModel):
     """
-    Response for /ctms/<email_id>
+    Response for GET /ctms/ by alternate IDs
 
-    Similar to ContactSchema, but groups are required and includes status: OK
+    Similar to ContactSchema, but groups are required
     """
 
     amo: AddOnsSchema
     email: EmailSchema
     fxa: FirefoxAccountsSchema
     newsletters: List[NewsletterSchema]
+    vpn_waitlist: VpnWaitlistSchema
+
+
+class CTMSSingleResponse(CTMSResponse):
+    """
+    Response for /ctms/<email_id>
+
+    Similar to ContactSchema, but groups are required and includes status: OK
+    """
+
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
     )
-    vpn_waitlist: VpnWaitlistSchema
 
 
 class IdentityResponse(BaseModel):
