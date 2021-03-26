@@ -74,17 +74,13 @@ class ContactInBase(ComparableBase):
                 return None
             return None if field.is_default() else field
 
-        if self.email != other.email:
-            return False
-        if _noneify(self.amo) != _noneify(other.amo):
-            return False
-        if _noneify(self.fxa) != _noneify(other.fxa):
-            return False
-        if _noneify(self.vpn_waitlist) != _noneify(other.vpn_waitlist):
-            return False
-        if sorted(self.newsletters) != sorted(other.newsletters):
-            return False
-        return True
+        return (
+            self.email == other.email
+            and _noneify(self.amo) == _noneify(other.amo)
+            and _noneify(self.fxa) == _noneify(other.fxa)
+            and _noneify(self.vpn_waitlist) == _noneify(other.vpn_waitlist)
+            and sorted(self.newsletters) == sorted(other.newsletters)
+        )
 
 
 class ContactInSchema(ContactInBase):
