@@ -65,11 +65,12 @@ def test_get_identity_not_found(client, dbsession):
         ("maximal", "amo_user_id"),
         ("maximal", "fxa_id"),
         ("example", "fxa_primary_email"),
+        ("maximal", "mofo_id"),
     ),
 )
 def test_get_identities_by_alt_id(client, sample_contacts, name, ident):
     """GET /identities?alt_id=value returns a one-item identities list."""
-    email_id, contact = sample_contacts[name]
+    _, contact = sample_contacts[name]
     identity = identity_response_for_contact(contact)
     assert identity[ident]
     resp = client.get(f"/identities?{ident}={identity[ident]}")
@@ -115,7 +116,7 @@ def test_get_identities_by_two_alt_id_one_blank_fails(client, minimal_contact):
 
 def test_get_identities_with_no_alt_ids_fails(client, dbsession):
     """GET /identities without an alternate IDs query return an error."""
-    resp = client.get(f"/identities")
+    resp = client.get("/identities")
     assert resp.status_code == 400
     assert resp.json() == {
         "detail": (

@@ -484,7 +484,7 @@ def _compare_written_contacts(
     sample,
     email_id,
     ids_should_be_identical: bool = True,
-    new_default_fields: set = set(),
+    new_default_fields: Optional[set] = None,
 ):
     fields_not_written = new_default_fields or SAMPLE_CONTACTS.get_not_written(email_id)
 
@@ -627,7 +627,7 @@ def put_contact(request, client, dbsession):
         query_fields: Optional[dict] = None,
         check_written: bool = True,
         record: Optional[ContactSchema] = None,
-        new_default_fields: set = set(),
+        new_default_fields: Optional[set] = None,
     ):
         if record:
             contact = record
@@ -635,6 +635,7 @@ def put_contact(request, client, dbsession):
             contact = _contact
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
+        new_default_fields = new_default_fields or set()
         sample = contact.copy(deep=True)
         sample = modifier(sample)
         resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
