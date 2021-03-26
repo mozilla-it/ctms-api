@@ -90,6 +90,7 @@ def minimal_contact(dbsession):
     contact = SAMPLE_CONTACTS[email_id]
     assert contact.amo is None
     assert contact.fxa is None
+    assert contact.mofo is None
     assert contact.vpn_waitlist is None
     create_contact(dbsession, email_id, contact)
     dbsession.commit()

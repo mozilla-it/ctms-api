@@ -31,7 +31,8 @@ def identity_response_for_contact(contact):
         "primary_email": contact.email.primary_email,
         "basket_token": str(contact.email.basket_token),
         "sfdc_id": contact.email.sfdc_id,
-        "mofo_id": contact.email.mofo_id,
+        "mofo_contact_id": contact.mofo.mofo_contact_id if contact.mofo else None,
+        "mofo_email_id": contact.mofo.mofo_email_id if contact.mofo else None,
         "amo_user_id": contact.amo.user_id if contact.amo else None,
         "fxa_id": contact.fxa.fxa_id if contact.fxa else None,
         "fxa_primary_email": contact.fxa.primary_email if contact.fxa else None,
@@ -65,7 +66,8 @@ def test_get_identity_not_found(client, dbsession):
         ("maximal", "amo_user_id"),
         ("maximal", "fxa_id"),
         ("example", "fxa_primary_email"),
-        ("maximal", "mofo_id"),
+        ("maximal", "mofo_contact_id"),
+        ("maximal", "mofo_email_id"),
     ),
 )
 def test_get_identities_by_alt_id(client, sample_contacts, name, ident):
@@ -125,7 +127,8 @@ def test_get_identities_with_no_alt_ids_fails(client, dbsession):
             "primary_email, "
             "basket_token, "
             "sfdc_id, "
-            "mofo_id, "
+            "mofo_contact_id, "
+            "mofo_email_id, "
             "amo_user_id, "
             "fxa_id, "
             "fxa_primary_email"
@@ -143,7 +146,8 @@ def test_get_identities_with_no_alt_ids_fails(client, dbsession):
         ("fxa_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
         ("fxa_primary_email", "unknown-user@example.com"),
         ("sfdc_id", "001A000404aUnknown"),
-        ("mofo_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("mofo_contact_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("mofo_email_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
     ],
 )
 def test_get_identities_with_unknown_ids_fails(

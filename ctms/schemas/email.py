@@ -32,11 +32,6 @@ class EmailBase(ComparableBase):
         description="Salesforce legacy ID, Id in Salesforce",
         example="001A000023aABcDEFG",
     )
-    mofo_id: Optional[str] = Field(
-        default=None,
-        max_length=255,
-        description="Foriegn key to MoFo contact database",
-    )
     first_name: Optional[str] = Field(
         default=None,
         max_length=255,
@@ -63,9 +58,6 @@ class EmailBase(ComparableBase):
         default="en",
         max_length=5,
         description="Email language code, usually 2 lowercase letters, Email_Language__c in Salesforce",
-    )
-    mofo_relevant: bool = Field(
-        default=False, description="Mozilla Foundation is tracking this email"
     )
     has_opted_out_of_email: bool = Field(
         default=False,

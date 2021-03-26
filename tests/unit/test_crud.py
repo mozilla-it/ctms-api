@@ -9,6 +9,7 @@ from ctms.crud import (
     create_amo,
     create_email,
     create_fxa,
+    create_mofo,
     create_newsletter,
     get_contact_by_email_id,
     get_contacts_by_any_id,
@@ -17,6 +18,7 @@ from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
     FirefoxAccountsInSchema,
+    MozillaFoundationInSchema,
     NewsletterInSchema,
 )
 
@@ -85,7 +87,8 @@ def test_get_contact_by_email_id_miss(dbsession):
         ("fxa_id", "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"),
         ("fxa_primary_email", "fxa-firefox-fan@example.com"),
         ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
+        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
+        ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
     ],
 )
 def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
@@ -112,7 +115,7 @@ def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
         ("amo_user_id", "123"),
         ("fxa_primary_email", "fxa-firefox-fan@example.com"),
         ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
+        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
     ],
 )
 def test_get_multiple_contacts_by_any_id(
@@ -130,7 +133,6 @@ def test_get_multiple_contacts_by_any_id(
             sfdc_id=alt_id_value
             if alt_id_name == "sfdc_id"
             else "other_sdfc_alt_id_value",
-            mofo_id=alt_id_value if alt_id_name == "mofo_id" else str(uuid4()),
         ),
     )
     if alt_id_name == "amo_user_id":
@@ -139,6 +141,15 @@ def test_get_multiple_contacts_by_any_id(
         create_fxa(
             dbsession, dupe_id, FirefoxAccountsInSchema(primary_email=alt_id_value)
         )
+    if alt_id_name == "mofo_contact_id":
+        create_mofo(
+            dbsession,
+            dupe_id,
+            MozillaFoundationInSchema(
+                mofo_email_id=str(uuid4()), mofo_contact_id=alt_id_value
+            ),
+        )
+
     create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="zzz_sleepy_news"))
     create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="aaa_game_news"))
     dbsession.flush()

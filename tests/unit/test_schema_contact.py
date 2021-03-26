@@ -18,6 +18,7 @@ def test_idempotent_equal():
         ("amo", "display_name", "changed"),
         ("email", "email_format", "T"),
         ("fxa", "lang", "es"),
+        ("mofo", "mofo_relevant", False),
         ("vpn_waitlist", "geo", "ir"),
     ),
 )
