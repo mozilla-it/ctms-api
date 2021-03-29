@@ -36,9 +36,11 @@ from .schemas import (
     ContactPutSchema,
     ContactSchema,
     CTMSResponse,
+    CTMSSingleResponse,
     EmailSchema,
     FirefoxAccountsSchema,
     IdentityResponse,
+    MozillaFoundationSchema,
     NotFoundResponse,
     TokenResponse,
     UnauthorizedResponse,
@@ -101,7 +103,8 @@ def all_ids(
     primary_email: Optional[EmailStr] = None,
     basket_token: Optional[UUID] = None,
     sfdc_id: Optional[str] = None,
-    mofo_id: Optional[str] = None,
+    mofo_contact_id: Optional[str] = None,
+    mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
@@ -112,7 +115,8 @@ def all_ids(
         "primary_email": primary_email,
         "basket_token": basket_token,
         "sfdc_id": sfdc_id,
-        "mofo_id": mofo_id,
+        "mofo_contact_id": mofo_contact_id,
+        "mofo_email_id": mofo_email_id,
         "amo_user_id": amo_user_id,
         "fxa_id": fxa_id,
         "fxa_primary_email": fxa_primary_email,
@@ -125,7 +129,8 @@ def get_contacts_by_ids(
     primary_email: Optional[EmailStr] = None,
     basket_token: Optional[UUID] = None,
     sfdc_id: Optional[str] = None,
-    mofo_id: Optional[str] = None,
+    mofo_contact_id: Optional[str] = None,
+    mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
@@ -141,7 +146,8 @@ def get_contacts_by_ids(
         primary_email,
         basket_token,
         sfdc_id,
-        mofo_id,
+        mofo_contact_id,
+        mofo_email_id,
         amo_user_id,
         fxa_id,
         fxa_primary_email,
@@ -195,7 +201,7 @@ def root():
 @app.get(
     "/ctms",
     summary="Get all contacts matching alternate IDs",
-    response_model=List[ContactSchema],
+    response_model=List[CTMSResponse],
     responses={
         400: {"model": BadRequestResponse},
         401: {"model": UnauthorizedResponse},
@@ -214,10 +220,11 @@ def read_ctms_by_any_id(
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_ids(db, **ids)
     return [
-        ContactSchema(
+        CTMSResponse(
             amo=contact.amo or AddOnsSchema(),
             email=contact.email or EmailSchema(),
             fxa=contact.fxa or FirefoxAccountsSchema(),
+            mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
             vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
         )
@@ -228,7 +235,7 @@ def read_ctms_by_any_id(
 @app.get(
     "/ctms/{email_id}",
     summary="Get a contact by email_id",
-    response_model=CTMSResponse,
+    response_model=CTMSSingleResponse,
     responses={
         401: {"model": UnauthorizedResponse},
         404: {"model": NotFoundResponse},
@@ -241,10 +248,11 @@ def read_ctms_by_email_id(
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     contact = get_contact_or_404(db, email_id)
-    return CTMSResponse(
+    return CTMSSingleResponse(
         amo=contact.amo or AddOnsSchema(),
         email=contact.email or EmailSchema(),
         fxa=contact.fxa or FirefoxAccountsSchema(),
+        mofo=contact.mofo or MozillaFoundationSchema(),
         newsletters=contact.newsletters or [],
         vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
         status="ok",

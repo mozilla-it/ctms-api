@@ -195,19 +195,13 @@ To create a new migration file based on updated SQLAlchemy models:
 
 ```sh
 make shell  # To enter the web container
-alembic revision -m "A short description of the change"
+alembic revision --autogenerate -m "A short description of the change"
+black /app/migrations/versions/
 exit
 ```
 
 Edit the generated migration script, confirm it does what you meant,
 and adjust or delete and recreate as needed.
-
-The revision may be detected as secrets at compile time. You can mark
-them as allowed:
-
-```python
-revision = "3f8a97b79852"  # pragma: allowlist secret
-```
 
 To run this and other migrations on an existing database:
 

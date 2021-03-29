@@ -10,6 +10,7 @@ from .models import (
     ApiClient,
     Email,
     FirefoxAccount,
+    MozillaFoundationContact,
     Newsletter,
     VpnWaitlist,
 )
@@ -21,6 +22,7 @@ from .schemas import (
     EmailInSchema,
     EmailPutSchema,
     FirefoxAccountsInSchema,
+    MozillaFoundationInSchema,
     NewsletterInSchema,
     VpnWaitlistInSchema,
 )
@@ -34,6 +36,14 @@ def get_fxa_by_email_id(db: Session, email_id: UUID4):
     return (
         db.query(FirefoxAccount)
         .filter(FirefoxAccount.email_id == email_id)
+        .one_or_none()
+    )
+
+
+def get_mofo_by_email_id(db: Session, email_id: UUID4):
+    return (
+        db.query(MozillaFoundationContact)
+        .filter(MozillaFoundationContact.email_id == email_id)
         .one_or_none()
     )
 
@@ -52,6 +62,7 @@ def _contact_base_query(db):
         db.query(Email)
         .options(joinedload(Email.amo))
         .options(joinedload(Email.fxa))
+        .options(joinedload(Email.mofo))
         .options(joinedload(Email.vpn_waitlist))
         .options(selectinload("newsletters"))
     )
@@ -66,6 +77,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4):
         "amo": email.amo,
         "email": email,
         "fxa": email.fxa,
+        "mofo": email.mofo,
         "newsletters": email.newsletters,
         "vpn_waitlist": email.vpn_waitlist,
     }
@@ -77,7 +89,8 @@ def get_contacts_by_any_id(
     primary_email: Optional[EmailStr] = None,
     basket_token: Optional[UUID4] = None,
     sfdc_id: Optional[str] = None,
-    mofo_id: Optional[str] = None,
+    mofo_contact_id: Optional[str] = None,
+    mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
@@ -94,7 +107,8 @@ def get_contacts_by_any_id(
             primary_email,
             basket_token,
             sfdc_id,
-            mofo_id,
+            mofo_email_id,
+            mofo_contact_id,
             amo_user_id,
             fxa_id,
             fxa_primary_email,
@@ -109,8 +123,14 @@ def get_contacts_by_any_id(
         statement = statement.filter(Email.basket_token == str(basket_token))
     if sfdc_id is not None:
         statement = statement.filter(Email.sfdc_id == sfdc_id)
-    if mofo_id is not None:
-        statement = statement.filter(Email.mofo_id == mofo_id)
+    if mofo_contact_id is not None:
+        statement = statement.join(Email.mofo).filter(
+            MozillaFoundationContact.mofo_contact_id == mofo_contact_id
+        )
+    if mofo_email_id is not None:
+        statement = statement.join(Email.mofo).filter(
+            MozillaFoundationContact.mofo_email_id == mofo_email_id
+        )
     if amo_user_id is not None:
         statement = statement.join(Email.amo).filter(AmoAccount.user_id == amo_user_id)
     if fxa_id is not None:
@@ -127,6 +147,7 @@ def get_contacts_by_any_id(
                 "amo": email.amo,
                 "email": email,
                 "fxa": email.fxa,
+                "mofo": email.mofo,
                 "newsletters": email.newsletters,
                 "vpn_waitlist": email.vpn_waitlist,
             }
@@ -181,6 +202,30 @@ def create_or_update_fxa(
     stmt = insert(FirefoxAccount).values(email_id=email_id, **fxa.dict())
     stmt = stmt.on_conflict_do_update(
         index_elements=[FirefoxAccount.email_id], set_=fxa.dict()
+    )
+    db.execute(stmt)
+
+
+def create_mofo(db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema):
+    if mofo.is_default():
+        return
+    db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.dict())
+    db.add(db_mofo)
+
+
+def create_or_update_mofo(
+    db: Session, email_id: UUID4, mofo: Optional[MozillaFoundationInSchema]
+):
+    if not mofo or mofo.is_default():
+        (
+            db.query(MozillaFoundationContact)
+            .filter(MozillaFoundationContact.email_id == email_id)
+            .delete()
+        )
+        return
+    stmt = insert(MozillaFoundationContact).values(email_id=email_id, **mofo.dict())
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[MozillaFoundationContact.email_id], set_=mofo.dict()
     )
     db.execute(stmt)
 
@@ -243,6 +288,8 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
         create_amo(db, email_id, contact.amo)
     if contact.fxa:
         create_fxa(db, email_id, contact.fxa)
+    if contact.mofo:
+        create_mofo(db, email_id, contact.mofo)
     if contact.vpn_waitlist:
         create_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     for newsletter in contact.newsletters:
@@ -253,6 +300,7 @@ def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSc
     create_or_update_email(db, contact.email)
     create_or_update_amo(db, email_id, contact.amo)
     create_or_update_fxa(db, email_id, contact.fxa)
+    create_or_update_mofo(db, email_id, contact.mofo)
     create_or_update_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     create_or_update_newsletters(db, email_id, contact.newsletters)
 

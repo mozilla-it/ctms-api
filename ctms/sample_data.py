@@ -8,6 +8,7 @@ from .schemas import (
     EmailInSchema,
     EmailSchema,
     FirefoxAccountsSchema,
+    MozillaFoundationSchema,
     NewsletterSchema,
     VpnWaitlistSchema,
 )
@@ -52,12 +53,10 @@ SAMPLE_MAXIMAL = ContactSchema(
         email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
         primary_email="mozilla-fan@example.com",
         basket_token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
-        mofo_id="195207d2-63f2-4c9f-b149-80e9c408477a",
         first_name="Fan",
         last_name="of Mozilla",
         mailing_country="ca",
         email_lang="fr",
-        mofo_relevant=True,
         sfdc_id="001A000001aMozFan",
         double_opt_in=True,
         unsubscribe_reason="done with this mailing list",
@@ -70,6 +69,11 @@ SAMPLE_MAXIMAL = ContactSchema(
         lang="fr,fr-CA",
         primary_email="fxa-firefox-fan@example.com",
         first_service="monitor",
+    ),
+    mofo=MozillaFoundationSchema(
+        mofo_email_id="195207d2-63f2-4c9f-b149-80e9c408477a",
+        mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+        mofo_relevant=True,
     ),
     newsletters=[
         NewsletterSchema(

@@ -8,6 +8,7 @@ from ctms.crud import (
     get_amo_by_email_id,
     get_contacts_by_any_id,
     get_fxa_by_email_id,
+    get_mofo_by_email_id,
     get_newsletters_by_email_id,
     get_vpn_by_email_id,
 )
@@ -46,8 +47,6 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
             "has_opted_out_of_email": False,
             "last_name": None,
             "mailing_country": "us",
-            "mofo_id": None,
-            "mofo_relevant": False,
             "primary_email": "ctms-user@example.com",
             "sfdc_id": "001A000001aABcDEFG",
             "unsubscribe_reason": None,
@@ -60,6 +59,11 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
             "fxa_id": None,
             "lang": None,
             "primary_email": None,
+        },
+        "mofo": {
+            "mofo_contact_id": None,
+            "mofo_email_id": None,
+            "mofo_relevant": False,
         },
         "newsletters": [
             {
@@ -131,8 +135,6 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
             "has_opted_out_of_email": False,
             "last_name": "of Mozilla",
             "mailing_country": "ca",
-            "mofo_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
-            "mofo_relevant": True,
             "primary_email": "mozilla-fan@example.com",
             "sfdc_id": "001A000001aMozFan",
             "unsubscribe_reason": "done with this mailing list",
@@ -145,6 +147,11 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
             "fxa_id": "611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
             "lang": "fr,fr-CA",
             "primary_email": "fxa-firefox-fan@example.com",
+        },
+        "mofo": {
+            "mofo_contact_id": "5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+            "mofo_email_id": "195207d2-63f2-4c9f-b149-80e9c408477a",
+            "mofo_relevant": True,
         },
         "newsletters": [
             {
@@ -241,8 +248,6 @@ def test_get_ctms_for_api_example(client, example_contact):
             "has_opted_out_of_email": False,
             "last_name": "Doe",
             "mailing_country": "us",
-            "mofo_id": None,
-            "mofo_relevant": False,
             "primary_email": "contact@example.com",
             "sfdc_id": "001A000023aABcDEFG",
             "unsubscribe_reason": None,
@@ -255,6 +260,11 @@ def test_get_ctms_for_api_example(client, example_contact):
             "fxa_id": "6eb6ed6ac3b64259968aa490c6c0b9df",
             "lang": "en,en-US",
             "primary_email": "my-fxa-acct@example.com",
+        },
+        "mofo": {
+            "mofo_contact_id": None,
+            "mofo_email_id": None,
+            "mofo_relevant": False,
         },
         "newsletters": [
             {
@@ -289,7 +299,16 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
             "email": {
                 "email_id": str(uuid4()),
                 "primary_email": "new@example.com",
-                "basket_token": str(uuid4()),
+            }
+        },
+    ),
+    (
+        "PUT",
+        "/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c",
+        {
+            "email": {
+                "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+                "primary_email": "put-new@example.com",
             }
         },
     ),
@@ -304,8 +323,8 @@ def test_unauthorized_api_call_fails(
     if method == "GET":
         resp = anon_client.get(path, params=params)
     else:
-        assert method == "POST"
-        resp = anon_client.post(path, json=params)
+        assert method in ("POST", "PUT")
+        resp = anon_client.request(method, path, json=params)
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
 
@@ -315,10 +334,11 @@ def test_authorized_api_call_succeeds(client, example_contact, method, path, par
     """Calling the API without credentials fails."""
     if method == "GET":
         resp = client.get(path, params=params)
+        assert resp.status_code == 200
     else:
-        assert method == "POST"
-        resp = client.post(path, json=params)
-    assert resp.status_code in {200, 303}
+        assert method in ("POST", "PUT")
+        resp = client.request(method, path, json=params)
+        assert resp.status_code == 303
 
 
 def test_get_ctms_not_found(client, dbsession):
@@ -339,7 +359,8 @@ def test_get_ctms_not_found(client, dbsession):
         ("fxa_id", "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"),
         ("fxa_primary_email", "fxa-firefox-fan@example.com"),
         ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
+        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
+        ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
     ],
 )
 def test_get_ctms_by_alt_id(sample_contacts, client, alt_id_name, alt_id_value):
@@ -357,7 +378,18 @@ def test_get_ctms_by_no_ids_is_error(client, dbsession):
     resp = client.get("/ctms")
     assert resp.status_code == 400
     assert resp.json() == {
-        "detail": "No identifiers provided, at least one is needed: email_id, primary_email, basket_token, sfdc_id, mofo_id, amo_user_id, fxa_id, fxa_primary_email"
+        "detail": (
+            "No identifiers provided, at least one is needed: "
+            "email_id, "
+            "primary_email, "
+            "basket_token, "
+            "sfdc_id, "
+            "mofo_contact_id, "
+            "mofo_email_id, "
+            "amo_user_id, "
+            "fxa_id, "
+            "fxa_primary_email"
+        )
     }
 
 
@@ -371,7 +403,8 @@ def test_get_ctms_by_no_ids_is_error(client, dbsession):
         ("fxa_id", "cad092eca71a-4df5-aa92-517959caeecb"),
         ("fxa_primary_email", "unknown-user@example.com"),
         ("sfdc_id", "001A000404aUnknown"),
-        ("mofo_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("mofo_contact_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
+        ("mofo_email_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
     ],
 )
 def test_get_ctms_by_alt_id_none_found(client, dbsession, alt_id_name, alt_id_value):
@@ -451,6 +484,7 @@ def post_contact(request, client, dbsession):
         if check_written:
             _check_written("amo", get_amo_by_email_id)
             _check_written("fxa", get_fxa_by_email_id)
+            _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
 
@@ -464,7 +498,7 @@ def _compare_written_contacts(
     sample,
     email_id,
     ids_should_be_identical: bool = True,
-    new_default_fields: set = set(),
+    new_default_fields: Optional[set] = None,
 ):
     fields_not_written = new_default_fields or SAMPLE_CONTACTS.get_not_written(email_id)
 
@@ -607,7 +641,7 @@ def put_contact(request, client, dbsession):
         query_fields: Optional[dict] = None,
         check_written: bool = True,
         record: Optional[ContactSchema] = None,
-        new_default_fields: set = set(),
+        new_default_fields: Optional[set] = None,
     ):
         if record:
             contact = record
@@ -615,6 +649,7 @@ def put_contact(request, client, dbsession):
             contact = _contact
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
+        new_default_fields = new_default_fields or set()
         sample = contact.copy(deep=True)
         sample = modifier(sample)
         resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
@@ -653,6 +688,7 @@ def put_contact(request, client, dbsession):
         if check_written:
             _check_written("amo", get_amo_by_email_id)
             _check_written("fxa", get_fxa_by_email_id)
+            _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
 

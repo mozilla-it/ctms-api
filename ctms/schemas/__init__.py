@@ -5,10 +5,12 @@ from .contact import (
     ContactPutSchema,
     ContactSchema,
     CTMSResponse,
+    CTMSSingleResponse,
     IdentityResponse,
 )
 from .email import EmailInSchema, EmailPutSchema, EmailSchema
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
+from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
 from .web import (

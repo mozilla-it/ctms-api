@@ -24,13 +24,13 @@ class Email(Base):
     primary_email = Column(String(255), unique=True, nullable=False)
     basket_token = Column(String(255), unique=True)
     sfdc_id = Column(String(255))
-    mofo_id = Column(String(255))
+    mofo_id = Column(String(255))  # TODO: Remove (issue #119)
     first_name = Column(String(255))
     last_name = Column(String(255))
     mailing_country = Column(String(255))
     email_format = Column(String(1))
     email_lang = Column(String(5))
-    mofo_relevant = Column(Boolean)
+    mofo_relevant = Column(Boolean)  # TODO: Remove (issue #119)
     double_opt_in = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
@@ -51,6 +51,9 @@ class Email(Base):
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
     vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
+    mofo = relationship(
+        "MozillaFoundationContact", back_populates="email", uselist=False
+    )
 
 
 class Newsletter(Base):
@@ -180,3 +183,17 @@ class ApiClient(Base):
         server_default=now(),
         server_onupdate=now(),
     )
+
+
+class MozillaFoundationContact(Base):
+    __tablename__ = "mofo"
+
+    id = Column(Integer, primary_key=True)
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
+    mofo_email_id = Column(String(255), unique=True)
+    mofo_contact_id = Column(String(255))
+    mofo_relevant = Column(Boolean)
+
+    email = relationship("Email", back_populates="mofo", uselist=False)

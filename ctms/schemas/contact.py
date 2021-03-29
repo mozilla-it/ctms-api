@@ -7,6 +7,7 @@ from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
 from .email import EmailBase, EmailInSchema, EmailPutSchema, EmailSchema
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
+from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
 
@@ -17,6 +18,7 @@ class ContactSchema(ComparableBase):
     amo: Optional[AddOnsSchema] = None
     email: EmailSchema
     fxa: Optional[FirefoxAccountsSchema] = None
+    mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterSchema] = Field(
         default=[],
         description="List of newsletters for which the contact is or was subscribed",
@@ -32,7 +34,8 @@ class ContactSchema(ComparableBase):
             email_id=getattr(self.email, "email_id", None),
             fxa_id=getattr(self.fxa, "fxa_id", None),
             fxa_primary_email=getattr(self.fxa, "primary_email", None),
-            mofo_id=getattr(self.email, "mofo_id", None),
+            mofo_contact_id=getattr(self.mofo, "mofo_contact_id", None),
+            mofo_email_id=getattr(self.mofo, "mofo_email_id", None),
             primary_email=getattr(self.email, "primary_email", None),
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
@@ -50,6 +53,8 @@ class ContactSchema(ComparableBase):
             and self.vpn_waitlist.is_default()
         ):
             default_fields.add("vpn_waitlist")
+        if hasattr(self, "mofo") and self.mofo and self.mofo.is_default():
+            default_fields.add("mofo")
         if all(n.is_default() for n in self.newsletters):
             default_fields.add("newsletters")
         return default_fields
@@ -61,6 +66,7 @@ class ContactInBase(ComparableBase):
     amo: Optional[AddOnsInSchema] = None
     email: EmailBase
     fxa: Optional[FirefoxAccountsInSchema] = None
+    mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = Field(
         default=[],
         description="List of newsletters for which the contact is or was subscribed",
@@ -74,17 +80,14 @@ class ContactInBase(ComparableBase):
                 return None
             return None if field.is_default() else field
 
-        if self.email != other.email:
-            return False
-        if _noneify(self.amo) != _noneify(other.amo):
-            return False
-        if _noneify(self.fxa) != _noneify(other.fxa):
-            return False
-        if _noneify(self.vpn_waitlist) != _noneify(other.vpn_waitlist):
-            return False
-        if sorted(self.newsletters) != sorted(other.newsletters):
-            return False
-        return True
+        return (
+            self.email == other.email
+            and _noneify(self.amo) == _noneify(other.amo)
+            and _noneify(self.fxa) == _noneify(other.fxa)
+            and _noneify(self.mofo) == _noneify(other.mofo)
+            and _noneify(self.vpn_waitlist) == _noneify(other.vpn_waitlist)
+            and sorted(self.newsletters) == sorted(other.newsletters)
+        )
 
 
 class ContactInSchema(ContactInBase):
@@ -101,19 +104,29 @@ class ContactPutSchema(ContactInBase):
 
 class CTMSResponse(BaseModel):
     """
-    Response for /ctms/<email_id>
+    Response for GET /ctms/ by alternate IDs
 
-    Similar to ContactSchema, but groups are required and includes status: OK
+    Similar to ContactSchema, but groups are required
     """
 
     amo: AddOnsSchema
     email: EmailSchema
     fxa: FirefoxAccountsSchema
+    mofo: MozillaFoundationSchema
     newsletters: List[NewsletterSchema]
+    vpn_waitlist: VpnWaitlistSchema
+
+
+class CTMSSingleResponse(CTMSResponse):
+    """
+    Response for /ctms/<email_id>
+
+    Similar to ContactSchema, but groups are required and includes status: OK
+    """
+
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
     )
-    vpn_waitlist: VpnWaitlistSchema
 
 
 class IdentityResponse(BaseModel):
@@ -123,7 +136,8 @@ class IdentityResponse(BaseModel):
     primary_email: EmailStr
     basket_token: UUID
     sfdc_id: Optional[str] = None
-    mofo_id: Optional[str] = None
+    mofo_contact_id: Optional[str] = None
+    mofo_email_id: Optional[str] = None
     amo_user_id: Optional[str] = None
     fxa_id: Optional[str] = None
     fxa_primary_email: Optional[EmailStr] = None
