@@ -24,13 +24,13 @@ class Email(Base):
     primary_email = Column(String(255), unique=True, nullable=False)
     basket_token = Column(String(255), unique=True)
     sfdc_id = Column(String(255))
-    mofo_id = Column(String(255))  # TODO: Remove
+    mofo_id = Column(String(255))  # TODO: Remove (issue #119)
     first_name = Column(String(255))
     last_name = Column(String(255))
     mailing_country = Column(String(255))
     email_format = Column(String(1))
     email_lang = Column(String(5))
-    mofo_relevant = Column(Boolean)  # TODO: Remove
+    mofo_relevant = Column(Boolean)  # TODO: Remove (issue #119)
     double_opt_in = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
