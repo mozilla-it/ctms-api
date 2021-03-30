@@ -2,7 +2,7 @@
 
 Protected Branches:
 - `main`: staging env
-- `prod`: production env
+
 
 ### Working
 
