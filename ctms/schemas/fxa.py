@@ -1,8 +1,9 @@
 from typing import Optional
 
-from pydantic import EmailStr, Field
+from pydantic import UUID4, EmailStr, Field
 
 from .base import ComparableBase
+from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class FirefoxAccountsBase(ComparableBase):
@@ -51,3 +52,13 @@ class FirefoxAccountsBase(ComparableBase):
 # No need to change anything, just extend if you want to
 FirefoxAccountsInSchema = FirefoxAccountsBase
 FirefoxAccountsSchema = FirefoxAccountsBase
+
+
+class FirefoxAccountsTableSchema(FirefoxAccountsBase):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )
+
+    class Config:
+        extra = "forbid"

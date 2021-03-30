@@ -1,8 +1,9 @@
 from typing import Literal, Optional
 
-from pydantic import Field, HttpUrl
+from pydantic import UUID4, Field, HttpUrl
 
 from .base import ComparableBase
+from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class NewsletterBase(ComparableBase):
@@ -43,3 +44,13 @@ class NewsletterBase(ComparableBase):
 # No need to change anything, just extend if you want to
 NewsletterInSchema = NewsletterBase
 NewsletterSchema = NewsletterBase
+
+
+class NewsletterTableSchema(NewsletterBase):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )
+
+    class Config:
+        extra = "forbid"

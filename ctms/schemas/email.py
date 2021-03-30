@@ -89,6 +89,11 @@ class EmailSchema(EmailBase):
     )
 
 
+class EmailTableSchema(EmailSchema):
+    class Config:
+        extra = "forbid"
+
+
 class EmailInSchema(EmailBase):
     """Nearly identical to EmailPutSchema but the email_id is not required."""
 

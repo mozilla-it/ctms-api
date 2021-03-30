@@ -1,8 +1,9 @@
 from typing import Optional
 
-from pydantic import Field
+from pydantic import UUID4, Field
 
 from .base import ComparableBase
+from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class VpnWaitlistBase(ComparableBase):
@@ -36,3 +37,13 @@ class VpnWaitlistBase(ComparableBase):
 # No need to change anything, just extend if you want to
 VpnWaitlistInSchema = VpnWaitlistBase
 VpnWaitlistSchema = VpnWaitlistBase
+
+
+class VpnWaitlistTableSchema(VpnWaitlistBase):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )
+
+    class Config:
+        extra = "forbid"
