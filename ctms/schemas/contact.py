@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import List, Literal, Optional, Set
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AnyUrl, BaseModel, EmailStr, Field
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -137,6 +138,20 @@ class CTMSSingleResponse(CTMSResponse):
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
     )
+
+
+class CTMSBulkResponse(BaseModel):
+    """
+    Response for GET /bulk_ctms/
+
+    """
+
+    next: Optional[AnyUrl]
+    start: datetime
+    end: datetime
+    limit: int
+    items: List[Optional[CTMSResponse]]
+    after: Optional[str] = None
 
 
 class IdentityResponse(BaseModel):

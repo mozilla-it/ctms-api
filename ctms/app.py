@@ -1,4 +1,5 @@
-from datetime import timedelta
+import base64
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Dict, List, Optional, Union
 from uuid import UUID, uuid4
@@ -10,6 +11,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, scoped_session
+
+from ctms.schemas.contact import CTMSBulkResponse
 
 from . import config
 from .auth import (
@@ -23,6 +26,7 @@ from .crud import (
     create_contact,
     create_or_update_contact,
     get_api_client_by_id,
+    get_bulk_contacts,
     get_contact_by_email_id,
     get_email,
     get_emails_by_any_id,
@@ -177,6 +181,39 @@ def get_contacts_by_ids(
         )
         for email in rows
     ]
+
+
+def get_bulk_contacts_by_timestamp(
+    db: Session,
+    start_time: datetime,
+    end_time: Union[datetime, str],
+    limit: int = 10,
+    after: str = None,
+) -> CTMSBulkResponse:
+    """Get bulk contacts by time range."""
+    if after is None:
+        results = get_bulk_contacts(
+            db=db, start_time=start_time, end_time=end_time, limit=limit
+        )
+        print(results)
+        if len(results) > 0:
+            last_result: ContactSchema = results[-1]
+            str_encode = f"{last_result.email.email_id},{last_result.email.update_timestamp}".encode(
+                "utf-8"
+            )
+            result_after = base64.urlsafe_b64encode(str_encode)
+        else:
+            results = []
+            result_after = None
+    else:
+        # TODO: "after" logic
+        results = []
+        result_after = None
+
+    # TODO: "next" logic
+    return CTMSBulkResponse(
+        start=start_time, end=end_time, limit=limit, items=results, after=result_after
+    )
 
 
 def get_api_client(
@@ -379,6 +416,39 @@ def partial_update_ctms_contact(
     update_contact(db, current_email, update_data)
     db.commit()
     return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+
+
+@app.get(
+    "/ctms/bulk/",
+    summary="Get all contacts within provided timeframe",
+    response_model=CTMSBulkResponse,
+    responses={
+        400: {"model": BadRequestResponse},
+        401: {"model": UnauthorizedResponse},
+    },
+    tags=["Public"],
+)
+def read_ctms_in_bulk_by_timestamps_and_limit(
+    start: datetime,
+    end: Optional[Union[datetime, str]] = None,
+    after: Optional[str] = None,
+    limit: int = 10,
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+):
+    if end is None:
+        end = datetime.now(timezone.utc).isoformat()
+    return get_bulk_contacts_by_timestamp(
+        db=db, start_time=start, end_time=end, after=after, limit=limit
+    )
+
+
+# return response:
+#     next: Optional[AnyUrl]
+#     start: datetime
+#     end: datetime
+#     limit: int
+#     items: Optional[List[CTMSResponse]]
 
 
 @app.get(

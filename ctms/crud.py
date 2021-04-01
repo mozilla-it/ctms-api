@@ -1,8 +1,12 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from datetime import datetime
 
 from pydantic import UUID4, EmailStr
+from sqlalchemy import asc
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
+
+from ctms.schemas import ContactSchema
 
 from .auth import hash_password
 from .database import Base
@@ -68,6 +72,44 @@ def _contact_base_query(db):
         .options(selectinload("newsletters"))
     )
 
+def get_bulk_contacts(
+    db: Session,
+    start_time: datetime,
+    end_time: Union[datetime, str],
+    limit: int,
+    after_email_id: UUID4 = None,
+):
+    """Get all the data for a bulk batched set of contacts."""
+    print(f"{start_time}\n{end_time}")
+    bulk_contacts = (
+        _contact_base_query(db)
+        .filter(
+            start_time <= Email.update_timestamp,
+            Email.update_timestamp < end_time,
+            Email.email_id != after_email_id,
+        )
+        .order_by(asc(Email.update_timestamp), asc(Email.email_id))
+        .limit(limit)
+        .all()
+    )
+
+    print(bulk_contacts)
+    if bulk_contacts is None:
+        return []
+
+    return [
+        ContactSchema.parse_obj(
+            {
+                "amo": email.amo,
+                "email": email,
+                "fxa": email.fxa,
+                "mofo": email.mofo,
+                "newsletters": email.newsletters,
+                "vpn_waitlist": email.vpn_waitlist,
+            }
+        )
+        for email in bulk_contacts
+    ]
 
 def get_email(db: Session, email_id: UUID4) -> Email:
     """Get an Email and all related data."""
