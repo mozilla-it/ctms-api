@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+=======
+import uuid
+>>>>>>> Updating typing
 from datetime import datetime
 <<<<<<< HEAD
 =======
@@ -81,16 +85,20 @@ def get_bulk_contacts(
     start_time: datetime,
     end_time: datetime,
     limit: int,
-    after_email_id: UUID4 = None,
+    after_email_id: str = None,
 ):
     """Get all the data for a bulk batched set of contacts."""
     print(f"{start_time}\n{end_time}")
+    print(f"after_email_id: {after_email_id}")
+    after_email_uuid = None
+    if after_email_id is not None:
+        after_email_uuid = uuid.UUID(after_email_id)
     bulk_contacts = (
         _contact_base_query(db)
         .filter(
             Email.update_timestamp >= start_time,
             Email.update_timestamp < end_time,
-            Email.email_id != after_email_id,
+            Email.email_id != after_email_uuid,
         )
         .order_by(asc(Email.update_timestamp), asc(Email.email_id))
         .limit(limit)
