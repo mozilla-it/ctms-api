@@ -1,5 +1,9 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from datetime import datetime
+<<<<<<< HEAD
+=======
+from typing import Dict, List, Optional
+>>>>>>> Updated logic for after and next processing with bulk reading
 
 from pydantic import UUID4, EmailStr
 from sqlalchemy import asc
@@ -75,7 +79,7 @@ def _contact_base_query(db):
 def get_bulk_contacts(
     db: Session,
     start_time: datetime,
-    end_time: Union[datetime, str],
+    end_time: datetime,
     limit: int,
     after_email_id: UUID4 = None,
 ):
@@ -84,7 +88,7 @@ def get_bulk_contacts(
     bulk_contacts = (
         _contact_base_query(db)
         .filter(
-            start_time <= Email.update_timestamp,
+            Email.update_timestamp >= start_time,
             Email.update_timestamp < end_time,
             Email.email_id != after_email_id,
         )
@@ -93,7 +97,6 @@ def get_bulk_contacts(
         .all()
     )
 
-    print(bulk_contacts)
     if bulk_contacts is None:
         return []
 

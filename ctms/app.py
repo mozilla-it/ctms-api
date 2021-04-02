@@ -1,9 +1,10 @@
 import base64
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
+import dateutil.parser
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Response
 from fastapi.responses import RedirectResponse
@@ -183,36 +184,63 @@ def get_contacts_by_ids(
     ]
 
 
+def helper_for_bulk_encoded_details(after: str = None) -> Tuple[str, datetime]:
+    str_decode = base64.urlsafe_b64decode(after)
+    result_after_list = str(str_decode.decode("utf-8")).split(",")
+    after_email_id = result_after_list[0]
+    after_start_time = dateutil.parser.parse(result_after_list[1])
+    print(f"***\n(Prev_ID, Prev_TS):\t({after_email_id}, {after_start_time})\n***")
+    return after_email_id, after_start_time
+
+
 def get_bulk_contacts_by_timestamp(
     db: Session,
     start_time: datetime,
-    end_time: Union[datetime, str],
+    end_time: datetime,
     limit: int = 10,
     after: str = None,
 ) -> CTMSBulkResponse:
     """Get bulk contacts by time range."""
-    if after is None:
-        results = get_bulk_contacts(
-            db=db, start_time=start_time, end_time=end_time, limit=limit
-        )
-        print(results)
-        if len(results) > 0:
-            last_result: ContactSchema = results[-1]
-            str_encode = f"{last_result.email.email_id},{last_result.email.update_timestamp}".encode(
-                "utf-8"
-            )
-            result_after = base64.urlsafe_b64encode(str_encode)
-        else:
-            results = []
-            result_after = None
-    else:
-        # TODO: "after" logic
-        results = []
-        result_after = None
+    after_email_id = None
+    after_start_time = start_time
+    if after is not None:
+        after_email_id, after_start_time = helper_for_bulk_encoded_details(after=after)
 
-    # TODO: "next" logic
+    results = get_bulk_contacts(
+        db=db,
+        start_time=after_start_time,
+        end_time=end_time,
+        limit=limit,
+        after_email_id=after_email_id,
+    )
+    if len(results) > 0:
+        last_result: ContactSchema = results[-1]
+        last_email_id = last_result.email.email_id
+        last_update_time = last_result.email.update_timestamp
+        print(f"***\n(Last_ID, Last_TS):\t({last_email_id}, {last_update_time})\n***")
+        result_after_encoded = base64.urlsafe_b64encode(
+            f"{last_email_id},{last_update_time}".encode("utf-8")
+        )
+        url_safe_encoded_str = result_after_encoded.decode()
+        next_url = (
+            f"{get_settings().server_prefix}/bulk?"
+            f"start={start_time.isoformat()}"
+            f"&end={end_time.isoformat()}"
+            f"&limit={limit}"
+            f"&after={url_safe_encoded_str} "
+        )
+    else:
+        # No results/end
+        url_safe_encoded_str = None
+        next_url = None
+
     return CTMSBulkResponse(
-        start=start_time, end=end_time, limit=limit, items=results, after=result_after
+        start=start_time,
+        end=end_time,
+        limit=limit,
+        items=results,
+        after=url_safe_encoded_str,
+        next=next_url,
     )
 
 
@@ -419,7 +447,7 @@ def partial_update_ctms_contact(
 
 
 @app.get(
-    "/ctms/bulk/",
+    "/bulk",
     summary="Get all contacts within provided timeframe",
     response_model=CTMSBulkResponse,
     responses={
@@ -430,14 +458,12 @@ def partial_update_ctms_contact(
 )
 def read_ctms_in_bulk_by_timestamps_and_limit(
     start: datetime,
-    end: Optional[Union[datetime, str]] = None,
-    after: Optional[str] = None,
+    end: Optional[datetime] = datetime.now(timezone.utc),
     limit: int = 10,
+    after: Optional[str] = None,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
-    if end is None:
-        end = datetime.now(timezone.utc).isoformat()
     return get_bulk_contacts_by_timestamp(
         db=db, start_time=start, end_time=end, after=after, limit=limit
     )

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional, Set
+from typing import List, Literal, Optional, Set, Union
 from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, EmailStr, Field
@@ -146,12 +146,12 @@ class CTMSBulkResponse(BaseModel):
 
     """
 
-    next: Optional[AnyUrl]
+    next: Optional[Union[AnyUrl, str]]
     start: datetime
     end: datetime
     limit: int
-    items: List[Optional[CTMSResponse]]
     after: Optional[str] = None
+    items: List[Optional[CTMSResponse]]
 
 
 class IdentityResponse(BaseModel):
