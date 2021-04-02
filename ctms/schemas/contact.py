@@ -146,11 +146,11 @@ class CTMSBulkResponse(BaseModel):
 
     """
 
-    next: Optional[Union[AnyUrl, str]]
     start: datetime
     end: datetime
     limit: int
     after: Optional[str] = None
+    next: Optional[Union[AnyUrl, str]]
     items: List[Optional[CTMSResponse]]
 
 
