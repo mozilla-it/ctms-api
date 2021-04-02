@@ -29,23 +29,36 @@ def csv_reader(directory, f, modifier: Callable[[int, Dict[str, Any]], BaseModel
     with open(path, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         for i, line in enumerate(reader):
+            newline = {}
             for key, value in line.items():
-                if value == "":
-                    # dictreader has strings for all values, but we
-                    # want to override that behavior
-                    line[key] = None  # type: ignore[assignment]
-            yield modifier(i, line)
+                if value != "":
+                    newline[key] = value
+            yield modifier(i, newline)
+
+
+def _ensure_timestamps(line: dict):
+    create_ts = line.get("create_timestamp")
+    update_ts = line.get("update_timestamp")
+    if create_ts and update_ts:
+        return
+
+    if create_ts and not update_ts:
+        line["update_timestamp"] = create_ts
+    elif not create_ts and update_ts:
+        line["create_timestamp"] = update_ts
+    else:
+        line["create_timestamp"] = datetime.now(timezone.utc)
+        line["update_timestamp"] = datetime.now(timezone.utc)
 
 
 def _email_modifier(i: int, line: dict) -> EmailTableSchema:
+    _ensure_timestamps(line)
     line["primary_email"] = f"{line['primary_email']}@whatever.com"
-    now = datetime.now(timezone.utc)
-    line["create_timestamp"] = line["create_timestamp"] or now
-    line["update_timestamp"] = line["update_timestamp"] or now
     return EmailTableSchema(**line)
 
 
 def _amo_modifier(i: int, line: dict) -> AddOnsTableSchema:
+    _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
         key = re.sub("^amo_", "", key)
@@ -54,12 +67,10 @@ def _amo_modifier(i: int, line: dict) -> AddOnsTableSchema:
 
 
 def _fxa_modifier(i: int, line: dict) -> FirefoxAccountsTableSchema:
-    if line["fxa_primary_email"]:
+    _ensure_timestamps(line)
+    if line.get("fxa_primary_email"):
         line["fxa_primary_email"] = f"{line['fxa_primary_email']}@whatever.com"
-    line["fxa_id"] = line["fxa_id"] or str(uuid4())
-    line["created_date"] = line["create_timestamp"]
-    del line["create_timestamp"]
-    del line["update_timestamp"]
+    line.setdefault("fxa_id", str(uuid4()))
     newline = {}
     for key, val in line.items():
         if key != "fxa_id":
@@ -69,8 +80,7 @@ def _fxa_modifier(i: int, line: dict) -> FirefoxAccountsTableSchema:
 
 
 def _newsletter_modifier(i: int, line: dict) -> NewsletterTableSchema:
-    del line["create_timestamp"]
-    del line["update_timestamp"]
+    _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
         key = re.sub("^newsletter_", "", key)
@@ -79,8 +89,7 @@ def _newsletter_modifier(i: int, line: dict) -> NewsletterTableSchema:
 
 
 def _vpn_waitlist_modifier(i: int, line: dict) -> VpnWaitlistTableSchema:
-    del line["create_timestamp"]
-    del line["update_timestamp"]
+    _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
         key = re.sub("^vpn_waitlist_", "", key)

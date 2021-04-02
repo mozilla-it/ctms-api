@@ -102,6 +102,16 @@ class AddOnsTableSchema(AddOnsSchema):
         description=EMAIL_ID_DESCRIPTION,
         example=EMAIL_ID_EXAMPLE,
     )
+    create_timestamp: datetime = Field(
+        default=None,
+        description="AMO data creation timestamp",
+        example="2020-12-05T19:21:50.908000+00:00",
+    )
+    update_timestamp: datetime = Field(
+        default=None,
+        description="AMO data update timestamp",
+        example="2021-02-04T15:36:57.511000+00:00",
+    )
 
     @validator("last_login", pre=True)
     def convert_from_empty(cls, value):  # pylint:disable = E0213

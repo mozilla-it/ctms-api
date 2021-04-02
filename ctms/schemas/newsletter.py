@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal, Optional
 
 from pydantic import UUID4, Field, HttpUrl
@@ -50,6 +51,16 @@ class NewsletterTableSchema(NewsletterBase):
     email_id: UUID4 = Field(
         description=EMAIL_ID_DESCRIPTION,
         example=EMAIL_ID_EXAMPLE,
+    )
+    create_timestamp: datetime = Field(
+        default=None,
+        description="Newsletter subscription data creation timestamp",
+        example="2020-12-05T19:21:50.908000+00:00",
+    )
+    update_timestamp: datetime = Field(
+        default=None,
+        description="Newsletter subscription data update timestamp",
+        example="2021-02-04T15:36:57.511000+00:00",
     )
 
     class Config:
