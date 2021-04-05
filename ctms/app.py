@@ -467,8 +467,6 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     )
 
 
-
-
 @app.get(
     "/identities",
     summary="Get identities associated with alternate IDs",

@@ -151,7 +151,7 @@ class CTMSBulkResponse(BaseModel):
     limit: int
     after: Optional[str] = None
     next: Optional[Union[AnyUrl, str]] = None
-    items: List[Optional[CTMSResponse]] 
+    items: List[Optional[CTMSResponse]]
 
 
 class IdentityResponse(BaseModel):
