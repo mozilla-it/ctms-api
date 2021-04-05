@@ -91,12 +91,10 @@ class EmailSchema(EmailBase):
 
 class EmailTableSchema(EmailSchema):
     create_timestamp: datetime = Field(
-        default=None,
         description="Contact creation date, CreatedDate in Salesforce",
         example="2020-03-28T15:41:00.000Z",
     )
     update_timestamp: datetime = Field(
-        default=None,
         description="Contact last modified date, LastModifiedDate in Salesforce",
         example="2021-01-28T21:26:57.511Z",
     )
