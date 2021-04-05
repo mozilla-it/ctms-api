@@ -103,12 +103,10 @@ class AddOnsTableSchema(AddOnsSchema):
         example=EMAIL_ID_EXAMPLE,
     )
     create_timestamp: datetime = Field(
-        default=None,
         description="AMO data creation timestamp",
         example="2020-12-05T19:21:50.908000+00:00",
     )
     update_timestamp: datetime = Field(
-        default=None,
         description="AMO data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
     )
