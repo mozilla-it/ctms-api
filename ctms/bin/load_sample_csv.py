@@ -53,7 +53,7 @@ def _ensure_timestamps(line: dict):
 
 def _email_modifier(i: int, line: dict) -> EmailTableSchema:
     _ensure_timestamps(line)
-    line["primary_email"] = f"{line['primary_email']}@whatever.com"
+    line["primary_email"] = f"{line['primary_email']}@example.com"
     return EmailTableSchema(**line)
 
 
@@ -69,7 +69,7 @@ def _amo_modifier(i: int, line: dict) -> AddOnsTableSchema:
 def _fxa_modifier(i: int, line: dict) -> FirefoxAccountsTableSchema:
     _ensure_timestamps(line)
     if line.get("fxa_primary_email"):
-        line["fxa_primary_email"] = f"{line['fxa_primary_email']}@whatever.com"
+        line["fxa_primary_email"] = f"{line['fxa_primary_email']}@example.com"
     line.setdefault("fxa_id", str(uuid4()))
     newline = {}
     for key, val in line.items():
