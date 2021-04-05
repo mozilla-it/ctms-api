@@ -88,8 +88,6 @@ def get_bulk_contacts(
     after_email_id: str = None,
 ):
     """Get all the data for a bulk batched set of contacts."""
-    print(f"{start_time}\n{end_time}")
-    print(f"after_email_id: {after_email_id}")
     after_email_uuid = None
     if after_email_id is not None:
         after_email_uuid = uuid.UUID(after_email_id)

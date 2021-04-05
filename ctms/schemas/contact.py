@@ -150,8 +150,8 @@ class CTMSBulkResponse(BaseModel):
     end: datetime
     limit: int
     after: Optional[str] = None
-    next: Optional[Union[AnyUrl, str]]
-    items: List[Optional[CTMSResponse]]
+    next: Optional[Union[AnyUrl, str]] = None
+    items: List[Optional[CTMSResponse]] 
 
 
 class IdentityResponse(BaseModel):

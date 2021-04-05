@@ -189,7 +189,6 @@ def helper_for_bulk_encoded_details(after: str = None) -> Tuple[str, datetime]:
     result_after_list = str(str_decode.decode("utf-8")).split(",")
     after_email_id = result_after_list[0]
     after_start_time = dateutil.parser.parse(result_after_list[1])
-    print(f"***\n(Prev_ID, Prev_TS):\t({after_email_id}, {after_start_time})\n***")
     return after_email_id, after_start_time
 
 
@@ -217,7 +216,6 @@ def get_bulk_contacts_by_timestamp(
         last_result: ContactSchema = results[-1]
         last_email_id = last_result.email.email_id
         last_update_time = last_result.email.update_timestamp
-        print(f"***\n(Last_ID, Last_TS):\t({last_email_id}, {last_update_time})\n***")
         result_after_encoded = base64.urlsafe_b64encode(
             f"{last_email_id},{last_update_time}".encode("utf-8")
         )
@@ -459,7 +457,7 @@ def partial_update_ctms_contact(
 def read_ctms_in_bulk_by_timestamps_and_limit(
     start: datetime,
     end: Optional[datetime] = datetime.now(timezone.utc),
-    limit: int = 10,
+    limit: Optional[int] = 10,
     after: Optional[str] = None,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
@@ -469,12 +467,6 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     )
 
 
-# return response:
-#     next: Optional[AnyUrl]
-#     start: datetime
-#     end: datetime
-#     limit: int
-#     items: Optional[List[CTMSResponse]]
 
 
 @app.get(
