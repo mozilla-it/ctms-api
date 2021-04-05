@@ -613,7 +613,7 @@ def test_create_basic_with_email_collision(post_contact):
 
     def _change_primary_email(contact):
         contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-        contact.email.primary_email = "foo@bar.com"
+        contact.email.primary_email = "foo@example.com"
         return contact
 
     saved_contacts, _, _ = post_contact(
@@ -747,7 +747,7 @@ def test_create_or_update_change_primary_email(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
     def _change_email(contact):
-        contact.email.primary_email = "something-new@whatever.com"
+        contact.email.primary_email = "something-new@example.com"
         return contact
 
     saved_contacts, sample, email_id = put_contact(
@@ -801,7 +801,7 @@ def test_create_or_update_with_email_collision(put_contact):
 
     def _change_primary_email(contact):
         contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-        contact.email.primary_email = "foo@bar.com"
+        contact.email.primary_email = "foo@example.com"
         return contact
 
     saved_contacts, _, _ = put_contact(
@@ -835,7 +835,7 @@ def _un_amo(contact):
 
 
 def _change_email(contact):
-    contact.email.primary_email = "something-new@some-website.com"
+    contact.email.primary_email = "something-new@example.com"
 
 
 _test_get_put_modifiers = [

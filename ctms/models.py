@@ -120,7 +120,7 @@ class AmoAccount(Base):
     email_opt_in = Column(Boolean)
     language = Column(String(5))
     last_login = Column(Date)
-    location = Column(String(10))
+    location = Column(String(255))
     profile_url = Column(String(40))
     user = Column(Boolean)
     user_id = Column(String(40))

@@ -1,4 +1,4 @@
-from .addons import AddOnsInSchema, AddOnsSchema
+from .addons import AddOnsInSchema, AddOnsSchema, AddOnsTableSchema
 from .api_client import ApiClientSchema
 from .contact import (
     ContactInSchema,
@@ -8,11 +8,15 @@ from .contact import (
     CTMSSingleResponse,
     IdentityResponse,
 )
-from .email import EmailInSchema, EmailPutSchema, EmailSchema
-from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
+from .email import EmailInSchema, EmailPutSchema, EmailSchema, EmailTableSchema
+from .fxa import (
+    FirefoxAccountsInSchema,
+    FirefoxAccountsSchema,
+    FirefoxAccountsTableSchema,
+)
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import NewsletterInSchema, NewsletterSchema
-from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
+from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
+from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema, VpnWaitlistTableSchema
 from .web import (
     BadRequestResponse,
     NotFoundResponse,

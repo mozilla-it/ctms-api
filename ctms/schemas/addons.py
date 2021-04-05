@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import Field
+from pydantic import UUID4, Field, validator
 
 from .base import ComparableBase
+from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class AddOnsBase(ComparableBase):
@@ -46,7 +47,7 @@ class AddOnsBase(ComparableBase):
     )
     location: Optional[str] = Field(
         default=None,
-        max_length=10,
+        max_length=255,
         description="Free-text location on AMO, AMO_Location__c in Salesforce",
         example="California",
     )
@@ -93,3 +94,29 @@ class AddOnsSchema(AddOnsBase):
         description="AMO data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
     )
+
+
+class AddOnsTableSchema(AddOnsSchema):
+
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )
+    create_timestamp: datetime = Field(
+        description="AMO data creation timestamp",
+        example="2020-12-05T19:21:50.908000+00:00",
+    )
+    update_timestamp: datetime = Field(
+        description="AMO data update timestamp",
+        example="2021-02-04T15:36:57.511000+00:00",
+    )
+
+    @validator("last_login", pre=True)
+    def convert_from_empty(cls, value):  # pylint:disable = E0213
+        if isinstance(value, str):
+            if not value:
+                return None
+        return value
+
+    class Config:
+        extra = "forbid"
