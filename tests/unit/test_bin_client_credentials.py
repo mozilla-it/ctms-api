@@ -8,11 +8,6 @@ from ctms.models import ApiClient
 
 
 @pytest.fixture
-def settings():
-    return Settings()
-
-
-@pytest.fixture
 def existing_client(dbsession):
     client = ApiClient(
         client_id="id_existing", email="existing@example.com", hashed_secret="password"
