@@ -26,6 +26,7 @@ from .crud import (
     get_contact_by_email_id,
     get_email,
     get_emails_by_any_id,
+    update_contact,
 )
 from .database import get_db_engine
 from .models import Email
@@ -35,6 +36,7 @@ from .schemas import (
     ApiClientSchema,
     BadRequestResponse,
     ContactInSchema,
+    ContactPatchSchema,
     ContactPutSchema,
     ContactSchema,
     CTMSResponse,
@@ -344,6 +346,38 @@ def create_or_update_ctms_contact(
                 detail="Contact with primary_email or basket_token already exists",
             ) from e
         raise e from e
+    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+
+
+@app.patch(
+    "/ctms/{email_id}",
+    summary="""Partially update a contact. Provided data will be updated, and omitted
+               data will keep existing values.""",
+    responses={
+        409: {"model": BadRequestResponse},
+        404: {"model": NotFoundResponse},
+    },
+    tags=["Public"],
+)
+def partial_update_ctms_contact(
+    contact: ContactPatchSchema,
+    email_id: UUID = Path(..., title="The Email ID"),
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+):
+    if (
+        contact.email
+        and getattr(contact.email, "email_id")
+        and contact.email.email_id != email_id
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="cannot change email_id",
+        )
+    current_email = get_email_or_404(db, email_id)
+    update_data = contact.dict(exclude_unset=True)
+    update_contact(db, current_email, update_data)
+    db.commit()
     return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
 
 

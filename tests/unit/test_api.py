@@ -312,6 +312,15 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
             }
         },
     ),
+    (
+        "PATCH",
+        "/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c",
+        {
+            "email": {
+                "email_format": "T",
+            }
+        },
+    ),
 )
 
 
@@ -323,7 +332,7 @@ def test_unauthorized_api_call_fails(
     if method == "GET":
         resp = anon_client.get(path, params=params)
     else:
-        assert method in ("POST", "PUT")
+        assert method in ("PATCH", "POST", "PUT")
         resp = anon_client.request(method, path, json=params)
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
@@ -336,7 +345,7 @@ def test_authorized_api_call_succeeds(client, example_contact, method, path, par
         resp = client.get(path, params=params)
         assert resp.status_code == 200
     else:
-        assert method in ("POST", "PUT")
+        assert method in ("PATCH", "POST", "PUT")
         resp = client.request(method, path, json=params)
         assert resp.status_code == 303
 
