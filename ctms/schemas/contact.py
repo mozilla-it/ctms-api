@@ -128,6 +128,21 @@ class CTMSResponse(BaseModel):
     vpn_waitlist: VpnWaitlistSchema
 
 
+class CTMSOptionalResponse(BaseModel):
+    """
+    Response for GET /ctms/ by alternate IDs
+
+    Similar to ContactSchema, but groups are required
+    """
+
+    amo: Optional[AddOnsSchema] = None
+    email: Optional[EmailSchema] = None
+    fxa: Optional[FirefoxAccountsSchema] = None
+    mofo: Optional[MozillaFoundationSchema] = None
+    newsletters: Optional[List[NewsletterSchema]] = None
+    vpn_waitlist: Optional[VpnWaitlistSchema] = None
+
+
 class CTMSSingleResponse(CTMSResponse):
     """
     Response for /ctms/<email_id>
@@ -151,7 +166,7 @@ class CTMSBulkResponse(BaseModel):
     limit: int
     after: Optional[str] = None
     next: Optional[Union[AnyUrl, str]] = None
-    items: List[Optional[CTMSResponse]]
+    items: List[Optional[CTMSOptionalResponse]]
 
 
 class IdentityResponse(BaseModel):
