@@ -19,7 +19,7 @@ def test_input_io_can_finalize():
     ios.finalize()
 
 
-def test_input_io_rejects_if_emptyy():
+def test_input_io_rejects_if_empty():
     ios = InputIOs()
     with pytest.raises(BaseException) as e:
         ios.finalize()
