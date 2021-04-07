@@ -142,3 +142,8 @@ def client(anon_client):
     app.dependency_overrides[get_api_client] = test_api_client
     yield anon_client
     del app.dependency_overrides[get_api_client]
+
+
+@pytest.fixture
+def settings():
+    return Settings()

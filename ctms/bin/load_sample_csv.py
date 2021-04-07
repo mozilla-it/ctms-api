@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict
 from uuid import uuid4
 
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.engine import Connection
 
 from ctms import config
 from ctms.database import get_db_engine
@@ -97,7 +97,7 @@ def _vpn_waitlist_modifier(i: int, line: dict) -> VpnWaitlistTableSchema:
     return VpnWaitlistTableSchema(**newline)
 
 
-def main(db: Session, cfg: config.Settings, test_args=None) -> int:
+def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     parser = argparse.ArgumentParser(
         description="""
         Load csv dumps of bigquery into the db. This requires...
@@ -105,6 +105,9 @@ def main(db: Session, cfg: config.Settings, test_args=None) -> int:
     )
     parser.add_argument(
         "-d", "--dir", help="Directory containing the csv files.", required=True
+    )
+    parser.add_argument(
+        "-b", "--batch-size", help="Maximum size of insert batch.", default=1000
     )
 
     args = parser.parse_args(args=test_args)
@@ -127,7 +130,7 @@ def main(db: Session, cfg: config.Settings, test_args=None) -> int:
         print(e)
         return 1
 
-    ingester = Ingester(inputs, session)
+    ingester = Ingester(inputs, db, args.batch_size)
     ingester.run()
 
     return 0
@@ -138,12 +141,9 @@ if __name__ == "__main__":
 
     # Get the database
     config_settings = config.Settings()
-    engine, session_factory = get_db_engine(config_settings)
-    session = session_factory()
+    engine, _ = get_db_engine(config_settings)
 
-    try:
-        ret = main(session, config_settings)  # pylint:disable = C0103
-    finally:
-        session.close()
+    with engine.connect() as connection:
+        ret = main(connection, config_settings)  # pylint:disable = C0103
 
     sys.exit(ret)
