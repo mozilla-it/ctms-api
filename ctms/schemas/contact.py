@@ -104,13 +104,36 @@ class ContactInSchema(ContactInBase):
 
 
 class ContactPutSchema(ContactInBase):
-    """A contact as provided by callers when using POST. This is nearly identical to the ContactInSchema but does require an email_id."""
+    """A contact as provided by callers when using PUT. This is nearly identical to the ContactInSchema but does require an email_id."""
 
     email: EmailPutSchema
 
 
-class ContactPatchSchema(ContactInBase):
+class ContactPatchSchema(ComparableBase):
+    """A contact provided by callers when using PATCH.
+
+    This is nearly identical to ContactInSchema, but almost everything
+    is optional, and some values can be action strings instead of lists or
+    objects.
+    """
+
+    amo: Optional[AddOnsInSchema]
     email: Optional[EmailPatchSchema]
+    fxa: Optional[FirefoxAccountsInSchema]
+    mofo: Optional[MozillaFoundationInSchema]
+    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
+    vpn_waitlist: Optional[VpnWaitlistInSchema]
+
+    class Config:
+        fields = {
+            "newsletters": {
+                "description": (
+                    "List of newsletters to add or update, or 'UNSUBSCRIBE' to"
+                    " unsubscribe from all."
+                ),
+                "example": [{"name": "firefox-welcome", "subscribed": False}],
+            }
+        }
 
 
 class CTMSResponse(BaseModel):

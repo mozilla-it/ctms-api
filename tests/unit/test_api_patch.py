@@ -409,3 +409,13 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, maximal_contact):
     actual = resp.json()
     assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
     assert not any(nl["name"] == unknown_name for nl in actual["newsletters"])
+
+
+def test_patch_unsubscribe_all(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    patch_data = {"newsletters": "UNSUBSCRIBE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
+    assert all(not nl["subscribed"] for nl in actual["newsletters"])
