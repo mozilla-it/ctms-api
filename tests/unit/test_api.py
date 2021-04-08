@@ -1,9 +1,15 @@
 """pytest tests for API functionality"""
+import urllib.parse
+from datetime import timedelta
 from typing import Any, Callable, Optional, Tuple
 from uuid import UUID, uuid4
 
 import pytest
 
+from ctms.app import (
+    compressor_for_bulk_encoded_details,
+    extractor_for_bulk_encoded_details,
+)
 from ctms.crud import (
     get_amo_by_email_id,
     get_contacts_by_any_id,
@@ -14,6 +20,40 @@ from ctms.crud import (
 )
 from ctms.sample_data import SAMPLE_CONTACTS
 from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
+
+
+def test_get_ctms_bulk_by_timerange(
+    client, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+    first_contact = sorted_list[0]
+    last_contact = sorted_list[-1]
+    after = compressor_for_bulk_encoded_details(first_contact)
+    limit = 1
+    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start_time = urllib.parse.quote_plus(start.isoformat())
+    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end_time = urllib.parse.quote_plus(end.isoformat())
+    url = f"/bulk?start={start_time}&end={end_time}&limit={limit}&after={after}"
+    resp = client.get(
+        f"/bulk?start={start_time}&end={end_time}&limit={limit}&after={after}"
+    )
+    assert resp.status_code == 200
+    results = resp.json()
+    assert "start" in results
+    assert "end" in results
+    assert "limit" in results
+    assert "after" in results
+    assert "next" in results
+    assert "items" in results
+    assert len(results["items"]) > 0
+    dict_contact_expected = sorted_list[1].dict()
+    dict_contact_actual = ContactSchema.parse_obj(results["items"][0]).dict()
+    assert dict_contact_expected == dict_contact_actual
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -320,6 +360,11 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
                 "email_format": "T",
             }
         },
+    ),
+    (
+        "GET",
+        "/bulk?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+        None,
     ),
 )
 

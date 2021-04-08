@@ -184,12 +184,21 @@ def get_contacts_by_ids(
     ]
 
 
-def helper_for_bulk_encoded_details(after: str = None) -> Tuple[str, datetime]:
+def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
     str_decode = base64.urlsafe_b64decode(after)
     result_after_list = str(str_decode.decode("utf-8")).split(",")
     after_email_id = result_after_list[0]
     after_start_time = dateutil.parser.parse(result_after_list[1])
     return after_email_id, after_start_time
+
+
+def compressor_for_bulk_encoded_details(last_result: ContactSchema):
+    last_email_id = last_result.email.email_id
+    last_update_time = last_result.email.update_timestamp
+    result_after_encoded = base64.urlsafe_b64encode(
+        f"{last_email_id},{last_update_time}".encode("utf-8")
+    )
+    return result_after_encoded.decode()
 
 
 def get_bulk_contacts_by_timestamp(
@@ -203,7 +212,9 @@ def get_bulk_contacts_by_timestamp(
     after_email_id = None
     after_start_time = start_time
     if after is not None:
-        after_email_id, after_start_time = helper_for_bulk_encoded_details(after=after)
+        after_email_id, after_start_time = extractor_for_bulk_encoded_details(
+            after=after
+        )
 
     results = get_bulk_contacts(
         db=db,
@@ -214,12 +225,7 @@ def get_bulk_contacts_by_timestamp(
     )
     if len(results) > 0:
         last_result: ContactSchema = results[-1]
-        last_email_id = last_result.email.email_id
-        last_update_time = last_result.email.update_timestamp
-        result_after_encoded = base64.urlsafe_b64encode(
-            f"{last_email_id},{last_update_time}".encode("utf-8")
-        )
-        url_safe_encoded_str = result_after_encoded.decode()
+        url_safe_encoded_str = compressor_for_bulk_encoded_details(last_result)
         next_url = (
             f"{get_settings().server_prefix}/bulk?"
             f"start={start_time.isoformat()}"

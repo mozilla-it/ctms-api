@@ -1,13 +1,6 @@
-<<<<<<< HEAD
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-=======
 import uuid
->>>>>>> Updating typing
 from datetime import datetime
-<<<<<<< HEAD
-=======
-from typing import Dict, List, Optional
->>>>>>> Updated logic for after and next processing with bulk reading
 
 from pydantic import UUID4, EmailStr
 from sqlalchemy import asc
