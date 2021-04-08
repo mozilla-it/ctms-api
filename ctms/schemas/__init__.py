@@ -2,13 +2,20 @@ from .addons import AddOnsInSchema, AddOnsSchema, AddOnsTableSchema
 from .api_client import ApiClientSchema
 from .contact import (
     ContactInSchema,
+    ContactPatchSchema,
     ContactPutSchema,
     ContactSchema,
     CTMSResponse,
     CTMSSingleResponse,
     IdentityResponse,
 )
-from .email import EmailInSchema, EmailPutSchema, EmailSchema, EmailTableSchema
+from .email import (
+    EmailInSchema,
+    EmailPatchSchema,
+    EmailPutSchema,
+    EmailSchema,
+    EmailTableSchema,
+)
 from .fxa import (
     FirefoxAccountsInSchema,
     FirefoxAccountsSchema,

@@ -1,10 +1,11 @@
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pydantic import UUID4, EmailStr
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .auth import hash_password
+from .database import Base
 from .models import (
     AmoAccount,
     ApiClient,
@@ -68,9 +69,14 @@ def _contact_base_query(db):
     )
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID4):
-    """Get all the data for a contact."""
-    email = _contact_base_query(db).filter(Email.email_id == email_id).one_or_none()
+def get_email(db: Session, email_id: UUID4) -> Email:
+    """Get an Email and all related data."""
+    return _contact_base_query(db).filter(Email.email_id == email_id).one_or_none()
+
+
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Dict:
+    """Get all the data for a contact, as a dict."""
+    email = get_email(db, email_id)
     if email is None:
         return None
     return {
@@ -83,7 +89,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4):
     }
 
 
-def get_contacts_by_any_id(
+def get_emails_by_any_id(
     db: Session,
     email_id: Optional[UUID4] = None,
     primary_email: Optional[EmailStr] = None,
@@ -94,9 +100,9 @@ def get_contacts_by_any_id(
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
-) -> List[Dict]:
+) -> List[Email]:
     """
-    Get all the data for multiple contacts by IDs.
+    Get all the data for multiple contacts by IDs as a list of Email instances.
 
     Newsletters are retrieved in batches of 500 email_ids, so it will be two
     queries for most calls.
@@ -139,9 +145,41 @@ def get_contacts_by_any_id(
         statement = statement.join(Email.fxa).filter(
             FirefoxAccount.primary_email == fxa_primary_email
         )
-    results = statement.all()
+    return statement.all()
+
+
+def get_contacts_by_any_id(
+    db: Session,
+    email_id: Optional[UUID4] = None,
+    primary_email: Optional[EmailStr] = None,
+    basket_token: Optional[UUID4] = None,
+    sfdc_id: Optional[str] = None,
+    mofo_contact_id: Optional[str] = None,
+    mofo_email_id: Optional[str] = None,
+    amo_user_id: Optional[str] = None,
+    fxa_id: Optional[str] = None,
+    fxa_primary_email: Optional[EmailStr] = None,
+) -> List[Dict]:
+    """
+    Get all the data for multiple contacts by ID as a list of dicts.
+
+    Newsletters are retrieved in batches of 500 email_ids, so it will be two
+    queries for most calls.
+    """
+    emails = get_emails_by_any_id(
+        db,
+        email_id,
+        primary_email,
+        basket_token,
+        sfdc_id,
+        mofo_contact_id,
+        mofo_email_id,
+        amo_user_id,
+        fxa_id,
+        fxa_primary_email,
+    )
     data = []
-    for email in results:
+    for email in emails:
         data.append(
             {
                 "amo": email.amo,
@@ -155,7 +193,7 @@ def get_contacts_by_any_id(
     return data
 
 
-def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema):
+def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema) -> None:
     if amo.is_default():
         return
     db_amo = AmoAccount(email_id=email_id, **amo.dict())
@@ -186,7 +224,7 @@ def create_or_update_email(db: Session, email: EmailPutSchema):
     db.execute(stmt)
 
 
-def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema):
+def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema) -> None:
     if fxa.is_default():
         return
     db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
@@ -206,7 +244,7 @@ def create_or_update_fxa(
     db.execute(stmt)
 
 
-def create_mofo(db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema):
+def create_mofo(db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema) -> None:
     if mofo.is_default():
         return
     db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.dict())
@@ -232,7 +270,7 @@ def create_or_update_mofo(
 
 def create_vpn_waitlist(
     db: Session, email_id: UUID4, vpn_waitlist: VpnWaitlistInSchema
-):
+) -> None:
     if vpn_waitlist.is_default():
         return
     db_vpn_waitlist = VpnWaitlist(email_id=email_id, **vpn_waitlist.dict())
@@ -303,6 +341,47 @@ def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSc
     create_or_update_mofo(db, email_id, contact.mofo)
     create_or_update_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     create_or_update_newsletters(db, email_id, contact.newsletters)
+
+
+def update_contact(db: Session, email: Email, update_data: dict) -> None:
+    """Update an existing contact using a sparse update dictionary"""
+    email_id = email.email_id
+
+    def update_orm(orm: Base, update_dict: dict):
+        """Update a SQLAlchemy model from an update dictionary."""
+        for key, value in update_dict.items():
+            setattr(orm, key, value)
+
+    if "email" in update_data:
+        update_orm(email, update_data["email"])
+
+    simple_groups: Dict[
+        str, Tuple[Callable[[Session, UUID4, Any], None], Type[Any]]
+    ] = {
+        "amo": (create_amo, AddOnsInSchema),
+        "fxa": (create_fxa, FirefoxAccountsInSchema),
+        "mofo": (create_mofo, MozillaFoundationInSchema),
+        "vpn_waitlist": (create_vpn_waitlist, VpnWaitlistInSchema),
+    }
+    for group_name, (creator, schema) in simple_groups.items():
+        if group_name in update_data:
+            existing = getattr(email, group_name)
+            if existing is None:
+                creator(db, email_id, schema(**update_data[group_name]))
+            else:
+                update_orm(existing, update_data[group_name])
+                if schema.from_orm(existing).is_default():
+                    db.delete(existing)
+
+    if "newsletters" in update_data:
+        existing = {}
+        for newsletter in getattr(email, "newsletters", []):
+            existing[newsletter.name] = newsletter
+        for nl_update in update_data["newsletters"]:
+            if nl_update["name"] in existing:
+                update_orm(existing[nl_update["name"]], nl_update)
+            elif nl_update.get("subscribed", True):
+                create_newsletter(db, email_id, NewsletterInSchema(**nl_update))
 
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):

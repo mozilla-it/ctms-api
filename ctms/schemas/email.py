@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import UUID4, EmailStr, Field
+from pydantic import UUID4, EmailStr, Field, validator
 
 from .base import ComparableBase
 
@@ -13,11 +13,7 @@ EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
 class EmailBase(ComparableBase):
     """Data that is included in input/output/db of a primary_email and such."""
 
-    primary_email: EmailStr = Field(
-        ...,
-        description="Contact email address, Email in Salesforce",
-        example="contact@example.com",
-    )
+    primary_email: EmailStr
     basket_token: Optional[UUID] = Field(
         default=None,
         description="Basket token, Token__c in Salesforce",
@@ -70,6 +66,12 @@ class EmailBase(ComparableBase):
 
     class Config:
         orm_mode = True
+        fields = {
+            "primary_email": {
+                "description": "Contact email address, Email in Salesforce",
+                "example": "contact@example.com",
+            }
+        }
 
 
 class EmailSchema(EmailBase):
@@ -120,3 +122,15 @@ class EmailPutSchema(EmailBase):
         description=EMAIL_ID_DESCRIPTION,
         example=EMAIL_ID_EXAMPLE,
     )
+
+
+class EmailPatchSchema(EmailInSchema):
+    """Nearly identical to EmailInSchema but nothing is required."""
+
+    primary_email: Optional[EmailStr]
+
+    @validator("primary_email")
+    @classmethod
+    def prevent_none(cls, value):
+        assert value is not None, "primary_email may not be None"
+        return value

@@ -5,7 +5,13 @@ from pydantic import BaseModel, EmailStr, Field
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
-from .email import EmailBase, EmailInSchema, EmailPutSchema, EmailSchema
+from .email import (
+    EmailBase,
+    EmailInSchema,
+    EmailPatchSchema,
+    EmailPutSchema,
+    EmailSchema,
+)
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
@@ -100,6 +106,10 @@ class ContactPutSchema(ContactInBase):
     """A contact as provided by callers when using POST. This is nearly identical to the ContactInSchema but does require an email_id."""
 
     email: EmailPutSchema
+
+
+class ContactPatchSchema(ContactInBase):
+    email: Optional[EmailPatchSchema]
 
 
 class CTMSResponse(BaseModel):
