@@ -24,9 +24,11 @@ from .crud import (
     create_or_update_contact,
     get_api_client_by_id,
     get_contact_by_email_id,
-    get_contacts_by_any_id,
+    get_email,
+    get_emails_by_any_id,
 )
 from .database import get_db_engine
+from .models import Email
 from .monitor import check_database, get_version
 from .schemas import (
     AddOnsSchema,
@@ -87,15 +89,25 @@ def _token_settings(
     }
 
 
-def get_contact_or_404(db: Session, email_id) -> ContactSchema:
-    """
-    Get a contact by email_ID, or raise a 404 exception.
-
-    """
-    data = get_contact_by_email_id(db, email_id)
-    if data is None:
+def get_email_or_404(db: Session, email_id) -> Email:
+    """Get an email and related data by email_ID, or raise a 404 exception."""
+    email = get_email(db, email_id)
+    if email is None:
         raise HTTPException(status_code=404, detail="Unknown email_id")
-    return ContactSchema(**data)
+    return email
+
+
+def get_contact_or_404(db: Session, email_id) -> ContactSchema:
+    """Get a contact by email_ID, or raise a 404 exception."""
+    email = get_email_or_404(db, email_id)
+    return ContactSchema(
+        amo=email.amo,
+        email=email,
+        fxa=email.fxa,
+        mofo=email.mofo,
+        newsletters=email.newsletters,
+        vpn_waitlist=email.vpn_waitlist,
+    )
 
 
 def all_ids(
@@ -140,7 +152,7 @@ def get_contacts_by_ids(
     Callers are expected to set just one ID, but if multiple are set, a contact
     must match all IDs.
     """
-    rows = get_contacts_by_any_id(
+    rows = get_emails_by_any_id(
         db,
         email_id,
         primary_email,
@@ -152,7 +164,17 @@ def get_contacts_by_ids(
         fxa_id,
         fxa_primary_email,
     )
-    return [ContactSchema(**data) for data in rows]
+    return [
+        ContactSchema(
+            amo=email.amo,
+            email=email,
+            fxa=email.fxa,
+            mofo=email.mofo,
+            newsletters=email.newsletters,
+            vpn_waitlist=email.vpn_waitlist,
+        )
+        for email in rows
+    ]
 
 
 def get_api_client(
