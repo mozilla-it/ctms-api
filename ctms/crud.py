@@ -1,6 +1,6 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 import uuid
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pydantic import UUID4, EmailStr
 from sqlalchemy import asc
@@ -73,6 +73,7 @@ def _contact_base_query(db):
         .options(selectinload("newsletters"))
     )
 
+
 def get_bulk_contacts(
     db: Session,
     start_time: datetime,
@@ -112,6 +113,7 @@ def get_bulk_contacts(
         )
         for email in bulk_contacts
     ]
+
 
 def get_email(db: Session, email_id: UUID4) -> Email:
     """Get an Email and all related data."""
