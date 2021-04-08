@@ -191,7 +191,7 @@ def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
     return after_email_id, after_start_time
 
 
-def compressor_for_bulk_encoded_details(last_result: ContactSchema):
+def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
     last_email_id = last_result.email.email_id
     last_update_time = last_result.email.update_timestamp
     result_after_encoded = base64.urlsafe_b64encode(
@@ -224,8 +224,25 @@ def get_bulk_contacts_by_timestamp(
     )
     page_length = len(results)
     last_page = page_length < limit
-    if page_length > 0 and not last_page:
-        last_result: ContactSchema = results[-1]
+    if page_length > 0:
+        results = [
+            CTMSResponse(
+                amo=contact.amo or AddOnsSchema(),
+                email=contact.email or EmailSchema(),
+                fxa=contact.fxa or FirefoxAccountsSchema(),
+                mofo=contact.mofo or MozillaFoundationSchema(),
+                newsletters=contact.newsletters or [],
+                vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+            )
+            for contact in results
+        ]
+
+    if last_page:
+        # No results/end
+        url_safe_encoded_str = None
+        next_url = None
+    else:
+        last_result: CTMSResponse = results[-1]
         url_safe_encoded_str = compressor_for_bulk_encoded_details(last_result)
         next_url = (
             f"{get_settings().server_prefix}/updates?"
@@ -234,10 +251,6 @@ def get_bulk_contacts_by_timestamp(
             f"&limit={limit}"
             f"&after={url_safe_encoded_str} "
         )
-    else:
-        # No results/end
-        url_safe_encoded_str = None
-        next_url = None
 
     return CTMSBulkResponse(
         start=start_time,

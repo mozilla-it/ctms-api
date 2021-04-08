@@ -19,7 +19,12 @@ from ctms.crud import (
     get_vpn_by_email_id,
 )
 from ctms.sample_data import SAMPLE_CONTACTS
-from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
+from ctms.schemas import (
+    ContactInSchema,
+    ContactSchema,
+    CTMSResponse,
+    NewsletterInSchema,
+)
 
 
 def test_get_ctms_bulk_by_timerange(
@@ -49,7 +54,7 @@ def test_get_ctms_bulk_by_timerange(
     assert "items" in results
     assert len(results["items"]) > 0
     dict_contact_expected = sorted_list[1].dict()
-    dict_contact_actual = ContactSchema.parse_obj(results["items"][0]).dict()
+    dict_contact_actual = CTMSResponse.parse_obj(results["items"][0]).dict()
     assert dict_contact_expected == dict_contact_actual
     assert results["next"] is not None
 
