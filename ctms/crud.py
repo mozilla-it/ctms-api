@@ -7,8 +7,6 @@ from sqlalchemy import asc
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ctms.schemas import ContactSchema
-
 from .auth import hash_password
 from .database import Base
 from .models import (
@@ -25,6 +23,7 @@ from .schemas import (
     ApiClientSchema,
     ContactInSchema,
     ContactPutSchema,
+    ContactSchema,
     EmailInSchema,
     EmailPutSchema,
     FirefoxAccountsInSchema,

@@ -13,8 +13,6 @@ from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, scoped_session
 
-from ctms.schemas.contact import CTMSBulkResponse
-
 from . import config
 from .auth import (
     OAuth2ClientCredentials,
@@ -44,6 +42,7 @@ from .schemas import (
     ContactPatchSchema,
     ContactPutSchema,
     ContactSchema,
+    CTMSBulkResponse,
     CTMSResponse,
     CTMSSingleResponse,
     EmailSchema,
@@ -223,11 +222,13 @@ def get_bulk_contacts_by_timestamp(
         limit=limit,
         after_email_id=after_email_id,
     )
-    if len(results) > 0:
+    page_length = len(results)
+    last_page = page_length < limit
+    if page_length > 0 and not last_page:
         last_result: ContactSchema = results[-1]
         url_safe_encoded_str = compressor_for_bulk_encoded_details(last_result)
         next_url = (
-            f"{get_settings().server_prefix}/bulk?"
+            f"{get_settings().server_prefix}/updates?"
             f"start={start_time.isoformat()}"
             f"&end={end_time.isoformat()}"
             f"&limit={limit}"
@@ -243,7 +244,6 @@ def get_bulk_contacts_by_timestamp(
         end=end_time,
         limit=limit,
         items=results,
-        after=url_safe_encoded_str,
         next=next_url,
     )
 
@@ -451,7 +451,7 @@ def partial_update_ctms_contact(
 
 
 @app.get(
-    "/bulk",
+    "/updates",
     summary="Get all contacts within provided timeframe",
     response_model=CTMSBulkResponse,
     responses={

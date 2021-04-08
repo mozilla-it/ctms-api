@@ -129,12 +129,6 @@ class CTMSResponse(BaseModel):
 
 
 class CTMSOptionalResponse(BaseModel):
-    """
-    Response for GET /ctms/ by alternate IDs
-
-    Similar to ContactSchema, but groups are required
-    """
-
     amo: Optional[AddOnsSchema] = None
     email: Optional[EmailSchema] = None
     fxa: Optional[FirefoxAccountsSchema] = None
@@ -157,16 +151,15 @@ class CTMSSingleResponse(CTMSResponse):
 
 class CTMSBulkResponse(BaseModel):
     """
-    Response for GET /bulk_ctms/
+    Response for GET /updates/
 
     """
 
     start: datetime
     end: datetime
     limit: int
-    after: Optional[str] = None
     next: Optional[Union[AnyUrl, str]] = None
-    items: List[Optional[CTMSOptionalResponse]]
+    items: List[ContactSchema]
 
 
 class IdentityResponse(BaseModel):

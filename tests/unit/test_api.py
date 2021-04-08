@@ -38,22 +38,49 @@ def test_get_ctms_bulk_by_timerange(
     start_time = urllib.parse.quote_plus(start.isoformat())
     end = last_contact.email.update_timestamp + timedelta(hours=12)
     end_time = urllib.parse.quote_plus(end.isoformat())
-    url = f"/bulk?start={start_time}&end={end_time}&limit={limit}&after={after}"
-    resp = client.get(
-        f"/bulk?start={start_time}&end={end_time}&limit={limit}&after={after}"
-    )
+    url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
+    resp = client.get(url)
     assert resp.status_code == 200
     results = resp.json()
     assert "start" in results
     assert "end" in results
     assert "limit" in results
-    assert "after" in results
     assert "next" in results
     assert "items" in results
     assert len(results["items"]) > 0
     dict_contact_expected = sorted_list[1].dict()
     dict_contact_actual = ContactSchema.parse_obj(results["items"][0]).dict()
     assert dict_contact_expected == dict_contact_actual
+    assert results["next"] is not None
+
+
+def test_get_ctms_bulk_by_timerange_no_results(
+    client, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+    first_contact = sorted_list[0]
+    last_contact = sorted_list[-1]
+    after = compressor_for_bulk_encoded_details(last_contact)
+    limit = 1
+    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start_time = urllib.parse.quote_plus(start.isoformat())
+    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end_time = urllib.parse.quote_plus(end.isoformat())
+    url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
+    resp = client.get(url)
+    assert resp.status_code == 200
+    results = resp.json()
+    assert "start" in results
+    assert "end" in results
+    assert "limit" in results
+    assert "next" in results
+    assert "items" in results
+    assert len(results["items"]) == 0
+    assert results["next"] is None
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -363,7 +390,7 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
     ),
     (
         "GET",
-        "/bulk?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
         None,
     ),
 )
