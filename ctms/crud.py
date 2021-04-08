@@ -68,9 +68,14 @@ def _contact_base_query(db):
     )
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID4):
-    """Get all the data for a contact."""
-    email = _contact_base_query(db).filter(Email.email_id == email_id).one_or_none()
+def get_email(db: Session, email_id: UUID4) -> Email:
+    """Get an Email and all related data."""
+    return _contact_base_query(db).filter(Email.email_id == email_id).one_or_none()
+
+
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Dict:
+    """Get all the data for a contact, as a dict."""
+    email = get_email(db, email_id)
     if email is None:
         return None
     return {
@@ -83,7 +88,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4):
     }
 
 
-def get_contacts_by_any_id(
+def get_emails_by_any_id(
     db: Session,
     email_id: Optional[UUID4] = None,
     primary_email: Optional[EmailStr] = None,
@@ -94,9 +99,9 @@ def get_contacts_by_any_id(
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[EmailStr] = None,
-) -> List[Dict]:
+) -> List[Email]:
     """
-    Get all the data for multiple contacts by IDs.
+    Get all the data for multiple contacts by IDs as a list of Email instances.
 
     Newsletters are retrieved in batches of 500 email_ids, so it will be two
     queries for most calls.
@@ -139,9 +144,41 @@ def get_contacts_by_any_id(
         statement = statement.join(Email.fxa).filter(
             FirefoxAccount.primary_email == fxa_primary_email
         )
-    results = statement.all()
+    return statement.all()
+
+
+def get_contacts_by_any_id(
+    db: Session,
+    email_id: Optional[UUID4] = None,
+    primary_email: Optional[EmailStr] = None,
+    basket_token: Optional[UUID4] = None,
+    sfdc_id: Optional[str] = None,
+    mofo_contact_id: Optional[str] = None,
+    mofo_email_id: Optional[str] = None,
+    amo_user_id: Optional[str] = None,
+    fxa_id: Optional[str] = None,
+    fxa_primary_email: Optional[EmailStr] = None,
+) -> List[Dict]:
+    """
+    Get all the data for multiple contacts by ID as a list of dicts.
+
+    Newsletters are retrieved in batches of 500 email_ids, so it will be two
+    queries for most calls.
+    """
+    emails = get_emails_by_any_id(
+        db,
+        email_id,
+        primary_email,
+        basket_token,
+        sfdc_id,
+        mofo_contact_id,
+        mofo_email_id,
+        amo_user_id,
+        fxa_id,
+        fxa_primary_email,
+    )
     data = []
-    for email in results:
+    for email in emails:
         data.append(
             {
                 "amo": email.amo,
