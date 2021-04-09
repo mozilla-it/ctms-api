@@ -4,12 +4,16 @@ from uuid import uuid4
 
 import pytest
 
-from ctms.crud import get_email
+from ctms.crud import create_contact, get_email
 from ctms.schemas import (
+    AddOnsInSchema,
     AddOnsSchema,
+    ContactInSchema,
     CTMSResponse,
     EmailSchema,
+    FirefoxAccountsInSchema,
     FirefoxAccountsSchema,
+    MozillaFoundationInSchema,
     MozillaFoundationSchema,
     VpnWaitlistSchema,
 )
@@ -252,6 +256,59 @@ def test_patch_cannot_set_email_to_null(client, maximal_contact):
     }
 
 
+@pytest.mark.parametrize(
+    "group_name,key",
+    (
+        ("email", "primary_email"),
+        ("email", "basket_token"),
+        ("mofo", "mofo_email_id"),
+        ("fxa", "fxa_id"),
+    ),
+)
+def test_patch_error_on_id_conflict(
+    client, dbsession, maximal_contact, group_name, key
+):
+    """PATCH returns an error on ID conflicts, and makes none of the changes."""
+    conflict_id = str(uuid4())
+    conflicting_data = ContactInSchema(
+        amo=AddOnsInSchema(user_id=1337),
+        email=EmailSchema(
+            email_id=conflict_id,
+            primary_email="conflict@example.com",
+            basket_token=str(uuid4()),
+            sfdc_id=str(uuid4()),
+        ),
+        mofo=MozillaFoundationInSchema(
+            mofo_email_id=str(uuid4()),
+            mofo_contact_id=str(uuid4()),
+        ),
+        fxa=FirefoxAccountsInSchema(
+            fxa_id=1337, primary_email="fxa-conflict@example.com"
+        ),
+    )
+    create_contact(dbsession, conflict_id, conflicting_data)
+
+    existing_value = getattr(getattr(maximal_contact, group_name), key)
+    conflicting_value = getattr(getattr(conflicting_data, group_name), key)
+    assert existing_value
+    assert conflicting_value
+    assert existing_value != conflicting_value
+
+    patch_data = {group_name: {key: str(conflicting_value)}}
+    patch_data.setdefault("email", {})["first_name"] = "PATCHED"
+    patch_data["vpn_waitlist"] = {"geo": "XX"}
+
+    email_id = maximal_contact.email.email_id
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 409
+    assert resp.json() == {
+        "detail": (
+            "Contact with primary_email, basket_token, mofo_email_id, or fxa_id"
+            " already exists"
+        )
+    }
+
+
 def test_patch_to_subscribe(client, maximal_contact):
     """PATCH can subscribe to a single newsletter."""
     email_id = maximal_contact.email.email_id
@@ -352,3 +409,43 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, maximal_contact):
     actual = resp.json()
     assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
     assert not any(nl["name"] == unknown_name for nl in actual["newsletters"])
+
+
+def test_patch_unsubscribe_all(client, maximal_contact):
+    """PATCH with newsletters set to "UNSUBSCRIBE" unsubscribes all newsletters."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {"newsletters": "UNSUBSCRIBE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
+    assert all(not nl["subscribed"] for nl in actual["newsletters"])
+
+
+@pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo", "vpn_waitlist"))
+def test_patch_to_delete_group(client, maximal_contact, group_name):
+    """PATCH with a group set to "DELETE" resets the group to defaults."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {group_name: "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    defaults = {
+        "amo": AddOnsSchema(),
+        "fxa": FirefoxAccountsSchema(),
+        "mofo": MozillaFoundationSchema(),
+        "vpn_waitlist": VpnWaitlistSchema(),
+    }[group_name].dict()
+    assert actual[group_name] == defaults
+
+
+def test_patch_to_delete_deleted_group(client, minimal_contact):
+    """PATCH with a default group set to "DELETE" does nothing."""
+    email_id = minimal_contact.email.email_id
+    assert minimal_contact.mofo is None
+    patch_data = {"mofo": "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    default_mofo = MozillaFoundationSchema().dict()
+    assert actual["mofo"] == default_mofo

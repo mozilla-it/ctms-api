@@ -408,22 +408,30 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
     for group_name, (creator, schema) in simple_groups.items():
         if group_name in update_data:
             existing = getattr(email, group_name)
-            if existing is None:
-                creator(db, email_id, schema(**update_data[group_name]))
-            else:
-                update_orm(existing, update_data[group_name])
-                if schema.from_orm(existing).is_default():
+            if update_data[group_name] == "DELETE":
+                if existing:
                     db.delete(existing)
+            else:
+                if existing is None:
+                    creator(db, email_id, schema(**update_data[group_name]))
+                else:
+                    update_orm(existing, update_data[group_name])
+                    if schema.from_orm(existing).is_default():
+                        db.delete(existing)
 
     if "newsletters" in update_data:
-        existing = {}
-        for newsletter in getattr(email, "newsletters", []):
-            existing[newsletter.name] = newsletter
-        for nl_update in update_data["newsletters"]:
-            if nl_update["name"] in existing:
-                update_orm(existing[nl_update["name"]], nl_update)
-            elif nl_update.get("subscribed", True):
-                create_newsletter(db, email_id, NewsletterInSchema(**nl_update))
+        if update_data["newsletters"] == "UNSUBSCRIBE":
+            for newsletter in getattr(email, "newsletters", []):
+                update_orm(newsletter, {"subscribed": False})
+        else:
+            existing = {}
+            for newsletter in getattr(email, "newsletters", []):
+                existing[newsletter.name] = newsletter
+            for nl_update in update_data["newsletters"]:
+                if nl_update["name"] in existing:
+                    update_orm(existing[nl_update["name"]], nl_update)
+                elif nl_update.get("subscribed", True):
+                    create_newsletter(db, email_id, NewsletterInSchema(**nl_update))
 
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):

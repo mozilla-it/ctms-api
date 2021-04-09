@@ -459,7 +459,19 @@ def partial_update_ctms_contact(
     current_email = get_email_or_404(db, email_id)
     update_data = contact.dict(exclude_unset=True)
     update_contact(db, current_email, update_data)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:  # pylint:disable = W0703
+        db.rollback()
+        if isinstance(e, IntegrityError):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Contact with primary_email, basket_token, mofo_email_id,"
+                    " or fxa_id already exists"
+                ),
+            ) from e
+        raise
     return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
 
 

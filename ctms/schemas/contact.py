@@ -104,13 +104,46 @@ class ContactInSchema(ContactInBase):
 
 
 class ContactPutSchema(ContactInBase):
-    """A contact as provided by callers when using POST. This is nearly identical to the ContactInSchema but does require an email_id."""
+    """A contact as provided by callers when using PUT. This is nearly identical to the ContactInSchema but does require an email_id."""
 
     email: EmailPutSchema
 
 
-class ContactPatchSchema(ContactInBase):
+class ContactPatchSchema(ComparableBase):
+    """A contact provided by callers when using PATCH.
+
+    This is nearly identical to ContactInSchema, but almost everything
+    is optional, and some values can be action strings (like "DELETE" or
+    "UNSUBSCRIBE" instead of lists or objects.
+    """
+
+    amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]]
     email: Optional[EmailPatchSchema]
+    fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]]
+    mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
+    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
+    vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
+
+    class Config:
+        fields = {
+            "amo": {"description": 'Add-ons data to update, or "DELETE" to reset.'},
+            "fxa": {
+                "description": 'Firefox Accounts data to update, or "DELETE" to reset.'
+            },
+            "mofo": {
+                "description": 'Mozilla Foundation data to update, or "DELETE" to reset.'
+            },
+            "newsletters": {
+                "description": (
+                    "List of newsletters to add or update, or 'UNSUBSCRIBE' to"
+                    " unsubscribe from all."
+                ),
+                "example": [{"name": "firefox-welcome", "subscribed": False}],
+            },
+            "vpn_waitlist": {
+                "description": 'VPN Waitlist data to update, or "DELETE" to reset.'
+            },
+        }
 
 
 class CTMSResponse(BaseModel):
