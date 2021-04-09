@@ -429,6 +429,10 @@ def read_ctms_by_email_id(
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
+    return get_ctms_response_or_404(db, email_id)
+
+
+def get_ctms_response_or_404(db, email_id):
     contact = get_contact_or_404(db, email_id)
     return CTMSSingleResponse(
         amo=contact.amo or AddOnsSchema(),
@@ -449,6 +453,7 @@ def read_ctms_by_email_id(
 )
 def create_ctms_contact(
     contact: ContactInSchema,
+    response: Response,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
@@ -457,7 +462,12 @@ def create_ctms_contact(
     existing = get_contact_by_email_id(db, email_id)
     if existing:
         if ContactInSchema(**existing).idempotent_equal(contact):
-            return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+            # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+            response.headers[
+                "Location"
+            ] = f"{get_settings().server_prefix}/ctms/{email_id}"
+            response.status_code = 201
+            return get_ctms_response_or_404(db=db, email_id=email_id)
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact)
@@ -468,7 +478,10 @@ def create_ctms_contact(
         if isinstance(e, IntegrityError):
             raise HTTPException(status_code=409, detail="Contact already exists") from e
         raise e from e
-    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+    # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+    response.headers["Location"] = f"{get_settings().server_prefix}/ctms/{email_id}"
+    response.status_code = 201
+    return get_ctms_response_or_404(db=db, email_id=email_id)
 
 
 @app.put(
@@ -482,6 +495,7 @@ def create_ctms_contact(
 )
 def create_or_update_ctms_contact(
     contact: ContactPutSchema,
+    response: Response,
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
@@ -506,7 +520,10 @@ def create_or_update_ctms_contact(
                 detail="Contact with primary_email or basket_token already exists",
             ) from e
         raise e from e
-    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+    # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+    response.headers["Location"] = f"{get_settings().server_prefix}/ctms/{email_id}"
+    response.status_code = 201
+    return get_ctms_response_or_404(db=db, email_id=email_id)
 
 
 @app.patch(
@@ -521,6 +538,7 @@ def create_or_update_ctms_contact(
 )
 def partial_update_ctms_contact(
     contact: ContactPatchSchema,
+    response: Response,
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
@@ -551,7 +569,10 @@ def partial_update_ctms_contact(
                 ),
             ) from e
         raise
-    return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+    # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+    response.headers["Location"] = f"{get_settings().server_prefix}/ctms/{email_id}"
+    response.status_code = 201
+    return get_ctms_response_or_404(db=db, email_id=email_id)
 
 
 @app.get(
