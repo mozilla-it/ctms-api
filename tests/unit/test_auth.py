@@ -96,6 +96,23 @@ def test_post_token_succeeds_no_grant(anon_client, client_id_and_secret):
     assert resp.status_code == 200
 
 
+def test_post_token_succeeds_refresh_grant(
+    anon_client, test_token_settings, client_id_and_secret
+):
+    """If grant_type is refresh_token, the token grant is successful."""
+    client_id, client_secret = client_id_and_secret
+    resp = anon_client.post(
+        "/token",
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": None,
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+    )
+    assert resp.status_code == 200
+
+
 def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
     """If grant_type is omitted, getting a token fails."""
     resp = anon_client.post(
@@ -104,10 +121,11 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
         auth=HTTPBasicAuth(*client_id_and_secret),
     )
     assert resp.status_code == 422
+    pattern = "^(client_credentials|refresh_token)$"
     assert resp.json()["detail"][0] == {
-        "ctx": {"pattern": "client_credentials"},
+        "ctx": {"pattern": pattern},
         "loc": ["body", "grant_type"],
-        "msg": 'string does not match regex "client_credentials"',
+        "msg": f'string does not match regex "{pattern}"',
         "type": "value_error.str.regex",
     }
 
