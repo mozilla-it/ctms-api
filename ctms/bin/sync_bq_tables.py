@@ -4,6 +4,7 @@
 import argparse
 import re
 from datetime import datetime, timezone
+from time import monotonic
 from typing import Any, Callable, Dict
 from uuid import uuid4
 
@@ -23,15 +24,28 @@ from ctms.schemas import (
 )
 
 
-# TODO: this should probably return afunction that can be called to do this lazily
 def bq_reader(
     client: bigquery.Client,
     table: str,
     modifier: Callable[[Dict[str, Any]], BaseModel],
+    table_index: int,
+    total_tables: int,
+    report_frequency: int,
 ):
     query = f"SELECT * FROM `mozilla-cdp-prod.sfdc_exports.{table}`"
-    query_job_rows = client.query(query)
-    for row in query_job_rows:
+    query_job_rows = client.query(query).result()
+    total_rows = query_job_rows.total_rows
+    report_prefix = f"{table} (table: {table_index}/{total_tables})"
+    start = monotonic()
+    for i, row in enumerate(query_job_rows):
+        i = i + 1
+        if i % report_frequency == 0 or i == total_rows:
+            percent_done = int(i / total_rows * 100)
+            time_since_start = monotonic() - start
+            per_second = int(i / time_since_start)
+            print(
+                f"{report_prefix}: {percent_done}% Complete ({per_second} rows/s) ({int(time_since_start)}s since query)"
+            )
         newrow = {}
         for key, value in row.items():
             if value != "":
@@ -69,7 +83,6 @@ def _amo_modifier(line: dict) -> AddOnsTableSchema:
     return AddOnsTableSchema(**newline)
 
 
-# TODO: every minute or every 1000 records emit how many we've done and how long it has been since the last one
 # emit failures in as much data as possible
 # look into python inside docker stdout flushing
 # TODO: make sure that ensure_timestamp is actually useful compared to making the server_defaults work
@@ -113,7 +126,18 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         """
     )
     parser.add_argument(
-        "-b", "--batch-size", help="Maximum size of insert batch.", default=1000
+        "-b",
+        "--batch-size",
+        help="Maximum size of insert batch.",
+        default=1000,
+        type=int,
+    )
+    parser.add_argument(
+        "-r",
+        "--report_frequency",
+        help="How often (in # of rows) this will report progress.",
+        default=1000,
+        type=int,
     )
 
     args = parser.parse_args(args=test_args)
@@ -122,16 +146,37 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     # TODO: Get creds from config
     bq_client = bigquery.Client()
 
+    report_frequency = args.report_frequency
+
     inputs.emails = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_email", _email_modifier
+        bq_client,
+        "CTMS_SAMPLE_contact_to_email",
+        _email_modifier,
+        1,
+        5,
+        report_frequency,
     )
-    inputs.amo = bq_reader(bq_client, "CTMS_SAMPLE_contact_to_amo", _amo_modifier)
-    inputs.fxa = bq_reader(bq_client, "CTMS_SAMPLE_contact_to_fxa", _fxa_modifier)
+    inputs.amo = bq_reader(
+        bq_client, "CTMS_SAMPLE_contact_to_amo", _amo_modifier, 2, 5, report_frequency
+    )
+    inputs.fxa = bq_reader(
+        bq_client, "CTMS_SAMPLE_contact_to_fxa", _fxa_modifier, 3, 5, report_frequency
+    )
     inputs.newsletters = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_newsletter", _newsletter_modifier
+        bq_client,
+        "CTMS_SAMPLE_contact_to_newsletter",
+        _newsletter_modifier,
+        4,
+        5,
+        report_frequency,
     )
     inputs.vpn_waitlist = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_vpn_waitlist", _vpn_waitlist_modifier
+        bq_client,
+        "CTMS_SAMPLE_contact_to_vpn_waitlist",
+        _vpn_waitlist_modifier,
+        5,
+        5,
+        report_frequency,
     )
     try:
         inputs.finalize()

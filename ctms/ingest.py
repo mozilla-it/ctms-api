@@ -35,7 +35,12 @@ class InputIOs:
 
 
 class Ingester:
-    def __init__(self, inputs: InputIOs, connection: Connection, batch_size: int = 10):
+    def __init__(
+        self,
+        inputs: InputIOs,
+        connection: Connection,
+        batch_size: int = 10,
+    ):
         self.inputs = inputs
         self.db = connection
         self.batch_size = batch_size

@@ -107,7 +107,11 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         "-d", "--dir", help="Directory containing the csv files.", required=True
     )
     parser.add_argument(
-        "-b", "--batch-size", help="Maximum size of insert batch.", default=1000
+        "-b",
+        "--batch-size",
+        help="Maximum size of insert batch.",
+        default=1000,
+        type=int,
     )
 
     args = parser.parse_args(args=test_args)
