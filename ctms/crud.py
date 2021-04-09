@@ -408,12 +408,16 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
     for group_name, (creator, schema) in simple_groups.items():
         if group_name in update_data:
             existing = getattr(email, group_name)
-            if existing is None:
-                creator(db, email_id, schema(**update_data[group_name]))
-            else:
-                update_orm(existing, update_data[group_name])
-                if schema.from_orm(existing).is_default():
+            if update_data[group_name] == "DELETE":
+                if existing:
                     db.delete(existing)
+            else:
+                if existing is None:
+                    creator(db, email_id, schema(**update_data[group_name]))
+                else:
+                    update_orm(existing, update_data[group_name])
+                    if schema.from_orm(existing).is_default():
+                        db.delete(existing)
 
     if "newsletters" in update_data:
         if update_data["newsletters"] == "UNSUBSCRIBE":

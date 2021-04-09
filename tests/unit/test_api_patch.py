@@ -412,6 +412,7 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, maximal_contact):
 
 
 def test_patch_unsubscribe_all(client, maximal_contact):
+    """PATCH with newsletters set to "UNSUBSCRIBE" unsubscribes all newsletters."""
     email_id = maximal_contact.email.email_id
     patch_data = {"newsletters": "UNSUBSCRIBE"}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -419,3 +420,32 @@ def test_patch_unsubscribe_all(client, maximal_contact):
     actual = resp.json()
     assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
     assert all(not nl["subscribed"] for nl in actual["newsletters"])
+
+
+@pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo", "vpn_waitlist"))
+def test_patch_to_delete_group(client, maximal_contact, group_name):
+    """PATCH with a group set to "DELETE" resets the group to defaults."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {group_name: "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    defaults = {
+        "amo": AddOnsSchema(),
+        "fxa": FirefoxAccountsSchema(),
+        "mofo": MozillaFoundationSchema(),
+        "vpn_waitlist": VpnWaitlistSchema(),
+    }[group_name].dict()
+    assert actual[group_name] == defaults
+
+
+def test_patch_to_delete_deleted_group(client, minimal_contact):
+    """PATCH with a default group set to "DELETE" does nothing."""
+    email_id = minimal_contact.email.email_id
+    assert minimal_contact.mofo is None
+    patch_data = {"mofo": "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    default_mofo = MozillaFoundationSchema().dict()
+    assert actual["mofo"] == default_mofo
