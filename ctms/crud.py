@@ -96,9 +96,6 @@ def get_bulk_contacts(
         .all()
     )
 
-    if bulk_contacts is None:
-        return []
-
     return [
         ContactSchema.parse_obj(
             {
