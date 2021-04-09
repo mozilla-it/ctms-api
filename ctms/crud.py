@@ -1,6 +1,9 @@
+import uuid
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pydantic import UUID4, EmailStr
+from sqlalchemy import asc
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -20,6 +23,7 @@ from .schemas import (
     ApiClientSchema,
     ContactInSchema,
     ContactPutSchema,
+    ContactSchema,
     EmailInSchema,
     EmailPutSchema,
     FirefoxAccountsInSchema,
@@ -67,6 +71,44 @@ def _contact_base_query(db):
         .options(joinedload(Email.vpn_waitlist))
         .options(selectinload("newsletters"))
     )
+
+
+def get_bulk_contacts(
+    db: Session,
+    start_time: datetime,
+    end_time: datetime,
+    limit: int,
+    after_email_id: str = None,
+):
+    """Get all the data for a bulk batched set of contacts."""
+    after_email_uuid = None
+    if after_email_id is not None:
+        after_email_uuid = uuid.UUID(after_email_id)
+    bulk_contacts = (
+        _contact_base_query(db)
+        .filter(
+            Email.update_timestamp >= start_time,
+            Email.update_timestamp < end_time,
+            Email.email_id != after_email_uuid,
+        )
+        .order_by(asc(Email.update_timestamp), asc(Email.email_id))
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        ContactSchema.parse_obj(
+            {
+                "amo": email.amo,
+                "email": email,
+                "fxa": email.fxa,
+                "mofo": email.mofo,
+                "newsletters": email.newsletters,
+                "vpn_waitlist": email.vpn_waitlist,
+            }
+        )
+        for email in bulk_contacts
+    ]
 
 
 def get_email(db: Session, email_id: UUID4) -> Email:

@@ -1,8 +1,10 @@
-from datetime import timedelta
+import base64
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
+import dateutil.parser
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Response
 from fastapi.responses import RedirectResponse
@@ -23,6 +25,7 @@ from .crud import (
     create_contact,
     create_or_update_contact,
     get_api_client_by_id,
+    get_bulk_contacts,
     get_contact_by_email_id,
     get_email,
     get_emails_by_any_id,
@@ -39,6 +42,7 @@ from .schemas import (
     ContactPatchSchema,
     ContactPutSchema,
     ContactSchema,
+    CTMSBulkResponse,
     CTMSResponse,
     CTMSSingleResponse,
     EmailSchema,
@@ -177,6 +181,84 @@ def get_contacts_by_ids(
         )
         for email in rows
     ]
+
+
+def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
+    str_decode = base64.urlsafe_b64decode(after)
+    result_after_list = str(str_decode.decode("utf-8")).split(",")
+    after_email_id = result_after_list[0]
+    after_start_time = dateutil.parser.parse(result_after_list[1])
+    return after_email_id, after_start_time
+
+
+def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
+    last_email_id = last_result.email.email_id
+    last_update_time = last_result.email.update_timestamp
+    result_after_encoded = base64.urlsafe_b64encode(
+        f"{last_email_id},{last_update_time}".encode("utf-8")
+    )
+    return result_after_encoded.decode()
+
+
+def get_bulk_contacts_by_timestamp(
+    db: Session,
+    start_time: datetime,
+    end_time: datetime,
+    limit: int = 10,
+    after: str = None,
+) -> CTMSBulkResponse:
+    """Get bulk contacts by time range."""
+    after_email_id = None
+    after_start_time = start_time
+    if after is not None:
+        after_email_id, after_start_time = extractor_for_bulk_encoded_details(
+            after=after
+        )
+
+    results = get_bulk_contacts(
+        db=db,
+        start_time=after_start_time,
+        end_time=end_time,
+        limit=limit,
+        after_email_id=after_email_id,
+    )
+    page_length = len(results)
+    last_page = page_length < limit
+    if page_length > 0:
+        results = [
+            CTMSResponse(
+                amo=contact.amo or AddOnsSchema(),
+                email=contact.email or EmailSchema(),
+                fxa=contact.fxa or FirefoxAccountsSchema(),
+                mofo=contact.mofo or MozillaFoundationSchema(),
+                newsletters=contact.newsletters or [],
+                vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+            )
+            for contact in results
+        ]
+
+    if last_page:
+        # No results/end
+        url_safe_encoded_str = None
+        next_url = None
+    else:
+        last_result: CTMSResponse = results[-1]
+        url_safe_encoded_str = compressor_for_bulk_encoded_details(last_result)
+        next_url = (
+            f"{get_settings().server_prefix}/updates?"
+            f"start={start_time.isoformat()}"
+            f"&end={end_time.isoformat()}"
+            f"&limit={limit}"
+            f"&after={url_safe_encoded_str} "
+        )
+
+    return CTMSBulkResponse(
+        start=start_time,
+        end=end_time,
+        limit=limit,
+        items=results,
+        next=next_url,
+    )
 
 
 def get_api_client(
@@ -379,6 +461,29 @@ def partial_update_ctms_contact(
     update_contact(db, current_email, update_data)
     db.commit()
     return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
+
+
+@app.get(
+    "/updates",
+    summary="Get all contacts within provided timeframe",
+    response_model=CTMSBulkResponse,
+    responses={
+        400: {"model": BadRequestResponse},
+        401: {"model": UnauthorizedResponse},
+    },
+    tags=["Public"],
+)
+def read_ctms_in_bulk_by_timestamps_and_limit(
+    start: datetime,
+    end: Optional[datetime] = datetime.now(timezone.utc),
+    limit: Optional[int] = 10,
+    after: Optional[str] = None,
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+):
+    return get_bulk_contacts_by_timestamp(
+        db=db, start_time=start, end_time=end, after=after, limit=limit
+    )
 
 
 @app.get(

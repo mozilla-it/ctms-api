@@ -1,5 +1,5 @@
 """Test database operations"""
-
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -11,6 +11,7 @@ from ctms.crud import (
     create_fxa,
     create_mofo,
     create_newsletter,
+    get_bulk_contacts,
     get_contact_by_email_id,
     get_contacts_by_any_id,
     get_email,
@@ -183,6 +184,116 @@ def test_get_contact_by_email_id_miss(dbsession):
         contact = get_contact_by_email_id(dbsession, str(uuid4()))
     assert sw.count == 1
     assert contact is None
+
+
+def test_get_bulk_contacts_some_after_higher_limit(
+    dbsession, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+
+    first_contact = sorted_list[0]
+    after_start = first_contact.email.update_timestamp
+    after_id = str(first_contact.email.email_id)
+    last_contact = sorted_list[-1]
+    last_contact_timestamp = last_contact.email.update_timestamp
+    end_time = last_contact_timestamp + timedelta(hours=12)
+
+    with StatementWatcher(dbsession.connection()) as sw:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession,
+            start_time=after_start,
+            end_time=end_time,
+            limit=2,
+            after_email_id=after_id,
+        )
+    assert sw.count == 2
+    assert len(bulk_contact_list) == 2
+    assert last_contact in bulk_contact_list
+    assert sorted_list[-2] in bulk_contact_list
+
+
+def test_get_bulk_contacts_some_after(
+    dbsession, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+
+    second_to_last_contact = sorted_list[-2]
+    after_start = second_to_last_contact.email.update_timestamp
+    after_id = str(second_to_last_contact.email.email_id)
+    last_contact = sorted_list[-1]
+    last_contact_timestamp = last_contact.email.update_timestamp
+    end_time = last_contact_timestamp + timedelta(hours=12)
+
+    with StatementWatcher(dbsession.connection()) as sw:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession,
+            start_time=after_start,
+            end_time=end_time,
+            limit=1,
+            after_email_id=after_id,
+        )
+    assert sw.count == 2
+    assert len(bulk_contact_list) == 1
+    assert last_contact in bulk_contact_list
+
+
+def test_get_bulk_contacts_some(
+    dbsession, example_contact, maximal_contact, minimal_contact
+):
+    example_timestamp: datetime = example_contact.email.update_timestamp
+    maximal_timestamp: datetime = maximal_contact.email.update_timestamp
+    minimal_timestamp: datetime = minimal_contact.email.update_timestamp
+
+    oldest_timestamp = min([example_timestamp, maximal_timestamp, minimal_timestamp])
+    timestamp = oldest_timestamp - timedelta(hours=12)
+
+    with StatementWatcher(dbsession.connection()) as sw:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession,
+            start_time=timestamp,
+            end_time=datetime.now(timezone.utc),
+            limit=10,
+        )
+    assert sw.count == 2
+    assert len(bulk_contact_list) == 3
+    assert example_contact in bulk_contact_list
+    assert maximal_contact in bulk_contact_list
+    assert minimal_contact in bulk_contact_list
+
+
+def test_get_bulk_contacts_one(dbsession, example_contact):
+    email_id = example_contact.email.email_id
+    timestamp: datetime = example_contact.email.update_timestamp
+    start_time = timestamp - timedelta(12)
+    end_time = timestamp + timedelta(hours=12)
+
+    with StatementWatcher(dbsession.connection()) as sw:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession, start_time=start_time, end_time=end_time, limit=10
+        )
+    assert sw.count == 2
+    assert len(bulk_contact_list) == 1
+    assert bulk_contact_list[0].email.email_id == email_id
+
+
+def test_get_bulk_contacts_none(dbsession):
+    with StatementWatcher(dbsession.connection()) as sw:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession,
+            start_time=datetime.now(timezone.utc) + timedelta(days=1),
+            end_time=datetime.now(timezone.utc) + timedelta(days=1),
+            limit=10,
+        )
+    assert sw.count == 1
+    assert bulk_contact_list == []
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,7 @@ from .contact import (
     ContactPatchSchema,
     ContactPutSchema,
     ContactSchema,
+    CTMSBulkResponse,
     CTMSResponse,
     CTMSSingleResponse,
     IdentityResponse,

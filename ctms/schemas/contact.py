@@ -1,7 +1,8 @@
-from typing import List, Literal, Optional, Set
+from datetime import datetime
+from typing import List, Literal, Optional, Set, Union
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AnyUrl, BaseModel, EmailStr, Field
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -137,6 +138,19 @@ class CTMSSingleResponse(CTMSResponse):
     status: Literal["ok"] = Field(
         default="ok", description="Request was successful", example="ok"
     )
+
+
+class CTMSBulkResponse(BaseModel):
+    """
+    Response for GET /updates/
+
+    """
+
+    start: datetime
+    end: datetime
+    limit: int
+    next: Optional[Union[AnyUrl, str]] = None
+    items: List[CTMSResponse]
 
 
 class IdentityResponse(BaseModel):
