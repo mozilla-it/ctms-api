@@ -18,7 +18,7 @@ documentation = "https://github.com/mozilla-it/ctms-api"
 
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
-python = ">=3.7, <4"
+python = ">=3.7, <3.10" # google-cloud-bigquery requires this range
 fastapi = "^0.61.1"
 requests = "^2.24.0"
 uvicorn = "^0.12.2"
@@ -31,6 +31,7 @@ python-multipart = "^0.0.5"
 python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 passlib = {extras = ["argon2"], version = "^1.7.4"}
 python-dateutil = "^2.8.1"
+google-cloud-bigquery = "^2.13.1"
 
 
 [tool.poetry.dev-dependencies]
