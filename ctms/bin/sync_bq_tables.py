@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from google.cloud import bigquery
 from pydantic import BaseModel
+from pydantic.error_wrappers import ValidationError
 from sqlalchemy.engine import Connection
 
 from ctms import config
@@ -32,6 +33,9 @@ def bq_reader(
     total_tables: int,
     report_frequency: int,
 ):
+    # TODO: Probably want some sort of ordering here, a report of where
+    # we are in that ordering, and a way to resume from that place if
+    # things crash
     query = f"SELECT * FROM `mozilla-cdp-prod.sfdc_exports.{table}`"
     query_job_rows = client.query(query).result()
     total_rows = query_job_rows.total_rows
@@ -50,9 +54,14 @@ def bq_reader(
         for key, value in row.items():
             if value != "":
                 newrow[key] = value
-        yield modifier(newrow)
+        try:
+            yield modifier(newrow)
+        except ValidationError as e:
+            # TODO: Write this to a table so we know what didn't work
+            print(newrow["email_id"], str(e))
 
 
+# TODO: make sure that ensure_timestamp is actually useful compared to making the server_defaults work
 def _ensure_timestamps(line: dict):
     create_ts = line.get("create_timestamp")
     update_ts = line.get("update_timestamp")
@@ -81,11 +90,6 @@ def _amo_modifier(line: dict) -> AddOnsTableSchema:
         key = re.sub("^amo_", "", key)
         newline[key] = val
     return AddOnsTableSchema(**newline)
-
-
-# emit failures in as much data as possible
-# look into python inside docker stdout flushing
-# TODO: make sure that ensure_timestamp is actually useful compared to making the server_defaults work
 
 
 def _fxa_modifier(line: dict) -> FirefoxAccountsTableSchema:

@@ -49,6 +49,10 @@ class Ingester:
         if len(batch) == 0:
             return
 
+        # TODO: Handle things like `psycopg2.errors.DatatypeMismatch: column "email_id" is of type uuid but expression is of type integer`
+        # smartly. This should mean something like recording which records
+        # failed and why maybe if we're lucky? Also retries for disconnects
+        # or other kinds of failures?
         stmt = insert(table).values([r.dict() for r in batch])
         stmt = stmt.on_conflict_do_update(**stmt_args, set_=dict(stmt.excluded))
         self.db.execute(stmt)
