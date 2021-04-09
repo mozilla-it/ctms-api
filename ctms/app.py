@@ -462,11 +462,10 @@ def create_ctms_contact(
     existing = get_contact_by_email_id(db, email_id)
     if existing:
         if ContactInSchema(**existing).idempotent_equal(contact):
-            # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
             response.headers[
                 "Location"
             ] = f"{get_settings().server_prefix}/ctms/{email_id}"
-            response.status_code = 201
+            response.status_code = 200
             return get_ctms_response_or_404(db=db, email_id=email_id)
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
@@ -478,7 +477,6 @@ def create_ctms_contact(
         if isinstance(e, IntegrityError):
             raise HTTPException(status_code=409, detail="Contact already exists") from e
         raise e from e
-    # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
     response.headers["Location"] = f"{get_settings().server_prefix}/ctms/{email_id}"
     response.status_code = 201
     return get_ctms_response_or_404(db=db, email_id=email_id)
@@ -520,8 +518,6 @@ def create_or_update_ctms_contact(
                 detail="Contact with primary_email or basket_token already exists",
             ) from e
         raise e from e
-    # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
-    response.headers["Location"] = f"{get_settings().server_prefix}/ctms/{email_id}"
     response.status_code = 201
     return get_ctms_response_or_404(db=db, email_id=email_id)
 
@@ -569,9 +565,7 @@ def partial_update_ctms_contact(
                 ),
             ) from e
         raise
-    # return RedirectResponse(status_code=303, url=f"/ctms/{email_id}")
-    response.headers["Location"] = f"{get_settings().server_prefix}/ctms/{email_id}"
-    response.status_code = 201
+    response.status_code = 200
     return get_ctms_response_or_404(db=db, email_id=email_id)
 
 
