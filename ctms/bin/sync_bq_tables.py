@@ -6,7 +6,6 @@ import re
 from datetime import datetime, timezone
 from time import monotonic
 from typing import Any, Callable, Dict
-from uuid import uuid4
 
 from google.cloud import bigquery
 from pydantic import BaseModel
@@ -35,7 +34,7 @@ def bq_reader(
 ):
     # TODO: Probably want some sort of ordering here, a report of where
     # we are in that ordering, and a way to resume from that place if
-    # things crash
+    # things crash (LOGGING AND QUERYING?)
     query = f"SELECT * FROM `mozilla-cdp-prod.sfdc_exports.{table}`"
     query_job_rows = client.query(query).result()
     total_rows = query_job_rows.total_rows
@@ -79,7 +78,6 @@ def _ensure_timestamps(line: dict):
 
 def _email_modifier(line: dict) -> EmailTableSchema:
     _ensure_timestamps(line)
-    line["primary_email"] = f"{line['primary_email']}@example.com"
     return EmailTableSchema(**line)
 
 
@@ -94,9 +92,6 @@ def _amo_modifier(line: dict) -> AddOnsTableSchema:
 
 def _fxa_modifier(line: dict) -> FirefoxAccountsTableSchema:
     _ensure_timestamps(line)
-    if line.get("fxa_primary_email"):
-        line["fxa_primary_email"] = f"{line['fxa_primary_email']}@example.com"
-    line.setdefault("fxa_id", str(uuid4()))
     newline = {}
     for key, val in line.items():
         if key != "fxa_id":
