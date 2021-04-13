@@ -143,6 +143,12 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         default=1000,
         type=int,
     )
+    parser.add_argument(
+        "-p",
+        "--prefix",
+        help="Which prefix to use for BQ tables.",
+        default="CTMS",
+    )
 
     args = parser.parse_args(args=test_args)
     inputs = InputIOs()
@@ -154,21 +160,31 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
 
     inputs.emails = bq_reader(
         bq_client,
-        "CTMS_SAMPLE_contact_to_email",
+        f"{args.prefix}_contact_to_email",
         _email_modifier,
         1,
         5,
         report_frequency,
     )
     inputs.amo = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_amo", _amo_modifier, 2, 5, report_frequency
+        bq_client,
+        f"{args.prefix}_contact_to_amo",
+        _amo_modifier,
+        2,
+        5,
+        report_frequency,
     )
     inputs.fxa = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_fxa", _fxa_modifier, 3, 5, report_frequency
+        bq_client,
+        f"{args.prefix}_contact_to_fxa",
+        _fxa_modifier,
+        3,
+        5,
+        report_frequency,
     )
     inputs.newsletters = bq_reader(
         bq_client,
-        "CTMS_SAMPLE_contact_to_newsletter",
+        f"{args.prefix}_contact_to_newsletter",
         _newsletter_modifier,
         4,
         5,
@@ -176,7 +192,7 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     )
     inputs.vpn_waitlist = bq_reader(
         bq_client,
-        "CTMS_SAMPLE_contact_to_vpn_waitlist",
+        f"{args.prefix}_contact_to_vpn_waitlist",
         _vpn_waitlist_modifier,
         5,
         5,
