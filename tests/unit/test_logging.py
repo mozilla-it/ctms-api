@@ -72,6 +72,11 @@ def test_uvicorn_mozlog_root_path_call(formatter):
             "router": Mock(),
             "endpoint": root,
             "path_params": {},
+            "state": {
+                "log_context": {
+                    "duration_s": 0.017,
+                }
+            },
         },
         "msg": '172.19.0.1:56988 - "GET / HTTP/1.1" 307',
     }
@@ -85,6 +90,7 @@ def test_uvicorn_mozlog_root_path_call(formatter):
             "scope.fastapi_astack",
             "scope.router",
         ],
+        "duration_s": 0.017,
         "endpoint": "root",
         "headers": {
             "accept": "text/html,application/xhtml+xml",
@@ -175,11 +181,21 @@ def test_uvicorn_mozlog_put_api_call(formatter):
             ],
             "endpoint": create_or_update_ctms_contact,
             "path_params": {"email_id": "e1d35779-9f14-4553-b2aa-85f9629f68bb"},
+            "state": {
+                "log_context": {
+                    "duration_s": 0.116,
+                    "client_id": "id_test",
+                    "client_allowed": True,
+                }
+            },
         },
         "msg": '172.19.0.1:57014 - "PUT /ctms/e1d35779-9f14-4553-b2aa-85f9629f68bb HTTP/1.1" 303',
     }
     out = formatter.convert_fields(fields_in)
     assert out == {
+        "client_allowed": True,
+        "client_id": "id_test",
+        "duration_s": 0.116,
         "endpoint": "create_or_update_ctms_contact",
         "headers": {
             "authorization": "[OMITTED]",

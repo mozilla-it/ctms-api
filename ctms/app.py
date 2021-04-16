@@ -1,4 +1,5 @@
 import base64
+import time
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple, Union
@@ -6,7 +7,7 @@ from uuid import UUID, uuid4
 
 import dateutil.parser
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Path, Response
+from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import EmailStr
@@ -273,6 +274,7 @@ def updates_helper(value, default):
 
 
 def get_api_client(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     token_settings=Depends(_token_settings),
     db: Session = Depends(get_db),
@@ -286,20 +288,49 @@ def get_api_client(
         token,
         secret_key=token_settings["secret_key"],
     )
+    log_context = request.state.log_context
+    log_context["client_allowed"] = False
+
     if name is None:
+        log_context["auth_fail"] = "No or bad token"
         raise credentials_exception
+
+    log_context["client_id"] = name
     if namespace != "api_client":
+        log_context["auth_fail"] = "Bad namespace"
         raise credentials_exception
+
     api_client = get_api_client_by_id(db, name)
     if not api_client:
+        log_context["auth_fail"] = "No client record"
         raise credentials_exception
+
     return api_client
 
 
-def get_enabled_api_client(api_client: ApiClientSchema = Depends(get_api_client)):
+def get_enabled_api_client(
+    request: Request, api_client: ApiClientSchema = Depends(get_api_client)
+):
+    log_context = request.state.log_context
     if not api_client.enabled:
+        log_context["auth_fail"] = "Client disabled"
         raise HTTPException(status_code=400, detail="API Client has been disabled")
+    log_context["client_allowed"] = True
     return api_client
+
+
+@app.middleware("http")
+async def log_request(request: Request, call_next):
+    """Add timing and per-request logging context."""
+    start_time = time.time()
+    request.state.log_context = {}
+
+    response = await call_next(request)
+
+    duration = time.time() - start_time
+    duration_s = round(duration, 3)
+    request.state.log_context["duration_s"] = duration_s
+    return response
 
 
 @app.get("/", include_in_schema=False)

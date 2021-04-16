@@ -65,6 +65,10 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
                             f"headers{'.' if hfield else ''}{hfield}"
                             for hfield in byte_fields
                         )
+                    elif key == "state":
+                        # Import log context from CTMS
+                        for skey, sval in value.get("log_context", {}).items():
+                            out[skey] = sval
                     elif key == "endpoint" and hasattr(value, "__name__"):
                         out["endpoint"] = value.__name__  # Endpoint function
                     elif (
