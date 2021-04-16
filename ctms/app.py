@@ -32,6 +32,7 @@ from .crud import (
     update_contact,
 )
 from .database import get_db_engine
+from .logging import configure_logging
 from .models import Email
 from .monitor import check_database, get_version
 from .schemas import (
@@ -73,7 +74,9 @@ def get_settings():
 @app.on_event("startup")
 def startup_event():
     global SessionLocal  # pylint:disable = W0603
-    _, session_factory = get_db_engine(get_settings())
+    settings = get_settings()
+    configure_logging(settings.use_mozlog, settings.logging_level)
+    _, session_factory = get_db_engine(settings)
     SessionLocal = scoped_session(session_factory)
 
 
