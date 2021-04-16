@@ -259,6 +259,19 @@ curio = ["curio (>=1.2)", "sniffio (>=1.1)"]
 trio = ["trio (>=0.14.0)", "sniffio (>=1.1)"]
 
 [[package]]
+name = "dockerflow"
+version = "2020.10.0"
+description = "Python tools and helpers for Mozilla's Dockerflow"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+django = ["django"]
+flask = ["flask", "blinker"]
+sanic = ["sanic"]
+
+[[package]]
 name = "docutils"
 version = "0.16"
 description = "Docutils -- Python Documentation Utilities"
@@ -1261,7 +1274,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7, <3.10" # google-cloud-bigquery requires this range
-content-hash = "8f591b594ffe87742e214b621e970c432190cf1ff05379d5ec60f664cce9cc9f"
+content-hash = "403b1e1030a10f429f69d0069399e77a201a1ab960eaf13fa35e416e9e08ae47"
 
 [metadata.files]
 alabaster = [
@@ -1461,6 +1474,10 @@ distlib = [
 dnspython = [
     {file = "dnspython-2.1.0-py3-none-any.whl", hash = "sha256:95d12f6ef0317118d2a1a6fc49aac65ffec7eb8087474158f42f26a639135216"},
     {file = "dnspython-2.1.0.zip", hash = "sha256:e4a87f0b573201a0f3727fa18a516b055fd1107e0e5477cded4a2de497df1dd4"},
+]
+dockerflow = [
+    {file = "dockerflow-2020.10.0-py2.py3-none-any.whl", hash = "sha256:226086becc436b5a1995348e26c4fb2ad1d4e5dbc10dffec0c675c9a43306c8b"},
+    {file = "dockerflow-2020.10.0.tar.gz", hash = "sha256:36787fa016e5505d71d60c36cd4e0de7b2d1e50059160bd4e93ceb62bb40d3f8"},
 ]
 docutils = [
     {file = "docutils-0.16-py2.py3-none-any.whl", hash = "sha256:0c5b78adfbf7762415433f5515cd5c9e762339e23369dbe8000d84a4bf4ab3af"},
