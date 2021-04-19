@@ -102,15 +102,15 @@ access token. These values are replaced by ``[OMITTED]``.
 
 The fields added by uvicorn are:
 
-* ``status_code`` - HTTP status code as integer, such as 200 or 404
-* ``type`` - Type of request, such as "http"
+* ``headers`` - Dictionary of header names (lowercased) to header values
 * ``http_version`` - HTTP version, such as "1.0" or "1.1"
-* ``scheme`` - Scheme, such as "http" or "https"
 * ``method`` - HTTP method, such as "GET" or "POST"
+* ``msg`` - A request summary suitable for humans
 * ``path`` - Path portion of URL, such as "/ctms"
 * ``query_string`` - Querystring portion of URL, not decoded
-* ``headers`` - Dictionary of header names (lowercased) to header values
-* ``msg`` - A request summary suitable for humans
+* ``scheme`` - Scheme, such as "http" or "https"
+* ``status_code`` - HTTP status code as integer, such as 200 or 404
+* ``type`` - Type of request, such as "http"
 
 Others are added by FastAPI:
 
