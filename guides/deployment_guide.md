@@ -42,7 +42,7 @@ When the environment variable ``CTMS_USE_MOZLOG`` is set to true or unset, then
 the [MozLog JSON format](https://wiki.mozilla.org/Firefox/Services/Logging) is
 used for logging.
 
-## Example
+### Example
 
 Here's what a single log line from development looks like, formatted as
 multi-line JSON for clarity:
