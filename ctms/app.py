@@ -6,11 +6,13 @@ from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 import dateutil.parser
+import sentry_sdk
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import EmailStr
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, scoped_session
 
@@ -664,5 +666,14 @@ def lbheartbeat():
     return {"status": "OK"}
 
 
+# Setup the sentry-wrapped app
+# The dsn is read from the environment variable SENTRY_DSN
+sentry_sdk.init(
+    release=get_version().get("commit", None),
+    debug=config.Settings().sentry_debug,
+    send_default_pii=False,
+)
+sentry_app = SentryAsgiMiddleware(app)
+
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=80, reload=True)
+    uvicorn.run("app:sentry_app", host="0.0.0.0", port=80, reload=True)
