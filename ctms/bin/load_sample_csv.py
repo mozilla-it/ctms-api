@@ -26,7 +26,12 @@ from ctms.schemas import (
 )
 
 
-def csv_reader(directory, f, modifier: Callable[[int, Dict[str, Any]], BaseModel]):
+def csv_reader(
+    directory,
+    f,
+    modifier: Callable[[int, Dict[str, Any], bool], BaseModel],
+    isdev: bool,
+):
     path = os.path.join(directory, f)
     with open(path, "r", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
@@ -36,7 +41,7 @@ def csv_reader(directory, f, modifier: Callable[[int, Dict[str, Any]], BaseModel
                 if value != "":
                     newline[key] = value
             try:
-                yield modifier(i, newline)
+                yield modifier(i, newline, isdev)
             except ValidationError as e:
                 # TODO: Write this to a table so we know what didn't work
                 print(
@@ -60,13 +65,14 @@ def _ensure_timestamps(line: dict):
         line["update_timestamp"] = datetime.now(timezone.utc)
 
 
-def _email_modifier(i: int, line: dict) -> EmailTableSchema:
+def _email_modifier(i: int, line: dict, isdev: bool) -> EmailTableSchema:
     _ensure_timestamps(line)
-    line["primary_email"] = f"{line['primary_email']}@example.com"
+    if isdev:
+        line["primary_email"] = f"{line['primary_email']}@example.com"
     return EmailTableSchema(**line)
 
 
-def _amo_modifier(i: int, line: dict) -> AddOnsTableSchema:
+def _amo_modifier(i: int, line: dict, isdev: bool) -> AddOnsTableSchema:
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
@@ -75,11 +81,12 @@ def _amo_modifier(i: int, line: dict) -> AddOnsTableSchema:
     return AddOnsTableSchema(**newline)
 
 
-def _fxa_modifier(i: int, line: dict) -> FirefoxAccountsTableSchema:
+def _fxa_modifier(i: int, line: dict, isdev: bool) -> FirefoxAccountsTableSchema:
     _ensure_timestamps(line)
-    if line.get("fxa_primary_email"):
-        line["fxa_primary_email"] = f"{line['fxa_primary_email']}@example.com"
-    line.setdefault("fxa_id", str(uuid4()))
+    if isdev:
+        if line.get("fxa_primary_email"):
+            line["fxa_primary_email"] = f"{line['fxa_primary_email']}@example.com"
+        line.setdefault("fxa_id", str(uuid4()))
     newline = {}
     for key, val in line.items():
         if key != "fxa_id":
@@ -88,7 +95,7 @@ def _fxa_modifier(i: int, line: dict) -> FirefoxAccountsTableSchema:
     return FirefoxAccountsTableSchema(**newline)
 
 
-def _newsletter_modifier(i: int, line: dict) -> NewsletterTableSchema:
+def _newsletter_modifier(i: int, line: dict, isdev: bool) -> NewsletterTableSchema:
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
@@ -97,7 +104,7 @@ def _newsletter_modifier(i: int, line: dict) -> NewsletterTableSchema:
     return NewsletterTableSchema(**newline)
 
 
-def _vpn_waitlist_modifier(i: int, line: dict) -> VpnWaitlistTableSchema:
+def _vpn_waitlist_modifier(i: int, line: dict, isdev: bool) -> VpnWaitlistTableSchema:
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
@@ -122,9 +129,15 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         default=1000,
         type=int,
     )
+    parser.add_argument(
+        "--dev",
+        help="If true, apply dev transforms",
+        action="store_true",
+    )
 
     args = parser.parse_args(args=test_args)
     directory = args.dir
+    isdev = args.dev
     inputs = InputIOs()
     total = 0
 
@@ -136,19 +149,21 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     for f in os.listdir(directory):
         if "contact_to_email" in f:
             total += 1
-            emails.append(csv_reader(directory, f, _email_modifier))
+            emails.append(csv_reader(directory, f, _email_modifier, isdev))
         elif "contact_to_amo" in f:
             total += 1
-            amos.append(csv_reader(directory, f, _amo_modifier))
+            amos.append(csv_reader(directory, f, _amo_modifier, isdev))
         elif "contact_to_fxa" in f:
             total += 1
-            fxas.append(csv_reader(directory, f, _fxa_modifier))
+            fxas.append(csv_reader(directory, f, _fxa_modifier, isdev))
         elif "contact_to_newsletter" in f:
             total += 1
-            newsletters.append(csv_reader(directory, f, _newsletter_modifier))
+            newsletters.append(csv_reader(directory, f, _newsletter_modifier, isdev))
         elif "contact_to_vpn_waitlist" in f:
             total += 1
-            vpn_waitlists.append(csv_reader(directory, f, _vpn_waitlist_modifier))
+            vpn_waitlists.append(
+                csv_reader(directory, f, _vpn_waitlist_modifier, isdev)
+            )
 
     inputs.amo = chain(*amos)
     inputs.emails = chain(*emails)
