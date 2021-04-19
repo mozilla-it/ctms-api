@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Load csv dumps of bigquery into the db. This is only for development testing data, it mutates stuff in a way we don't want to for real data"""
+"""Load csv dumps of bigquery into the db."""
 
 import argparse
 import csv
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from itertools import chain
 from typing import Any, Callable, Dict
@@ -47,6 +48,7 @@ def csv_reader(
                 print(
                     newline["email_id"],
                     str(e),
+                    file=sys.stderr,
                 )
 
 
@@ -183,8 +185,6 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
 
 
 if __name__ == "__main__":
-    import sys
-
     # Get the database
     config_settings = config.Settings()
     engine, _ = get_db_engine(config_settings)
