@@ -255,10 +255,18 @@ def get_bulk_contacts_by_timestamp(
     return CTMSBulkResponse(
         start=start_time,
         end=end_time,
+        after=url_safe_encoded_str,
         limit=limit,
         items=results,
         next=next_url,
     )
+
+
+def updates_helper(value, default):
+    blank_vals = ["", " ", None]
+    if value in blank_vals:
+        return default
+    return value
 
 
 def get_api_client(
@@ -487,14 +495,21 @@ def partial_update_ctms_contact(
 )
 def read_ctms_in_bulk_by_timestamps_and_limit(
     start: datetime,
-    end: Optional[datetime] = datetime.now(timezone.utc),
-    limit: Optional[int] = 10,
+    end: Optional[Union[datetime, str]] = None,
+    limit: Optional[Union[int, str]] = None,
     after: Optional[str] = None,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
+    after_param = updates_helper(value=after, default=None)
+    limit_param = updates_helper(value=limit, default=10)
+    end_param = updates_helper(value=end, default=datetime.now(timezone.utc))
     return get_bulk_contacts_by_timestamp(
-        db=db, start_time=start, end_time=end, after=after, limit=limit
+        db=db,
+        start_time=start,
+        end_time=end_param,
+        after=after_param,
+        limit=limit_param,
     )
 
 

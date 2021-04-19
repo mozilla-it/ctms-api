@@ -6,10 +6,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from ctms.app import (
-    compressor_for_bulk_encoded_details,
-    extractor_for_bulk_encoded_details,
-)
+from ctms.app import compressor_for_bulk_encoded_details
 from ctms.crud import (
     get_amo_by_email_id,
     get_contacts_by_any_id,
@@ -49,6 +46,7 @@ def test_get_ctms_bulk_by_timerange(
     results = resp.json()
     assert "start" in results
     assert "end" in results
+    assert "after" in results
     assert "limit" in results
     assert "next" in results
     assert "items" in results
@@ -81,6 +79,7 @@ def test_get_ctms_bulk_by_timerange_no_results(
     results = resp.json()
     assert "start" in results
     assert "end" in results
+    assert "after" in results
     assert "limit" in results
     assert "next" in results
     assert "items" in results
@@ -396,6 +395,11 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
     (
         "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+        None,
+    ),
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=&after=",
         None,
     ),
 )
