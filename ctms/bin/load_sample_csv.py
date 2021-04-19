@@ -6,10 +6,12 @@ import csv
 import os
 import re
 from datetime import datetime, timezone
+from itertools import chain
 from typing import Any, Callable, Dict
 from uuid import uuid4
 
 from pydantic import BaseModel
+from pydantic.error_wrappers import ValidationError
 from sqlalchemy.engine import Connection
 
 from ctms import config
@@ -33,7 +35,14 @@ def csv_reader(directory, f, modifier: Callable[[int, Dict[str, Any]], BaseModel
             for key, value in line.items():
                 if value != "":
                     newline[key] = value
-            yield modifier(i, newline)
+            try:
+                yield modifier(i, newline)
+            except ValidationError as e:
+                # TODO: Write this to a table so we know what didn't work
+                print(
+                    newline["email_id"],
+                    str(e),
+                )
 
 
 def _ensure_timestamps(line: dict):
@@ -117,24 +126,42 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     args = parser.parse_args(args=test_args)
     directory = args.dir
     inputs = InputIOs()
+    total = 0
+
+    emails = []
+    amos = []
+    fxas = []
+    newsletters = []
+    vpn_waitlists = []
     for f in os.listdir(directory):
-        if f == "CTMS_SAMPLE_contact_to_email.csv":
-            inputs.emails = csv_reader(directory, f, _email_modifier)
-        elif f == "CTMS_SAMPLE_contact_to_amo.csv":
-            inputs.amo = csv_reader(directory, f, _amo_modifier)
-        elif f == "CTMS_SAMPLE_contact_to_fxa.csv":
-            inputs.fxa = csv_reader(directory, f, _fxa_modifier)
-        elif f == "CTMS_SAMPLE_contact_to_newsletter.csv":
-            inputs.newsletters = csv_reader(directory, f, _newsletter_modifier)
-        elif f == "CTMS_SAMPLE_contact_to_vpn_waitlist.csv":
-            inputs.vpn_waitlist = csv_reader(directory, f, _vpn_waitlist_modifier)
+        if "contact_to_email" in f:
+            total += 1
+            emails.append(csv_reader(directory, f, _email_modifier))
+        elif "contact_to_amo" in f:
+            total += 1
+            amos.append(csv_reader(directory, f, _amo_modifier))
+        elif "contact_to_fxa" in f:
+            total += 1
+            fxas.append(csv_reader(directory, f, _fxa_modifier))
+        elif "contact_to_newsletter" in f:
+            total += 1
+            newsletters.append(csv_reader(directory, f, _newsletter_modifier))
+        elif "contact_to_vpn_waitlist" in f:
+            total += 1
+            vpn_waitlists.append(csv_reader(directory, f, _vpn_waitlist_modifier))
+
+    inputs.amo = chain(*amos)
+    inputs.emails = chain(*emails)
+    inputs.fxa = chain(*fxas)
+    inputs.newsletters = chain(*newsletters)
+    inputs.vpn_waitlist = chain(*vpn_waitlists)
     try:
         inputs.finalize()
     except BaseException as e:  # pylint:disable = W0703
         print(e)
         return 1
 
-    ingester = Ingester(inputs, db, args.batch_size)
+    ingester = Ingester(inputs, db, args.batch_size, total_inputs=total)
     ingester.run()
 
     return 0

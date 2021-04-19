@@ -3,6 +3,7 @@
 
 import argparse
 import re
+import sys
 from datetime import datetime, timezone
 from time import monotonic
 from typing import Any, Callable, Dict
@@ -57,7 +58,7 @@ def bq_reader(
             yield modifier(newrow)
         except ValidationError as e:
             # TODO: Write this to a table so we know what didn't work
-            print(newrow["email_id"], str(e))
+            print(newrow["email_id"], str(e), file=sys.stderr)
 
 
 # TODO: make sure that ensure_timestamp is actually useful compared to making the server_defaults work
@@ -206,8 +207,6 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
 
 
 if __name__ == "__main__":
-    import sys
-
     # Get the database
     config_settings = config.Settings()
     engine, _ = get_db_engine(config_settings)
