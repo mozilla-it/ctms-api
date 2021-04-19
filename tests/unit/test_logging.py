@@ -88,6 +88,8 @@ def test_uvicorn_mozlog_root_path_call(formatter):
             "scope.app",
             "scope.asgi",
             "scope.fastapi_astack",
+            "scope.raw_path",
+            "scope.root_path",
             "scope.router",
         ],
         "duration_s": 0.017,
@@ -108,8 +110,6 @@ def test_uvicorn_mozlog_root_path_call(formatter):
         "path": "/",
         "path_params": {},
         "query_string": "",
-        "raw_path": "/",
-        "root_path": "",
         "scheme": "http",
         "server_ip": "172.19.0.3",
         "server_port": 8000,
@@ -264,13 +264,13 @@ def test_uvicorn_mozlog_non_ascii_path(formatter):
     """
     fields_in = {
         "scope": {
-            "raw_path": "/✰".encode("utf8"),
+            "path": "/✰".encode("utf8"),
         }
     }
     out = formatter.convert_fields(fields_in)
     assert out == {
-        "bytes_fields": ["raw_path"],
-        "raw_path": b"/\xe2\x9c\xb0",
+        "bytes_fields": ["path"],
+        "path": b"/\xe2\x9c\xb0",
     }
 
 

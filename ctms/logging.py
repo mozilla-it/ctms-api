@@ -13,6 +13,10 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
     DROP_FIELDS = {
         "color_message",
     }
+    DROP_SCOPE_FIELDS = {
+        "root_path",  # FastAPI proxy path
+        "raw_path",  # Uvicorn path as bytes
+    }
     SECURITY_HEADERS = {
         "cookie",  # CSRF token, not needed in logs
         "authorization",  # Basic auth or OAuth2 bearer tokens
@@ -60,7 +64,10 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
             elif field_key == "scope":
                 # Lift up relevant request details from scope, drop irrelevant details
                 for key, value in field_value.items():
-                    if key == "headers":
+                    if key in self.DROP_SCOPE_FIELDS:
+                        if self.log_dropped_fields:
+                            dropped.append(f"scope.{key}")
+                    elif key == "headers":
                         headers, byte_fields, have_dupes = self.convert_headers(value)
                         out["headers"] = headers
                         if have_dupes:

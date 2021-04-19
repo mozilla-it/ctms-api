@@ -35,6 +35,8 @@ production, they are set as part of the runtime environment.
 * ``CTMS_USE_MOZLOG`` - Use the JSON
   [MozLog](https://wiki.mozilla.org/Firefox/Services/Logging) format for logs.
   Defaults to `True` as used in production, and is set to `False` for development.
+  See the [deployment guide](./deployment_guide.md) for more information on the
+  MozLog format.
 
 * ``MK_KEEP_DOCKER_UP`` - If unset, then ``make test`` runs ``docker-compose down``
   after tests run, shutting down the PostgreSQL container.  If set to ``1``,
