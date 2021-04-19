@@ -10,7 +10,7 @@ from ctms.logging import UvicornJsonLogFormatter
 
 @pytest.fixture
 def formatter():
-    return UvicornJsonLogFormatter(logger_name="ctms", report_dropped=True)
+    return UvicornJsonLogFormatter(logger_name="ctms", log_dropped_fields=True)
 
 
 def test_uvicorn_mozlog_drop_color_message(formatter):
@@ -28,7 +28,7 @@ def test_uvicorn_mozlog_drop_color_message(formatter):
 
 def test_uvicorn_mozlog_silent_drop_fields():
     """The field dropped_fields can be omitted."""
-    fmt = UvicornJsonLogFormatter(logger_name="ctms", report_dropped=False)
+    fmt = UvicornJsonLogFormatter(logger_name="ctms", log_dropped_fields=False)
     fields_in = {
         "color_message": "Finished server process [\u001b[36m%d\u001b[0m]",
         "msg": "Finished server process [30]",

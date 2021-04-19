@@ -18,9 +18,13 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
         "authorization",  # Basic auth or OAuth2 bearer tokens
     }
 
-    def __init__(self, report_dropped=False, **kwargs):
+    def __init__(self, log_dropped_fields=False, **kwargs):
         """
-        Allow recording dropped uvicorn fields.
+        Initialize the UvicornJsonLogFormatter.
+
+        Adds one extra parameter to JsonLogFormatter:
+
+        * log_dropped_fields: Add "dropped_fields" list to log context.
 
         These fields are dropped because they tend to be class instances that
         are not useful for logging. This setting could be used in production
@@ -28,7 +32,7 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
         available.
         """
         super().__init__(**kwargs)
-        self.report_dropped = report_dropped
+        self.log_dropped_fields = log_dropped_fields
 
     def convert_record(self, record):
         """
@@ -51,7 +55,7 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
         is_bytes = []
         for field_key, field_value in fields.items():
             if field_key in self.DROP_FIELDS:
-                if self.report_dropped:
+                if self.log_dropped_fields:
                     dropped.append(field_key)
             elif field_key == "scope":
                 # Lift up relevant request details from scope, drop irrelevant details
@@ -88,7 +92,7 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
                             is_bytes.append(key)
                     elif isinstance(value, str):
                         out[key] = value
-                    elif self.report_dropped:
+                    elif self.log_dropped_fields:
                         dropped.append(f"scope.{key}")
             else:
                 out[field_key] = field_value
