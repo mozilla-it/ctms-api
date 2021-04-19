@@ -187,7 +187,7 @@ def configure_logging(use_mozlog=True, logging_level="INFO"):
     uvicorn_formatters = uvicorn.config.LOGGING_CONFIG["formatters"]
     logging_config = {
         "version": 1,
-        "disable_existing_loggers": True,
+        "disable_existing_loggers": False,
         "formatters": {
             "dev_console": {
                 "format": "%(asctime)s %(levelname)s:%(name)s:  %(message)s"
