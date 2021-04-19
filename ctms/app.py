@@ -6,15 +6,15 @@ from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 import dateutil.parser
-import sentry_sdk
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from pydantic import EmailStr
-from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, scoped_session
+
+import sentry_sdk
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from . import config
 from .auth import (
@@ -124,14 +124,14 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
 
 def all_ids(
     email_id: Optional[UUID] = None,
-    primary_email: Optional[EmailStr] = None,
+    primary_email: Optional[str] = None,
     basket_token: Optional[UUID] = None,
     sfdc_id: Optional[str] = None,
     mofo_contact_id: Optional[str] = None,
     mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[EmailStr] = None,
+    fxa_primary_email: Optional[str] = None,
 ):
     """Alternate IDs, injected as a dependency."""
     return {
@@ -150,14 +150,14 @@ def all_ids(
 def get_contacts_by_ids(
     db: Session,
     email_id: Optional[UUID] = None,
-    primary_email: Optional[EmailStr] = None,
+    primary_email: Optional[str] = None,
     basket_token: Optional[UUID] = None,
     sfdc_id: Optional[str] = None,
     mofo_contact_id: Optional[str] = None,
     mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[EmailStr] = None,
+    fxa_primary_email: Optional[str] = None,
 ) -> List[ContactSchema]:
     """Get contacts by any ID.
 

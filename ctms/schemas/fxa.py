@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import UUID4, EmailStr, Field
+from pydantic import UUID4, Field
 
 from .base import ComparableBase
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
@@ -16,7 +16,7 @@ class FirefoxAccountsBase(ComparableBase):
         max_length=50,
         example="6eb6ed6ac3b64259968aa490c6c0b9df",  # pragma: allowlist secret
     )
-    primary_email: Optional[EmailStr] = Field(
+    primary_email: Optional[str] = Field(
         default=None,
         description="FxA Email, can be foreign ID, FxA_Primary_Email__c in Salesforce",
         example="my-fxa-acct@example.com",

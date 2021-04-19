@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Literal, Optional, Set, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, EmailStr, Field
+from pydantic import AnyUrl, BaseModel, Field
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -191,11 +191,11 @@ class IdentityResponse(BaseModel):
     """The identity keys for a contact."""
 
     email_id: UUID
-    primary_email: EmailStr
+    primary_email: str
     basket_token: UUID
     sfdc_id: Optional[str] = None
     mofo_contact_id: Optional[str] = None
     mofo_email_id: Optional[str] = None
     amo_user_id: Optional[str] = None
     fxa_id: Optional[str] = None
-    fxa_primary_email: Optional[EmailStr] = None
+    fxa_primary_email: Optional[str] = None
