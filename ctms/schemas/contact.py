@@ -182,6 +182,7 @@ class CTMSBulkResponse(BaseModel):
     start: datetime
     end: datetime
     limit: int
+    after: Optional[str] = None
     next: Optional[Union[AnyUrl, str]] = None
     items: List[CTMSResponse]
 
