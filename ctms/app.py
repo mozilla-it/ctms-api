@@ -239,23 +239,23 @@ def get_bulk_contacts_by_timestamp(
 
     if last_page:
         # No results/end
-        url_safe_encoded_str = None
+        after_encoded = None
         next_url = None
     else:
         last_result: CTMSResponse = results[-1]
-        url_safe_encoded_str = compressor_for_bulk_encoded_details(last_result)
+        after_encoded = compressor_for_bulk_encoded_details(last_result)
         next_url = (
             f"{get_settings().server_prefix}/updates?"
             f"start={start_time.isoformat()}"
             f"&end={end_time.isoformat()}"
             f"&limit={limit}"
-            f"&after={url_safe_encoded_str} "
+            f"&after={after_encoded} "
         )
 
     return CTMSBulkResponse(
         start=start_time,
         end=end_time,
-        after=url_safe_encoded_str,
+        after=after_encoded,
         limit=limit,
         items=results,
         next=next_url,
@@ -263,7 +263,7 @@ def get_bulk_contacts_by_timestamp(
 
 
 def updates_helper(value, default):
-    blank_vals = ["", " ", None]
+    blank_vals = ["", None]
     if value in blank_vals:
         return default
     return value
