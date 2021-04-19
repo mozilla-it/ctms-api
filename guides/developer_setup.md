@@ -244,5 +244,8 @@ Please view the [Git Strategy](git_strategy.md)
 ### Testing
 Please view the [Testing Strategy](testing_strategy.md)
 
+### Configuration
+See [Configuration](configuration.md) for local and production configuration settings.
+
 ---
 [View All Docs](./)
