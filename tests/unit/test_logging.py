@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for logging helpers"""
-from unittest.mock import Mock
+import json
+from logging import INFO, LogRecord
+from unittest.mock import ANY, Mock, patch
 
 import pytest
 
 from ctms.app import app, create_or_update_ctms_contact, login, root
-from ctms.logging import UvicornJsonLogFormatter
+from ctms.logging import UvicornJsonLogFormatter, configure_logging
 
 
 @pytest.fixture
@@ -35,6 +37,25 @@ def test_uvicorn_mozlog_silent_drop_fields():
     }
     out = fmt.convert_fields(fields_in)
     assert out == {"msg": "Finished server process [30]"}
+
+
+def test_uvicorn_mozlog_format(formatter):
+    """The UvicornJsonLogFormatter can format a record (calling convert_record)."""
+    record = LogRecord(
+        "uvicorn.access", INFO, __file__, 100, "A log messaage", (), None
+    )
+    raw_out = formatter.format(record)
+    out = json.loads(raw_out)
+    assert out == {
+        "Timestamp": ANY,
+        "Type": "uvicorn.access",
+        "Logger": "ctms",
+        "Hostname": ANY,
+        "EnvVersion": "2.0",
+        "Severity": 6,
+        "Pid": ANY,
+        "Fields": {"msg": "A log messaage"},
+    }
 
 
 def test_uvicorn_mozlog_root_path_call(formatter):
@@ -360,3 +381,24 @@ def test_uvicorn_mozlog_nonascii_querystring(formatter):
         "bytes_fields": ["query_string"],
         "query_string": b"star=\xe2\x9c\xb0",
     }
+
+
+@pytest.mark.parametrize(
+    "use_mozlog,logging_level",
+    (
+        (True, "INFO"),
+        (False, "WARNING"),
+    ),
+)
+def test_configure_logging(formatter, use_mozlog, logging_level):
+    with patch("ctms.logging.logging.config.dictConfig") as mock_dc:
+        configure_logging(use_mozlog, logging_level)
+    mock_dc.assert_called_once()
+    args = mock_dc.mock_calls[0].args
+    assert len(args) == 1
+    if use_mozlog:
+        handlers = ["mozlog"]
+    else:
+        handlers = ["humans"]
+    assert args[0]["root"] == {"handlers": handlers, "level": "WARNING"}
+    assert args[0]["loggers"]["ctms"]["level"] == logging_level
