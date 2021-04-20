@@ -110,4 +110,4 @@ WORKDIR /app
 
 EXPOSE $PORT
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD uvicorn ctms.app:app --host=0.0.0.0 --port=${PORT}
+CMD uvicorn ctms.app:app --host=0.0.0.0 --port=${PORT} --log-config /app/docker/log_config.json

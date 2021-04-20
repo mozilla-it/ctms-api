@@ -1,4 +1,5 @@
 import base64
+import time
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple, Union
@@ -6,7 +7,7 @@ from uuid import UUID, uuid4
 
 import dateutil.parser
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException, Path, Response
+from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import EmailStr
@@ -32,6 +33,7 @@ from .crud import (
     update_contact,
 )
 from .database import get_db_engine
+from .logging import configure_logging
 from .models import Email
 from .monitor import check_database, get_version
 from .schemas import (
@@ -73,7 +75,9 @@ def get_settings():
 @app.on_event("startup")
 def startup_event():
     global SessionLocal  # pylint:disable = W0603
-    _, session_factory = get_db_engine(get_settings())
+    settings = get_settings()
+    configure_logging(settings.use_mozlog, settings.logging_level)
+    _, session_factory = get_db_engine(settings)
     SessionLocal = scoped_session(session_factory)
 
 
@@ -270,6 +274,7 @@ def updates_helper(value, default):
 
 
 def get_api_client(
+    request: Request,
     token: str = Depends(oauth2_scheme),
     token_settings=Depends(_token_settings),
     db: Session = Depends(get_db),
@@ -283,20 +288,49 @@ def get_api_client(
         token,
         secret_key=token_settings["secret_key"],
     )
+    log_context = request.state.log_context
+    log_context["client_allowed"] = False
+
     if name is None:
+        log_context["auth_fail"] = "No or bad token"
         raise credentials_exception
+
+    log_context["client_id"] = name
     if namespace != "api_client":
+        log_context["auth_fail"] = "Bad namespace"
         raise credentials_exception
+
     api_client = get_api_client_by_id(db, name)
     if not api_client:
+        log_context["auth_fail"] = "No client record"
         raise credentials_exception
+
     return api_client
 
 
-def get_enabled_api_client(api_client: ApiClientSchema = Depends(get_api_client)):
+def get_enabled_api_client(
+    request: Request, api_client: ApiClientSchema = Depends(get_api_client)
+):
+    log_context = request.state.log_context
     if not api_client.enabled:
+        log_context["auth_fail"] = "Client disabled"
         raise HTTPException(status_code=400, detail="API Client has been disabled")
+    log_context["client_allowed"] = True
     return api_client
+
+
+@app.middleware("http")
+async def log_request(request: Request, call_next):
+    """Add timing and per-request logging context."""
+    start_time = time.time()
+    request.state.log_context = {}
+
+    response = await call_next(request)
+
+    duration = time.time() - start_time
+    duration_s = round(duration, 3)
+    request.state.log_context["duration_s"] = duration_s
+    return response
 
 
 @app.get("/", include_in_schema=False)
@@ -564,11 +598,13 @@ def read_identity(
     responses={400: {"model": BadRequestResponse}},
 )
 def login(
+    request: Request,
     db: Session = Depends(get_db),
     form_data: OAuth2ClientCredentialsRequestForm = Depends(),
     basic_credentials: Optional[HTTPBasicCredentials] = Depends(token_scheme),
     token_settings=Depends(_token_settings),
 ):
+    log_context = request.state.log_context
     failed_auth = HTTPException(
         status_code=400, detail="Incorrect username or password"
     )
@@ -576,16 +612,25 @@ def login(
     if form_data.client_id and form_data.client_secret:
         client_id = form_data.client_id
         client_secret = form_data.client_secret
+        log_context["token_creds_from"] = "form"
     elif basic_credentials:
         client_id = basic_credentials.username
         client_secret = basic_credentials.password
+        log_context["token_creds_from"] = "header"
     else:
+        log_context["token_fail"] = "No credentials"
         raise failed_auth
 
+    log_context["client_id"] = client_id
     api_client = get_api_client_by_id(db, client_id)
-    if not api_client or not api_client.enabled:
+    if not api_client:
+        log_context["token_fail"] = "No client record"
+        raise failed_auth
+    if not api_client.enabled:
+        log_context["token_fail"] = "Client disabled"
         raise failed_auth
     if not verify_password(client_secret, api_client.hashed_secret):
+        log_context["token_fail"] = "Bad credentials"
         raise failed_auth
 
     access_token = create_access_token(
