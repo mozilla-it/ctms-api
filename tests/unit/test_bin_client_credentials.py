@@ -3,7 +3,6 @@
 import pytest
 
 from ctms.bin.client_credentials import main
-from ctms.config import Settings
 from ctms.models import ApiClient
 
 
@@ -25,7 +24,7 @@ def test_create(dbsession, settings):
     client = dbsession.query(ApiClient).one()
     assert client.client_id == "id_test"
     assert client.email == "test@example.com"
-    assert client.enabled == True
+    assert client.enabled
 
 
 def test_create_explicit_id(dbsession, settings):
@@ -36,7 +35,7 @@ def test_create_explicit_id(dbsession, settings):
     client = dbsession.query(ApiClient).one()
     assert client.client_id == "id_tst"
     assert client.email == "test@example.com"
-    assert client.enabled == True
+    assert client.enabled
 
 
 def test_create_disabled(dbsession, settings):
@@ -49,7 +48,7 @@ def test_create_disabled(dbsession, settings):
     client = dbsession.query(ApiClient).one()
     assert client.client_id == "id_test2"
     assert client.email == "test@example.com"
-    assert client.enabled == False
+    assert not client.enabled
 
 
 def test_create_email_required(dbsession, settings):
@@ -71,7 +70,7 @@ def test_create_valid_client_id(dbsession, settings, client_id):
     client = dbsession.query(ApiClient).one()
     assert client.client_id == f"id_{client_id}"
     assert client.email == "test@example.com"
-    assert client.enabled == True
+    assert client.enabled
 
 
 @pytest.mark.parametrize("client_id", ("test@example.com", "Résumé", "💩.la"))

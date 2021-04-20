@@ -5,7 +5,7 @@ import os.path
 from unittest.mock import Mock
 
 import pytest
-from sqlalchemy.exc import TimeoutError
+from sqlalchemy.exc import TimeoutError as SQATimeoutError
 
 from ctms.app import app, get_db
 
@@ -13,13 +13,13 @@ from ctms.app import app, get_db
 @pytest.fixture
 def mock_db():
     """Mock the database session."""
-    mock_db = Mock()
+    mocked_db = Mock()
 
     def mock_get_db():
-        yield mock_db
+        yield mocked_db
 
     app.dependency_overrides[get_db] = mock_get_db
-    yield mock_db
+    yield mocked_db
     del app.dependency_overrides[get_db]
 
 
@@ -56,7 +56,7 @@ def test_read_heartbeat(anon_client, dbsession):
 
 def test_read_heartbeat_no_db_fails(anon_client, mock_db):
     """/__heartbeat__ returns 503 when the database is unavailable."""
-    mock_db.execute.side_effect = TimeoutError()
+    mock_db.execute.side_effect = SQATimeoutError()
     resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 503
     data = resp.json()

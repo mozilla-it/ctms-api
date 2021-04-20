@@ -792,7 +792,7 @@ def test_create_or_update_basic_id_is_different(client, minimal_contact):
 
     # This id is different from the one in the contact
     resp = client.put(
-        f"/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7", minimal_contact.json()
+        "/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7", minimal_contact.json()
     )
     assert resp.status_code == 422, resp.text
 
@@ -805,7 +805,7 @@ def test_create_or_update_basic_id_is_none(put_contact):
         contact.email.email_id = None
         return contact
 
-    saved_contacts, sample, email_id = put_contact(
+    put_contact(
         modifier=_remove_id,
         check_redirect=False,
         code=422,

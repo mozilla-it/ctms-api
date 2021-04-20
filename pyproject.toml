@@ -47,6 +47,7 @@ detect-secrets = "^0.14.3"
 bandit = "^1.7.0"
 SQLAlchemy-Utils = "^0.36.8"
 pylint = "^2.7.2"
+pylint-pytest = "^1.1.2"
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -82,8 +83,9 @@ testpaths = [
     generated-members='alembic.*'
     [tool.pylint.MASTER]
     extension-pkg-whitelist='pydantic'
+    load-plugins='pylint_pytest'
     ignore='third_party'
-    ignore-patterns = "migrations/.*,tests/.*/.*" # Not worth fixing yet
+    ignore-patterns = "migrations/.*" # Not worth fixing yet
 
 [tool.black]
 line-length = 88

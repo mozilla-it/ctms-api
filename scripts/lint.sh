@@ -14,4 +14,4 @@ detect-secrets-hook $SECRETS_TO_SCAN --baseline .secrets.baseline
 mypy --no-strict-optional --ignore-missing-imports "${BASE_DIR}"
 black --config "${BASE_DIR}/pyproject.toml" "${BASE_DIR}"
 isort --recursive --settings-path "${BASE_DIR}/pyproject.toml" "${BASE_DIR}"
-pylint ctms
+pylint ctms tests/unit

@@ -160,7 +160,7 @@ def test_get_ctms_with_token(
     example_contact, anon_client, test_token_settings, client_id_and_secret
 ):
     """An authenticated API can be fetched with a valid token"""
-    client_id, client_secret = client_id_and_secret
+    client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
     )
@@ -175,7 +175,7 @@ def test_get_ctms_with_invalid_token_fails(
     example_contact, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with an invalid token is an error"""
-    client_id, client_secret = client_id_and_secret
+    client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"},
         secret_key="secret_key_from_other_deploy",
@@ -193,7 +193,7 @@ def test_get_ctms_with_invalid_namespace_fails(
     example_contact, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with an unexpected namespace is an error"""
-    client_id, client_secret = client_id_and_secret
+    client_id = client_id_and_secret[0]
     token = create_access_token({"sub": f"unknown:{client_id}"}, **test_token_settings)
     resp = anon_client.get(
         f"/ctms/{example_contact.email.email_id}",
@@ -207,7 +207,7 @@ def test_get_ctms_with_unknown_client_fails(
     example_contact, anon_client, test_token_settings, client_id_and_secret
 ):
     """A token with an unknown (deleted?) API client name is an error"""
-    client_id, client_secret = client_id_and_secret
+    client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:not_{client_id}"}, **test_token_settings
     )
@@ -224,7 +224,7 @@ def test_get_ctms_with_expired_token_fails(
 ):
     """Calling an authenticated API with an expired token is an error"""
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    client_id, client_secret = client_id_and_secret
+    client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings, now=yesterday
     )
@@ -240,7 +240,7 @@ def test_get_ctms_with_disabled_client_fails(
     dbsession, example_contact, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with a valid token for an expired client is an error."""
-    client_id, client_secret = client_id_and_secret
+    client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
     )
