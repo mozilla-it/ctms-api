@@ -65,7 +65,9 @@ multi-line JSON for clarity:
     "root_path": "",
     "path": "/ctms",
     "raw_path": "/ctms",
-    "query_string": "primary_email=test%40example.com",
+    "query": {
+        "primary_email": "[OMITTED]",
+    },
     "headers": {
       "host": "localhost:8000",
       "accept-encoding": "gzip, deflate",
@@ -98,7 +100,8 @@ bytestrings, but the logger attempts to decode them as ASCII to unicode strings,
 and falls back to ``repr()`` to convert to a string, such as ``"b'byte string'"``.
 
 Some headers contain security sensitive information, such as client credentials and
-access token. These values are replaced by ``[OMITTED]``.
+access token. These values are replaced by ``[OMITTED]``. Similar replacement
+removes emails from the querystring (when parsed).
 
 The fields added by uvicorn are:
 
@@ -107,7 +110,8 @@ The fields added by uvicorn are:
 * ``method`` - HTTP method, such as "GET" or "POST"
 * ``msg`` - A request summary suitable for humans
 * ``path`` - Path portion of URL, such as "/ctms"
-* ``query_string`` - Querystring portion of URL, not decoded
+* ``query_string`` - Querystring portion of URL, if not decoded and parse
+* ``query`` - Query parameters, if decoded and parsed
 * ``scheme`` - Scheme, such as "http" or "https"
 * ``status_code`` - HTTP status code as integer, such as 200 or 404
 * ``type`` - Type of request, such as "http"
