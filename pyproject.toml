@@ -83,8 +83,9 @@ testpaths = [
     generated-members='alembic.*'
     [tool.pylint.MASTER]
     extension-pkg-whitelist='pydantic'
+    load-plugins='pylint_pytest'
     ignore='third_party'
-    ignore-patterns = "migrations/.*,tests/.*/.*" # Not worth fixing yet
+    ignore-patterns = "migrations/.*" # Not worth fixing yet
 
 [tool.black]
 line-length = 88

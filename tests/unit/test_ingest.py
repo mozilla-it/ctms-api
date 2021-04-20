@@ -62,6 +62,7 @@ def _check_saved(dbsession, emails=None, amos=None, newsletters=None):
 
 def test_ingest_empty(connection, empty_ios):
     ingester = Ingester(empty_ios, connection)
+    ingester.run()
 
 
 @pytest.mark.parametrize("batch_size", [10, 1, 2, 100])

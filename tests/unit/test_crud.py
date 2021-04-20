@@ -36,9 +36,9 @@ class StatementWatcher:
     against the given session / connection.
 
     Usage:
-        with StatementWatcher(dbsession.connection()) as sw:
+        with StatementWatcher(dbsession.connection()) as watcher:
             dbsession.query(Email).all()
-        assert sw.count == 1
+        assert watcher.count == 1
     """
 
     def __init__(self, connection):
@@ -169,9 +169,9 @@ def test_get_multiple_emails_by_any_id(
 def test_get_contact_by_email_id_found(dbsession, example_contact):
     """A contact is retrived in two queries, and newsletters are sorted by name."""
     email_id = example_contact.email.email_id
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         contact = get_contact_by_email_id(dbsession, email_id)
-    assert sw.count == 2
+    assert watcher.count == 2
     assert contact["email"].email_id == email_id
     newsletter_names = [nl.name for nl in contact["newsletters"]]
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
@@ -180,9 +180,9 @@ def test_get_contact_by_email_id_found(dbsession, example_contact):
 
 def test_get_contact_by_email_id_miss(dbsession):
     """A missed contact is 1 query."""
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         contact = get_contact_by_email_id(dbsession, str(uuid4()))
-    assert sw.count == 1
+    assert watcher.count == 1
     assert contact is None
 
 
@@ -202,7 +202,7 @@ def test_get_bulk_contacts_some_after_higher_limit(
     last_contact_timestamp = last_contact.email.update_timestamp
     end_time = last_contact_timestamp + timedelta(hours=12)
 
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         bulk_contact_list = get_bulk_contacts(
             dbsession,
             start_time=after_start,
@@ -210,7 +210,7 @@ def test_get_bulk_contacts_some_after_higher_limit(
             limit=2,
             after_email_id=after_id,
         )
-    assert sw.count == 2
+    assert watcher.count == 2
     assert len(bulk_contact_list) == 2
     assert last_contact in bulk_contact_list
     assert sorted_list[-2] in bulk_contact_list
@@ -232,7 +232,7 @@ def test_get_bulk_contacts_some_after(
     last_contact_timestamp = last_contact.email.update_timestamp
     end_time = last_contact_timestamp + timedelta(hours=12)
 
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         bulk_contact_list = get_bulk_contacts(
             dbsession,
             start_time=after_start,
@@ -240,7 +240,7 @@ def test_get_bulk_contacts_some_after(
             limit=1,
             after_email_id=after_id,
         )
-    assert sw.count == 2
+    assert watcher.count == 2
     assert len(bulk_contact_list) == 1
     assert last_contact in bulk_contact_list
 
@@ -255,14 +255,14 @@ def test_get_bulk_contacts_some(
     oldest_timestamp = min([example_timestamp, maximal_timestamp, minimal_timestamp])
     timestamp = oldest_timestamp - timedelta(hours=12)
 
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         bulk_contact_list = get_bulk_contacts(
             dbsession,
             start_time=timestamp,
             end_time=datetime.now(timezone.utc),
             limit=10,
         )
-    assert sw.count == 2
+    assert watcher.count == 2
     assert len(bulk_contact_list) == 3
     assert example_contact in bulk_contact_list
     assert maximal_contact in bulk_contact_list
@@ -275,24 +275,24 @@ def test_get_bulk_contacts_one(dbsession, example_contact):
     start_time = timestamp - timedelta(12)
     end_time = timestamp + timedelta(hours=12)
 
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         bulk_contact_list = get_bulk_contacts(
             dbsession, start_time=start_time, end_time=end_time, limit=10
         )
-    assert sw.count == 2
+    assert watcher.count == 2
     assert len(bulk_contact_list) == 1
     assert bulk_contact_list[0].email.email_id == email_id
 
 
 def test_get_bulk_contacts_none(dbsession):
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         bulk_contact_list = get_bulk_contacts(
             dbsession,
             start_time=datetime.now(timezone.utc) + timedelta(days=1),
             end_time=datetime.now(timezone.utc) + timedelta(days=1),
             limit=10,
         )
-    assert sw.count == 1
+    assert watcher.count == 1
     assert bulk_contact_list == []
 
 
@@ -312,9 +312,9 @@ def test_get_bulk_contacts_none(dbsession):
 )
 def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
     """A contacts is fetched by alternate id in two queries."""
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert sw.count == 2
+    assert watcher.count == 2
     assert len(contacts) == 1
     newsletter_names = [nl.name for nl in contacts[0]["newsletters"]]
     assert sorted(newsletter_names) == newsletter_names
@@ -322,9 +322,9 @@ def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_v
 
 def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
     """A contacts is fetched by alternate id in two queries."""
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         contact = get_contacts_by_any_id(dbsession, basket_token=str(uuid4()))
-    assert sw.count == 1
+    assert watcher.count == 1
     assert len(contact) == 0
 
 
@@ -373,10 +373,10 @@ def test_get_multiple_contacts_by_any_id(
     create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="aaa_game_news"))
     dbsession.flush()
 
-    with StatementWatcher(dbsession.connection()) as sw:
+    with StatementWatcher(dbsession.connection()) as watcher:
         contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert sw.count == 2
+    assert watcher.count == 2
     assert len(contacts) == 2
     for contact in contacts:
-        newsletter_names = [nl.name for nl in contacts[0]["newsletters"]]
+        newsletter_names = [nl.name for nl in contact["newsletters"]]
         assert sorted(newsletter_names) == newsletter_names

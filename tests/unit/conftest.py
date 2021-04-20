@@ -60,9 +60,9 @@ def engine(pytestconfig):
 @pytest.fixture
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
-    with engine.begin() as connection:
-        savepoint = connection.begin_nested()
-        yield connection
+    with engine.begin() as conn:
+        savepoint = conn.begin_nested()
+        yield conn
         savepoint.rollback()
 
 
