@@ -109,7 +109,7 @@ def test_uvicorn_mozlog_root_path_call(formatter):
         "msg": '172.19.0.1:56988 - "GET / HTTP/1.1" 307',
         "path": "/",
         "path_params": {},
-        "query_string": "",
+        "query": {},
         "scheme": "http",
         "server_ip": "172.19.0.3",
         "server_port": 8000,
@@ -322,4 +322,41 @@ def test_uvicorn_mozlog_string_object(formatter):
     assert out == {
         "bytes_fields": ["headers.x-set"],
         "headers": {"x-set": {}},
+    }
+
+
+@pytest.mark.parametrize(
+    "querystring,query",
+    (
+        (b"primary_email=test@example.com", {"primary_email": "[OMITTED]"}),
+        (b"fxa_primary_email=test@example.com", {"fxa_primary_email": "[OMITTED]"}),
+        (b"email_id=a-uuid", {"email_id": "a-uuid"}),
+        (
+            b"start=2020-04-19T21:03&end=&limit=10",
+            {"start": "2020-04-19T21:03", "end": "", "limit": "10"},
+        ),
+        (b"a=1&a=2", {"a": ["1", "2"]}),
+    ),
+)
+def test_uvicorn_mozlog_querystring(formatter, querystring, query):
+    """The querystring is parsed, and emails are omitted."""
+    fields_in = {"scope": {"query_string": querystring}}
+    out = formatter.convert_fields(fields_in)
+    assert out == {"query": query}
+
+
+def test_uvicorn_mozlog_invalid_querystring(formatter):
+    """An invalid querystring is not parsed."""
+    fields_in = {"scope": {"query_string": b"invalid&&="}}
+    out = formatter.convert_fields(fields_in)
+    assert out == {"query_string": "invalid&&="}
+
+
+def test_uvicorn_mozlog_nonascii_querystring(formatter):
+    """An non-ASCII querystring is not parsed."""
+    fields_in = {"scope": {"query_string": "star=✰".encode("utf8")}}
+    out = formatter.convert_fields(fields_in)
+    assert out == {
+        "bytes_fields": ["query_string"],
+        "query_string": b"star=\xe2\x9c\xb0",
     }

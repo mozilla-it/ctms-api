@@ -2,6 +2,7 @@
 
 import logging
 import logging.config
+from urllib.parse import parse_qs
 
 import uvicorn
 from dockerflow.logging import JsonLogFormatter
@@ -20,6 +21,10 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
     SECURITY_HEADERS = {
         "cookie",  # CSRF token, not needed in logs
         "authorization",  # Basic auth or OAuth2 bearer tokens
+    }
+    QUERY_KEYS_WITH_PII = {
+        "primary_email",
+        "fxa_primary_email",
     }
 
     def __init__(self, log_dropped_fields=False, **kwargs):
@@ -91,6 +96,15 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
                     elif key == "path_params" and isinstance(value, dict):
                         # Dictionary of path parameters
                         out["path_params"] = value
+                    elif key == "query_string":
+                        is_decoded, is_parsed, query = self.convert_querystring(value)
+                        if not is_decoded:
+                            out["query_string"] = value
+                            is_bytes.append(key)
+                        elif not is_parsed:
+                            out["query_string"] = query
+                        else:
+                            out["query"] = query
                     elif isinstance(value, bytes):
                         # HTTP values are probably ASCII, try converting
                         clean_value, decoded = self.attempt_to_decode_bytestring(value)
@@ -173,6 +187,43 @@ class UvicornJsonLogFormatter(JsonLogFormatter):
             else:
                 new_headers[header_name] = clean_val
         return new_headers, byte_fields, has_duplicates
+
+    def convert_querystring(self, querystring):
+        """
+        Convert uvicorn raw querystring to query dict
+
+        Actions:
+        * Attempt to convert the query_string to a string
+        * Omit the values for keys with PII
+        * Turn into a dictionary of names to values, or list of
+          values when multiple values given for same key
+
+        Return is a tuple
+        * is_decoded - True if the querystring was decoded from bytes
+        * is_parsed - True if the querystring was parsed into key/values
+        * query - the query dict, or the decoded querystring, or original
+        """
+        clean_qs, is_decoded = self.attempt_to_decode_bytestring(querystring)
+        if not is_decoded:
+            return False, False, clean_qs
+
+        if clean_qs == "":
+            return True, True, {}
+
+        try:
+            parsed = parse_qs(clean_qs, keep_blank_values=True, strict_parsing=True)
+        except ValueError:
+            return True, False, clean_qs
+
+        query = {}
+        for qkey, qvalues in parsed.items():
+            if qkey in self.QUERY_KEYS_WITH_PII:
+                qvalues = ["[OMITTED]" for val in qvalues]
+            if len(qvalues) == 1:
+                query[qkey] = qvalues[0]
+            else:
+                query[qkey] = qvalues
+        return True, True, query
 
 
 def configure_logging(use_mozlog=True, logging_level="INFO"):
