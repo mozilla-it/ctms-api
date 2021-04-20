@@ -8,7 +8,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from itertools import chain
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Set
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -25,6 +25,15 @@ from ctms.schemas import (
     NewsletterTableSchema,
     VpnWaitlistTableSchema,
 )
+
+# Track email_ids that we have determined should not be inserted for
+# one reason or another
+skip_writes: Set[str] = set()
+canonical_mapping: Dict[str, str] = {}
+
+
+class NonCanonicalError(BaseException):
+    pass
 
 
 def csv_reader(
@@ -50,6 +59,12 @@ def csv_reader(
                     str(e),
                     file=sys.stderr,
                 )
+            except NonCanonicalError as e:
+                print(
+                    newline["email_id"],
+                    "is non-canonical, skipping.",
+                    file=sys.stderr,
+                )
 
 
 def _ensure_timestamps(line: dict):
@@ -68,13 +83,24 @@ def _ensure_timestamps(line: dict):
 
 
 def _email_modifier(i: int, line: dict, isdev: bool) -> EmailTableSchema:
+    if canonical_mapping.get(line["email_id"]):
+        raise NonCanonicalError  # We don't insert non-canonical email records
     _ensure_timestamps(line)
     if isdev:
         line["primary_email"] = f"{line['primary_email']}@example.com"
-    return EmailTableSchema(**line)
+
+    # Only for emails, we add to the skip_writes list since
+    # rows in other tables don't make sense with missing email row
+    try:
+        return EmailTableSchema(**line)
+    except ValidationError as e:
+        skip_writes.add(line["email_id"])
+        raise e
 
 
 def _amo_modifier(i: int, line: dict, isdev: bool) -> AddOnsTableSchema:
+    if canonical_mapping.get(line["email_id"]):
+        raise NonCanonicalError  # We don't insert non-canonical email records
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
@@ -84,6 +110,8 @@ def _amo_modifier(i: int, line: dict, isdev: bool) -> AddOnsTableSchema:
 
 
 def _fxa_modifier(i: int, line: dict, isdev: bool) -> FirefoxAccountsTableSchema:
+    if canonical_mapping.get(line["email_id"]):
+        raise NonCanonicalError  # We don't insert non-canonical email records
     _ensure_timestamps(line)
     if isdev:
         if line.get("fxa_primary_email"):
@@ -98,6 +126,13 @@ def _fxa_modifier(i: int, line: dict, isdev: bool) -> FirefoxAccountsTableSchema
 
 
 def _newsletter_modifier(i: int, line: dict, isdev: bool) -> NewsletterTableSchema:
+
+    # For newsletters only, we actually replace the email_id
+    # with the canonical id so that we don't lose subscriptions
+    canonical_id = canonical_mapping.get(line["email_id"])
+    if canonical_id:
+        line["email_id"] = canonical_id
+
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
@@ -107,6 +142,8 @@ def _newsletter_modifier(i: int, line: dict, isdev: bool) -> NewsletterTableSche
 
 
 def _vpn_waitlist_modifier(i: int, line: dict, isdev: bool) -> VpnWaitlistTableSchema:
+    if canonical_mapping.get(line["email_id"]):
+        raise NonCanonicalError  # We don't insert non-canonical email records
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
@@ -136,12 +173,23 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         help="If true, apply dev transforms",
         action="store_true",
     )
+    parser.add_argument(
+        "--duplicates",
+        help="A spefically formatted file containing duplicate emails",
+        required=True,
+    )
 
     args = parser.parse_args(args=test_args)
     directory = args.dir
     isdev = args.dev
     inputs = InputIOs()
     total = 0
+
+    with open(args.duplicates, "r") as dups:
+        for line in dups:
+            ids = line.strip("\n").split(" ")
+            for _id in ids[1:]:
+                canonical_mapping[_id] = ids[0]
 
     emails = []
     amos = []

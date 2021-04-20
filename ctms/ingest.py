@@ -1,4 +1,5 @@
 from dataclasses import dataclass, fields
+from time import monotonic
 from typing import Any, Generator, List
 
 from pydantic import BaseModel
@@ -59,11 +60,17 @@ class Ingester:
         stmt_args: dict,
     ):
         batch = []
+        prev = monotonic()
         for model in feed:
             batch.append(model)
             if len(batch) == self.batch_size:
                 self._insert_batch(batch, table, stmt_args)
                 batch = []
+                now = monotonic()
+                elapsed = now - prev
+                per_second = int(self.batch_size / elapsed)
+                print(f"Writing approx. {per_second} rows/second")
+                prev = now
         # Finally write whatever is left over
         self._insert_batch(batch, table, stmt_args)
 
