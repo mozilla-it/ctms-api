@@ -39,3 +39,6 @@ To stop on the first failure and drop into [pdb][pdb]:
 > pytest -sx --pdb
 
 [pdb]: <https://docs.python.org/3/library/pdb.html> "pdb - The Python Debugger"
+
+---
+[View All Docs](./)

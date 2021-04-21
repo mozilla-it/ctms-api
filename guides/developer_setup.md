@@ -19,7 +19,7 @@ Install Poetry for osx/linux:
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
 ```
 
-## Install Dependencies
+## Setup Dependencies
 Install prod dependencies in pyproject.toml through poetry:
 
 ```sh
@@ -31,7 +31,7 @@ Install ALL deps including DEV dependencies:
 poetry install
 ```
 
-### In Use
+### Using Poetry
 Opens shell with corresponding dependencies to the poetry(.lock) in the directory that you make the call:
 
 ```sh
@@ -59,7 +59,7 @@ Run the following command to exit `poetry shell` while in a shell.
 exit
 ```
 
-The command `deactivate` will not work to full disengage the poetry shell as it does with `venv`.
+The command `deactivate` might not work to full disengage the poetry shell as it does with `venv`.
 
 [...view poetry site for further documentation and details.](https://python-poetry.org/)
 
@@ -82,18 +82,18 @@ pre-commit installed at .git/hooks/pre-commit
 
 Reinstall the pre-commit hooks when there are changes to the `.pre-commit-config.yaml` file.
 
-### Run on the Entire Codebase
+### It Passively Runs on Git "Commit"
+When you commit in git, the pre-commit hooks will engage and perform the outlined steps.
+
+### Force Run on the Entire Codebase (Optional)
 
 Run the following command where you installed pre-commit.
 ```sh
 pre-commit run --all-files
 ```
 
-### Passively Runs on Git "Commit"
-When you commit in git, the pre-commit hooks will engage and perform the outlined steps.
-
-#### Bypass Hook (Not Recommended)
-The option `--no-verify` should allow a committer to bypass the hooks.
+### Bypass Hook (Not Recommended)
+The option `--no-verify` should allow a committer to bypass the hooks when committing.
 
 ---
 ## Docker
@@ -103,7 +103,7 @@ Install Docker here: https://docs.docker.com/get-docker/
 
 ### Linux Users
 Linux users will want to set the user ID and group ID used in the container.
-User of Docker Desktop for Mac or Windows and skip this step.
+User of Docker Desktop for Mac or Windows can skip this step.
 
 Create a ``.env`` environment file, if it isn't already created:
 
@@ -122,23 +122,6 @@ Set these to your user ID and group ID. These commands might return them:
 ```sh
 id -u # Your user ID
 id -g # Your group ID
-```
-
-### Building
-Build images with:
-```sh
-docker build --tag ctms-api --file docker/Dockerfile .
-```
-
-Stop the build at optional stages (development, lint, test, production) with the --target option:
-```sh
-docker build --tag ctms-api --file docker/Dockerfile . --target <stage>
-```
-
-#### Optional
-It is also possible to build the full image through the provided scripts:
-```sh
-poetry run scripts/build.sh
 ```
 
 ---
@@ -169,6 +152,7 @@ make build # Build the docker containers
 Web-Framework for building APIs with Python that provides short, easy, and
 intuitive decorator-based annotations for routing (similar to Flask), but
 also provides OpenAPI and JSON Schema portals for API viewing.
+- https://fastapi.tiangolo.com/
 
 ---
 ## Pydantic
@@ -176,7 +160,7 @@ also provides OpenAPI and JSON Schema portals for API viewing.
 ### Details
 Data Modeling and validation package that enforces type hints at
 runtime and provides friendly errors for easy debugging.
-
+- https://pydantic-docs.helpmanual.io/
 ---
 ## SQLAlchemy and Alembic
 
@@ -236,16 +220,9 @@ Your OAuth2 client credentials are:
 You can use these on the interactive Swagger docs by clicking the "**Authorize**" button.
 
 ---
-## Next Steps
-
-### Git Strategy
-Please view the [Git Strategy](git_strategy.md)
-
-### Testing
-Please view the [Testing Strategy](testing_strategy.md)
-
-### Configuration
+## Configuration
 See [Configuration](configuration.md) for local and production configuration settings.
+
 
 ---
 [View All Docs](./)
