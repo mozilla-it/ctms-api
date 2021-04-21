@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     server_prefix: str = "http://localhost:8000"
     use_mozlog: bool = True
     logging_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
+    sentry_debug: bool = False
 
     class Config:
         env_prefix = "ctms_"
