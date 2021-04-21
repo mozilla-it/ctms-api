@@ -26,6 +26,7 @@ def main(test_args=None) -> int:
 
     total = 0
 
+    # TODO: THIS NEEDS TO WORK FOR BASKET TOKEN TOO
     with open(args.collectfile, "w") as col:
         for f in os.listdir(directory):
             if "contact_to_email" in f:

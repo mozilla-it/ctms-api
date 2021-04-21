@@ -8,7 +8,6 @@ import sys
 from itertools import chain
 from typing import Any, Callable, Dict, Set
 
-from pydantic import BaseModel
 from pydantic.error_wrappers import ValidationError
 from sqlalchemy.engine import Connection
 
@@ -28,7 +27,7 @@ from ctms.ingest import Ingester, InputIOs
 def csv_reader(
     directory,
     f,
-    modifier: Callable[[int, Dict[str, Any], bool, Any, Any], BaseModel],
+    modifier: Callable[[int, Dict[str, Any], bool, Any, Any], Any],
     isdev: bool,
     canonical_mapping: Dict[str, str],
     skip_writes: Set[str],
