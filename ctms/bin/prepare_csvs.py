@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Given a dump of csvs from bigquery, prepare it for being imported
-into postgres with COPY."""
+"""
+Given a dump of csvs from bigquery, prepare it for being imported
+into postgres with COPY.
+"""
 
 import argparse
 import csv
