@@ -80,7 +80,7 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     )
     parser.add_argument(
         "--duplicates",
-        help="A spefically formatted file containing duplicate emails",
+        help="A specifically formatted file containing duplicate emails",
         required=True,
     )
 
