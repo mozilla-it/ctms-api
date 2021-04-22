@@ -44,6 +44,7 @@ The project is structured with the following in mind:
         - Scripts intended for background machinery
     - schemas/*
         - Pydantic Models for Data Modeling, and Contract Validation
+    - models.py
         - SQLAlchemy models
 - tests/unit/*
     - Test suite using pytest
