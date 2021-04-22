@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import UUID4, EmailStr, Field, validator
+from pydantic import UUID4, Field, validator
 
 from .base import ComparableBase
 
@@ -13,7 +13,7 @@ EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
 class EmailBase(ComparableBase):
     """Data that is included in input/output/db of a primary_email and such."""
 
-    primary_email: EmailStr
+    primary_email: str
     basket_token: Optional[UUID] = Field(
         default=None,
         description="Basket token, Token__c in Salesforce",
@@ -127,7 +127,7 @@ class EmailPutSchema(EmailBase):
 class EmailPatchSchema(EmailInSchema):
     """Nearly identical to EmailInSchema but nothing is required."""
 
-    primary_email: Optional[EmailStr]
+    primary_email: Optional[str]
 
     @validator("primary_email")
     @classmethod

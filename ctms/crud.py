@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
-from pydantic import UUID4, EmailStr
+from pydantic import UUID4
 from sqlalchemy import asc
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -134,14 +134,14 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Dict:
 def get_emails_by_any_id(
     db: Session,
     email_id: Optional[UUID4] = None,
-    primary_email: Optional[EmailStr] = None,
+    primary_email: Optional[str] = None,
     basket_token: Optional[UUID4] = None,
     sfdc_id: Optional[str] = None,
     mofo_contact_id: Optional[str] = None,
     mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[EmailStr] = None,
+    fxa_primary_email: Optional[str] = None,
 ) -> List[Email]:
     """
     Get all the data for multiple contacts by IDs as a list of Email instances.
@@ -193,14 +193,14 @@ def get_emails_by_any_id(
 def get_contacts_by_any_id(
     db: Session,
     email_id: Optional[UUID4] = None,
-    primary_email: Optional[EmailStr] = None,
+    primary_email: Optional[str] = None,
     basket_token: Optional[UUID4] = None,
     sfdc_id: Optional[str] = None,
     mofo_contact_id: Optional[str] = None,
     mofo_email_id: Optional[str] = None,
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[EmailStr] = None,
+    fxa_primary_email: Optional[str] = None,
 ) -> List[Dict]:
     """
     Get all the data for multiple contacts by ID as a list of dicts.

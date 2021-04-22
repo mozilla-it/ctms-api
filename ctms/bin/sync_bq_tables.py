@@ -3,10 +3,10 @@
 
 import argparse
 import re
+import sys
 from datetime import datetime, timezone
 from time import monotonic
 from typing import Any, Callable, Dict
-from uuid import uuid4
 
 from google.cloud import bigquery
 from pydantic import BaseModel
@@ -35,7 +35,7 @@ def bq_reader(
 ):
     # TODO: Probably want some sort of ordering here, a report of where
     # we are in that ordering, and a way to resume from that place if
-    # things crash
+    # things crash (LOGGING AND QUERYING?)
     query = f"SELECT * FROM `mozilla-cdp-prod.sfdc_exports.{table}`"
     query_job_rows = client.query(query).result()
     total_rows = query_job_rows.total_rows
@@ -58,7 +58,7 @@ def bq_reader(
             yield modifier(newrow)
         except ValidationError as e:
             # TODO: Write this to a table so we know what didn't work
-            print(newrow["email_id"], str(e))
+            print(newrow["email_id"], str(e), file=sys.stderr)
 
 
 # TODO: make sure that ensure_timestamp is actually useful compared to making the server_defaults work
@@ -79,7 +79,6 @@ def _ensure_timestamps(line: dict):
 
 def _email_modifier(line: dict) -> EmailTableSchema:
     _ensure_timestamps(line)
-    line["primary_email"] = f"{line['primary_email']}@example.com"
     return EmailTableSchema(**line)
 
 
@@ -94,9 +93,6 @@ def _amo_modifier(line: dict) -> AddOnsTableSchema:
 
 def _fxa_modifier(line: dict) -> FirefoxAccountsTableSchema:
     _ensure_timestamps(line)
-    if line.get("fxa_primary_email"):
-        line["fxa_primary_email"] = f"{line['fxa_primary_email']}@example.com"
-    line.setdefault("fxa_id", str(uuid4()))
     newline = {}
     for key, val in line.items():
         if key != "fxa_id":
@@ -143,6 +139,12 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         default=1000,
         type=int,
     )
+    parser.add_argument(
+        "-p",
+        "--prefix",
+        help="Which prefix to use for BQ tables.",
+        default="CTMS",
+    )
 
     args = parser.parse_args(args=test_args)
     inputs = InputIOs()
@@ -154,21 +156,31 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
 
     inputs.emails = bq_reader(
         bq_client,
-        "CTMS_SAMPLE_contact_to_email",
+        f"{args.prefix}_contact_to_email",
         _email_modifier,
         1,
         5,
         report_frequency,
     )
     inputs.amo = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_amo", _amo_modifier, 2, 5, report_frequency
+        bq_client,
+        f"{args.prefix}_contact_to_amo",
+        _amo_modifier,
+        2,
+        5,
+        report_frequency,
     )
     inputs.fxa = bq_reader(
-        bq_client, "CTMS_SAMPLE_contact_to_fxa", _fxa_modifier, 3, 5, report_frequency
+        bq_client,
+        f"{args.prefix}_contact_to_fxa",
+        _fxa_modifier,
+        3,
+        5,
+        report_frequency,
     )
     inputs.newsletters = bq_reader(
         bq_client,
-        "CTMS_SAMPLE_contact_to_newsletter",
+        f"{args.prefix}_contact_to_newsletter",
         _newsletter_modifier,
         4,
         5,
@@ -176,7 +188,7 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     )
     inputs.vpn_waitlist = bq_reader(
         bq_client,
-        "CTMS_SAMPLE_contact_to_vpn_waitlist",
+        f"{args.prefix}_contact_to_vpn_waitlist",
         _vpn_waitlist_modifier,
         5,
         5,
@@ -195,8 +207,6 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
 
 
 if __name__ == "__main__":
-    import sys
-
     # Get the database
     config_settings = config.Settings()
     engine, _ = get_db_engine(config_settings)

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, fields
-from typing import Generator, List, Optional
+from time import monotonic
+from typing import Any, Generator, List
 
 from pydantic import BaseModel
 from sqlalchemy.dialects.postgresql import insert
@@ -7,22 +8,15 @@ from sqlalchemy.engine import Connection
 
 from ctms.database import Base
 from ctms.models import AmoAccount, Email, FirefoxAccount, Newsletter, VpnWaitlist
-from ctms.schemas import (
-    AddOnsTableSchema,
-    EmailTableSchema,
-    FirefoxAccountsTableSchema,
-    NewsletterTableSchema,
-    VpnWaitlistTableSchema,
-)
 
 
 @dataclass
 class InputIOs:
-    amo: Optional[Generator[AddOnsTableSchema, None, None]] = None
-    emails: Optional[Generator[EmailTableSchema, None, None]] = None
-    fxa: Optional[Generator[FirefoxAccountsTableSchema, None, None]] = None
-    vpn_waitlist: Optional[Generator[VpnWaitlistTableSchema, None, None]] = None
-    newsletters: Optional[Generator[NewsletterTableSchema, None, None]] = None
+    amo: Any = None
+    emails: Any = None
+    fxa: Any = None
+    vpn_waitlist: Any = None
+    newsletters: Any = None
 
     def finalize(self):
         missing = []
@@ -40,10 +34,12 @@ class Ingester:
         inputs: InputIOs,
         connection: Connection,
         batch_size: int = 10,
+        total_inputs: int = 0,
     ):
         self.inputs = inputs
         self.db = connection
         self.batch_size = batch_size
+        self.total_inputs = total_inputs
 
     def _insert_batch(self, batch: List[BaseModel], table: Base, stmt_args: dict):
         if len(batch) == 0:
@@ -53,8 +49,9 @@ class Ingester:
         # smartly. This should mean something like recording which records
         # failed and why maybe if we're lucky? Also retries for disconnects
         # or other kinds of failures?
-        stmt = insert(table).values([r.dict() for r in batch])
+        stmt = insert(table).values(batch)
         stmt = stmt.on_conflict_do_update(**stmt_args, set_=dict(stmt.excluded))
+        print(batch)
         self.db.execute(stmt)
 
     def _table_loop(
@@ -64,11 +61,17 @@ class Ingester:
         stmt_args: dict,
     ):
         batch = []
+        prev = monotonic()
         for model in feed:
             batch.append(model)
             if len(batch) == self.batch_size:
                 self._insert_batch(batch, table, stmt_args)
                 batch = []
+                now = monotonic()
+                elapsed = now - prev
+                per_second = int(self.batch_size / elapsed)
+                print(f"Writing approx. {per_second} rows/second")
+                prev = now
         # Finally write whatever is left over
         self._insert_batch(batch, table, stmt_args)
 
