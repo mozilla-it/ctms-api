@@ -77,6 +77,11 @@ def get_settings():
 def startup_event():
     global SessionLocal  # pylint:disable = W0603
     settings = get_settings()
+    sentry_sdk.init(
+        release=get_version().get("commit", None),
+        debug=settings.sentry_debug,
+        send_default_pii=False,
+    )
     configure_logging(settings.use_mozlog, settings.logging_level)
     _, session_factory = get_db_engine(settings)
     SessionLocal = scoped_session(session_factory)
@@ -667,11 +672,6 @@ def lbheartbeat():
 
 # Setup the sentry-wrapped app
 # The dsn is read from the environment variable SENTRY_DSN
-sentry_sdk.init(
-    release=get_version().get("commit", None),
-    debug=config.Settings().sentry_debug,
-    send_default_pii=False,
-)
 sentry_app = SentryAsgiMiddleware(app)
 
 if __name__ == "__main__":
