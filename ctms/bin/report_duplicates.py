@@ -25,7 +25,7 @@ def main(test_args=None) -> int:
     directory = args.dir
 
     total = 0
-
+    estimated_records = 87339348
     # TODO: THIS NEEDS TO WORK FOR BASKET TOKEN TOO
     with open(args.collectfile, "w") as col:
         for f in os.listdir(directory):
@@ -37,7 +37,11 @@ def main(test_args=None) -> int:
                         print(line["primary_email"], line["email_id"], file=col)
                         total += 1
                         if i % 100000 == 0:
-                            print(total, 87339348, int((total / 87339348.0) * 100))
+                            print(
+                                total,
+                                estimated_records,
+                                int((total / estimated_records) * 100),
+                            )
 
     sorted_file = f"sorted_{args.collectfile}"
 

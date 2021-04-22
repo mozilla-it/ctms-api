@@ -6,15 +6,14 @@ from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 import dateutil.parser
+import sentry_sdk
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, scoped_session
-
-import sentry_sdk
-from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from . import config
 from .auth import (

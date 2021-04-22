@@ -31,6 +31,7 @@ def csv_reader(
     writer,
     total,
     start,
+    estimated_total,
 ):
     path = os.path.join(directory, f)
     with open(path, "r", newline="") as csvfile:
@@ -39,9 +40,9 @@ def csv_reader(
             total += 1
             if i % 100000 == 0:
                 rps = total / (monotonic() - start)
-                remaining = ((442235069.0 - total) / rps) / 60
+                remaining = ((estimated_total - total) / rps) / 60
                 print(
-                    f"{int(total/442235069.0 * 100)}% complete (processing {f}) ({rps} rows/sec) {remaining} minutes remain"
+                    f"{int(total/estimated_total * 100)}% complete (processing {f}) ({rps} rows/sec) {remaining} minutes remain"
                 )
             newline = {}
             for key, value in line.items():
@@ -147,6 +148,7 @@ def main(test_args=None) -> int:
 
         total = 0
         start = monotonic()
+        estimated_total = 442235069
 
         # First handle emails
         for f in os.listdir(directory):
@@ -161,6 +163,7 @@ def main(test_args=None) -> int:
                     email_writer,
                     total,
                     start,
+                    estimated_total,
                 )
 
         for f in os.listdir(directory):
@@ -175,6 +178,7 @@ def main(test_args=None) -> int:
                     amo_writer,
                     total,
                     start,
+                    estimated_total,
                 )
             elif "contact_to_fxa" in f:
                 csv_reader(
@@ -187,6 +191,7 @@ def main(test_args=None) -> int:
                     fxa_writer,
                     total,
                     start,
+                    estimated_total,
                 )
             elif "contact_to_newsletter" in f:
                 csv_reader(
@@ -199,6 +204,7 @@ def main(test_args=None) -> int:
                     newsletter_writer,
                     total,
                     start,
+                    estimated_total,
                 )
             elif "contact_to_vpn_waitlist" in f:
                 csv_reader(
@@ -211,6 +217,7 @@ def main(test_args=None) -> int:
                     vpn_waitlist_writer,
                     total,
                     start,
+                    estimated_total,
                 )
 
     return 0
