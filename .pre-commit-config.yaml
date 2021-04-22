@@ -5,7 +5,7 @@ repos:
         name: pylint
         entry: pylint
         language: system
-        exclude: ^(migrations|tests)/
+        exclude: ^migrations/
         types: [python]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.1.0
