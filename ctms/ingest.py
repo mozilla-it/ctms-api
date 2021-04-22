@@ -49,8 +49,9 @@ class Ingester:
         # smartly. This should mean something like recording which records
         # failed and why maybe if we're lucky? Also retries for disconnects
         # or other kinds of failures?
-        stmt = insert(table).values([r.dict() for r in batch])
+        stmt = insert(table).values(batch)
         stmt = stmt.on_conflict_do_update(**stmt_args, set_=dict(stmt.excluded))
+        print(batch)
         self.db.execute(stmt)
 
     def _table_loop(

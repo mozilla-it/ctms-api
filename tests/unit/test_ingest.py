@@ -73,25 +73,25 @@ def test_ingest_only_emails(connection, empty_ios, dbsession, batch_size):
             primary_email="foo@example.com",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
         EmailTableSchema(
             email_id=uuid4(),
             primary_email="bar@example.com",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
         EmailTableSchema(
             email_id=uuid4(),
             primary_email="baz@example.com",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
         EmailTableSchema(
             email_id=uuid4(),
             primary_email="bing@example.com",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
     ]
     empty_ios.emails = emails
     ingester = Ingester(empty_ios, connection, batch_size=batch_size)
@@ -107,14 +107,14 @@ def test_ingest_emails_and_amo(connection, empty_ios, dbsession, batch_size):
             primary_email="foo@example.com",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        )
+        ).dict()
     ]
     amos = [
         AddOnsTableSchema(
-            email_id=emails[0].email_id,
+            email_id=emails[0]["email_id"],
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        )
+        ).dict()
     ]
     empty_ios.emails = emails
     empty_ios.amo = amos
@@ -131,27 +131,27 @@ def test_ingest_emails_and_newsletters(connection, empty_ios, dbsession, batch_s
             primary_email="foo@example.com",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        )
+        ).dict()
     ]
     newsletters = [
         NewsletterTableSchema(
-            email_id=emails[0].email_id,
+            email_id=emails[0]["email_id"],
             name="FOO",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
         NewsletterTableSchema(
-            email_id=emails[0].email_id,
+            email_id=emails[0]["email_id"],
             name="BAR",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
         NewsletterTableSchema(
-            email_id=emails[0].email_id,
+            email_id=emails[0]["email_id"],
             name="BAZ",
             create_timestamp=datetime.now(timezone.utc),
             update_timestamp=datetime.now(timezone.utc),
-        ),
+        ).dict(),
     ]
     empty_ios.emails = emails
     empty_ios.newsletters = newsletters

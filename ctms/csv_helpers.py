@@ -22,6 +22,14 @@ def _ensure_timestamps(line: dict):
         line["update_timestamp"] = datetime.now(timezone.utc)
 
 
+def _fix_booleans(line: dict, fields: list):
+    for bool_var in fields:
+        if line.get(bool_var) in ["1", 1, "true"]:
+            line[bool_var] = True
+        elif line.get(bool_var) in ["0", 0, "false"]:
+            line[bool_var] = False
+
+
 def email_modifier(i: int, line: dict, isdev: bool, canonical_mapping, skip_writes):
     if canonical_mapping.get(line["email_id"]):
         raise NonCanonicalError  # We don't insert non-canonical email records
@@ -32,6 +40,8 @@ def email_modifier(i: int, line: dict, isdev: bool, canonical_mapping, skip_writ
     if not line.get("primary_email"):
         skip_writes.add(line["email_id"])
         raise NonCanonicalError  # We don't insert non-canonical email records
+
+    _fix_booleans(line, ["double_opt_in", "has_opted_out_of_email"])
     return line
 
 
@@ -44,6 +54,7 @@ def amo_modifier(i: int, line: dict, isdev: bool, canonical_mapping, skip_writes
     for key, val in line.items():
         key = re.sub("^amo_", "", key)
         newline[key] = val
+    _fix_booleans(newline, ["user", "email_opt_in"])
     return newline
 
 
@@ -61,6 +72,7 @@ def fxa_modifier(i: int, line: dict, isdev: bool, canonical_mapping, skip_writes
         if key != "fxa_id":
             key = re.sub("^fxa_", "", key)
         newline[key] = val
+    _fix_booleans(newline, ["account_deleted"])
     return newline
 
 
@@ -83,6 +95,7 @@ def newsletter_modifier(
     for key, val in line.items():
         key = re.sub("^newsletter_", "", key)
         newline[key] = val
+    _fix_booleans(newline, ["subscribed"])
     return newline
 
 
