@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pydantic import UUID4
-from sqlalchemy import asc
+from sqlalchemy import and_, asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -87,9 +87,17 @@ def get_bulk_contacts(
     bulk_contacts = (
         _contact_base_query(db)
         .filter(
-            Email.update_timestamp >= start_time,
-            Email.update_timestamp < end_time,
-            Email.email_id != after_email_uuid,
+            or_(
+                and_(
+                    Email.update_timestamp >= start_time,
+                    Email.update_timestamp < end_time,
+                ),
+                # and_(FirefoxAccount.update_timestamp >= start_time, FirefoxAccount.update_timestamp < end_time, ),
+                # and_(AmoAccount.update_timestamp >= start_time, AmoAccount.update_timestamp < end_time, ),
+                # and_(VpnWaitlist.update_timestamp >= start_time, VpnWaitlist.update_timestamp < end_time, ),
+                # and_(Newsletter.update_timestamp >= start_time, Newsletter.update_timestamp < end_time, ),
+            ),
+            and_(Email.email_id != after_email_uuid),
         )
         .order_by(asc(Email.update_timestamp), asc(Email.email_id))
         .limit(limit)

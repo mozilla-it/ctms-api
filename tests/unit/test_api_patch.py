@@ -107,7 +107,8 @@ def test_patch_one_new_value(
         assert actual["amo"]["update_timestamp"] is not None
         assert actual["amo"]["create_timestamp"] == actual["amo"]["update_timestamp"]
         expected["amo"]["create_timestamp"] = actual["amo"]["create_timestamp"]
-        expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
+    expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
+    expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
 
     assert actual == expected
 
@@ -183,6 +184,8 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
     actual = resp.json()
     assert actual["status"] == "ok"
     del actual["status"]
+    expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
+    expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
     assert actual == expected
 
 

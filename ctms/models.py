@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import (
     TIMESTAMP,
     Boolean,
@@ -11,7 +13,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import now
 
 from .database import Base
 
@@ -33,14 +34,13 @@ class Email(Base):
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
 
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
+    now_tz = datetime.now(timezone.utc)
+    create_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, default=now_tz)
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=now_tz,
+        onupdate=now_tz,
     )
 
     newsletters = relationship(
@@ -66,14 +66,13 @@ class Newsletter(Base):
     source = Column(Text)
     unsub_reason = Column(Text)
 
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
+    now_tz = datetime.now(timezone.utc)
+    create_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, default=now_tz)
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=now_tz,
+        onupdate=now_tz,
     )
 
     email = relationship("Email", back_populates="newsletters", uselist=False)
@@ -95,14 +94,17 @@ class FirefoxAccount(Base):
     first_service = Column(String(50))
     account_deleted = Column(Boolean)
 
+    now_tz = datetime.now(timezone.utc)
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        default=now_tz,
     )
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=now_tz,
+        onupdate=now_tz,
     )
 
     email = relationship("Email", back_populates="fxa", uselist=False)
@@ -126,14 +128,13 @@ class AmoAccount(Base):
     user_id = Column(String(40))
     username = Column(String(100))
 
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
+    now_tz = datetime.now(timezone.utc)
+    create_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, default=now_tz)
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=now_tz,
+        onupdate=now_tz,
     )
 
     email = relationship("Email", back_populates="amo", uselist=False)
@@ -149,14 +150,13 @@ class VpnWaitlist(Base):
     geo = Column(String(100))
     platform = Column(String(100))
 
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
+    now_tz = datetime.now(timezone.utc)
+    create_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, default=now_tz)
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=now_tz,
+        onupdate=now_tz,
     )
 
     email = relationship("Email", back_populates="vpn_waitlist", uselist=False)
@@ -172,14 +172,13 @@ class ApiClient(Base):
     enabled = Column(Boolean, default=True)
     hashed_secret = Column(String, nullable=False)
 
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
+    now_tz = datetime.now(timezone.utc)
+    create_timestamp = Column(TIMESTAMP(timezone=True), nullable=False, default=now_tz)
     update_timestamp = Column(
         TIMESTAMP(timezone=True),
         nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        default=now_tz,
+        onupdate=now_tz,
     )
 
 

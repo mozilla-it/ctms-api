@@ -253,13 +253,14 @@ def test_get_bulk_contacts_some(
     minimal_timestamp: datetime = minimal_contact.email.update_timestamp
 
     oldest_timestamp = min([example_timestamp, maximal_timestamp, minimal_timestamp])
-    timestamp = oldest_timestamp - timedelta(hours=12)
+    start_timestamp = oldest_timestamp - timedelta(hours=12)
+    end_timestamp = datetime.now(timezone.utc) + timedelta(hours=12)
 
     with StatementWatcher(dbsession.connection()) as watcher:
         bulk_contact_list = get_bulk_contacts(
             dbsession,
-            start_time=timestamp,
-            end_time=datetime.now(timezone.utc),
+            start_time=start_timestamp,
+            end_time=end_timestamp,
             limit=10,
         )
     assert watcher.count == 2
