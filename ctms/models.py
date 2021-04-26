@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Sequence,
     String,
     Text,
     UniqueConstraint,
@@ -186,3 +187,31 @@ class MozillaFoundationContact(Base):
     mofo_relevant = Column(Boolean)
 
     email = relationship("Email", back_populates="mofo", uselist=False)
+
+
+class PendingAcousticRecord(Base):
+    __tablename__ = "pending_acoustic"
+
+    field_seq = Sequence("pending_id_sequence")
+    id = Column(
+        Integer, field_seq, server_default=field_seq.next_value, primary_key=True
+    )
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
+    retry = Column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    email = relationship("Email", back_populates="pending_acoustic", uselist=False)
