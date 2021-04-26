@@ -507,6 +507,7 @@ def partial_update_ctms_contact(
     current_email = get_email_or_404(db, email_id)
     update_data = contact.dict(exclude_unset=True)
     update_contact(db, current_email, update_data)
+    # submit_downstream_update(db)
     try:
         db.commit()
     except Exception as e:  # pylint:disable = W0703
