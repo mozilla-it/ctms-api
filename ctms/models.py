@@ -3,6 +3,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -11,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import now
+from sqlalchemy.sql.functions import func, now
 
 from .database import Base
 
@@ -34,13 +35,10 @@ class Email(Base):
     unsubscribe_reason = Column(Text)
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
     newsletters = relationship(
@@ -67,13 +65,10 @@ class Newsletter(Base):
     unsub_reason = Column(Text)
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
     email = relationship("Email", back_populates="newsletters", uselist=False)
@@ -96,13 +91,10 @@ class FirefoxAccount(Base):
     account_deleted = Column(Boolean)
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
     email = relationship("Email", back_populates="fxa", uselist=False)
@@ -127,13 +119,10 @@ class AmoAccount(Base):
     username = Column(String(100))
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
     email = relationship("Email", back_populates="amo", uselist=False)
@@ -150,13 +139,10 @@ class VpnWaitlist(Base):
     platform = Column(String(100))
 
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
     email = relationship("Email", back_populates="vpn_waitlist", uselist=False)
