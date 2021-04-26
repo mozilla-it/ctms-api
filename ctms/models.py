@@ -192,10 +192,7 @@ class MozillaFoundationContact(Base):
 class PendingAcousticRecord(Base):
     __tablename__ = "pending_acoustic"
 
-    field_seq = Sequence("pending_id_sequence")
-    id = Column(
-        Integer, field_seq, server_default=field_seq.next_value, primary_key=True
-    )
+    id = Column(Integer, Sequence("pending_id_sequence"), primary_key=True)
     email_id = Column(
         UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
     )
@@ -214,4 +211,4 @@ class PendingAcousticRecord(Base):
         server_onupdate=now(),
     )
 
-    email = relationship("Email", back_populates="pending_acoustic", uselist=False)
+    email = relationship("Email", uselist=False)
