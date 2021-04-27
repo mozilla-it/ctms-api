@@ -1,4 +1,5 @@
 import base64
+import sys
 import time
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
@@ -11,6 +12,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, scoped_session
@@ -73,15 +75,39 @@ def get_settings():
     return config.Settings()
 
 
+def init_sentry():
+    """
+    Initialize Sentry integrations for capturing exceptions.
+
+    Because FastAPI uses threads to integrate async and sync code, this needs
+    to be called at module import.
+
+    sentry_sdk.init needs a data source name (DSN) URL, which it reads from the
+    environment variable SENTRY_DSN.
+    """
+    try:
+        settings = get_settings()
+    except ValidationError:
+        sentry_debug = False
+    else:
+        sentry_debug = settings.sentry_debug
+
+    sentry_sdk.init(
+        release=get_version().get("commit", None),
+        debug=sentry_debug,
+        send_default_pii=False,
+    )
+
+
+# Initialize Sentry for each thread, unless we're in tests
+if "pytest" not in sys.argv[0]:
+    init_sentry()
+
+
 @app.on_event("startup")
 def startup_event():
     global SessionLocal  # pylint:disable = W0603
     settings = get_settings()
-    sentry_sdk.init(
-        release=get_version().get("commit", None),
-        debug=settings.sentry_debug,
-        send_default_pii=False,
-    )
     configure_logging(settings.use_mozlog, settings.logging_level)
     _, session_factory = get_db_engine(settings)
     SessionLocal = scoped_session(session_factory)
