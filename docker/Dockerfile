@@ -75,7 +75,7 @@ COPY --chown=app:app . .
 
 EXPOSE $PORT
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD uvicorn ctms.app:sentry_app --reload --host=0.0.0.0 --port=$PORT
+CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 
 
 # 'lint' stage runs black and isort
@@ -110,4 +110,4 @@ WORKDIR /app
 
 EXPOSE $PORT
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD uvicorn ctms.app:sentry_app --host=0.0.0.0 --port=${PORT} --log-config /app/docker/log_config.json
+CMD uvicorn ctms.app:app --host=0.0.0.0 --port=${PORT} --log-config /app/docker/log_config.json
