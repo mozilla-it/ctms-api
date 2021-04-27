@@ -83,6 +83,14 @@ class AddOnsBase(ComparableBase):
 AddOnsInSchema = AddOnsBase
 
 
+class UpdatedAddOnsInSchema(AddOnsInSchema):
+    update_timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="AMO data update timestamp",
+        example="2021-01-28T21:26:57.511Z",
+    )
+
+
 class AddOnsSchema(AddOnsBase):
     create_timestamp: Optional[datetime] = Field(
         default=None,

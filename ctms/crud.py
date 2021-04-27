@@ -1,11 +1,17 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pydantic import UUID4
 from sqlalchemy import asc
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
+
+from ctms.schemas.addons import UpdatedAddOnsInSchema
+from ctms.schemas.email import UpdatedEmailPutSchema
+from ctms.schemas.fxa import UpdatedFirefoxAccountsInSchema
+from ctms.schemas.newsletter import UpdatedNewsletterInSchema
+from ctms.schemas.vpn import UpdatedVpnWaitlistInSchema
 
 from .auth import hash_password
 from .database import Base
@@ -246,9 +252,12 @@ def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSch
     if not amo or amo.is_default():
         db.query(AmoAccount).filter(AmoAccount.email_id == email_id).delete()
         return
-    stmt = insert(AmoAccount).values(email_id=email_id, **amo.dict())
+
+    # Providing update timestamp
+    updated_amo = UpdatedAddOnsInSchema(**amo.dict())
+    stmt = insert(AmoAccount).values(email_id=email_id, **updated_amo.dict())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[AmoAccount.email_id], set_=amo.dict()
+        index_elements=[AmoAccount.email_id], set_=updated_amo.dict()
     )
     db.execute(stmt)
 
@@ -259,9 +268,12 @@ def create_email(db: Session, email: EmailInSchema):
 
 
 def create_or_update_email(db: Session, email: EmailPutSchema):
-    stmt = insert(Email).values(**email.dict())
+    # Providing update timestamp
+    updated_email = UpdatedEmailPutSchema(**email.dict())
+
+    stmt = insert(Email).values(**updated_email.dict())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[Email.email_id], set_=email.dict()
+        index_elements=[Email.email_id], set_=updated_email.dict()
     )
     db.execute(stmt)
 
@@ -279,9 +291,12 @@ def create_or_update_fxa(
     if not fxa or fxa.is_default():
         (db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete())
         return
-    stmt = insert(FirefoxAccount).values(email_id=email_id, **fxa.dict())
+    # Providing update timestamp
+    updated_fxa = UpdatedFirefoxAccountsInSchema(**fxa.dict())
+
+    stmt = insert(FirefoxAccount).values(email_id=email_id, **updated_fxa.dict())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[FirefoxAccount.email_id], set_=fxa.dict()
+        index_elements=[FirefoxAccount.email_id], set_=updated_fxa.dict()
     )
     db.execute(stmt)
 
@@ -325,9 +340,13 @@ def create_or_update_vpn_waitlist(
     if not vpn_waitlist or vpn_waitlist.is_default():
         db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).delete()
         return
-    stmt = insert(VpnWaitlist).values(email_id=email_id, **vpn_waitlist.dict())
+
+    # Providing update timestamp
+    updated_vpn = UpdatedVpnWaitlistInSchema(**vpn_waitlist.dict())
+
+    stmt = insert(VpnWaitlist).values(email_id=email_id, **updated_vpn.dict())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[VpnWaitlist.email_id], set_=vpn_waitlist.dict()
+        index_elements=[VpnWaitlist.email_id], set_=updated_vpn.dict()
     )
     db.execute(stmt)
 
@@ -352,6 +371,7 @@ def create_or_update_newsletters(
     )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
 
     if newsletters:
+        newsletters = [UpdatedNewsletterInSchema(**news.dict()) for news in newsletters]
         stmt = insert(Newsletter).values(
             [{"email_id": email_id, **n.dict()} for n in newsletters]
         )
@@ -432,6 +452,9 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                     update_orm(existing[nl_update["name"]], nl_update)
                 elif nl_update.get("subscribed", True):
                     create_newsletter(db, email_id, NewsletterInSchema(**nl_update))
+
+    # On any PATCH event, the central/email table's time is updated as well.
+    update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})
 
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):
