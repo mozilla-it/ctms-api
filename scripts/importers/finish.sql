@@ -15,6 +15,11 @@ alter table fxa add constraint fxa_fxa_id_key unique (fxa_id);
 -- There's nothing we can do to save these (missing primary_email)
 delete from emails where primary_email = ''; -- about 125447 records
 
+-- But these we can save! (missing basket_token)
+CREATE EXTENSION "uuid-ossp";
+update emails set basket_token = uuid_generate_v4() where basket_token = '';
+DROP EXTENSION "uuid-ossp";
+
 -- Get rid of duplicate primary_emails
 delete from emails where email_id in (select email_id from (select email_id, row_number() over w as rnum from emails window w as (partition by primary_email order by email_format, has_opted_out_of_email desc, update_timestamp desc)) t where t.rnum > 1);
 -- And duplicate basket_tokens
@@ -37,11 +42,5 @@ alter table newsletters add constraint newsletters_email_id_fkey foreign key (em
 alter table vpn_waitlist add constraint vpn_waitlist_email_id_fkey foreign key (email_id) references emails (email_id);
 alter table mofo add constraint mofo_email_id_fkey foreign key (email_id) references emails (email_id);
 
--- But these we can save! (missing basket_token)
-CREATE EXTENSION "uuid-ossp";
-update emails set basket_token = uuid_generate_v4() where basket_token = '';
-DROP EXTENSION "uuid-ossp";
-alter table emails add constraint emails_basket_token_key unique (basket_token);
-
 -- One more cleanup
-update emails set email_format = 'T' where email_format = 'N';
+update newsletters set "format" = 'T' where "format" = 'N';
