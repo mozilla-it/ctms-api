@@ -69,3 +69,16 @@ def test_read_health(anon_client):
     resp = anon_client.get("/__lbheartbeat__")
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK"}
+
+
+def test_crash_authorized(client):
+    """The endpoint /__crash__ can be used to test Sentry integration."""
+    with pytest.raises(RuntimeError):
+        client.get("/__crash__")
+
+
+def test_crash_unauthorized(anon_client):
+    """The endpoint /__crash__ can not be used without credentials."""
+    resp = anon_client.get("/__crash__")
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Not authenticated"}

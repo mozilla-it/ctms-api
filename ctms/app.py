@@ -697,5 +697,11 @@ def lbheartbeat():
     return {"status": "OK"}
 
 
+@app.get("/__crash__", tags=["Platform"], include_in_schema=False)
+def crash(api_client: ApiClientSchema = Depends(get_enabled_api_client)):
+    """Raise an exception to test Sentry integration."""
+    raise RuntimeError("Test exception handling")
+
+
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=80, reload=True)
