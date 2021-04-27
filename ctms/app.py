@@ -102,6 +102,7 @@ def init_sentry():
 # Initialize Sentry for each thread, unless we're in tests
 if "pytest" not in sys.argv[0]:
     init_sentry()
+    app.add_middleware(SentryAsgiMiddleware)
 
 
 @app.on_event("startup")
@@ -696,9 +697,5 @@ def lbheartbeat():
     return {"status": "OK"}
 
 
-# Setup the sentry-wrapped app
-# The dsn is read from the environment variable SENTRY_DSN
-sentry_app = SentryAsgiMiddleware(app)
-
 if __name__ == "__main__":
-    uvicorn.run("app:sentry_app", host="0.0.0.0", port=80, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=80, reload=True)
