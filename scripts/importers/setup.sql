@@ -6,10 +6,6 @@ TRUNCATE fxa RESTART IDENTITY;
 TRUNCATE newsletters RESTART IDENTITY;
 TRUNCATE vpn_waitlist RESTART IDENTITY;
 
-ALTER TABLE emails DROP CONSTRAINT emails_pkey;
-ALTER TABLE emails DROP CONSTRAINT emails_basket_token_key;
-ALTER TABLE emails DROP CONSTRAINT emails_primary_email_key;
-
 ALTER TABLE amo DROP CONSTRAINT amo_pkey;
 ALTER TABLE amo DROP CONSTRAINT amo_email_id_key;
 ALTER TABLE amo DROP CONSTRAINT amo_email_id_fkey;
@@ -26,5 +22,11 @@ ALTER TABLE newsletters DROP CONSTRAINT newsletters_email_id_fkey;
 ALTER TABLE vpn_waitlist DROP CONSTRAINT vpn_waitlist_pkey;
 ALTER TABLE vpn_waitlist DROP CONSTRAINT vpn_waitlist_email_id_key;
 ALTER TABLE vpn_waitlist DROP CONSTRAINT vpn_waitlist_email_id_fkey;
+
+ALTER TABLE mofo DROP CONSTRAINT mofo_email_id_fkey;
+
+ALTER TABLE emails DROP CONSTRAINT emails_pkey;
+ALTER TABLE emails DROP CONSTRAINT emails_basket_token_key;
+ALTER TABLE emails DROP CONSTRAINT emails_primary_email_key;
 
 END TRANSACTION;
