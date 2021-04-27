@@ -47,6 +47,14 @@ NewsletterInSchema = NewsletterBase
 NewsletterSchema = NewsletterBase
 
 
+class UpdatedNewsletterInSchema(NewsletterInSchema):
+    update_timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Newsletter subscription data update timestamp",
+        example="2021-01-28T21:26:57.511Z",
+    )
+
+
 class NewsletterTableSchema(NewsletterBase):
     email_id: UUID4 = Field(
         description=EMAIL_ID_DESCRIPTION,

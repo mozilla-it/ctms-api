@@ -134,3 +134,11 @@ class EmailPatchSchema(EmailInSchema):
     def prevent_none(cls, value):
         assert value is not None, "primary_email may not be None"
         return value
+
+
+class UpdatedEmailPutSchema(EmailPutSchema):
+    update_timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Contact last modified date, LastModifiedDate in Salesforce",
+        example="2021-01-28T21:26:57.511Z",
+    )
