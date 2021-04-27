@@ -38,7 +38,11 @@ class Email(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        onupdate=func.now(),
+        default=func.now(),
+        index=True,
     )
 
     newsletters = relationship(
