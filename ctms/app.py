@@ -63,7 +63,7 @@ from .schemas import (
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="0.6.0",
+    version="0.7.0",
 )
 SessionLocal = None
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
