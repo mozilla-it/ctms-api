@@ -15,7 +15,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, scoped_session
+from sqlalchemy.orm import Session
 
 from . import config
 from .auth import (
@@ -110,8 +110,7 @@ def startup_event():
     global SessionLocal  # pylint:disable = W0603
     settings = get_settings()
     configure_logging(settings.use_mozlog, settings.logging_level)
-    _, session_factory = get_db_engine(settings)
-    SessionLocal = scoped_session(session_factory)
+    _, SessionLocal = get_db_engine(get_settings())
 
 
 def get_db():
@@ -120,7 +119,6 @@ def get_db():
         yield db
     finally:
         db.close()
-        SessionLocal.remove()
 
 
 def _token_settings(
