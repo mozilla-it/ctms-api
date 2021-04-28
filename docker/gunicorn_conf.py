@@ -1,11 +1,17 @@
-# From: https://github.com/tiangolo/uvicorn-gunicorn-docker/blob/315f04413114e938ff37a410b5979126facc90af/python3.7/gunicorn_conf.py
+# From: https://github.com/tiangolo/uvicorn-gunicorn-docker/blob/2daa3e3873c837d5781feb4ff6a40a89f791f81b/docker-images/gunicorn_conf.py
+# pylint: disable=invalid-name
 
 import json
 import multiprocessing
 import os
 
 workers_per_core_str = os.getenv("WORKERS_PER_CORE", "1")
+max_workers_str = os.getenv("MAX_WORKERS")
+use_max_workers = None
+if max_workers_str:
+    use_max_workers = int(max_workers_str)
 web_concurrency_str = os.getenv("WEB_CONCURRENCY", None)
+
 host = os.getenv("HOST", "0.0.0.0")
 port = os.getenv("PORT", "80")
 bind_env = os.getenv("BIND", None)
@@ -23,21 +29,41 @@ if web_concurrency_str:
     assert web_concurrency > 0
 else:
     web_concurrency = max(int(default_web_concurrency), 2)
+    if use_max_workers:
+        web_concurrency = min(web_concurrency, use_max_workers)
+accesslog_var = os.getenv("ACCESS_LOG", "-")
+use_accesslog = accesslog_var or None
+errorlog_var = os.getenv("ERROR_LOG", "-")
+use_errorlog = errorlog_var or None
+graceful_timeout_str = os.getenv("GRACEFUL_TIMEOUT", "120")
+timeout_str = os.getenv("TIMEOUT", "120")
+keepalive_str = os.getenv("KEEP_ALIVE", "5")
 
 # Gunicorn config variables
 loglevel = use_loglevel
 workers = web_concurrency
 bind = use_bind
-keepalive = 120
-errorlog = "-"
+errorlog = use_errorlog
+worker_tmp_dir = "/dev/shm"
+accesslog = use_accesslog
+graceful_timeout = int(graceful_timeout_str)
+timeout = int(timeout_str)
+keepalive = int(keepalive_str)
+
 
 # For debugging and testing
 log_data = {
     "loglevel": loglevel,
     "workers": workers,
     "bind": bind,
+    "graceful_timeout": graceful_timeout,
+    "timeout": timeout,
+    "keepalive": keepalive,
+    "errorlog": errorlog,
+    "accesslog": accesslog,
     # Additional, non-gunicorn variables
     "workers_per_core": workers_per_core,
+    "use_max_workers": use_max_workers,
     "host": host,
     "port": port,
 }
