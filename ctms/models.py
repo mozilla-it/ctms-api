@@ -5,6 +5,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -20,6 +21,7 @@ from .database import Base
 class Email(Base):
     __tablename__ = "emails"
     __mapper_args__ = {"eager_defaults": True}
+    __table_args__ = (Index("bulk_read_index", "update_timestamp", "email_id"),)
 
     email_id = Column(UUID(as_uuid=True), primary_key=True)
     primary_email = Column(String(255), unique=True, nullable=False)
@@ -42,7 +44,6 @@ class Email(Base):
         nullable=False,
         onupdate=func.now(),
         default=func.now(),
-        index=True,
     )
 
     newsletters = relationship(
