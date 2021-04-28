@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      target: development
+      target: production
     volumes:
       - type: bind
         source: .
