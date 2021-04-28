@@ -7,8 +7,9 @@ name = "ctms"
 version = "0.6.0"
 description = "Contact Management System API"
 authors = [
-    "John Whitlock <jwhitlock@mozilla.com>",
+    "Brian Stack <bstack@mozilla.com>",
     "Bryan Sieber <bsieber@mozilla.com>",
+    "John Whitlock <jwhitlock@mozilla.com>",
 ]
 readme = "README.md"
 homepage = "https://github.com/mozilla-it/ctms-api"
