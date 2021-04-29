@@ -26,7 +26,7 @@ class Email(Base):
     email_id = Column(UUID(as_uuid=True), primary_key=True)
     primary_email = Column(String(255), unique=True, nullable=False)
     basket_token = Column(String(255), unique=True)
-    sfdc_id = Column(String(255))
+    sfdc_id = Column(String(255), index=True)
     first_name = Column(String(255))
     last_name = Column(String(255))
     mailing_country = Column(String(255))
@@ -89,7 +89,7 @@ class FirefoxAccount(Base):
     email_id = Column(
         UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
     )
-    primary_email = Column(String(255))
+    primary_email = Column(String(255), index=True)
     created_date = Column(String(50))
     lang = Column(String(255))
     first_service = Column(String(50))
@@ -120,7 +120,7 @@ class AmoAccount(Base):
     location = Column(String(255))
     profile_url = Column(String(40))
     user = Column(Boolean)
-    user_id = Column(String(40))
+    user_id = Column(String(40), index=True)
     username = Column(String(100))
 
     create_timestamp = Column(
@@ -182,7 +182,7 @@ class MozillaFoundationContact(Base):
         UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
     )
     mofo_email_id = Column(String(255), unique=True)
-    mofo_contact_id = Column(String(255))
+    mofo_contact_id = Column(String(255), index=True)
     mofo_relevant = Column(Boolean)
 
     email = relationship("Email", back_populates="mofo", uselist=False)
