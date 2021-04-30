@@ -90,7 +90,7 @@ def query_filter_list(start_time, end_time, after_email_uuid, mofo_relevant):
         Email.update_timestamp >= start_time,
         Email.update_timestamp < end_time,
         Email.email_id != after_email_uuid,
-        MozillaFoundationContact.mofo_relevant,
+        Email.mofo.has(mofo_relevant=mofo_relevant),
     ]
 
 
