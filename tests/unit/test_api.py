@@ -399,7 +399,7 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
     ),
     (
         "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=&after=",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=&after=&mofo_relevant=",
         None,
     ),
 )
