@@ -210,8 +210,8 @@ def test_get_bulk_contacts_mofo_relevant_false(
             limit=10,
             mofo_relevant=mofo_relevant_flag,
         )
-    assert watcher.count == 1
-    assert len(bulk_contact_list) == 0
+    assert watcher.count == 2
+    assert len(bulk_contact_list) == 2
 
 
 def test_get_bulk_contacts_mofo_relevant_true(
