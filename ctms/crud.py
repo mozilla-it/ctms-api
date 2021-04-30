@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pydantic import UUID4
-from sqlalchemy import asc
+from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -79,25 +79,48 @@ def _contact_base_query(db):
     )
 
 
+def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
+    filters = [
+        Email.update_timestamp >= start_time,
+        Email.update_timestamp < end_time,
+        Email.email_id != after_email_uuid,
+    ]
+    if mofo_relevant is False:
+        filters.append(
+            or_(
+                Email.mofo == None,  # pylint: disable=C0121
+                Email.mofo.has(mofo_relevant=mofo_relevant),
+            )
+        )
+    if mofo_relevant is True:
+        filters.append(Email.mofo.has(mofo_relevant=mofo_relevant))
+    return filters
+
+
 def get_bulk_contacts(
     db: Session,
     start_time: datetime,
     end_time: datetime,
     limit: int,
+    mofo_relevant: bool = None,
     after_email_id: str = None,
 ):
     """Get all the data for a bulk batched set of contacts."""
     after_email_uuid = None
     if after_email_id is not None:
         after_email_uuid = uuid.UUID(after_email_id)
+    filter_list = get_bulk_query(
+        start_time=start_time,
+        end_time=end_time,
+        after_email_uuid=after_email_uuid,
+        mofo_relevant=mofo_relevant,
+    )
+    bulk_contacts = _contact_base_query(db)
+    for query_filter in filter_list:
+        bulk_contacts = bulk_contacts.filter(query_filter)
+
     bulk_contacts = (
-        _contact_base_query(db)
-        .filter(
-            Email.update_timestamp >= start_time,
-            Email.update_timestamp < end_time,
-            Email.email_id != after_email_uuid,
-        )
-        .order_by(asc(Email.update_timestamp), asc(Email.email_id))
+        bulk_contacts.order_by(asc(Email.update_timestamp), asc(Email.email_id))
         .limit(limit)
         .all()
     )
