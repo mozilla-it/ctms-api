@@ -87,7 +87,10 @@ def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     ]
     if mofo_relevant is False:
         filters.append(
-            or_(Email.mofo == None, Email.mofo.has(mofo_relevant=mofo_relevant))
+            or_(
+                Email.mofo == None,  # pylint: disable=C0121
+                Email.mofo.has(mofo_relevant=mofo_relevant),
+            )
         )
     if mofo_relevant is True:
         filters.append(Email.mofo.has(mofo_relevant=mofo_relevant))

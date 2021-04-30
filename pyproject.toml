@@ -76,7 +76,6 @@ testpaths = [
         "C0114", # mozilla-it/ctms-api#100
         "C0115", # mozilla-it/ctms-api#100
         "C0116", # mozilla-it/ctms-api#100
-        "C0121", # Because it's actually not a singleton, but a model comparison
     ]
     [tool.pylint.REPORTS]
     output-format = 'colorized'
