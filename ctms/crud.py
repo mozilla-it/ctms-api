@@ -79,25 +79,45 @@ def _contact_base_query(db):
     )
 
 
+def query_filter_list(start_time, end_time, after_email_uuid, mofo_relevant):
+    if mofo_relevant is None:
+        return [
+            Email.update_timestamp >= start_time,
+            Email.update_timestamp < end_time,
+            Email.email_id != after_email_uuid,
+        ]
+    return [
+        Email.update_timestamp >= start_time,
+        Email.update_timestamp < end_time,
+        Email.email_id != after_email_uuid,
+        MozillaFoundationContact.mofo_relevant,
+    ]
+
+
 def get_bulk_contacts(
     db: Session,
     start_time: datetime,
     end_time: datetime,
     limit: int,
+    mofo_relevant: bool = None,
     after_email_id: str = None,
 ):
     """Get all the data for a bulk batched set of contacts."""
     after_email_uuid = None
     if after_email_id is not None:
         after_email_uuid = uuid.UUID(after_email_id)
+    filter_list = query_filter_list(
+        start_time=start_time,
+        end_time=end_time,
+        after_email_uuid=after_email_uuid,
+        mofo_relevant=mofo_relevant,
+    )
+    bulk_contacts = _contact_base_query(db)
+    for query_filter in filter_list:
+        bulk_contacts = bulk_contacts.filter(query_filter)
+
     bulk_contacts = (
-        _contact_base_query(db)
-        .filter(
-            Email.update_timestamp >= start_time,
-            Email.update_timestamp < end_time,
-            Email.email_id != after_email_uuid,
-        )
-        .order_by(asc(Email.update_timestamp), asc(Email.email_id))
+        bulk_contacts.order_by(asc(Email.update_timestamp), asc(Email.email_id))
         .limit(limit)
         .all()
     )

@@ -241,6 +241,7 @@ def get_bulk_contacts_by_timestamp(
     end_time: datetime,
     limit: int = 10,
     after: str = None,
+    mofo_relevant: bool = None,
 ) -> CTMSBulkResponse:
     """Get bulk contacts by time range."""
     after_email_id = None
@@ -256,6 +257,7 @@ def get_bulk_contacts_by_timestamp(
         end_time=end_time,
         limit=limit,
         after_email_id=after_email_id,
+        mofo_relevant=mofo_relevant,
     )
     page_length = len(results)
     last_page = page_length < limit
@@ -563,6 +565,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     end: Optional[Union[datetime, str]] = None,
     limit: Optional[Union[int, str]] = None,
     after: Optional[str] = None,
+    mofo_relevant: Optional[bool] = None,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
@@ -575,6 +578,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
         end_time=end_param,
         after=after_param,
         limit=limit_param,
+        mofo_relevant=mofo_relevant,
     )
 
 
