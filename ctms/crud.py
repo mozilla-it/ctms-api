@@ -80,28 +80,18 @@ def _contact_base_query(db):
 
 
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
-    if mofo_relevant is None:
-        return [
-            Email.update_timestamp >= start_time,
-            Email.update_timestamp < end_time,
-            Email.email_id != after_email_uuid,
-        ]
-    if mofo_relevant is False:
-        return [
-            Email.update_timestamp >= start_time,
-            Email.update_timestamp < end_time,
-            Email.email_id != after_email_uuid,
-            or_(
-                Email.mofo == None,
-                Email.mofo.has(mofo_relevant=mofo_relevant),
-            ),
-        ]
-    return [
+    filters = [
         Email.update_timestamp >= start_time,
         Email.update_timestamp < end_time,
         Email.email_id != after_email_uuid,
-        Email.mofo.has(mofo_relevant=mofo_relevant),
     ]
+    if mofo_relevant is False:
+        filters.append(
+            or_(Email.mofo == None, Email.mofo.has(mofo_relevant=mofo_relevant))
+        )
+    if mofo_relevant is True:
+        filters.append(Email.mofo.has(mofo_relevant=mofo_relevant))
+    return filters
 
 
 def get_bulk_contacts(
