@@ -79,7 +79,7 @@ def _contact_base_query(db):
     )
 
 
-def query_filter_list(start_time, end_time, after_email_uuid, mofo_relevant):
+def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     if mofo_relevant is None:
         return [
             Email.update_timestamp >= start_time,
@@ -106,7 +106,7 @@ def get_bulk_contacts(
     after_email_uuid = None
     if after_email_id is not None:
         after_email_uuid = uuid.UUID(after_email_id)
-    filter_list = query_filter_list(
+    filter_list = get_bulk_query(
         start_time=start_time,
         end_time=end_time,
         after_email_uuid=after_email_uuid,

@@ -186,6 +186,64 @@ def test_get_contact_by_email_id_miss(dbsession):
     assert contact is None
 
 
+def test_get_bulk_contacts_mofo_relevant_false(
+    dbsession, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+    mofo_relevant_flag = False
+
+    first_contact = sorted_list[0]
+    after_start = first_contact.email.update_timestamp - timedelta(hours=12)
+    last_contact = sorted_list[-1]
+    last_contact_timestamp = last_contact.email.update_timestamp
+    end_time = last_contact_timestamp + timedelta(hours=12)
+
+    with StatementWatcher(dbsession.connection()) as watcher:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession,
+            start_time=after_start,
+            end_time=end_time,
+            limit=10,
+            mofo_relevant=mofo_relevant_flag,
+        )
+    assert watcher.count == 1
+    assert len(bulk_contact_list) == 0
+
+
+def test_get_bulk_contacts_mofo_relevant_true(
+    dbsession, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+    mofo_relevant_flag = True
+
+    first_contact = sorted_list[0]
+    after_start = first_contact.email.update_timestamp - timedelta(hours=12)
+    last_contact = sorted_list[-1]
+    last_contact_timestamp = last_contact.email.update_timestamp
+    end_time = last_contact_timestamp + timedelta(hours=12)
+
+    with StatementWatcher(dbsession.connection()) as watcher:
+        bulk_contact_list = get_bulk_contacts(
+            dbsession,
+            start_time=after_start,
+            end_time=end_time,
+            limit=10,
+            mofo_relevant=mofo_relevant_flag,
+        )
+    assert watcher.count == 2
+    assert len(bulk_contact_list) == 1
+    for contact in bulk_contact_list:
+        assert contact.mofo.mofo_relevant == mofo_relevant_flag
+
+
 def test_get_bulk_contacts_some_after_higher_limit(
     dbsession, example_contact, maximal_contact, minimal_contact
 ):
