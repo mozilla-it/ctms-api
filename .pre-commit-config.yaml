@@ -27,7 +27,6 @@ repos:
     rev: v0.782
     hooks:
       - id: mypy
-        args: [--no-strict-optional, --ignore-missing-imports]
   - repo: https://github.com/PyCQA/bandit
     rev: 1.6.2
     hooks:
