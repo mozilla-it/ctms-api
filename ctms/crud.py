@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
 from pydantic import UUID4
 from sqlalchemy import asc, or_
@@ -140,12 +140,15 @@ def get_bulk_contacts(
     ]
 
 
-def get_email(db: Session, email_id: UUID4) -> Email:
+def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
     """Get an Email and all related data."""
-    return _contact_base_query(db).filter(Email.email_id == email_id).one_or_none()
+    return cast(
+        Optional[Email],
+        _contact_base_query(db).filter(Email.email_id == email_id).one_or_none(),
+    )
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID4) -> Dict:
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
     """Get all the data for a contact, as a dict."""
     email = get_email(db, email_id)
     if email is None:
@@ -216,7 +219,7 @@ def get_emails_by_any_id(
         statement = statement.join(Email.fxa).filter(
             FirefoxAccount.primary_email == fxa_primary_email
         )
-    return statement.all()
+    return cast(List[Email], statement.all())
 
 
 def get_contacts_by_any_id(
