@@ -7,12 +7,6 @@ from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ctms.schemas.addons import UpdatedAddOnsInSchema
-from ctms.schemas.email import UpdatedEmailPutSchema
-from ctms.schemas.fxa import UpdatedFirefoxAccountsInSchema
-from ctms.schemas.newsletter import UpdatedNewsletterInSchema
-from ctms.schemas.vpn import UpdatedVpnWaitlistInSchema
-
 from .auth import hash_password
 from .database import Base
 from .models import (
@@ -22,6 +16,7 @@ from .models import (
     FirefoxAccount,
     MozillaFoundationContact,
     Newsletter,
+    PendingAcousticRecord,
     VpnWaitlist,
 )
 from .schemas import (
@@ -35,6 +30,12 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
+    PendingAcousticRecordInSchema,
+    UpdatedAddOnsInSchema,
+    UpdatedEmailPutSchema,
+    UpdatedFirefoxAccountsInSchema,
+    UpdatedNewsletterInSchema,
+    UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,
 )
 
@@ -265,6 +266,86 @@ def get_contacts_by_any_id(
             }
         )
     return data
+
+
+def get_pending_acoustic_records(
+    db: Session,
+    end_time: datetime,
+):
+    """Get all the pending records up to a certain date."""
+    pending_records: List[PendingAcousticRecord] = (
+        db.query(PendingAcousticRecord)
+        .filter(
+            PendingAcousticRecord.update_timestamp < end_time,
+        )
+        .order_by(asc(Email.update_timestamp), asc(Email.email_id))
+        .all()
+    )
+
+    return pending_records
+
+
+def get_pending_records_as_contacts(
+    pending_records: List[PendingAcousticRecord],
+) -> List[ContactSchema]:
+    return [
+        ContactSchema.parse_obj(
+            {
+                "amo": record.email.amo,
+                "email": record.email,
+                "fxa": record.email.fxa,
+                "mofo": record.email.mofo,
+                "newsletters": record.email.newsletters,
+                "vpn_waitlist": record.email.vpn_waitlist,
+            }
+        )
+        for record in pending_records
+    ]
+
+
+def create_pending_acoustic_record(
+    db: Session,
+    email_id: UUID4,
+    pending_record: Optional[PendingAcousticRecordInSchema],
+) -> None:
+    kwargs = {}
+    if pending_record is not None:
+        kwargs = pending_record.dict()
+
+    db_pending_record = PendingAcousticRecord(email_id=email_id, **kwargs)
+    db.add(db_pending_record)
+
+
+def update_pending_acoustic_record(
+    db: Session,
+    email_id: UUID4,
+    pending_record: PendingAcousticRecordInSchema,
+) -> None:
+    updated_pending_record = PendingAcousticRecordInSchema(**pending_record.dict())
+    stmt = insert(PendingAcousticRecord).values(
+        email_id=email_id, **updated_pending_record.dict()
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[PendingAcousticRecord.email_id],
+        set_=updated_pending_record.dict(),
+    )
+    db.execute(stmt)
+
+
+def delete_pending_record(db: Session, email_id: UUID4):
+    db.query(PendingAcousticRecord).filter(
+        PendingAcousticRecord.email_id == email_id
+    ).delete()
+
+
+def delete_pending_records(db: Session, email_id_list: List[UUID4]):
+    assert (
+        len(email_id_list) > 0
+    ), "parameter (email_id_list) must contain a list for this to function"
+    filters = []
+    for email_id in email_id_list:
+        filters.append(PendingAcousticRecord.email_id == email_id)
+    db.query(PendingAcousticRecord).filter(filters).delete()
 
 
 def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema) -> None:
