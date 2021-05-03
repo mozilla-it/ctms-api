@@ -202,13 +202,10 @@ class PendingAcousticRecord(Base):
         default=0,
     )
     create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
     email = relationship("Email", uselist=False)
