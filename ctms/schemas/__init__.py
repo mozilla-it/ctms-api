@@ -1,4 +1,9 @@
-from .addons import AddOnsInSchema, AddOnsSchema, AddOnsTableSchema
+from .addons import (
+    AddOnsInSchema,
+    AddOnsSchema,
+    AddOnsTableSchema,
+    UpdatedAddOnsInSchema,
+)
 from .api_client import ApiClientSchema
 from .contact import (
     ContactInSchema,
@@ -16,15 +21,31 @@ from .email import (
     EmailPutSchema,
     EmailSchema,
     EmailTableSchema,
+    UpdatedEmailPutSchema,
 )
 from .fxa import (
     FirefoxAccountsInSchema,
     FirefoxAccountsSchema,
     FirefoxAccountsTableSchema,
+    UpdatedFirefoxAccountsInSchema,
 )
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
-from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema, VpnWaitlistTableSchema
+from .newsletter import (
+    NewsletterInSchema,
+    NewsletterSchema,
+    NewsletterTableSchema,
+    UpdatedNewsletterInSchema,
+)
+from .pending_acoustic_record import (
+    PendingAcousticRecordInSchema,
+    PendingAcousticRecordSchema,
+)
+from .vpn import (
+    UpdatedVpnWaitlistInSchema,
+    VpnWaitlistInSchema,
+    VpnWaitlistSchema,
+    VpnWaitlistTableSchema,
+)
 from .web import (
     BadRequestResponse,
     NotFoundResponse,

@@ -203,9 +203,9 @@ class PendingAcousticRecord(Base):
     )
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    )  # Timestamp when row is added into table
     update_timestamp = Column(
         DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
+    )  # Timestamp for when the row is updated/retried
 
     email = relationship("Email", uselist=False)
