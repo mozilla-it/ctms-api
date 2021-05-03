@@ -48,7 +48,7 @@ def create_access_token(
     to_encode = data.copy()
     expire = (now or datetime.now(timezone.utc)) + expires_delta
     to_encode["exp"] = expire
-    encoded_jwt = jwt.encode(to_encode, secret_key, algorithm="HS256")
+    encoded_jwt: str = jwt.encode(to_encode, secret_key, algorithm="HS256")
     return encoded_jwt
 
 
@@ -133,7 +133,12 @@ class OAuth2ClientCredentials(OAuth2):
 
     async def __call__(self, request: Request) -> Optional[str]:
         authorization: str = request.headers.get("Authorization")
-        scheme, param = get_authorization_scheme_param(authorization)
+
+        # TODO: Try combining these lines after FastAPI 0.61.2 / mypy update
+        scheme_param = get_authorization_scheme_param(authorization)
+        scheme: str = scheme_param[0]
+        param: str = scheme_param[1]
+
         if not authorization or scheme.lower() != "bearer":
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
