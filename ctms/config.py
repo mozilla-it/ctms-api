@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     use_mozlog: bool = True
     logging_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
     sentry_debug: bool = False
+    acoustic_loop_min_secs: int = 5
 
     class Config:
         env_prefix = "ctms_"
