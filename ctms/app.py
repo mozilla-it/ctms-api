@@ -36,7 +36,7 @@ from .crud import (
     update_contact,
 )
 from .database import get_db_engine
-from .logging import configure_logging
+from .log import configure_logging
 from .models import Email
 from .monitor import check_database, get_version
 from .schemas import (

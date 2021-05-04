@@ -7,7 +7,7 @@ from unittest.mock import ANY, Mock, patch
 import pytest
 
 from ctms.app import app, create_or_update_ctms_contact, login, root
-from ctms.logging import UvicornJsonLogFormatter, configure_logging
+from ctms.log import UvicornJsonLogFormatter, configure_logging
 
 
 @pytest.fixture
@@ -391,7 +391,7 @@ def test_uvicorn_mozlog_nonascii_querystring(formatter):
     ),
 )
 def test_configure_logging(formatter, use_mozlog, logging_level):
-    with patch("ctms.logging.logging.config.dictConfig") as mock_dc:
+    with patch("ctms.log.logging.config.dictConfig") as mock_dc:
         configure_logging(use_mozlog, logging_level)
     mock_dc.assert_called_once()
     args = mock_dc.mock_calls[0].args
