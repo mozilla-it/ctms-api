@@ -244,13 +244,13 @@ def configure_logging(use_mozlog=True, logging_level="INFO"):
                 "format": "%(asctime)s %(levelname)s:%(name)s:  %(message)s"
             },
             "mozlog_json": {
-                "()": "ctms.logging.JsonLogFormatter",
+                "()": "ctms.log.JsonLogFormatter",
                 "logger_name": "ctms",
             },
             "uvicorn_access": uvicorn_formatters["access"],
             "uvicorn_default": uvicorn_formatters["default"],
             "uvicorn_mozlog": {
-                "()": "ctms.logging.UvicornJsonLogFormatter",
+                "()": "ctms.log.UvicornJsonLogFormatter",
                 "logger_name": "ctms",
             },
         },
