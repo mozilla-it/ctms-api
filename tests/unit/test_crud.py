@@ -13,6 +13,7 @@ from ctms.crud import (
     create_mofo,
     create_newsletter,
     delete_acoustic_record,
+    get_acoustic_record_as_contact,
     get_all_acoustic_records_before,
     get_bulk_contacts,
     get_contact_by_email_id,
@@ -198,20 +199,18 @@ def test_schedule_then_get_acoustic_records_before_time(
     contact_list = [example_contact, maximal_contact, minimal_contact]
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
 
+    for record in contact_list:
+        schedule_acoustic_record(dbsession, record.email.email_id)
+
+    dbsession.flush()
     with StatementWatcher(dbsession.connection()) as watcher:
-        for record in contact_list:
-            schedule_acoustic_record(dbsession, record.email.email_id)
-
-        dbsession.flush()
-
         record_list = get_all_acoustic_records_before(
             dbsession,
             end_time=end_time,
         )
         dbsession.flush()
 
-    print(watcher.statements)
-    assert watcher.count == 4
+    assert watcher.count == 1
     assert len(record_list) == 3
     for record in record_list:
         assert record.email is not None
@@ -221,23 +220,48 @@ def test_schedule_then_get_acoustic_records_before_time(
         assert record.id is not None
 
 
+def test_schedule_then_get_acoustic_records_as_contacts(
+    dbsession, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+
+    for record in contact_list:
+        schedule_acoustic_record(dbsession, record.email.email_id)
+    dbsession.flush()
+
+    record_list = get_all_acoustic_records_before(
+        dbsession,
+        end_time=end_time,
+    )
+    dbsession.flush()
+    with StatementWatcher(dbsession.connection()) as watcher:
+
+        contact_record_list = [
+            get_acoustic_record_as_contact(dbsession, record) for record in record_list
+        ]
+
+    assert watcher.count == 6
+    assert len(contact_record_list) == 3
+    for record in contact_record_list:
+        assert record.email is not None
+
+
 def test_schedule_then_get_acoustic_records_retry_records(
     dbsession, example_contact, maximal_contact, minimal_contact
 ):
     contact_list = [example_contact, maximal_contact, minimal_contact]
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
 
+    for record in contact_list:
+        schedule_acoustic_record(dbsession, record.email.email_id)
+    dbsession.flush()
+
     with StatementWatcher(dbsession.connection()) as watcher:
-        for record in contact_list:
-            schedule_acoustic_record(dbsession, record.email.email_id)
-
-        dbsession.flush()
-
         record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
             dbsession,
             end_time=end_time,
         )
-
         for record in record_list:
             retry_acoustic_record(dbsession, record)
 
@@ -249,7 +273,7 @@ def test_schedule_then_get_acoustic_records_retry_records(
         )
         dbsession.flush()
 
-    assert watcher.count == 6
+    assert watcher.count == 3
     assert len(record_list) == 3
     for record in record_list:
         assert isinstance(record.email, Email)
@@ -264,11 +288,11 @@ def test_schedule_then_get_acoustic_records_minimum_retry(
     contact_list = [example_contact, maximal_contact, minimal_contact]
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
 
-    with StatementWatcher(dbsession.connection()) as watcher:
-        for record in contact_list:
-            schedule_acoustic_record(dbsession, record.email.email_id)
+    for record in contact_list:
+        schedule_acoustic_record(dbsession, record.email.email_id)
 
-        dbsession.flush()
+    dbsession.flush()
+    with StatementWatcher(dbsession.connection()) as watcher:
 
         record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
             dbsession,
@@ -285,7 +309,7 @@ def test_schedule_then_get_acoustic_records_minimum_retry(
         )
         dbsession.flush()
 
-    assert watcher.count == 6
+    assert watcher.count == 3
     assert len(record_list) == 0
 
 
@@ -295,11 +319,12 @@ def test_schedule_then_get_acoustic_records_then_delete(
     contact_list = [example_contact, maximal_contact, minimal_contact]
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
 
-    with StatementWatcher(dbsession.connection()) as watcher:
-        for record in contact_list:
-            schedule_acoustic_record(dbsession, record.email.email_id)
+    for record in contact_list:
+        schedule_acoustic_record(dbsession, record.email.email_id)
 
-        dbsession.flush()
+    dbsession.flush()
+
+    with StatementWatcher(dbsession.connection()) as watcher:
 
         record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
             dbsession,
@@ -318,7 +343,7 @@ def test_schedule_then_get_acoustic_records_then_delete(
         )
         dbsession.flush()
 
-    assert watcher.count == 6
+    assert watcher.count == 3
     assert len(record_list) == 0
 
 

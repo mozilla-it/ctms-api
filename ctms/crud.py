@@ -288,21 +288,14 @@ def get_all_acoustic_records_before(
 
 
 def get_acoustic_record_as_contact(
+    db: Session,
     record: PendingAcousticRecord,
 ) -> ContactSchema:
     # if list to list conversion desired this function
     # can be used with map(get_acoustic_record_as_contact, record_list)
-    contact: ContactSchema = ContactSchema.parse_obj(
-        {
-            "amo": record.email.amo,
-            "email": record.email,
-            "fxa": record.email.fxa,
-            "mofo": record.email.mofo,
-            "newsletters": record.email.newsletters,
-            "vpn_waitlist": record.email.vpn_waitlist,
-        }
-    )
-    return contact
+    contact = get_contact_by_email_id(db, record.email_id)
+    contact_schema: ContactSchema = ContactSchema.parse_obj(contact)
+    return contact_schema
 
 
 def schedule_acoustic_record(
