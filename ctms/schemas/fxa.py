@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import UUID4, Field
@@ -57,7 +57,7 @@ FirefoxAccountsSchema = FirefoxAccountsBase
 
 class UpdatedFirefoxAccountsInSchema(FirefoxAccountsInSchema):
     update_timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="FXA data update timestamp",
         example="2021-01-28T21:26:57.511Z",
     )

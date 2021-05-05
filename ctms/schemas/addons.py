@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from pydantic import UUID4, Field, validator
@@ -85,7 +85,7 @@ AddOnsInSchema = AddOnsBase
 
 class UpdatedAddOnsInSchema(AddOnsInSchema):
     update_timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="AMO data update timestamp",
         example="2021-01-28T21:26:57.511Z",
     )

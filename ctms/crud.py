@@ -7,12 +7,6 @@ from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from ctms.schemas.addons import UpdatedAddOnsInSchema
-from ctms.schemas.email import UpdatedEmailPutSchema
-from ctms.schemas.fxa import UpdatedFirefoxAccountsInSchema
-from ctms.schemas.newsletter import UpdatedNewsletterInSchema
-from ctms.schemas.vpn import UpdatedVpnWaitlistInSchema
-
 from .auth import hash_password
 from .database import Base
 from .models import (
@@ -22,6 +16,7 @@ from .models import (
     FirefoxAccount,
     MozillaFoundationContact,
     Newsletter,
+    PendingAcousticRecord,
     VpnWaitlist,
 )
 from .schemas import (
@@ -35,6 +30,11 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
+    UpdatedAddOnsInSchema,
+    UpdatedEmailPutSchema,
+    UpdatedFirefoxAccountsInSchema,
+    UpdatedNewsletterInSchema,
+    UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,
 )
 
@@ -265,6 +265,56 @@ def get_contacts_by_any_id(
             }
         )
     return data
+
+
+def get_all_acoustic_records_before(
+    db: Session,
+    end_time: datetime,
+    retry_limit: int = 5,
+) -> List[PendingAcousticRecord]:
+    """
+    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
+    pending_records: List[PendingAcousticRecord] = (
+        db.query(PendingAcousticRecord)
+        .filter(
+            PendingAcousticRecord.update_timestamp < end_time,
+            PendingAcousticRecord.retry < retry_limit,
+        )
+        .order_by(asc(PendingAcousticRecord.update_timestamp))
+        .all()
+    )
+
+    return pending_records
+
+
+def get_acoustic_record_as_contact(
+    db: Session,
+    record: PendingAcousticRecord,
+) -> ContactSchema:
+    # if list to list conversion desired this function
+    # can be used with map(get_acoustic_record_as_contact, record_list)
+    contact = get_contact_by_email_id(db, record.email_id)
+    contact_schema: ContactSchema = ContactSchema.parse_obj(contact)
+    return contact_schema
+
+
+def schedule_acoustic_record(
+    db: Session,
+    email_id: UUID4,
+) -> None:
+    db_pending_record = PendingAcousticRecord(email_id=email_id)
+    db.add(db_pending_record)
+
+
+def retry_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
+    pending_record.retry += 1
+    pending_record.update_timestamp = datetime.now(timezone.utc)
+    # db.commit() # TODO: will this be done by the background job?
+
+
+def delete_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
+    db.delete(pending_record)
+    # db.commit() # TODO: will this be done by the background job?
 
 
 def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema) -> None:

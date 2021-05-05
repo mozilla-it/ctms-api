@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal, Optional
 from uuid import UUID
 
@@ -138,7 +138,7 @@ class EmailPatchSchema(EmailInSchema):
 
 class UpdatedEmailPutSchema(EmailPutSchema):
     update_timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Contact last modified date, LastModifiedDate in Salesforce",
         example="2021-01-28T21:26:57.511Z",
     )
