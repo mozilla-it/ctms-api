@@ -317,11 +317,14 @@ def delete_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -
     # db.commit() # TODO: will this be done by the background job?
 
 
-def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema) -> None:
+def create_amo(
+    db: Session, email_id: UUID4, amo: AddOnsInSchema
+) -> Optional[AmoAccount]:
     if amo.is_default():
-        return
+        return None
     db_amo = AmoAccount(email_id=email_id, **amo.dict())
     db.add(db_amo)
+    return db_amo
 
 
 def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSchema]):
@@ -354,11 +357,14 @@ def create_or_update_email(db: Session, email: EmailPutSchema):
     db.execute(stmt)
 
 
-def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema) -> None:
+def create_fxa(
+    db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema
+) -> Optional[FirefoxAccount]:
     if fxa.is_default():
-        return
+        return None
     db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
     db.add(db_fxa)
+    return db_fxa
 
 
 def create_or_update_fxa(
@@ -377,11 +383,14 @@ def create_or_update_fxa(
     db.execute(stmt)
 
 
-def create_mofo(db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema) -> None:
+def create_mofo(
+    db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema
+) -> Optional[MozillaFoundationContact]:
     if mofo.is_default():
-        return
+        return None
     db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.dict())
     db.add(db_mofo)
+    return db_mofo
 
 
 def create_or_update_mofo(
@@ -403,11 +412,12 @@ def create_or_update_mofo(
 
 def create_vpn_waitlist(
     db: Session, email_id: UUID4, vpn_waitlist: VpnWaitlistInSchema
-) -> None:
+) -> Optional[VpnWaitlist]:
     if vpn_waitlist.is_default():
-        return
+        return None
     db_vpn_waitlist = VpnWaitlist(email_id=email_id, **vpn_waitlist.dict())
     db.add(db_vpn_waitlist)
+    return db_vpn_waitlist
 
 
 def create_or_update_vpn_waitlist(
@@ -427,11 +437,14 @@ def create_or_update_vpn_waitlist(
     db.execute(stmt)
 
 
-def create_newsletter(db: Session, email_id: UUID4, newsletter: NewsletterInSchema):
+def create_newsletter(
+    db: Session, email_id: UUID4, newsletter: NewsletterInSchema
+) -> Optional[Newsletter]:
     if newsletter.is_default():
-        return
+        return None
     db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
     db.add(db_newsletter)
+    return db_newsletter
 
 
 def create_or_update_newsletters(
@@ -494,7 +507,7 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
         update_orm(email, update_data["email"])
 
     simple_groups: Dict[
-        str, Tuple[Callable[[Session, UUID4, Any], None], Type[Any]]
+        str, Tuple[Callable[[Session, UUID4, Any], Optional[Base]], Type[Any]]
     ] = {
         "amo": (create_amo, AddOnsInSchema),
         "fxa": (create_fxa, FirefoxAccountsInSchema),
@@ -507,13 +520,16 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
             if update_data[group_name] == "DELETE":
                 if existing:
                     db.delete(existing)
+                    setattr(email, group_name, None)
             else:
                 if existing is None:
-                    creator(db, email_id, schema(**update_data[group_name]))
+                    new = creator(db, email_id, schema(**update_data[group_name]))
+                    setattr(email, group_name, new)
                 else:
                     update_orm(existing, update_data[group_name])
                     if schema.from_orm(existing).is_default():
                         db.delete(existing)
+                        setattr(email, group_name, None)
 
     if "newsletters" in update_data:
         if update_data["newsletters"] == "UNSUBSCRIBE":
@@ -527,7 +543,10 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                 if nl_update["name"] in existing:
                     update_orm(existing[nl_update["name"]], nl_update)
                 elif nl_update.get("subscribed", True):
-                    create_newsletter(db, email_id, NewsletterInSchema(**nl_update))
+                    new = create_newsletter(
+                        db, email_id, NewsletterInSchema(**nl_update)
+                    )
+                    email.newsletters.append(new)
 
     # On any PATCH event, the central/email table's time is updated as well.
     update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})
