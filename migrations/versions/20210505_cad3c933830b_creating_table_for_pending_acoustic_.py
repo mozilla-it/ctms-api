@@ -1,8 +1,8 @@
-"""Adding new table for acoustic pending records
+"""Creating table for pending acoustic records
 
-Revision ID: 3da6a1229bb1
+Revision ID: cad3c933830b
 Revises: bd7adf1a3801
-Create Date: 2021-05-03 19:05:33.926387
+Create Date: 2021-05-05 06:53:21.736467
 
 """
 # pylint: disable=no-member invalid-name
@@ -16,7 +16,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateSequence, Sequence
 
 # revision identifiers, used by Alembic.
-revision = "3da6a1229bb1"  # pragma: allowlist secret
+revision = "cad3c933830b"  # pragma: allowlist secret
 down_revision = "bd7adf1a3801"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
@@ -45,7 +45,6 @@ def upgrade():
             ["emails.email_id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email_id"),
     )
     # ### end Alembic commands ###
 

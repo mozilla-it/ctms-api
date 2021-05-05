@@ -36,10 +36,6 @@ from .newsletter import (
     NewsletterTableSchema,
     UpdatedNewsletterInSchema,
 )
-from .pending_acoustic_record import (
-    PendingAcousticRecordInSchema,
-    PendingAcousticRecordSchema,
-)
 from .vpn import (
     UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,

@@ -207,7 +207,3 @@ class PendingAcousticRecord(Base):
     )  # Timestamp for when the row is updated/retried
 
     email = relationship("Email", uselist=False)
-
-    # # Following command to create sequence added manually.
-    # op.execute(CreateSequence(Sequence("pending_id_sequence")))
-    # # End manually added commands
