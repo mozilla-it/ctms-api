@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import Field
@@ -20,7 +20,7 @@ class PendingAcousticRecordBase(ComparableBase):
     )
 
     update_timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="ISO 8601 Timestamp with utc",
         example="2021-01-29T18:43:49.082375+00:00",
     )
