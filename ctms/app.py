@@ -448,6 +448,7 @@ def get_ctms_response_or_404(db, email_id):
 @app.post(
     "/ctms",
     summary="Create a contact, generating an id if not specified.",
+    response_model=CTMSSingleResponse,
     responses={409: {"model": BadRequestResponse}},
     tags=["Public"],
 )
@@ -486,6 +487,7 @@ def create_ctms_contact(
                Compare this to POST where we will generate one for you if you want.
                This is intended to be used to send back a contact you have modified locally
                and therefore the input schema is a full Contact.""",
+    response_model=CTMSSingleResponse,
     responses={409: {"model": BadRequestResponse}, 422: {"model": BadRequestResponse}},
     tags=["Public"],
 )
@@ -524,6 +526,7 @@ def create_or_update_ctms_contact(
     "/ctms/{email_id}",
     summary="""Partially update a contact. Provided data will be updated, and omitted
                data will keep existing values.""",
+    response_model=CTMSSingleResponse,
     responses={
         409: {"model": BadRequestResponse},
         404: {"model": NotFoundResponse},
