@@ -583,6 +583,12 @@ def post_contact(request, client, dbsession):
             _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
 
+        # Check that GET returns the same contact
+        if code in {200, 201}:
+            dbsession.expunge_all()
+            get_resp = client.get(resp.headers["location"])
+            assert resp.json() == get_resp.json()
+
         return saved, sample, email_id
 
     return _add
@@ -783,6 +789,12 @@ def put_contact(request, client, dbsession):
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
+
+        # Check that GET returns the same contact
+        if code in {200, 201}:
+            dbsession.expunge_all()
+            get_resp = client.get(f"/ctms/{sample.email.email_id}")
+            assert resp.json() == get_resp.json()
 
         return saved, sample, sample_email_id
 
