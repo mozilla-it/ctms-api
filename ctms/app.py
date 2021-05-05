@@ -33,6 +33,7 @@ from .crud import (
     get_contact_by_email_id,
     get_email,
     get_emails_by_any_id,
+    schedule_acoustic_record,
     update_contact,
 )
 from .database import get_db_engine
@@ -460,6 +461,7 @@ def create_ctms_contact(
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact)
+        schedule_acoustic_record(db, email_id)
         db.commit()
     except Exception as e:  # pylint:disable = W0703
         db.rollback()
@@ -494,6 +496,7 @@ def create_or_update_ctms_contact(
         contact.email.email_id = email_id
     try:
         create_or_update_contact(db, email_id, contact)
+        schedule_acoustic_record(db, email_id)
         db.commit()
     except Exception as e:  # pylint:disable = W0703
         db.rollback()
@@ -534,7 +537,7 @@ def partial_update_ctms_contact(
     current_email = get_email_or_404(db, email_id)
     update_data = contact.dict(exclude_unset=True)
     update_contact(db, current_email, update_data)
-    # submit_downstream_update(db)
+    schedule_acoustic_record(db, email_id)
     try:
         db.commit()
     except Exception as e:  # pylint:disable = W0703
