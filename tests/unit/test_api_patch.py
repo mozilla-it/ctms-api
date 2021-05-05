@@ -91,9 +91,7 @@ def test_patch_one_new_value(
     expected[group_name][key] = new_value
     assert existing_value != new_value
 
-    resp_patch = client.patch(f"/ctms/{email_id}", json=patch_data)
-    assert resp_patch.status_code == 303
-    resp = client.get(f"/ctms/{email_id}")
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data)
     assert resp.status_code == 200
     actual = resp.json()
     assert actual["status"] == "ok"

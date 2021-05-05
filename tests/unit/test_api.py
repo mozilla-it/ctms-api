@@ -428,7 +428,12 @@ def test_authorized_api_call_succeeds(client, example_contact, method, path, par
     else:
         assert method in ("PATCH", "POST", "PUT")
         resp = client.request(method, path, json=params)
-        assert resp.status_code == 303
+        if method == "PUT":
+            assert resp.status_code in {200, 201}  # Either creates or updates
+        elif method == "POST":
+            assert resp.status_code == 201
+        else:  # PATCH
+            assert resp.status_code == 200
 
 
 def test_get_ctms_not_found(client, dbsession):
@@ -518,7 +523,7 @@ def post_contact(request, client, dbsession):
 
     def _add(
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
-        code: int = 303,
+        code: int = 201,
         stored_contacts: int = 1,
         check_redirect: bool = True,
         query_fields: Optional[dict] = None,
@@ -547,7 +552,7 @@ def post_contact(request, client, dbsession):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code == 303:
+            if sample.dict().get(field) and code in {200, 201}:
                 if field in fields_not_written:
                     if result_list:
                         assert (
@@ -650,7 +655,7 @@ def test_create_basic_idempotent(post_contact):
     """Creating a contact works across retries."""
     saved_contacts, sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
-    saved_contacts, _, _ = post_contact()
+    saved_contacts, _, _ = post_contact(code=200)
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
@@ -725,9 +730,8 @@ def put_contact(request, client, dbsession):
 
     def _add(
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
-        code: int = 303,
+        code: int = 201,
         stored_contacts: int = 1,
-        check_redirect: bool = True,
         query_fields: Optional[dict] = None,
         check_written: bool = True,
         record: Optional[ContactSchema] = None,
@@ -744,8 +748,6 @@ def put_contact(request, client, dbsession):
         sample = modifier(sample)
         resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
         assert resp.status_code == code, resp.text
-        if check_redirect:
-            assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
         saved = [
             ContactSchema(**c)
             for c in get_contacts_by_any_id(dbsession, **query_fields)
@@ -761,7 +763,7 @@ def put_contact(request, client, dbsession):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code == 303:
+            if sample.dict().get(field) and code in {200, 201}:
                 if field in fields_not_written or field in new_default_fields:
                     assert results is None or (
                         isinstance(results, list) and len(results) == 0
@@ -807,7 +809,6 @@ def test_create_or_update_basic_id_is_none(put_contact):
 
     put_contact(
         modifier=_remove_id,
-        check_redirect=False,
         code=422,
         stored_contacts=0,
         check_written=False,
@@ -874,9 +875,7 @@ def test_create_or_update_with_basket_collision(put_contact):
         contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
         return contact
 
-    saved_contacts, _, _ = put_contact(
-        modifier=_change_basket, code=409, check_redirect=False
-    )
+    saved_contacts, _, _ = put_contact(modifier=_change_basket, code=409)
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
@@ -894,9 +893,7 @@ def test_create_or_update_with_email_collision(put_contact):
         contact.email.primary_email = "foo@example.com"
         return contact
 
-    saved_contacts, _, _ = put_contact(
-        modifier=_change_primary_email, code=409, check_redirect=False
-    )
+    saved_contacts, _, _ = put_contact(modifier=_change_primary_email, code=409)
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
