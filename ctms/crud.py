@@ -315,23 +315,13 @@ def schedule_acoustic_record(
 
 def retry_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
     pending_record.retry += 1
+    pending_record.update_timestamp = datetime.now(timezone.utc)
     # db.commit() # TODO: will this be done by the background job?
 
 
 def delete_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
     db.delete(pending_record)
     # db.commit() # TODO: will this be done by the background job?
-
-
-def delete_pending_records(db: Session, deletion_list: List[PendingAcousticRecord]):
-    assert len(deletion_list) > 0 and isinstance(
-        deletion_list, list
-    ), "parameter (deletion_list) must contain a list"
-    for pending_record in deletion_list:
-        db.delete(pending_record)
-
-    # db.commit() # TODO: will this be done by the background job?
-    # if so, this method is likely unnecessary and the above can be used as a map
 
 
 def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema) -> None:
