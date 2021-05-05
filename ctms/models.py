@@ -193,9 +193,7 @@ class PendingAcousticRecord(Base):
     __tablename__ = "pending_acoustic"
 
     id = Column(Integer, Sequence("pending_id_sequence"), primary_key=True)
-    email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
+    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     retry = Column(
         Integer,
         nullable=False,
@@ -209,3 +207,7 @@ class PendingAcousticRecord(Base):
     )  # Timestamp for when the row is updated/retried
 
     email = relationship("Email", uselist=False)
+
+    # # Following command to create sequence added manually.
+    # op.execute(CreateSequence(Sequence("pending_id_sequence")))
+    # # End manually added commands
