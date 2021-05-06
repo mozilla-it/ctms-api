@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Run continuously in the background, syncing acoustic with our db."""
-
+import os
 from datetime import datetime, timezone
+from functools import lru_cache
 from time import monotonic, sleep
 from typing import List
 
 from ctms import config
+from ctms.acoustic_service import CTMSToAcousticService
 from ctms.crud import (
     delete_acoustic_record,
     get_acoustic_record_as_contact,
@@ -17,14 +19,24 @@ from ctms.models import PendingAcousticRecord
 from ctms.schemas import ContactSchema
 
 
+@lru_cache()
+def get_acoustic_service():
+    return CTMSToAcousticService(
+        client_id=os.environ["ACOUSTIC_CLIENT_ID"],
+        client_secret=os.environ["ACOUSTIC_CLIENT_SECRET"],
+        refresh_token=os.environ["ACOUSTIC_REFRESH_TOKEN"],
+        server_number=6,
+    )
+
+
 def sync_contact_with_acoustic(contact: ContactSchema):
-    print("sync here")
-    is_success = True
-    # TODO:
-    #  Need to define what a successful response from Acoustic would be, and make the request.
-    #   Upon success, the record is discarded;
-    #   Upon failure, the record is up for retry
-    return is_success
+    try:
+        ctms_to_acoustic = get_acoustic_service()
+        is_success: bool = ctms_to_acoustic.attempt_to_upload_ctms_contact(contact)
+        return is_success
+    except Exception:  # pylint: disable=W0703
+        # Failure
+        return False
 
 
 def sync_pending_record(db, pending_record: PendingAcousticRecord):
@@ -48,7 +60,7 @@ def sync_records(db):
 def main(db, settings):
     prev = monotonic()
     while True:
-        print("sync here")
+        sync_records(db)
         to_sleep = settings.acoustic_loop_min_secs - (monotonic() - prev)
         if to_sleep > 0:
             sleep(to_sleep)
