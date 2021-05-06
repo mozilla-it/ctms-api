@@ -54,6 +54,7 @@ def sync_records(db):
         PendingAcousticRecord
     ] = get_all_acoustic_records_before(db, end_time=datetime.now(timezone.utc))
     for acoustic_record in all_acoustic_records_before_now:
+        db.commit()
         sync_pending_record(db, acoustic_record)
 
 
