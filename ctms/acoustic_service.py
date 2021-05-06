@@ -1,21 +1,13 @@
 import logging
-import os
 import re
-from functools import lru_cache
 
 from django.utils.encoding import force_bytes
 from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
-from ctms import config
 from ctms.schemas import ContactSchema
 
 logger = logging.getLogger(__name__)
-
-
-@lru_cache()
-def get_settings():
-    return config.Settings()
 
 
 class AcousticResources:
@@ -120,17 +112,15 @@ class Acoustic(Silverpop):
 class CTMSToAcousticService:
     def __init__(
         self,
-        client_id=os.environ["ACOUSTIC_CLIENT_ID"],
-        client_secret=os.environ["ACOUSTIC_CLIENT_SECRET"],
-        refresh_token=os.environ["ACOUSTIC_REFRESH_TOKEN"],
+        client_id,
+        client_secret,
+        refresh_token,
+        acoustic_main_table_id,
+        acoustic_newsletter_table_id,
         server_number=6,
     ):
         """
-            Constuct a CTMSToAcousticService object that can interface between contacts and acoustic forms of data
-        :param client_id:
-        :param client_secret:
-        :param refresh_token:
-        :param server_number:
+        Constuct a CTMSToAcousticService object that can interface between contacts and acoustic forms of data
         """
         self.acoustic = Acoustic(
             client_id=client_id,
@@ -138,6 +128,8 @@ class CTMSToAcousticService:
             refresh_token=refresh_token,
             server_number=server_number,
         )
+        self.acoustic_main_table_id = acoustic_main_table_id
+        self.acoustic_newsletter_table_id = acoustic_newsletter_table_id
 
     def _convert_ctms_to_acoustic(self, ctms_data: dict):
         # populate with all the sub_flags set to false
@@ -257,14 +249,14 @@ class CTMSToAcousticService:
         try:
             main_table_data, nl_data = self._convert_ctms_to_acoustic(contact.dict())
 
-            main_table_id = get_settings().acoustic_main_table_id
+            main_table_id = self.acoustic_main_table_id
             self._add_contact(
                 list_id=main_table_id,
                 sync_fields={"email_id": main_table_data["email_id"]},
                 columns=main_table_data,
             )
 
-            newsletter_table_id = get_settings().acoustic_newsletter_table_id
+            newsletter_table_id = self.acoustic_newsletter_table_id
             self._insert_update_newsletters(table_id=newsletter_table_id, rows=nl_data)
             # success
             return True

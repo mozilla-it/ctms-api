@@ -12,9 +12,15 @@ class Settings(BaseSettings):
     use_mozlog: bool = True
     logging_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
     sentry_debug: bool = False
-    acoustic_loop_min_secs: int = 5
-    acoustic_main_table_id: int = 1390189
-    acoustic_newsletter_table_id: int = 1390247
 
     class Config:
         env_prefix = "ctms_"
+
+
+class BackgroundSettings(Settings):
+    acoustic_client_id: str
+    acoustic_client_secret: str
+    acoustic_refresh_token: str
+    acoustic_loop_min_secs: int = 5
+    acoustic_main_table_id: int = 1390189
+    acoustic_newsletter_table_id: int = 1390247
