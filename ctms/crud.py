@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 from pydantic import UUID4
 from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
 from .auth import hash_password
 from .database import Base
@@ -560,3 +560,14 @@ def create_api_client(db: Session, api_client: ApiClientSchema, secret):
 
 def get_api_client_by_id(db: Session, client_id: str):
     return db.query(ApiClient).filter(ApiClient.client_id == client_id).one_or_none()
+
+
+def get_active_api_client_ids(db: Session) -> List[str]:
+    rows = (
+        db.query(ApiClient)
+        .filter(ApiClient.enabled.is_(True))
+        .options(load_only("client_id"))
+        .order_by("client_id")
+        .all()
+    )
+    return [row.client_id for row in rows]
