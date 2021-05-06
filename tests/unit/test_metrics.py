@@ -1,9 +1,11 @@
 # Test for metrics
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from prometheus_client import REGISTRY, CollectorRegistry, generate_latest
+from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.parser import text_string_to_metric_families
+from pydantic import ValidationError
 
 from ctms.app import app
 from ctms.metrics import init_metrics, init_metrics_labels, init_metrics_registry
@@ -53,10 +55,34 @@ def metrics(setup_metrics):
     return test_metrics
 
 
-def test_init_metrics_registry():
+def test_init_metrics_registry_standard():
     """init_metrics_registry() returns a registry."""
-    the_registry = init_metrics_registry()
+    with patch("ctms.metrics.config.Settings") as settings:
+        settings.return_value.prometheus_multiproc_dir = None
+        the_registry = init_metrics_registry()
     assert the_registry != REGISTRY
+    assert the_registry._collector_to_names == {}  # pylint: disable=protected-access
+
+
+def test_init_metrics_registry_multiprocess(tmp_path):
+    """init_metrics_registry() can register a multiprocessing collector."""
+    with patch("ctms.metrics.config.Settings") as settings:
+        settings.return_value.prometheus_multiproc_dir = tmp_path
+        the_registry = init_metrics_registry()
+    assert the_registry != REGISTRY
+    # pylint: disable=protected-access
+    collectors = list(the_registry._collector_to_names.keys())
+    assert len(collectors) == 1
+    assert isinstance(collectors[0], MultiProcessCollector)
+
+
+def test_init_metrics_registry_settings_error():
+    """init_metrics_registry() handles invalid settings."""
+    with patch("ctms.metrics.config.Settings") as settings:
+        settings.side_effect = ValidationError(errors=[], model=Mock)
+        the_registry = init_metrics_registry()
+    assert the_registry != REGISTRY
+    assert the_registry._collector_to_names == {}  # pylint: disable=protected-access
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):

@@ -7,10 +7,13 @@ from fastapi import FastAPI
 from fastapi.requests import Request
 from prometheus_client import CollectorRegistry, Counter, Histogram
 from prometheus_client.metrics import MetricWrapperBase
+from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.utils import INF
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from starlette.routing import Match, Route
 
+from ctms import config
 from ctms.crud import get_active_api_client_ids
 
 METRICS_PARAMS = {
@@ -51,13 +54,24 @@ def init_metrics_registry() -> CollectorRegistry:
     """
     Initialize a metrics registry.
 
-    TODO: Add multiprocessor support
+    If we're running under gunicorn, we need a multiprocess collector that
+    points to a folder that was created empty at startup.
 
-    We could use the default REGISTRY, but a fresh registry is easier to reset
-    for tests, and forcing the web code to go through this method will ensure
-    we're using roughly the same code paths in development and production.
+    If we're not running under gunicorn, we could use the default REGISTRY, but
+    a fresh registry is easier to reset for tests, and forcing the web code to
+    go through this method will ensure we're using roughly the same code paths
+    in development and production.
     """
-    return CollectorRegistry()
+    try:
+        settings = config.Settings()
+        prometheus_multiproc_dir = settings.prometheus_multiproc_dir
+    except ValidationError:
+        prometheus_multiproc_dir = None
+
+    registry = CollectorRegistry()
+    if prometheus_multiproc_dir:
+        MultiProcessCollector(registry, path=prometheus_multiproc_dir)
+    return registry
 
 
 def init_metrics(registry: CollectorRegistry) -> Dict[str, MetricWrapperBase]:
