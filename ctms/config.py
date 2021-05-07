@@ -18,9 +18,9 @@ class Settings(BaseSettings):
 
 
 class BackgroundSettings(Settings):
+    acoustic_loop_min_secs: int = 5
     acoustic_client_id: str
     acoustic_client_secret: str
     acoustic_refresh_token: str
-    acoustic_loop_min_secs: int = 5
-    acoustic_main_table_id: int = 1390189
-    acoustic_newsletter_table_id: int = 1390247
+    acoustic_main_table_id: str
+    acoustic_newsletter_table_id: str
