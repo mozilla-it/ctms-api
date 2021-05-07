@@ -14,6 +14,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from sentry_sdk.integrations.logging import ignore_logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -98,6 +99,7 @@ def init_sentry():
         debug=sentry_debug,
         send_default_pii=False,
     )
+    ignore_logger("uvicorn.error")
 
 
 # Initialize Sentry for each thread, unless we're in tests
