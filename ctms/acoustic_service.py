@@ -1,8 +1,8 @@
 import datetime
 import logging
+from decimal import Decimal
 from typing import List
 
-from django.utils.encoding import force_bytes
 from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
@@ -10,45 +10,88 @@ from ctms.schemas import ContactSchema, NewsletterSchema
 
 logger = logging.getLogger(__name__)
 
+# Start cherry-picked from django.utils.encoding
+_PROTECTED_TYPES = (
+    type(None),
+    int,
+    float,
+    Decimal,
+    datetime.datetime,
+    datetime.date,
+    datetime.time,
+)
+
+
+def is_protected_type(obj):
+    # pylint: disable=no-member
+    """Determine if the object instance is of a protected type.
+    Objects of protected types are preserved as-is when passed to
+    force_str(strings_only=True).
+    """
+    return isinstance(obj, _PROTECTED_TYPES)
+
+
+def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
+    # pylint: disable=C0103,R1705
+    """
+    Similar to smart_bytes, except that lazy instances are resolved to
+    strings, rather than kept as lazy objects.
+    If strings_only is True, don't convert (some) non-string-like objects.
+    """
+    # Handle the common case first for performance reasons.
+    if isinstance(s, bytes):
+        if encoding == "utf-8":
+            return s
+        else:
+            return s.decode("utf-8", errors).encode(encoding, errors)
+    if strings_only and is_protected_type(s):
+        return s
+    if isinstance(s, memoryview):
+        return bytes(s)
+    return str(s).encode(encoding, errors)
+
+
+# End cherry-picked from django.utils.encoding
+
 
 class AcousticResources:
     # TODO: externalize, maybe a DB table?
     VALID_ACOUSTIC_MAIN_TABLE_FIELDS = {
-        "sfdc_id": 1,
-        "email": 1,
-        "amo_add_on_ids": 1,
-        "amo_display_name": 1,
-        "amo_email_opt_in": 1,
-        "amo_language": 1,
-        "amo_last_login": 1,
-        "amo_location": 1,
-        "amo_profile_url": 1,
-        "amo_user": 1,
-        "amo_user_id": 1,
-        "amo_username": 1,
-        "create_timestamp": 1,
-        "email_format": 1,
-        "email_id": 1,
-        "email_lang": 1,
-        "vpn_waitlist_geo": 1,
-        "vpn_waitlist_platform": 1,
-        "fxa_id": 1,
-        "fxa_account_deleted": 1,
-        "fxa_lang": 1,
-        "fxa_login_date": 1,
-        "fxa_first_service": 1,
-        "fxa_created_date": 1,
-        "fxa_primary_email": 1,
-        "double_opt_in": 1,
-        "has_opted_out_of_email": 1,
-        "mailing_country": 1,
-        "first_name": 1,
-        "last_name": 1,
-        "sumo_contributor": 1,
-        "sumo_user": 1,
-        "sumo_username": 1,
-        "basket_token": 1,
-        "unsubscribe_reason": 1,
+        "sfdc_id",
+        "email",
+        "amo_add_on_ids",
+        "amo_display_name",
+        "amo_email_opt_in",
+        "amo_language",
+        "amo_last_login",
+        "amo_location",
+        "amo_profile_url",
+        "amo_user",
+        "amo_user_id",
+        "amo_username",
+        "create_timestamp",
+        "email_format",
+        "email_id",
+        "email_lang",
+        "vpn_waitlist_geo",
+        "vpn_waitlist_platform",
+        "fxa_id",
+        "fxa_account_deleted",
+        "fxa_lang",
+        "fxa_login_date",
+        "fxa_first_service",
+        "fxa_created_date",
+        "fxa_primary_email",
+        "double_opt_in",
+        "has_opted_out_of_email",
+        "mailing_country",
+        "first_name",
+        "last_name",
+        "sumo_contributor",
+        "sumo_user",
+        "sumo_username",
+        "basket_token",
+        "unsubscribe_reason",
     }
 
     MAIN_TABLE_SUBSCR_FLAGS = {
@@ -71,12 +114,6 @@ class AcousticResources:
         "test-pilot": "sub_test_pilot",
         "about-mozilla": "sub_about_mozilla",
         "app-dev": "sub_apps_and_hacks",
-        "firefox-welcome": "firefox-welcome",  # TODO: Confirm approach, found newsletters through testing
-        "mozilla-welcome": "mozilla-welcome",  # TODO: Confirm
-        "firefox-os": "firefox-os",  # TODO: Confirm
-        "ambassadors": "ambassadors",  # TODO: Confirm
-        "maker-party": "maker-party",  # TODO: Confirm
-        "mozilla-learning-network": "mozilla-learning-network",  # TODO: Confirm
     }
 
 
@@ -102,8 +139,9 @@ class Acoustic(Silverpop):
         # how RT failures are reported:    (hooray for consistency.)
         failures = response.findall(".//FAILURES/FAILURE")
         if failures is not None:
-            for fail in failures:
-                raise SilverpopResponseException(etree.tostring(fail))
+            raise SilverpopResponseException(
+                [etree.tostring(fail) for fail in failures]
+            )
 
         return response
 
@@ -133,16 +171,14 @@ class CTMSToAcousticService:
             refresh_token=refresh_token,
             server_number=server_number,
         )
-        if isinstance(acoustic_main_table_id, str):
-            acoustic_main_table_id = int(acoustic_main_table_id)
-        self.acoustic_main_table_id = acoustic_main_table_id
-        if isinstance(acoustic_newsletter_table_id, str):
-            acoustic_newsletter_table_id = int(acoustic_newsletter_table_id)
+        self.acoustic_main_table_id = int(acoustic_main_table_id)
         self.acoustic_newsletter_table_id = int(acoustic_newsletter_table_id)
 
     def convert_ctms_to_acoustic(self, contact: ContactSchema):
         acoustic_main_table = self._main_table_converter(contact)
-        newsletter_rows = self._newsletter_converter(acoustic_main_table, contact)
+        newsletter_rows, acoustic_main_table = self._newsletter_converter(
+            acoustic_main_table, contact
+        )
         return acoustic_main_table, newsletter_rows
 
     def _main_table_converter(self, contact):
@@ -217,7 +253,7 @@ class CTMSToAcousticService:
                     ] = "1"
             # else:
             # print(f"Skipping Newsletter {newsletter.name} because no match in Acoustic") # TODO: Convert to logging
-        return newsletter_rows
+        return newsletter_rows, acoustic_main_table
 
     @staticmethod
     def transform_field_for_acoustic(data):

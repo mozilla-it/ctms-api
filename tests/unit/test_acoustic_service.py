@@ -6,31 +6,24 @@ import pytest
 
 from ctms import acoustic_service
 
-CTMS_ACOUSTIC_CLIENT_ID = "CLIENT"
-CTMS_ACOUSTIC_CLIENT_SECRET = "SECRET"
-CTMS_ACOUSTIC_REFRESH_TOKEN = "REFRESH"
 CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
 CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
 
 
-@pytest.fixture()
-def no_acoustic():
-    patcher = mock.patch("ctms.acoustic_service.Acoustic")
-    patcher.start()
-    yield patcher
-    patcher.stop()
-
-
 @pytest.fixture
-def base_ctms_acoustic_service(no_acoustic):
-    return acoustic_service.CTMSToAcousticService(
-        client_id=CTMS_ACOUSTIC_CLIENT_ID,
-        client_secret=CTMS_ACOUSTIC_CLIENT_SECRET,
-        refresh_token=CTMS_ACOUSTIC_REFRESH_TOKEN,
-        acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
-        acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
-        server_number=6,
-    )
+def base_ctms_acoustic_service():
+    ctms_acoustic_client_id = "CLIENT"
+    ctms_acoustic_client_secret = "SECRET"
+    ctms_acoustic_refresh_token = "REFRESH"
+    with mock.patch("ctms.acoustic_service.Acoustic"):
+        yield acoustic_service.CTMSToAcousticService(
+            client_id=ctms_acoustic_client_id,
+            client_secret=ctms_acoustic_client_secret,
+            refresh_token=ctms_acoustic_refresh_token,
+            acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
+            acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
+            server_number=6,
+        )
 
 
 def test_base_service_creation(base_ctms_acoustic_service):
@@ -41,9 +34,9 @@ def test_ctms_to_acoustic(
     base_ctms_acoustic_service, example_contact, maximal_contact, minimal_contact
 ):
     contact_list = [example_contact, maximal_contact, minimal_contact]
-    example_contact_expected = [54, len(example_contact.newsletters)]
-    maximal_contact_expected = [54, len(maximal_contact.newsletters)]
-    minimal_contact_expected = [36, len(minimal_contact.newsletters)]
+    example_contact_expected = [48, len(example_contact.newsletters) - 2]
+    maximal_contact_expected = [48, len(maximal_contact.newsletters) - 2]
+    minimal_contact_expected = [30, len(minimal_contact.newsletters) - 2]
     expected_results = {
         example_contact.email.email_id: example_contact_expected,
         maximal_contact.email.email_id: maximal_contact_expected,
@@ -74,7 +67,6 @@ def test_ctms_to_acoustic(
 
 
 def test_ctms_to_acoustic_mocked(
-    no_acoustic,
     base_ctms_acoustic_service,
     maximal_contact,
 ):

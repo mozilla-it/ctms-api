@@ -8,31 +8,23 @@ from ctms.crud import schedule_acoustic_record
 from ctms.sync import CTMSToAcousticSync
 from tests.unit.test_crud import StatementWatcher
 
-CTMS_ACOUSTIC_CLIENT_ID = "CLIENT"
-CTMS_ACOUSTIC_CLIENT_SECRET = "SECRET"
-CTMS_ACOUSTIC_REFRESH_TOKEN = "REFRESH"
-CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
-CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
-
-
-@pytest.fixture()
-def no_acoustic():
-    patcher = mock.patch("ctms.acoustic_service.Acoustic")
-    patcher.start()
-    yield patcher
-    patcher.stop()
-
 
 @pytest.fixture
-def ctms_to_acoustic_sync(no_acoustic):
-    return CTMSToAcousticSync(
-        client_id=CTMS_ACOUSTIC_CLIENT_ID,
-        client_secret=CTMS_ACOUSTIC_CLIENT_SECRET,
-        refresh_token=CTMS_ACOUSTIC_REFRESH_TOKEN,
-        acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
-        acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
-        server_number=6,
-    )
+def base_ctms_acoustic_service():
+    ctms_acoustic_client_id = "CLIENT"
+    ctms_acoustic_client_secret = "SECRET"
+    ctms_acoustic_refresh_token = "REFRESH"
+    ctms_acoustic_main_table_id = "1"
+    ctms_acoustic_newsletter_table_id = "9"
+    with mock.patch("ctms.acoustic_service.Acoustic"):
+        yield CTMSToAcousticSync(
+            client_id=ctms_acoustic_client_id,
+            client_secret=ctms_acoustic_client_secret,
+            refresh_token=ctms_acoustic_refresh_token,
+            acoustic_main_table_id=ctms_acoustic_main_table_id,
+            acoustic_newsletter_table_id=ctms_acoustic_newsletter_table_id,
+            server_number=6,
+        )
 
 
 def _setup_pending_record(dbsession, email_id):

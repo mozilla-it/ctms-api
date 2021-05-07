@@ -22,5 +22,5 @@ class BackgroundSettings(Settings):
     acoustic_client_id: str
     acoustic_client_secret: str
     acoustic_refresh_token: str
-    acoustic_main_table_id: str
-    acoustic_newsletter_table_id: str
+    acoustic_main_table_id: int
+    acoustic_newsletter_table_id: int
