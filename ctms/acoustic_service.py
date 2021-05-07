@@ -254,7 +254,7 @@ class CTMSToAcousticService:
             rows=rows,
         )
 
-    def attempt_to_upload_ctms_contact(self, contact: ContactSchema):
+    def attempt_to_upload_ctms_contact(self, contact: ContactSchema) -> bool:
         """
 
         :param contact: to be converted to acoustic table rows and uploaded
