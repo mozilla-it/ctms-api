@@ -5,6 +5,8 @@ import json
 import multiprocessing
 import os
 
+from prometheus_client import multiprocess
+
 workers_per_core_str = os.getenv("WORKERS_PER_CORE", "1")
 max_workers_str = os.getenv("MAX_WORKERS")
 use_max_workers = None
@@ -68,3 +70,7 @@ log_data = {
     "port": port,
 }
 print(json.dumps(log_data))
+
+
+def child_exit(server, worker):
+    multiprocess.mark_process_dead(worker.pid)

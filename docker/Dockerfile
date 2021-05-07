@@ -97,7 +97,9 @@ CMD ./scripts/test.sh
 # 'production' stage uses the clean 'python-base' stage and copyies
 # in only our runtime deps that were installed in the 'builder-base'
 FROM python-base as production
-ENV FASTAPI_ENV=production
+ENV FASTAPI_ENV=production \
+    IS_GUNICORN=1 \
+    PROMETHEUS_MULTIPROC=1
 
 COPY --from=builder-base $VENV_PATH $VENV_PATH
 COPY ./docker/gunicorn_conf.py /gunicorn_conf.py

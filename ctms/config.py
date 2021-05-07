@@ -1,7 +1,7 @@
 from datetime import timedelta
-from typing import Literal
+from typing import Literal, Optional
 
-from pydantic import BaseSettings, PostgresDsn
+from pydantic import BaseSettings, DirectoryPath, PostgresDsn
 
 
 class Settings(BaseSettings):
@@ -14,5 +14,14 @@ class Settings(BaseSettings):
     sentry_debug: bool = False
     acoustic_loop_min_secs: int = 5
 
+    fastapi_env: Optional[str] = None
+    is_gunicorn: bool = False
+    prometheus_multiproc_dir: Optional[DirectoryPath] = None
+
     class Config:
         env_prefix = "ctms_"
+        fields = {
+            "fastapi_env": {"env": "fastapi_env"},
+            "is_gunicorn": {"env": "is_gunicorn"},
+            "prometheus_multiproc_dir": {"env": "prometheus_multiproc_dir"},
+        }

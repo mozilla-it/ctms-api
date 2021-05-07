@@ -10,7 +10,7 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 
 from ctms.app import app, get_api_client, get_db
 from ctms.config import Settings
-from ctms.crud import create_contact
+from ctms.crud import create_api_client, create_contact
 from ctms.models import Base
 from ctms.sample_data import SAMPLE_CONTACTS
 from ctms.schemas import ApiClientSchema
@@ -147,3 +147,15 @@ def client(anon_client):
 @pytest.fixture
 def settings():
     return Settings()
+
+
+@pytest.fixture
+def client_id_and_secret(dbsession):
+    """Return valid OAuth2 client_id and client_secret."""
+    api_client = ApiClientSchema(
+        client_id="id_db_api_client", email="db_api_client@example.com", enabled=True
+    )
+    secret = "secret_what_a_weird_random_string"  # pragma: allowlist secret
+    create_api_client(dbsession, api_client, secret)
+    dbsession.flush()
+    return (api_client.client_id, secret)
