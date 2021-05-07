@@ -8,8 +8,6 @@ from silverpop.api import Silverpop, SilverpopResponseException
 
 from ctms.schemas import ContactSchema, NewsletterSchema
 
-logger = logging.getLogger(__name__)
-
 # Start cherry-picked from django.utils.encoding
 _PROTECTED_TYPES = (
     type(None),
@@ -164,6 +162,7 @@ class CTMSToAcousticService:
         self.acoustic = acoustic_client
         self.acoustic_main_table_id = int(acoustic_main_table_id)
         self.acoustic_newsletter_table_id = int(acoustic_newsletter_table_id)
+        self.logger = logging.getLogger(__name__)
 
     def convert_ctms_to_acoustic(self, contact: ContactSchema):
         acoustic_main_table = self._main_table_converter(contact)
@@ -208,9 +207,12 @@ class CTMSToAcousticService:
                         acoustic_main_table[
                             acoustic_field_name
                         ] = self.transform_field_for_acoustic(inner_value)
-                    # else:
-                    # print(f"Skipping CTMS field ({contact_attr}, {inner_attr}) because no match "
-                    #       f"in Acoustic") # TODO: Convert to logging
+                    else:
+                        self.logger.debug(
+                            "Skipping CTMS field (%s, %s) because no match in Acoustic",
+                            contact_attr,
+                            inner_attr,
+                        )
         return acoustic_main_table
 
     def _newsletter_converter(self, acoustic_main_table, contact):
@@ -242,8 +244,11 @@ class CTMSToAcousticService:
                     acoustic_main_table[
                         AcousticResources.MAIN_TABLE_SUBSCR_FLAGS[newsletter.name]
                     ] = "1"
-            # else:
-            # print(f"Skipping Newsletter {newsletter.name} because no match in Acoustic") # TODO: Convert to logging
+            else:
+                self.logger.debug(
+                    "Skipping Newsletter (%s) because no match in Acoustic",
+                    newsletter.name,
+                )
         return newsletter_rows, acoustic_main_table
 
     @staticmethod
