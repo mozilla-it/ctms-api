@@ -18,9 +18,9 @@ from ctms.metrics import init_metrics, init_metrics_labels, init_metrics_registr
 METHOD_PATH_CODE_COMBINATIONS = 45
 
 # Cardinality of ctms_requests_duration_seconds histogram
-METHOD_PATH_COMBOS = 23
+METHOD_PATH_CODEFAM_COMBOS = 31
 DURATION_BUCKETS = 8
-DURATION_COMBINATIONS = METHOD_PATH_COMBOS * (DURATION_BUCKETS + 2)
+DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 
 # Base cardinatility of ctms_api_requests_total
 # Actual is multiplied by the number of API clients
@@ -129,12 +129,12 @@ def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics)
     assert ("PATCH", "/ctms/{email_id}", "200") in req_labels
     assert ("PUT", "/ctms/{email_id}", "200") in req_labels
 
-    # ctms_requests_duration_seconds has a metric for each method / path combo
-    method_path = set((method, path) for method, path, _ in req_labels)
-    assert len(method_path) == METHOD_PATH_COMBOS
-    dur_label_names = ("method", "path_template")
+    # ctms_requests_duration_seconds has a metric for each
+    # method / path / status code family combo
+    dur_label_names = ("method", "path_template", "status_code_family")
     dur_labels = get_labels("ctms_requests_duration_seconds", dur_label_names)
     assert len(dur_labels) == DURATION_COMBINATIONS
+    assert ("GET", "/", "3xx") in dur_labels
 
     # ctms_api_requests has a metric for each
     # (method / path / client_id / status code family) combo for API paths
@@ -169,23 +169,40 @@ def test_homepage_request(anon_client, registry):
     assert (
         registry.get_sample_value(
             "ctms_requests_duration_seconds_bucket",
-            {"method": "GET", "path_template": "/", "le": "0.1"},
+            {
+                "method": "GET",
+                "path_template": "/",
+                "status_code_family": "3xx",
+                "le": "0.1",
+            },
         )
         == 1
     )
     assert (
         registry.get_sample_value(
             "ctms_requests_duration_seconds_count",
-            {"method": "GET", "path_template": "/"},
+            {"method": "GET", "path_template": "/", "status_code_family": "3xx"},
         )
         == 1
     )
     assert (
         registry.get_sample_value(
             "ctms_requests_duration_seconds_sum",
-            {"method": "GET", "path_template": "/"},
+            {"method": "GET", "path_template": "/", "status_code_family": "3xx"},
         )
         < 0.1
+    )
+    assert (
+        registry.get_sample_value(
+            "ctms_requests_duration_seconds_bucket",
+            {
+                "method": "GET",
+                "path_template": "/docs",
+                "status_code_family": "2xx",
+                "le": "0.1",
+            },
+        )
+        == 1
     )
 
 
@@ -204,21 +221,26 @@ def test_api_request(client, minimal_contact, registry):
     assert (
         registry.get_sample_value(
             "ctms_requests_duration_seconds_bucket",
-            {"method": "GET", "path_template": path, "le": "0.1"},
+            {
+                "method": "GET",
+                "path_template": path,
+                "status_code_family": "2xx",
+                "le": "0.1",
+            },
         )
         == 1
     )
     assert (
         registry.get_sample_value(
             "ctms_requests_duration_seconds_count",
-            {"method": "GET", "path_template": path},
+            {"method": "GET", "path_template": path, "status_code_family": "2xx"},
         )
         == 1
     )
     assert (
         registry.get_sample_value(
             "ctms_requests_duration_seconds_sum",
-            {"method": "GET", "path_template": path},
+            {"method": "GET", "path_template": path, "status_code_family": "2xx"},
         )
         < 0.1
     )
