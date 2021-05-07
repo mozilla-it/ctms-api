@@ -23,7 +23,6 @@ _PROTECTED_TYPES = (
 
 
 def is_protected_type(obj):
-    # pylint: disable=no-member
     """Determine if the object instance is of a protected type.
     Objects of protected types are preserved as-is when passed to
     force_str(strings_only=True).
