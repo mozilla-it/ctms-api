@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List
 
-from ctms.acoustic_service import CTMSToAcousticService
+from ctms.acoustic_service import Acoustic, CTMSToAcousticService
 from ctms.crud import (
     delete_acoustic_record,
     get_acoustic_record_as_contact,
@@ -22,13 +22,16 @@ class CTMSToAcousticSync:
         acoustic_newsletter_table_id,
         server_number,
     ):
+        acoustic_client = Acoustic(
+            client_id=client_id,
+            client_secret=client_secret,
+            refresh_token=refresh_token,
+            server_number=server_number,
+        )
         self.ctms_to_acoustic = CTMSToAcousticService(
-            client_id,
-            client_secret,
-            refresh_token,
-            acoustic_main_table_id,
-            acoustic_newsletter_table_id,
-            server_number,
+            acoustic_client=acoustic_client,
+            acoustic_main_table_id=acoustic_main_table_id,
+            acoustic_newsletter_table_id=acoustic_newsletter_table_id,
         )
 
     def sync_contact_with_acoustic(self, contact: ContactSchema):

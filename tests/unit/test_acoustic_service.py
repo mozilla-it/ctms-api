@@ -11,18 +11,26 @@ CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
 
 
 @pytest.fixture
-def base_ctms_acoustic_service():
+def acoustic_client():
     ctms_acoustic_client_id = "CLIENT"
     ctms_acoustic_client_secret = "SECRET"
     ctms_acoustic_refresh_token = "REFRESH"
     with mock.patch("ctms.acoustic_service.Acoustic"):
-        yield acoustic_service.CTMSToAcousticService(
+        yield acoustic_service.Acoustic(
             client_id=ctms_acoustic_client_id,
             client_secret=ctms_acoustic_client_secret,
             refresh_token=ctms_acoustic_refresh_token,
+            server_number=6,
+        )
+
+
+@pytest.fixture
+def base_ctms_acoustic_service(acoustic_client):
+    with mock.patch("ctms.acoustic_service.Acoustic"):
+        yield acoustic_service.CTMSToAcousticService(
+            acoustic_client=acoustic_client,
             acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
             acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
-            server_number=6,
         )
 
 

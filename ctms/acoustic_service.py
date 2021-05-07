@@ -154,22 +154,14 @@ class Acoustic(Silverpop):
 class CTMSToAcousticService:
     def __init__(
         self,
-        client_id,
-        client_secret,
-        refresh_token,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
-        server_number=6,
+        acoustic_client: Acoustic,
     ):
         """
         Construct a CTMSToAcousticService object that can interface between contacts and acoustic forms of data
         """
-        self.acoustic = Acoustic(
-            client_id=client_id,
-            client_secret=client_secret,
-            refresh_token=refresh_token,
-            server_number=server_number,
-        )
+        self.acoustic = acoustic_client
         self.acoustic_main_table_id = int(acoustic_main_table_id)
         self.acoustic_newsletter_table_id = int(acoustic_newsletter_table_id)
 

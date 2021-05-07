@@ -10,7 +10,7 @@ from tests.unit.test_crud import StatementWatcher
 
 
 @pytest.fixture
-def base_ctms_acoustic_service():
+def ctms_to_acoustic_sync():
     ctms_acoustic_client_id = "CLIENT"
     ctms_acoustic_client_secret = "SECRET"
     ctms_acoustic_refresh_token = "REFRESH"
