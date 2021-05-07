@@ -30,7 +30,7 @@ METRICS_PARAMS = {
         {
             "name": "ctms_requests_duration_seconds",
             "documentation": "Histogram of requests processing time by path (in seconds)",
-            "labelnames": ["method", "path_template"],
+            "labelnames": ["method", "path_template", "status_code_family"],
             "buckets": (0.01, 0.05, 0.1, 0.5, 1, 5, 10, INF),
         },
     ),
@@ -108,19 +108,18 @@ def init_metrics_labels(
                         [int(code) for code in list(mspec.get("responses", [200]))]
                     )
                     is_api |= "security" in mspec
-            status_code_families = sorted(
-                {str(code)[0] + "xx" for code in status_codes}
-            )
         elif path == "/":
             status_codes = [307]
         else:
             status_codes = [200]
+        status_code_families = sorted({str(code)[0] + "xx" for code in status_codes})
 
         for combo in product(methods, status_codes):
             method, status_code = combo
             request_metric.labels(method, path, status_code)
-        for method in methods:
-            timing_metric.labels(method, path)
+        for time_combo in product(methods, status_code_families):
+            method, status_code_family = time_combo
+            timing_metric.labels(method, path, status_code_family)
         if is_api:
             for api_combo in product(methods, status_code_families):
                 method, status_code_family = api_combo
@@ -145,13 +144,15 @@ def emit_response_metrics(
     ).inc()
 
     duration_s = request.state.log_context["duration_s"]
+    status_code_family = str(status_code)[0] + "xx"
     metrics["requests_duration"].labels(
-        method=method, path_template=path_template
+        method=method,
+        path_template=path_template,
+        status_code_family=status_code_family,
     ).observe(duration_s)
 
     client_id = request.state.log_context.get("client_id")
     if client_id:
-        status_code_family = str(status_code)[0] + "xx"
         metrics["api_requests"].labels(
             method=method,
             path_template=path_template,
