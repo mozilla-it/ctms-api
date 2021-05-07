@@ -1,5 +1,6 @@
 import datetime
 from unittest import mock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,7 +15,7 @@ CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
 
 @pytest.fixture()
 def no_acoustic():
-    patcher = mock.patch("acoustic_service.Acoustic")
+    patcher = mock.patch("ctms.acoustic_service.Acoustic")
     patcher.start()
     yield patcher
     patcher.stop()
@@ -70,6 +71,38 @@ def test_ctms_to_acoustic(
                 row["email_id"] == contact.email.email_id
             )  # TODO: Should this be a str?
             assert row["newsletter_name"] is not None
+
+
+def test_ctms_to_acoustic_mocked(
+    no_acoustic,
+    base_ctms_acoustic_service,
+    maximal_contact,
+):
+    acoustic_mock: MagicMock = MagicMock()
+    base_ctms_acoustic_service.acoustic = acoustic_mock
+    _main, _newsletter = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        maximal_contact
+    )  # To be used as in testing, for expected inputs to downstream methods
+    assert _main is not None
+    assert _newsletter is not None
+
+    results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(maximal_contact)
+    assert results  # success
+    acoustic_mock.add_recipient.assert_called()
+    acoustic_mock.insert_update_relational_table.assert_called()
+
+    acoustic_mock.add_recipient.assert_called_with(
+        list_id=int(CTMS_ACOUSTIC_MAIN_TABLE_ID),
+        created_from=3,
+        update_if_found="TRUE",
+        allow_html=False,
+        sync_fields={"email_id": _main["email_id"]},
+        columns=_main,
+    )
+
+    acoustic_mock.insert_update_relational_table.assert_called_with(
+        table_id=int(CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID), rows=_newsletter
+    )
 
 
 def test_transform_field(base_ctms_acoustic_service):
