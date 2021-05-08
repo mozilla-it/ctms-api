@@ -126,6 +126,7 @@ class Acoustic(Silverpop):
     def _process_response(resp):
         response = etree.fromstring(resp.text.encode("utf-8"))
         # success = response.find(".//SUCCESS")
+        # print("IS_SUCCESS: %s", success.text.upper())
 
         # how main table failures are reported:
         fault = response.find(".//Fault/FaultString")
@@ -133,9 +134,9 @@ class Acoustic(Silverpop):
             # print(fault.text) # TODO: Convert to logging
             raise SilverpopResponseException(fault.text)
 
-        # how RT failures are reported:    (hooray for consistency.)
+        # how RT failures are reported:
         failures = response.findall(".//FAILURES/FAILURE")
-        if failures is not None:
+        if failures is not None and len(failures) > 0:
             raise SilverpopResponseException(
                 [etree.tostring(fail) for fail in failures]
             )
@@ -294,15 +295,13 @@ class CTMSToAcousticService:
         """
         try:
             main_table_data, nl_data = self.convert_ctms_to_acoustic(contact)
-
-            main_table_id = self.acoustic_main_table_id
+            main_table_id = str(self.acoustic_main_table_id)
             self._add_contact(
                 list_id=main_table_id,
                 sync_fields={"email_id": main_table_data["email_id"]},
                 columns=main_table_data,
             )
-
-            newsletter_table_id = self.acoustic_newsletter_table_id
+            newsletter_table_id = str(self.acoustic_newsletter_table_id)
             self._insert_update_newsletters(table_id=newsletter_table_id, rows=nl_data)
             # success
             return True

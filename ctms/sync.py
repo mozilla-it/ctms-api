@@ -66,7 +66,9 @@ class CTMSToAcousticSync:
                 "Failure on sync; incrementing retry for pending_record in table."
             )
 
-    def sync_records(self, db, end_time=datetime.now(timezone.utc)):
+    def sync_records(self, db, end_time=None):
+        if end_time is None:
+            end_time = datetime.now(timezone.utc)
         self.logger.debug("START: sync.sync_records")
         # Get all Records before current time
         all_acoustic_records_before_now: List[
