@@ -92,7 +92,7 @@ def test_ctms_to_acoustic_mocked(
     acoustic_mock.insert_update_relational_table.assert_called()
 
     acoustic_mock.add_recipient.assert_called_with(
-        list_id=int(CTMS_ACOUSTIC_MAIN_TABLE_ID),
+        list_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
         created_from=3,
         update_if_found="TRUE",
         allow_html=False,
@@ -101,7 +101,7 @@ def test_ctms_to_acoustic_mocked(
     )
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
-        table_id=int(CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID), rows=_newsletter
+        table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID, rows=_newsletter
     )
 
 
