@@ -1,3 +1,4 @@
+# pylint: skip-file
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -19,14 +20,17 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "ctms-api"
-copyright = "2021, Bryan Sieber  <bsieber@mozilla.com>"
-author = "Bryan Sieber  <bsieber@mozilla.com>"
+copyright = "2021, Mozilla-IT "
+author = (
+    "Brian Stack <bstack@mozilla.com>, Bryan Sieber  <bsieber@mozilla.com>, Chris Valaas <cvalaas@mozilla.com>, "
+    "John Whitlock <jwhitlock@mozilla.com> "
+)
 
 # The short X.Y version
-version = "0.4.0"
+version = "0.8"
 
 # The full version, including alpha/beta/rc tags
-release = "0.4.0"
+release = "0.8.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -55,7 +59,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "alabaster"
+html_theme = "nature"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

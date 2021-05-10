@@ -1,22 +1,11 @@
 # Deployment Guide
 
-- HTTP/S: REST-Based Service
-- Port: 80
-- Cloud Build: Build Pipeline
+- Github Actions: Build Pipeline
 - Kubernetes: Manifests for Deployment
 - Docker: Container Management
+- AWS: Cloud Infra
 
----
-## Cloud Build
----
-## Docker
-### Details
-The docker image is a multistage build image.
-View more in the [developer_setup](developer_setup.md) guide.
 
-Acknowledgments to [michael0liver's example](https://github.com/michael0liver/python-poetry-docker-example)
-
----
 ## Deployment
 
 We use a variety of technologies to get this code into production.  Starting from this repo and going outwards:
@@ -133,3 +122,9 @@ CTMS adds fields for some requests:
 * ``token_cred_from``: For ``/token``, if the credentials were read from the
   ``Authentication`` header ("header") or from the form-encoded body ("form")
 * ``token_fail``: For ``/token``, why the token request failed
+
+## Docker
+View about docker in the [developer_setup](developer_setup.md) guide.
+
+---
+[View All Docs](./)
