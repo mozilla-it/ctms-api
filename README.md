@@ -2,9 +2,9 @@
 
 This is a work-in-progress for the Contact Management System (CTMS) API.
 
-While the app is running, the API documentation can found at the following relative paths: /docs, /redoc.
+While the app is running, interactive API documentation can found at the following relative paths: /docs, /redoc.
 
-OAS spec can be found at the following path: /openapi.json
+OpenApiSpec(OAS) spec can be found at the following path: /openapi.json
 
 ---
 ## Template Docs
@@ -42,19 +42,9 @@ The project is structured with the following in mind:
         - FastAPI Handling of HTTP Requests and routing to services
     - bin/*
         - Scripts intended for background machinery
+    - models.py
+        - SQLAlchemy models for ORM tool, SqlAlchemy
     - schemas/*
-        - Pydantic Models for Data Modeling, and Contract Validation
-        - SQLAlchemy models
+        - Pydantic Models for Data Modeling and Contract Validation, Pydantic
 - tests/unit/*
     - Test suite using pytest
-
----
-### Based on containerized-microservice-template
-
-[containerized-microservice-template](https://github.com/mozilla-it/containerized-microservice-template)
-is a mozilla-it github repo template.
-
-### References & Regards
-- https://github.com/tiangolo/fastapi
-- https://github.com/samuelcolvin/pydantic
-- https://github.com/michael0liver/python-poetry-docker-example
