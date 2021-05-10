@@ -124,6 +124,7 @@ class Acoustic(Silverpop):
 
     @staticmethod
     def _process_response(resp):
+        # pylint: disable=c-extension-no-member
         response = etree.fromstring(resp.text.encode("utf-8"))
         # success = response.find(".//SUCCESS")
         # print("IS_SUCCESS: %s", success.text.upper())
@@ -138,6 +139,7 @@ class Acoustic(Silverpop):
         failures = response.findall(".//FAILURES/FAILURE")
         if failures is not None and len(failures) > 0:
             raise SilverpopResponseException(
+                # pylint: disable=c-extension-no-member
                 [etree.tostring(fail) for fail in failures]
             )
 

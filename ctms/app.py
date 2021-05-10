@@ -105,6 +105,7 @@ def init_sentry():
     else:
         sentry_debug = settings.sentry_debug
 
+    # pylint: disable=abstract-class-instantiated
     sentry_sdk.init(
         release=get_version().get("commit", None),
         debug=sentry_debug,
