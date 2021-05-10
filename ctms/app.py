@@ -12,6 +12,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.logging import ignore_logger
@@ -39,6 +40,12 @@ from .crud import (
 )
 from .database import get_db_engine
 from .log import configure_logging
+from .metrics import (
+    emit_response_metrics,
+    init_metrics,
+    init_metrics_labels,
+    init_metrics_registry,
+)
 from .models import Email
 from .monitor import check_database, get_version
 from .schemas import (
@@ -68,6 +75,10 @@ app = FastAPI(
     version="0.7.2",
 )
 SessionLocal = None
+METRICS_REGISTRY = None
+METRICS = None
+get_metrics_registry = lambda: METRICS_REGISTRY
+get_metrics = lambda: METRICS
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
 
@@ -102,18 +113,21 @@ def init_sentry():
     ignore_logger("uvicorn.error")
 
 
-# Initialize Sentry for each thread, unless we're in tests
+# Initialize Sentry / Metrics for each thread, unless we're in tests
 if "pytest" not in sys.argv[0]:
     init_sentry()
     app.add_middleware(SentryAsgiMiddleware)
+    METRICS_REGISTRY = init_metrics_registry()
 
 
 @app.on_event("startup")
 def startup_event():
-    global SessionLocal  # pylint:disable = W0603
+    global SessionLocal, METRICS  # pylint:disable = W0603
     settings = get_settings()
     configure_logging(settings.use_mozlog, settings.logging_level)
     _, SessionLocal = get_db_engine(get_settings())
+    METRICS = init_metrics(METRICS_REGISTRY)
+    init_metrics_labels(SessionLocal(), app, METRICS)
 
 
 def get_db():
@@ -348,6 +362,9 @@ def get_enabled_api_client(
     request: Request, api_client: ApiClientSchema = Depends(get_api_client)
 ):
     log_context = request.state.log_context
+    if not log_context.get("client_id"):
+        # get_api_client was overridden by test
+        log_context["client_id"] = api_client.client_id
     if not api_client.enabled:
         log_context["auth_fail"] = "Client disabled"
         raise HTTPException(status_code=400, detail="API Client has been disabled")
@@ -358,14 +375,22 @@ def get_enabled_api_client(
 @app.middleware("http")
 async def log_request(request: Request, call_next):
     """Add timing and per-request logging context."""
-    start_time = time.time()
+    start_time = time.monotonic()
     request.state.log_context = {}
 
-    response = await call_next(request)
-
-    duration = time.time() - start_time
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        duration = time.monotonic() - start_time
+        duration_s = round(duration, 3)
+        request.state.log_context["duration_s"] = duration_s
+        emit_response_metrics(request, 500, get_metrics())
+        raise e from None
+    duration = time.monotonic() - start_time
     duration_s = round(duration, 3)
     request.state.log_context["duration_s"] = duration_s
+    emit_response_metrics(request, response.status_code, get_metrics())
+
     return response
 
 
@@ -726,6 +751,15 @@ def lbheartbeat():
 def crash(api_client: ApiClientSchema = Depends(get_enabled_api_client)):
     """Raise an exception to test Sentry integration."""
     raise RuntimeError("Test exception handling")
+
+
+@app.get("/metrics", tags=["Platform"])
+def metrics():
+    """Return Prometheus metrics"""
+    headers = {"Content-Type": CONTENT_TYPE_LATEST}
+    return Response(
+        generate_latest(get_metrics_registry()), status_code=200, headers=headers
+    )
 
 
 if __name__ == "__main__":

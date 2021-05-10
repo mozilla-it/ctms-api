@@ -8,20 +8,7 @@ from requests.auth import HTTPBasicAuth
 
 from ctms.app import _token_settings, app
 from ctms.auth import create_access_token, hash_password, verify_password
-from ctms.crud import create_api_client, get_api_client_by_id
-from ctms.schemas import ApiClientSchema
-
-
-@pytest.fixture
-def client_id_and_secret(dbsession):
-    """Return valid OAuth2 client_id and client_secret."""
-    api_client = ApiClientSchema(
-        client_id="id_db_api_client", email="db_api_client@example.com", enabled=True
-    )
-    secret = "secret_what_a_weird_random_string"  # pragma: allowlist secret
-    create_api_client(dbsession, api_client, secret)
-    dbsession.flush()
-    return (api_client.client_id, secret)
+from ctms.crud import get_api_client_by_id
 
 
 @pytest.fixture
