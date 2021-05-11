@@ -48,21 +48,24 @@ class CTMSToAcousticSync:
         """
         try:
             # Convert ContactSchema to Acoustic Readable, attempt API call
-            if self.is_acoustic_enabled:
-                return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(contact)
-            self.logger.debug(
-                "Acoustic is not currently enabled. Records will be classified as successful and "
-                "dropped from queue at this time."
-            )
-            return True
+            return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(contact)
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Error executing sync.sync_contact_with_acoustic")
             return False
 
     def _sync_pending_record(self, db, pending_record: PendingAcousticRecord):
         try:
-            contact: ContactSchema = get_acoustic_record_as_contact(db, pending_record)
-            is_success = self.sync_contact_with_acoustic(contact)
+            if self.is_acoustic_enabled:
+                self.logger.debug(
+                    "Acoustic is not currently enabled. Records will be classified as successful and "
+                    "dropped from queue at this time."
+                )
+                is_success = True
+            else:
+                contact: ContactSchema = get_acoustic_record_as_contact(
+                    db, pending_record
+                )
+                is_success = self.sync_contact_with_acoustic(contact)
 
             if is_success:
                 # on success delete pending_record from table
