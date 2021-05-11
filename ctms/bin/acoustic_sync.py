@@ -18,7 +18,7 @@ def main(db, settings):
         retry_limit=settings.acoustic_retry_limit,
     )
     prev = monotonic()
-    while True:
+    while settings.acoustic_sync_feature_flag:
         sync_service.sync_records(db)
         to_sleep = settings.acoustic_loop_min_secs - (monotonic() - prev)
         if to_sleep > 0:
