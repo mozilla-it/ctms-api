@@ -2,7 +2,7 @@ name: Update Sphinx Docs
 on:
   push:
     branches:
-      - main
+      - master
 jobs:
   sphinx:
     runs-on: ubuntu-latest
