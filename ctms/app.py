@@ -112,6 +112,7 @@ def init_sentry():
         send_default_pii=False,
     )
     ignore_logger("uvicorn.error")
+    ignore_logger("ctms.web")
 
 
 # Initialize Sentry / Metrics for each thread, unless we're in tests
@@ -378,20 +379,25 @@ async def log_request(request: Request, call_next):
     """Add timing and per-request logging context."""
     start_time = time.monotonic()
     request.state.log_context = {}
+    has_error = False
 
     try:
         response = await call_next(request)
     except Exception as e:
+        has_error = True
+        raise e from None
+    finally:
+        if has_error:
+            status_code = 500
+        else:
+            status_code = response.status_code
+
+        context = request.state.log_context
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)
-        request.state.log_context["duration_s"] = duration_s
-        emit_response_metrics(request, 500, get_metrics())
-        raise e from None
-    duration = time.monotonic() - start_time
-    duration_s = round(duration, 3)
-    request.state.log_context["duration_s"] = duration_s
-    emit_response_metrics(request, response.status_code, get_metrics())
+        context.update({"status_code": status_code, "duration_s": duration_s})
 
+        emit_response_metrics(request, status_code, get_metrics())
     return response
 
 
