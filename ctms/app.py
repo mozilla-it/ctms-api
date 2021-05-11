@@ -261,7 +261,7 @@ def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
     return result_after_encoded.decode()
 
 
-def get_bulk_contacts_by_timestamp_or_404(
+def get_bulk_contacts_by_timestamp_or_4xx(
     db: Session,
     start_time: datetime,
     end_time: datetime,
@@ -648,7 +648,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     limit_param = updates_helper(value=limit, default=10)
     end_param = updates_helper(value=end, default=datetime.now(timezone.utc))
     mofo_relevant_param = updates_helper(value=mofo_relevant, default=None)
-    return get_bulk_contacts_by_timestamp_or_404(
+    return get_bulk_contacts_by_timestamp_or_4xx(
         db=db,
         start_time=start,
         end_time=end_param,
