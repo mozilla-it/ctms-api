@@ -748,8 +748,7 @@ def version():
     return get_version()
 
 
-@app.get("/__heartbeat__", tags=["Platform"])
-def heartbeat(response: Response, db: Session = Depends(get_db)):
+def heartbeat(response: Response, db: Session):
     """Return status of backing services, as required by Dockerflow."""
     data = {"database": check_database(db)}
     if not data["database"]["up"]:
@@ -757,10 +756,29 @@ def heartbeat(response: Response, db: Session = Depends(get_db)):
     return data
 
 
-@app.get("/__lbheartbeat__", tags=["Platform"])
+@app.get("/__heartbeat__", tags=["Platform"])
+def get_heartbeat(response: Response, db: Session = Depends(get_db)):
+    return heartbeat(response, db)
+
+
+@app.head("/__heartbeat__", tags=["Platform"])
+def head_heartbeat(response: Response, db: Session = Depends(get_db)):
+    return heartbeat(response, db)
+
+
 def lbheartbeat():
     """Return response when application is running, as required by Dockerflow."""
     return {"status": "OK"}
+
+
+@app.get("/__lbheartbeat__", tags=["Platform"])
+def get_lbheartbeat():
+    return lbheartbeat()
+
+
+@app.head("/__lbheartbeat__", tags=["Platform"])
+def head_lbheartbeat():
+    return lbheartbeat()
 
 
 @app.get("/__crash__", tags=["Platform"], include_in_schema=False)
