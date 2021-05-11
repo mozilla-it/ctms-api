@@ -68,9 +68,7 @@ def test_ctms_to_acoustic(
         if contact.fxa is not None:
             assert _main["fxa_id"] == contact.fxa.fxa_id
         for row in _newsletter:
-            assert (
-                row["email_id"] == contact.email.email_id
-            )  # TODO: Should this be a str?
+            assert row["email_id"] == str(contact.email.email_id)
             assert row["newsletter_name"] is not None
 
 
@@ -85,7 +83,6 @@ def test_ctms_to_acoustic_mocked(
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
     assert _newsletter is not None
-
     results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(maximal_contact)
     assert results  # success
     acoustic_mock.add_recipient.assert_called()

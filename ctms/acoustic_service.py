@@ -2,6 +2,7 @@ import datetime
 import logging
 from decimal import Decimal
 from typing import List
+from uuid import UUID
 
 from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
@@ -222,25 +223,32 @@ class CTMSToAcousticService:
         # create the RT rows for the newsletter table in acoustic
         newsletter_rows = []
         contact_newsletters: List[NewsletterSchema] = contact.newsletters
+        contact_email_id = str(contact.email.email_id)
+        contact_email_format = contact.email.email_format
+        contact_email_lang = contact.email.email_lang
         for newsletter in contact_newsletters:
+            newsletter_template = {
+                "email_id": contact_email_id,
+                "newsletter_format": contact_email_format,
+                "newsletter_lang": contact_email_lang,
+            }
+
             if newsletter.name in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS.keys():
                 newsletter_dict = newsletter.dict()
-                create_timestamp = datetime.date.today().isoformat()
-                if "create_timestamp" in newsletter_dict:
-                    create_timestamp = newsletter_dict["create_timestamp"]
-                update_timestamp = datetime.date.today().isoformat()
-                if "update_timestamp" in newsletter_dict:
-                    update_timestamp = newsletter_dict["update_timestamp"]
-                newsletter_template = {
-                    "email_id": contact.email.email_id,
-                    "newsletter_name": newsletter.name,
-                    "newsletter_format": newsletter.format,
-                    "newsletter_lang": newsletter.lang,
-                    "newsletter_source": newsletter.source,
-                    "newsletter_unsub_reason": newsletter.unsub_reason,
-                    "create_date": create_timestamp,
-                    "update_date": update_timestamp,
-                }
+                _today = datetime.date.today().isoformat()
+                newsletter_template["create_date"] = self.dictionary_helper(
+                    newsletter_dict, "create_timestamp", _today
+                )
+                newsletter_template["update_date"] = self.dictionary_helper(
+                    newsletter_dict, "update_timestamp", _today
+                )
+                newsletter_template["newsletter_name"] = newsletter.name
+                newsletter_template["newsletter_unsub_reason"] = newsletter.unsub_reason
+                _source = newsletter.source
+                if _source is not None:
+                    _source = str(_source)
+                newsletter_template["newsletter_source"] = _source
+
                 newsletter_rows.append(newsletter_template)
                 # and finally flip the main table's sub_<newsletter> flag to true for each subscription
                 if newsletter.subscribed:
@@ -255,6 +263,12 @@ class CTMSToAcousticService:
         return newsletter_rows, acoustic_main_table
 
     @staticmethod
+    def dictionary_helper(dictionary, key, default=None):
+        if key in dictionary:
+            return dictionary[key]
+        return default
+
+    @staticmethod
     def transform_field_for_acoustic(data):
         if isinstance(data, bool):
             if data:
@@ -265,6 +279,8 @@ class CTMSToAcousticService:
             return data.date().isoformat()
         if isinstance(data, datetime.date):
             return data.isoformat()
+        if isinstance(data, UUID):
+            return str(data)
         return data
 
     def _add_contact(self, list_id=None, sync_fields=None, columns=None):
