@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
 
 class BackgroundSettings(Settings):
-    acoustic_sync_feature_flag: bool = False  # Enable/disable whole job
+    acoustic_sync_feature_flag: bool = False  # Enable/disable whole background sync job
     acoustic_integration_feature_flag: bool = (
         False  # Enable/disable integration w/ Acoustic
     )
