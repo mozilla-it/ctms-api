@@ -311,6 +311,7 @@ class CTMSToAcousticService:
         :param contact: to be converted to acoustic table rows and uploaded
         :return: Boolean indicating True (success) or False (failure)
         """
+        self.logger.debug("Converting and uploading contact to acoustic...")
         try:
             main_table_data, nl_data = self.convert_ctms_to_acoustic(contact)
             main_table_id = str(self.acoustic_main_table_id)
@@ -322,7 +323,9 @@ class CTMSToAcousticService:
             newsletter_table_id = str(self.acoustic_newsletter_table_id)
             self._insert_update_newsletters(table_id=newsletter_table_id, rows=nl_data)
             # success
+            self.logger.debug("Successfully sync'd contact to acoustic...")
             return True
         except SilverpopResponseException:
             # failure
+            self.logger.exception("Failure for contact in sync to acoustic...")
             return False

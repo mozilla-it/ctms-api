@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
 
 class BackgroundSettings(Settings):
+    acoustic_retry_limit: int = 6
+    acoustic_server_number: int = 6
     acoustic_loop_min_secs: int = 5
     acoustic_client_id: str
     acoustic_client_secret: str
