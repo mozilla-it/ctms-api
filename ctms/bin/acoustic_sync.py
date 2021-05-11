@@ -16,6 +16,7 @@ def main(db, settings):
         acoustic_newsletter_table_id=settings.acoustic_newsletter_table_id,
         server_number=settings.acoustic_server_number,
         retry_limit=settings.acoustic_retry_limit,
+        is_acoustic_enabled=settings.acoustic_integration_feature_flag,
     )
     prev = monotonic()
     while settings.acoustic_sync_feature_flag:
