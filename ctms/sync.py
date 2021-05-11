@@ -23,6 +23,7 @@ class CTMSToAcousticSync:
         acoustic_newsletter_table_id,
         server_number,
         retry_limit=5,
+        is_acoustic_enabled=True,
     ):
         acoustic_client = Acoustic(
             client_id=client_id,
@@ -37,6 +38,7 @@ class CTMSToAcousticSync:
         )
         self.logger = logging.getLogger(__name__)
         self.retry_limit = retry_limit
+        self.is_acoustic_enabled = is_acoustic_enabled
 
     def sync_contact_with_acoustic(self, contact: ContactSchema):
         """
@@ -46,7 +48,13 @@ class CTMSToAcousticSync:
         """
         try:
             # Convert ContactSchema to Acoustic Readable, attempt API call
-            return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(contact)
+            if self.is_acoustic_enabled:
+                return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(contact)
+            self.logger.debug(
+                "Acoustic is not currently enabled. Records will be classified as successful and "
+                "dropped from queue at this time."
+            )
+            return True
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Error executing sync.sync_contact_with_acoustic")
             return False
