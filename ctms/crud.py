@@ -291,8 +291,6 @@ def get_acoustic_record_as_contact(
     db: Session,
     record: PendingAcousticRecord,
 ) -> ContactSchema:
-    # if list to list conversion desired this function
-    # can be used with map(get_acoustic_record_as_contact, record_list)
     contact = get_contact_by_email_id(db, record.email_id)
     contact_schema: ContactSchema = ContactSchema.parse_obj(contact)
     return contact_schema

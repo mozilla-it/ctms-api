@@ -22,6 +22,7 @@ class CTMSToAcousticSync:
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
         server_number,
+        retry_limit=5,
     ):
         acoustic_client = Acoustic(
             client_id=client_id,
@@ -35,6 +36,7 @@ class CTMSToAcousticSync:
             acoustic_newsletter_table_id=acoustic_newsletter_table_id,
         )
         self.logger = logging.getLogger(__name__)
+        self.retry_limit = retry_limit
 
     def sync_contact_with_acoustic(self, contact: ContactSchema):
         """
@@ -50,21 +52,24 @@ class CTMSToAcousticSync:
             return False
 
     def _sync_pending_record(self, db, pending_record: PendingAcousticRecord):
-        contact: ContactSchema = get_acoustic_record_as_contact(db, pending_record)
-        is_success = self.sync_contact_with_acoustic(contact)
+        try:
+            contact: ContactSchema = get_acoustic_record_as_contact(db, pending_record)
+            is_success = self.sync_contact_with_acoustic(contact)
 
-        if is_success:
-            # on success delete pending_record from table
-            delete_acoustic_record(db, pending_record)
-            self.logger.debug(
-                "Successfully sync'd contact; deleting pending_record in table."
-            )
-        else:
-            # on failure increment retry of record in table
-            retry_acoustic_record(db, pending_record)
-            self.logger.debug(
-                "Failure on sync; incrementing retry for pending_record in table."
-            )
+            if is_success:
+                # on success delete pending_record from table
+                delete_acoustic_record(db, pending_record)
+                self.logger.debug(
+                    "Successfully sync'd contact; deleting pending_record in table."
+                )
+            else:
+                # on failure increment retry of record in table
+                retry_acoustic_record(db, pending_record)
+                self.logger.debug(
+                    "Failure on sync; incrementing retry for pending_record in table."
+                )
+        except Exception:  # pylint: disable=W0703
+            self.logger.exception("Exception occurred when processing acoustic record.")
 
     def sync_records(self, db, end_time=None):
         if end_time is None:
@@ -73,7 +78,9 @@ class CTMSToAcousticSync:
         # Get all Records before current time
         all_acoustic_records_before_now: List[
             PendingAcousticRecord
-        ] = get_all_acoustic_records_before(db, end_time=end_time)
+        ] = get_all_acoustic_records_before(
+            db, end_time=end_time, retry_limit=self.retry_limit
+        )
 
         # For each record, attempt downstream sync
         for acoustic_record in all_acoustic_records_before_now:
