@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
 
 class BackgroundSettings(Settings):
+    acoustic_sync_feature_flag: bool = False
     acoustic_retry_limit: int = 6
     acoustic_server_number: int = 6
     acoustic_loop_min_secs: int = 5
