@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 import dateutil.parser
 import sentry_sdk
+import structlog
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
@@ -39,7 +40,7 @@ from .crud import (
     update_contact,
 )
 from .database import get_db_engine
-from .log import configure_logging
+from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
     init_metrics,
@@ -112,6 +113,7 @@ def init_sentry():
         send_default_pii=False,
     )
     ignore_logger("uvicorn.error")
+    ignore_logger("ctms.web")
 
 
 # Initialize Sentry / Metrics for each thread, unless we're in tests
@@ -374,24 +376,37 @@ def get_enabled_api_client(
 
 
 @app.middleware("http")
-async def log_request(request: Request, call_next):
+async def log_request_middleware(request: Request, call_next):
     """Add timing and per-request logging context."""
     start_time = time.monotonic()
-    request.state.log_context = {}
+    request.state.log_context = context_from_request(request)
+    has_error = False
 
     try:
         response = await call_next(request)
     except Exception as e:
+        has_error = True
+        raise e from None
+    finally:
+        if has_error:
+            status_code = 500
+        else:
+            status_code = response.status_code
+
+        context = request.state.log_context
+        if request.path_params:
+            context["path_params"] = request.path_params
+        log_line = get_log_line(request, status_code, context.get("client_id"))
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)
-        request.state.log_context["duration_s"] = duration_s
-        emit_response_metrics(request, 500, get_metrics())
-        raise e from None
-    duration = time.monotonic() - start_time
-    duration_s = round(duration, 3)
-    request.state.log_context["duration_s"] = duration_s
-    emit_response_metrics(request, response.status_code, get_metrics())
+        context.update({"status_code": status_code, "duration_s": duration_s})
 
+        emit_response_metrics(context, get_metrics())
+        logger = structlog.get_logger("ctms.web")
+        if has_error:
+            logger.error(log_line, **context)
+        else:
+            logger.info(log_line, **context)
     return response
 
 
