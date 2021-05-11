@@ -402,6 +402,10 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=&after=&mofo_relevant=",
         None,
     ),
+    ("HEAD", "/__lbheartbeat__", None),
+    ("GET", "/__lbheartbeat__", None),
+    ("HEAD", "/__heartbeat__", None),
+    ("GET", "/__heartbeat__", None),
 )
 
 
@@ -410,30 +414,47 @@ def test_unauthorized_api_call_fails(
     anon_client, example_contact, method, path, params
 ):
     """Calling the API without credentials fails."""
-    if method == "GET":
-        resp = anon_client.get(path, params=params)
-    else:
-        assert method in ("PATCH", "POST", "PUT")
-        resp = anon_client.request(method, path, json=params)
-    assert resp.status_code == 401
-    assert resp.json() == {"detail": "Not authenticated"}
+    is_heartbeat = "heartbeat__" in path
+    put_patch_post = lambda operation: {
+        "method": operation,
+        "url": path,
+        "json": params,
+    }
+    _map = {  # METHOD: ( {_REQUEST_PARAMS} , {_EXPECTED_RESULTS}
+        "GET": ({"method": "GET", "url": path, "params": params}, {401}),
+        "HEAD": ({"method": "HEAD", "url": path}, {200}),
+        "PUT": (put_patch_post("PUT"), {401}),
+        "PATCH": (put_patch_post("PATCH"), {401}),
+        "POST": (put_patch_post("POST"), {401}),
+    }
+    if method in _map.keys():
+        _request, _results = _map.get(method)
+        resp = anon_client.request(**_request)
+        heartbeat_check = is_heartbeat and resp.status_code == 200
+        assert heartbeat_check or resp.status_code in _results
+        if method != "HEAD":
+            assert heartbeat_check or resp.json() == {"detail": "Not authenticated"}
 
 
 @pytest.mark.parametrize("method,path,params", API_TEST_CASES)
 def test_authorized_api_call_succeeds(client, example_contact, method, path, params):
     """Calling the API without credentials fails."""
-    if method == "GET":
-        resp = client.get(path, params=params)
-        assert resp.status_code == 200
-    else:
-        assert method in ("PATCH", "POST", "PUT")
-        resp = client.request(method, path, json=params)
-        if method == "PUT":
-            assert resp.status_code in {200, 201}  # Either creates or updates
-        elif method == "POST":
-            assert resp.status_code == 201
-        else:  # PATCH
-            assert resp.status_code == 200
+    put_patch_post = lambda operation: {
+        "method": operation,
+        "url": path,
+        "json": params,
+    }
+    _map = {  # METHOD: ( {_REQUEST_PARAMS} , {_EXPECTED_RESULTS}
+        "GET": ({"method": "GET", "url": path, "params": params}, {200}),
+        "HEAD": ({"method": "HEAD", "url": path}, {200}),
+        "PUT": (put_patch_post("PUT"), {200, 201}),  # Either creates or updates
+        "PATCH": (put_patch_post("PATCH"), {200}),
+        "POST": (put_patch_post("POST"), {201}),
+    }
+    if method in _map.keys():
+        _request, _results = _map.get(method)
+        resp = client.request(**_request)
+        assert resp.status_code in _results
 
 
 def test_get_ctms_not_found(client, dbsession):
