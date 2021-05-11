@@ -177,7 +177,8 @@ class ContactVendor:
     }
 
     def __getitem__(self, key: str) -> ContactSchema:
-        return self.contacts[key][0].copy(deep=True)
+        contact: ContactSchema = self.contacts[key][0].copy(deep=True)
+        return contact
 
     def get_not_written(self, key: str) -> Set[str]:
         return self.contacts[key][1]
