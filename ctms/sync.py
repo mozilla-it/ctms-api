@@ -56,16 +56,16 @@ class CTMSToAcousticSync:
     def _sync_pending_record(self, db, pending_record: PendingAcousticRecord):
         try:
             if self.is_acoustic_enabled:
+                contact: ContactSchema = get_acoustic_record_as_contact(
+                    db, pending_record
+                )
+                is_success = self.sync_contact_with_acoustic(contact)
+            else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
                     "dropped from queue at this time."
                 )
                 is_success = True
-            else:
-                contact: ContactSchema = get_acoustic_record_as_contact(
-                    db, pending_record
-                )
-                is_success = self.sync_contact_with_acoustic(contact)
 
             if is_success:
                 # on success delete pending_record from table
