@@ -3,7 +3,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 import dateutil.parser
@@ -239,11 +239,17 @@ def get_contacts_by_ids(
 
 
 def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
-    str_decode = base64.urlsafe_b64decode(after)
-    result_after_list = str(str_decode.decode("utf-8")).split(",")
-    after_email_id = result_after_list[0]
-    after_start_time = dateutil.parser.parse(result_after_list[1])
-    return after_email_id, after_start_time
+    try:
+        str_decode = base64.urlsafe_b64decode(after)
+        result_after_list = str(str_decode.decode("utf-8")).split(",")
+        after_email_id = result_after_list[0]
+        after_start_time = dateutil.parser.parse(result_after_list[1])
+        return after_email_id, after_start_time
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail="Error in Client Request: 'after' param validation error.",
+        ) from e
 
 
 def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
@@ -255,7 +261,7 @@ def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
     return result_after_encoded.decode()
 
 
-def get_bulk_contacts_by_timestamp(
+def get_bulk_contacts_by_timestamp_or_404(
     db: Session,
     start_time: datetime,
     end_time: datetime,
@@ -320,7 +326,7 @@ def get_bulk_contacts_by_timestamp(
 
 
 def updates_helper(value, default):
-    blank_vals = ["", None]
+    blank_vals = [None, "", "null"]
     if value in blank_vals:
         return default
     return value
@@ -631,10 +637,10 @@ def partial_update_ctms_contact(
 )
 def read_ctms_in_bulk_by_timestamps_and_limit(
     start: datetime,
-    end: Optional[Union[datetime, str]] = None,
-    limit: Optional[Union[int, str]] = None,
+    end: Optional[Union[datetime, Literal[""]]] = None,
+    limit: Optional[Union[int, Literal[""]]] = None,
     after: Optional[str] = None,
-    mofo_relevant: Optional[Union[bool, str]] = None,
+    mofo_relevant: Optional[Union[bool, Literal[""]]] = None,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
@@ -642,7 +648,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     limit_param = updates_helper(value=limit, default=10)
     end_param = updates_helper(value=end, default=datetime.now(timezone.utc))
     mofo_relevant_param = updates_helper(value=mofo_relevant, default=None)
-    return get_bulk_contacts_by_timestamp(
+    return get_bulk_contacts_by_timestamp_or_404(
         db=db,
         start_time=start,
         end_time=end_param,
