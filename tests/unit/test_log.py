@@ -1,386 +1,96 @@
 # -*- coding: utf-8 -*-
 """Tests for logging helpers"""
-import json
-from logging import INFO, LogRecord
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import patch
 
 import pytest
+from requests.auth import HTTPBasicAuth
+from structlog.testing import capture_logs
 
-from ctms.app import app, create_or_update_ctms_contact, login, root
-from ctms.log import UvicornJsonLogFormatter, configure_logging
-
-
-@pytest.fixture
-def formatter():
-    return UvicornJsonLogFormatter(logger_name="ctms", log_dropped_fields=True)
+from ctms.log import configure_logging
 
 
-def test_uvicorn_mozlog_drop_color_message(formatter):
-    """UvicornJsonLogFormatter drops color_message, sent by some error logs."""
-    fields_in = {
-        "color_message": "Finished server process [\u001b[36m%d\u001b[0m]",
-        "msg": "Finished server process [30]",
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "dropped_fields": ["color_message"],
-        "msg": "Finished server process [30]",
-    }
-
-
-def test_uvicorn_mozlog_silent_drop_fields():
-    """The field dropped_fields can be omitted."""
-    fmt = UvicornJsonLogFormatter(logger_name="ctms", log_dropped_fields=False)
-    fields_in = {
-        "color_message": "Finished server process [\u001b[36m%d\u001b[0m]",
-        "msg": "Finished server process [30]",
-    }
-    out = fmt.convert_fields(fields_in)
-    assert out == {"msg": "Finished server process [30]"}
-
-
-def test_uvicorn_mozlog_format(formatter):
-    """The UvicornJsonLogFormatter can format a record (calling convert_record)."""
-    record = LogRecord(
-        "uvicorn.access", INFO, __file__, 100, "A log messaage", (), None
-    )
-    raw_out = formatter.format(record)
-    out = json.loads(raw_out)
-    assert out == {
-        "Timestamp": ANY,
-        "Type": "uvicorn.access",
-        "Logger": "ctms",
-        "Hostname": ANY,
-        "EnvVersion": "2.0",
-        "Severity": 6,
-        "Pid": ANY,
-        "Fields": {"msg": "A log messaage"},
-    }
-
-
-def test_uvicorn_mozlog_root_path_call(formatter):
-    """
-    UvicornJsonLogFormatter converts the 307 redirect from calling /.
-
-    This is similar to a call in the local development environment.
-    """
-    fields_in = {
-        "status_code": 307,
-        "scope": {
-            "type": "http",
-            "asgi": {"version": "3.0", "spec_version": "2.1"},
-            "http_version": "1.1",
-            "server": ["172.19.0.3", 8000],
-            "client": ["172.19.0.1", 56988],
-            "scheme": "http",
-            "method": "GET",
-            "root_path": "",
-            "path": "/",
-            "raw_path": b"/",
-            "query_string": b"",
-            "headers": [
-                [b"host", b"localhost:8000"],
-                [b"accept", b"text/html,application/xhtml+xml"],
-                [b"upgrade-insecure-requests", b"1"],
-                [b"cookie", b"csrftoken=0WzTs-more-base64"],
-                [b"user-agent", b"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6)"],
-                [b"accept-language", b"en-us"],
-                [b"accept-encoding", b"gzip, deflate"],
-                [b"connection", b"keep-alive"],
-            ],
-            "fastapi_astack": Mock(),
-            "app": app,
-            "router": Mock(),
-            "endpoint": root,
-            "path_params": {},
-            "state": {
-                "log_context": {
-                    "duration_s": 0.017,
-                }
-            },
-        },
-        "msg": '172.19.0.1:56988 - "GET / HTTP/1.1" 307',
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "client_ip": "172.19.0.1",
-        "client_port": 56988,
-        "dropped_fields": [
-            "scope.app",
-            "scope.asgi",
-            "scope.fastapi_astack",
-            "scope.raw_path",
-            "scope.root_path",
-            "scope.router",
-        ],
-        "duration_s": 0.017,
-        "endpoint": "root",
-        "headers": {
-            "accept": "text/html,application/xhtml+xml",
-            "accept-encoding": "gzip, deflate",
-            "accept-language": "en-us",
-            "connection": "keep-alive",
-            "cookie": "[OMITTED]",
-            "host": "localhost:8000",
-            "upgrade-insecure-requests": "1",
-            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6)",
-        },
-        "http_version": "1.1",
-        "method": "GET",
-        "msg": '172.19.0.1:56988 - "GET / HTTP/1.1" 307',
-        "path": "/",
-        "path_params": {},
-        "query": {},
-        "scheme": "http",
-        "server_ip": "172.19.0.3",
-        "server_port": 8000,
-        "status_code": 307,
-        "type": "http",
-    }
-
-
-def test_uvicorn_mozlog_token_request(formatter):
-    """
-    UvicornJsonLogFormatter converts the 200 from a successful token request.
-
-    This is similar to a call in the local development environment,
-    but omits most fields from previous tests.
-    """
-    fields_in = {
-        "status_code": 200,
-        "scope": {
-            "method": "POST",
-            "headers": [
-                [b"authorization", b"Basic base64-string"],
-                [b"x-requested-with", b"XMLHttpRequest"],
-                [b"content-type", b"application/x-www-form-urlencoded"],
-                [b"content-length", b"29"],
-                [b"referer", b"http://localhost:8000/docs"],
-                [b"origin", b"http://localhost:8000"],
-                [b"cookie", b"csrftoken=0WzT-base64-string"],
-            ],
-            "path": "/token",
-            "endpoint": login,
-        },
-        "msg": '172.19.0.1:57002 - "POST /token HTTP/1.1" 200',
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "endpoint": "login",
-        "headers": {
-            "authorization": "[OMITTED]",
-            "content-length": "29",
-            "content-type": "application/x-www-form-urlencoded",
-            "cookie": "[OMITTED]",
-            "origin": "http://localhost:8000",
-            "referer": "http://localhost:8000/docs",
-            "x-requested-with": "XMLHttpRequest",
-        },
-        "method": "POST",
-        "msg": '172.19.0.1:57002 - "POST /token HTTP/1.1" 200',
-        "path": "/token",
-        "status_code": 200,
-    }
-
-
-def test_uvicorn_mozlog_put_api_call(formatter):
-    """
-    UvicornJsonLogFormatter converts the 303 from a successful PUT request.
-
-    This is similar to a call in the local development environment,
-    but omits most fields from previous tests.
-    """
-    fields_in = {
-        "status_code": 303,
-        "scope": {
-            "method": "PUT",
-            "path": "/ctms/e1d35779-9f14-4553-b2aa-85f9629f68bb",
-            "headers": [
-                [b"authorization", b"Bearer eyJh-base64-string"],
-                [b"content-length", b"1300"],
-                [b"cookie", b"csrftoken=a-base64-string"],
-            ],
-            "endpoint": create_or_update_ctms_contact,
-            "path_params": {"email_id": "e1d35779-9f14-4553-b2aa-85f9629f68bb"},
-            "state": {
-                "log_context": {
-                    "duration_s": 0.116,
-                    "client_id": "id_test",
-                    "client_allowed": True,
-                }
-            },
-        },
-        "msg": '172.19.0.1:57014 - "PUT /ctms/e1d35779-9f14-4553-b2aa-85f9629f68bb HTTP/1.1" 303',
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
+def test_request_log(client, minimal_contact):
+    """A request is logged."""
+    email_id = str(minimal_contact.email.email_id)
+    with capture_logs() as cap_logs:
+        resp = client.get(f"/ctms/{email_id}")
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    log = cap_logs[0]
+    assert "duration_s" in log
+    expected_log = {
         "client_allowed": True,
-        "client_id": "id_test",
-        "duration_s": 0.116,
-        "endpoint": "create_or_update_ctms_contact",
+        "client_host": "testclient",
+        "client_id": "test_client",
+        "duration_s": log["duration_s"],
+        "event": f"testclient:50000 test_client 'GET /ctms/{email_id} HTTP/1.1' 200",
         "headers": {
-            "authorization": "[OMITTED]",
-            "content-length": "1300",
-            "cookie": "[OMITTED]",
+            "host": "testserver",
+            "user-agent": "testclient",
+            "accept-encoding": "gzip, deflate",
+            "accept": "*/*",
+            "connection": "keep-alive",
         },
-        "method": "PUT",
-        "msg": (
-            "172.19.0.1:57014 - "
-            '"PUT /ctms/e1d35779-9f14-4553-b2aa-85f9629f68bb HTTP/1.1"'
-            " 303"
-        ),
-        "path": "/ctms/e1d35779-9f14-4553-b2aa-85f9629f68bb",
-        "path_params": {"email_id": "e1d35779-9f14-4553-b2aa-85f9629f68bb"},
-        "status_code": 303,
+        "log_level": "info",
+        "method": "GET",
+        "path": f"/ctms/{email_id}",
+        "path_params": {"email_id": email_id},
+        "path_template": "/ctms/{email_id}",
+        "status_code": 200,
+    }
+    assert log == expected_log
+
+
+def test_token_request_log(anon_client, client_id_and_secret):
+    """A token request log has omitted headers."""
+    client_id, client_secret = client_id_and_secret
+    with capture_logs() as cap_logs:
+        resp = anon_client.post(
+            "/token",
+            {"grant_type": "client_credentials"},
+            auth=HTTPBasicAuth(client_id, client_secret),
+            cookies={"csrftoken": "0WzT-base64-string"},
+        )
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    log = cap_logs[0]
+    assert log["client_id"] == client_id
+    assert log["token_creds_from"] == "header"
+    assert log["headers"]["authorization"] == "[OMITTED]"
+    assert log["headers"]["content-length"] == "29"
+    assert log["headers"]["cookie"] == "[OMITTED]"
+
+
+def test_log_omits_emails(client, maximal_contact):
+    """The logger omits emails from query params."""
+    email_id = str(maximal_contact.email.email_id)
+    email = maximal_contact.email.primary_email
+    fxa_email = maximal_contact.fxa.primary_email
+    url = (
+        f"/ctms?primary_email={email}&fxa_primary_email={fxa_email}"
+        f"&email_id={email_id}"
+    )
+    with capture_logs() as cap_logs:
+        resp = client.get(url)
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    log = cap_logs[0]
+    assert log["query"] == {
+        "email_id": email_id,
+        "fxa_primary_email": "[OMITTED]",
+        "primary_email": "[OMITTED]",
     }
 
 
-def test_uvicorn_mozlog_non_ascii_header_value(formatter):
-    """
-    A non-ascii header value is added to the log as bytes
-
-    curl refuses to send these, so this is theoretical.
-    """
-    fields_in = {
-        "scope": {
-            "headers": [
-                [b"x-star", "✰".encode("utf8")],
-            ],
-        },
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "bytes_fields": ["headers.x-star"],
-        "headers": {"x-star": b"\xe2\x9c\xb0"},
-    }
-
-
-def test_uvicorn_mozlog_non_ascii_header_name(formatter):
-    """
-    A non-ascii header is added to the log as bytes
-
-    Currently, uvicorn rejects requests with invalid headers,
-    so this code path is even more theoretical.
-    """
-    fields_in = {
-        "scope": {
-            "headers": [
-                ["x-✰".encode("utf8"), b"star"],
-            ],
-        },
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "bytes_fields": ["headers"],
-        "headers": {b"x-\xe2\x9c\xb0": "star"},
-    }
-
-
-def test_uvicorn_mozlog_non_ascii_path(formatter):
-    """
-    A non-ascii path is added to the log as bytes
-
-    Currently, uvicorn rejects requests with unicode paths,
-    so this code path is even more theoretical.
-    """
-    fields_in = {
-        "scope": {
-            "path": "/✰".encode("utf8"),
-        }
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "bytes_fields": ["path"],
-        "path": b"/\xe2\x9c\xb0",
-    }
-
-
-def test_uvicorn_mozlog_duplicate_headers(formatter):
-    """A repeated header is reported as a list."""
-    fields_in = {
-        "scope": {
-            "headers": [
-                [b"x-decision", b"yes"],
-                [b"x-decision", b"no"],
-                [b"x-decision", b"maybe"],
-                [b"x-decision", b"I don't know"],
-                [b"x-decision", b"Can you repeat the question?"],
-            ]
-        }
-    }
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "headers": {
-            "x-decision": [
-                "yes",
-                "no",
-                "maybe",
-                "I don't know",
-                "Can you repeat the question?",
-            ]
-        },
-        "headers_have_duplicates": True,
-    }
-
-
-def test_uvicorn_mozlog_string_header(formatter):
-    """If a header is already a string, it is kept a string."""
-    fields_in = {"scope": {"headers": [["x-unicode", "✓"]]}}
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "headers": {"x-unicode": "✓"},
-    }
-
-
-def test_uvicorn_mozlog_string_object(formatter):
-    """
-    If a header is an object, is is kept as an object.
-
-    This would be an assertion, but we're in logging, so don't raise.
-    """
-    fields_in = {"scope": {"headers": [["x-set", {}]]}}
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "bytes_fields": ["headers.x-set"],
-        "headers": {"x-set": {}},
-    }
-
-
-@pytest.mark.parametrize(
-    "querystring,query",
-    (
-        (b"primary_email=test@example.com", {"primary_email": "[OMITTED]"}),
-        (b"fxa_primary_email=test@example.com", {"fxa_primary_email": "[OMITTED]"}),
-        (b"email_id=a-uuid", {"email_id": "a-uuid"}),
-        (
-            b"start=2020-04-19T21:03&end=&limit=10",
-            {"start": "2020-04-19T21:03", "end": "", "limit": "10"},
-        ),
-        (b"a=1&a=2", {"a": ["1", "2"]}),
-    ),
-)
-def test_uvicorn_mozlog_querystring(formatter, querystring, query):
-    """The querystring is parsed, and emails are omitted."""
-    fields_in = {"scope": {"query_string": querystring}}
-    out = formatter.convert_fields(fields_in)
-    assert out == {"query": query}
-
-
-def test_uvicorn_mozlog_invalid_querystring(formatter):
-    """An invalid querystring is not parsed."""
-    fields_in = {"scope": {"query_string": b"invalid&&="}}
-    out = formatter.convert_fields(fields_in)
-    assert out == {"query_string": "invalid&&="}
-
-
-def test_uvicorn_mozlog_nonascii_querystring(formatter):
-    """An non-ASCII querystring is not parsed."""
-    fields_in = {"scope": {"query_string": "star=✰".encode("utf8")}}
-    out = formatter.convert_fields(fields_in)
-    assert out == {
-        "bytes_fields": ["query_string"],
-        "query_string": b"star=\xe2\x9c\xb0",
-    }
+def test_log_crash(client):
+    """Exceptions are logged."""
+    path = "/__crash__"
+    with pytest.raises(RuntimeError), capture_logs() as cap_logs:
+        client.get(path)
+    assert len(cap_logs) == 1
+    log = cap_logs[0]
+    assert log["log_level"] == "error"
+    assert log["event"] == "testclient:50000 test_client 'GET /__crash__ HTTP/1.1' 500"
 
 
 @pytest.mark.parametrize(
@@ -390,7 +100,7 @@ def test_uvicorn_mozlog_nonascii_querystring(formatter):
         (False, "WARNING"),
     ),
 )
-def test_configure_logging(formatter, use_mozlog, logging_level):
+def test_configure_logging(use_mozlog, logging_level):
     with patch("ctms.log.logging.config.dictConfig") as mock_dc:
         configure_logging(use_mozlog, logging_level)
     mock_dc.assert_called_once()

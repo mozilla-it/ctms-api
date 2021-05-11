@@ -1,17 +1,16 @@
 """Prometheus metrics for instrumentation and monitoring."""
 
 from itertools import product
-from typing import Dict, Optional, cast
+from typing import Any, Dict, cast
 
 from fastapi import FastAPI
-from fastapi.requests import Request
 from prometheus_client import CollectorRegistry, Counter, Histogram
 from prometheus_client.metrics import MetricWrapperBase
 from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.utils import INF
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
-from starlette.routing import Match, Route
+from starlette.routing import Route
 
 from ctms import config
 from ctms.crud import get_active_api_client_ids
@@ -130,20 +129,26 @@ def init_metrics_labels(
 
 
 def emit_response_metrics(
-    request: Request, status_code: int, metrics: Dict[str, MetricWrapperBase]
+    context: Dict[str, Any], metrics: Dict[str, MetricWrapperBase]
 ) -> None:
     """Emit metrics for a response."""
     if not metrics:
         return
-    path_template = get_path_template(request)
-    if path_template is None:
+
+    path_template = context.get("path_template")
+    if not path_template:
+        # If no path_template, then it is not a known route, probably a 404.
+        # Don't emit a metric, which will add noise to data
         return
-    method = request.method
+
+    method = context["method"]
+    duration_s = context["duration_s"]
+    status_code = context["status_code"]
+
     metrics["requests"].labels(
         method=method, path_template=path_template, status_code=status_code
     ).inc()
 
-    duration_s = request.state.log_context["duration_s"]
     status_code_family = str(status_code)[0] + "xx"
     metrics["requests_duration"].labels(
         method=method,
@@ -151,7 +156,7 @@ def emit_response_metrics(
         status_code_family=status_code_family,
     ).observe(duration_s)
 
-    client_id = request.state.log_context.get("client_id")
+    client_id = context.get("client_id")
     if client_id:
         metrics["api_requests"].labels(
             method=method,
@@ -159,13 +164,3 @@ def emit_response_metrics(
             client_id=client_id,
             status_code_family=status_code_family,
         ).inc()
-
-
-def get_path_template(request: Request) -> Optional[str]:
-    """Get the path template for the request, or fall back to plain path."""
-    for route in request.app.routes:
-        match, _ = route.matches(request.scope)
-        if match == Match.FULL:
-            return str(route.path)
-
-    return None  # Not a known application route
