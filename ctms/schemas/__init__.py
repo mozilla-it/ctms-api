@@ -5,6 +5,7 @@ from .addons import (
     UpdatedAddOnsInSchema,
 )
 from .api_client import ApiClientSchema
+from .bulk import BulkRequestSchema
 from .contact import (
     ContactInSchema,
     ContactPatchSchema,

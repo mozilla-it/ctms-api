@@ -1,7 +1,7 @@
 import base64
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Dict, List, Literal, Optional, Tuple, Union
 from uuid import UUID, uuid4
@@ -53,6 +53,7 @@ from .schemas import (
     AddOnsSchema,
     ApiClientSchema,
     BadRequestResponse,
+    BulkRequestSchema,
     ContactInSchema,
     ContactPatchSchema,
     ContactPutSchema,
@@ -239,17 +240,11 @@ def get_contacts_by_ids(
 
 
 def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
-    try:
-        str_decode = base64.urlsafe_b64decode(after)
-        result_after_list = str(str_decode.decode("utf-8")).split(",")
-        after_email_id = result_after_list[0]
-        after_start_time = dateutil.parser.parse(result_after_list[1])
-        return after_email_id, after_start_time
-    except Exception as e:
-        raise HTTPException(
-            status_code=422,
-            detail="Error in Client Request: 'after' param validation error.",
-        ) from e
+    str_decode = base64.urlsafe_b64decode(after)
+    result_after_list = str(str_decode.decode("utf-8")).split(",")
+    after_email_id = result_after_list[0]
+    after_start_time = dateutil.parser.parse(result_after_list[1])
+    return after_email_id, after_start_time
 
 
 def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
@@ -644,18 +639,14 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
-    after_param = updates_helper(value=after, default=None)
-    limit_param = updates_helper(value=limit, default=10)
-    end_param = updates_helper(value=end, default=datetime.now(timezone.utc))
-    mofo_relevant_param = updates_helper(value=mofo_relevant, default=None)
-    return get_bulk_contacts_by_timestamp_or_4xx(
-        db=db,
+    bulk_request = BulkRequestSchema(
         start_time=start,
-        end_time=end_param,
-        after=after_param,
-        limit=limit_param,
-        mofo_relevant=mofo_relevant_param,
+        end_time=end,
+        limit=limit,
+        after=after,
+        mofo_relevant=mofo_relevant,
     )
+    return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.dict())
 
 
 @app.get(
