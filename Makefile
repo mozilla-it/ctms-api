@@ -15,6 +15,7 @@ help:
 	@echo "CTMS make rules:"
 	@echo ""
 	@echo "  build   - build docker containers"
+	@echo "  lint    - lint check for code"
 	@echo "  setup   - (re)create the database"
 	@echo "  start   - run the API service"
 	@echo ""
@@ -37,6 +38,11 @@ help:
 .PHONY: build
 build: .env
 	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml build \
+		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
+
+.PHONY: lint
+lint: .env
+	docker-compose -f ./docker-compose.lint.yaml build \
 		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: db-only
