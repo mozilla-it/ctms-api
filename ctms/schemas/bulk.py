@@ -8,7 +8,7 @@ from .base import ComparableBase
 
 BLANK_VALS = [None, ""]
 
-ConstrainedLimit: ConstrainedInt = conint(gt=0, le=100)
+ConstrainedLimit: ConstrainedInt = conint(gt=0, le=1000)
 # Known issue with MyPy and constrained types
 #   https://github.com/samuelcolvin/pydantic/issues/156
 
@@ -26,12 +26,12 @@ class BulkRequestSchema(ComparableBase):
             return datetime.now(timezone.utc)
         return value
 
-    limit: Optional[Union[ConstrainedLimit, Literal[""]]] = 10
+    limit: Optional[Union[ConstrainedLimit, Literal[""]]] = None
 
     @validator("limit", always=True)
     def limit_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
         if value in BLANK_VALS:
-            return 10  # Default
+            return 100  # Default
         return value
 
     mofo_relevant: Optional[Union[bool, Literal[""]]] = None
