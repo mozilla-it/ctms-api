@@ -19,6 +19,7 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.logging import ignore_logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette import status
 
 from . import config
 from .auth import (
@@ -632,14 +633,20 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
-    bulk_request = BulkRequestSchema(
-        start_time=start,
-        end_time=end,
-        limit=limit,
-        after=after,
-        mofo_relevant=mofo_relevant,
-    )
-    return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.dict())
+    try:
+        bulk_request = BulkRequestSchema(
+            start_time=start,
+            end_time=end,
+            limit=limit,
+            after=after,
+            mofo_relevant=mofo_relevant,
+        )
+        return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.dict())
+    except ValidationError as e:
+        detail = {"errors": e.errors()}
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
+        ) from e
 
 
 @app.get(

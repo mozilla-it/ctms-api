@@ -1,0 +1,123 @@
+"""pytest tests for API functionality"""
+import urllib.parse
+from datetime import timedelta
+from typing import Tuple
+
+import pytest
+
+from ctms.app import compressor_for_bulk_encoded_details
+from ctms.schemas import CTMSResponse
+
+INVALID_BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=-11&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+    ),
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=101&after=&mofo_relevant=",
+    ),
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&after=null",
+    ),
+)
+BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+    ),
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=100&after=&mofo_relevant=",
+    ),
+    (
+        "GET",
+        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00",
+    ),
+)
+
+
+@pytest.mark.parametrize("method,path", INVALID_BULK_TEST_CASES)
+def test_authorized_bulk_call_errs_on_validation(client, example_contact, method, path):
+    """Calling the API without credentials fails."""
+    resp = client.get(path)
+    assert resp.status_code == 422
+
+
+@pytest.mark.parametrize("method,path", BULK_TEST_CASES)
+def test_authorized_bulk_call_succeeds(client, example_contact, method, path):
+    """Calling the API without credentials fails."""
+    resp = client.get(path)
+    assert resp.status_code == 200
+
+
+@pytest.mark.parametrize("method,path", BULK_TEST_CASES)
+def test_unauthorized_api_call_fails(anon_client, example_contact, method, path):
+    """Calling the API without credentials fails."""
+    resp = anon_client.get(path)
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Not authenticated"}
+
+
+def test_get_ctms_bulk_by_timerange(
+    client, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+    first_contact = sorted_list[0]
+    last_contact = sorted_list[-1]
+    after = compressor_for_bulk_encoded_details(first_contact)
+    limit = 1
+    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start_time = urllib.parse.quote_plus(start.isoformat())
+    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end_time = urllib.parse.quote_plus(end.isoformat())
+    url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
+    resp = client.get(url)
+    assert resp.status_code == 200
+    results = resp.json()
+    assert "start" in results
+    assert "end" in results
+    assert "after" in results
+    assert "limit" in results
+    assert "next" in results
+    assert "items" in results
+    assert len(results["items"]) > 0
+    dict_contact_expected = sorted_list[1].dict()
+    dict_contact_actual = CTMSResponse.parse_obj(results["items"][0]).dict()
+    assert dict_contact_expected == dict_contact_actual
+    assert results["next"] is not None
+
+
+def test_get_ctms_bulk_by_timerange_no_results(
+    client, example_contact, maximal_contact, minimal_contact
+):
+    contact_list = [example_contact, maximal_contact, minimal_contact]
+    sorted_list = sorted(
+        contact_list,
+        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+    )
+    first_contact = sorted_list[0]
+    last_contact = sorted_list[-1]
+    after = compressor_for_bulk_encoded_details(last_contact)
+    limit = 1
+    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start_time = urllib.parse.quote_plus(start.isoformat())
+    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end_time = urllib.parse.quote_plus(end.isoformat())
+    url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
+    resp = client.get(url)
+    assert resp.status_code == 200
+    results = resp.json()
+    assert "start" in results
+    assert "end" in results
+    assert "after" in results
+    assert "limit" in results
+    assert "next" in results
+    assert "items" in results
+    assert len(results["items"]) == 0
+    assert results["next"] is None
