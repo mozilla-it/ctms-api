@@ -1,7 +1,7 @@
 import pytest
 
-from ctms.sample_data import SAMPLE_MAXIMAL
 from ctms.schemas.contact import ContactInSchema
+from tests.unit.sample_data import SAMPLE_MAXIMAL
 
 
 def test_idempotent_equal():

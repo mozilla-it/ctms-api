@@ -12,8 +12,8 @@ from ctms.app import app, get_api_client, get_db
 from ctms.config import Settings
 from ctms.crud import create_api_client, create_contact
 from ctms.models import Base
-from ctms.sample_data import SAMPLE_CONTACTS
 from ctms.schemas import ApiClientSchema
+from tests.unit.sample_data import SAMPLE_CONTACTS
 
 
 @pytest.fixture(scope="session")

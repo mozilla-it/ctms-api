@@ -12,8 +12,8 @@ from ctms.crud import (
     get_newsletters_by_email_id,
     get_vpn_by_email_id,
 )
-from ctms.sample_data import SAMPLE_CONTACTS
 from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
+from tests.unit.sample_data import SAMPLE_CONTACTS
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
