@@ -17,7 +17,7 @@ class BulkRequestSchema(ComparableBase):
     end_time: Optional[Union[datetime, Literal[""]]] = None
 
     @validator("end_time")
-    def end_must_not_be_blank(self, value):
+    def end_time_must_not_be_blank(cls, value):  # pylint: disable=E0213
         if value in BLANK_VALS:
             return datetime.now(timezone.utc)
         return value
@@ -25,7 +25,7 @@ class BulkRequestSchema(ComparableBase):
     limit: Optional[Union[int, Literal[""]]] = 10
 
     @validator("limit")
-    def limit_must_not_be_blank(self, value):
+    def limit_must_not_be_blank(cls, value):  # pylint: disable=E0213
         if value in BLANK_VALS:
             return 10
         return value
@@ -33,7 +33,7 @@ class BulkRequestSchema(ComparableBase):
     mofo_relevant: Optional[Union[bool, Literal[""]]] = None
 
     @validator("mofo_relevant")
-    def mofo_relevant_must_not_be_blank(self, value):
+    def mofo_relevant_must_not_be_blank(cls, value):  # pylint: disable=E0213
         if value in BLANK_VALS:
             return None
         return value
@@ -41,7 +41,7 @@ class BulkRequestSchema(ComparableBase):
     after: Optional[str] = None
 
     @validator("after")
-    def after_must_be_base64_decodable(self, value):
+    def after_must_be_base64_decodable(cls, value):  # pylint: disable=E0213
         if value in BLANK_VALS:
             return None
         try:
