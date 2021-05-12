@@ -4,16 +4,21 @@ import json
 import os.path
 
 import pytest
+from structlog.testing import capture_logs
 
 
 def test_read_root(anon_client):
     """The site root redirects to the Swagger docs"""
-    resp = anon_client.get("/")
+    with capture_logs() as caplogs:
+        resp = anon_client.get("/")
     assert resp.status_code == 200
     assert len(resp.history) == 1
     prev_resp = resp.history[0]
     assert prev_resp.status_code == 307  # Temporary Redirect
     assert prev_resp.headers["location"] == "./docs"
+    assert len(caplogs) == 2
+    assert caplogs[0]["trivial"] is True
+    assert "trivial" not in caplogs[1]
 
 
 def test_read_version(anon_client):

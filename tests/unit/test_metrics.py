@@ -6,6 +6,7 @@ from prometheus_client import REGISTRY, CollectorRegistry, generate_latest
 from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.parser import text_string_to_metric_families
 from pydantic import ValidationError
+from structlog.testing import capture_logs
 
 from ctms.app import app
 from ctms.metrics import init_metrics, init_metrics_labels, init_metrics_registry
@@ -325,3 +326,22 @@ def test_unknown_path(anon_client, dbsession, registry):
     metrics_text = generate_latest(registry).decode()
     for family in text_string_to_metric_families(metrics_text):
         assert len(family.samples) == 0
+
+
+def test_get_metrics(anon_client, setup_metrics):
+    """An anonoymous user can request metrics."""
+    with capture_logs() as cap_logs:
+        resp = anon_client.get("/metrics")
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    assert "trivial" not in cap_logs[0]
+
+
+def test_prometheus_metrics_is_logged_as_trivial(anon_client, setup_metrics):
+    """When Prometheus requests metrics, it is logged as trivial."""
+    headers = {"user-agent": "Prometheus/2.26.0"}
+    with capture_logs() as cap_logs:
+        resp = anon_client.get("/metrics", headers=headers)
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    assert cap_logs[0]["trivial"] is True
