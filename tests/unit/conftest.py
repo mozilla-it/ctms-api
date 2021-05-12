@@ -253,3 +253,81 @@ def post_contact(request, client, dbsession):
         return saved, sample, email_id
 
     return _add
+
+
+@pytest.fixture
+def put_contact(request, client, dbsession):
+    _id = (
+        request.param
+        if hasattr(request, "param")
+        else "d1da1c99-fe09-44db-9c68-78a75752574d"
+    )
+    sample_email_id = UUID(str(_id))
+    _contact = SAMPLE_CONTACTS[sample_email_id]
+    fields_not_written = SAMPLE_CONTACTS.get_not_written(sample_email_id)
+
+    def _add(
+        modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
+        code: int = 201,
+        stored_contacts: int = 1,
+        query_fields: Optional[dict] = None,
+        check_written: bool = True,
+        record: Optional[ContactSchema] = None,
+        new_default_fields: Optional[set] = None,
+    ):
+        if record:
+            contact = record
+        else:
+            contact = _contact
+        if query_fields is None:
+            query_fields = {"primary_email": contact.email.primary_email}
+        new_default_fields = new_default_fields or set()
+        sample = contact.copy(deep=True)
+        sample = modifier(sample)
+        resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
+        assert resp.status_code == code, resp.text
+        saved = [
+            ContactSchema(**c)
+            for c in get_contacts_by_any_id(dbsession, **query_fields)
+        ]
+        assert len(saved) == stored_contacts
+
+        # Now make sure that we skip writing default models
+        def _check_written(field, getter):
+            # We delete this field in one test case so we have to check
+            # to see if it is even there
+            if hasattr(sample.email, "email_id") and sample.email.email_id is not None:
+                written_id = sample.email.email_id
+            else:
+                written_id = resp.headers["location"].split("/")[-1]
+            results = getter(dbsession, written_id)
+            if sample.dict().get(field) and code in {200, 201}:
+                if field in fields_not_written or field in new_default_fields:
+                    assert results is None or (
+                        isinstance(results, list) and len(results) == 0
+                    ), f"{sample_email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                else:
+                    assert (
+                        results
+                    ), f"{sample_email_id} has field `{field}` and it should have been written to db"
+            else:
+                assert results is None or (
+                    isinstance(results, list) and len(results) == 0
+                ), f"{sample_email_id} does not have field `{field}` and it should _not_ have been written to db"
+
+        if check_written:
+            _check_written("amo", get_amo_by_email_id)
+            _check_written("fxa", get_fxa_by_email_id)
+            _check_written("mofo", get_mofo_by_email_id)
+            _check_written("newsletters", get_newsletters_by_email_id)
+            _check_written("vpn_waitlist", get_vpn_by_email_id)
+
+        # Check that GET returns the same contact
+        if code in {200, 201}:
+            dbsession.expunge_all()
+            get_resp = client.get(f"/ctms/{sample.email.email_id}")
+            assert resp.json() == get_resp.json()
+
+        return saved, sample, sample_email_id
+
+    return _add
