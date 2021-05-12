@@ -27,7 +27,7 @@ class BulkRequestSchema(ComparableBase):
             return datetime.now(timezone.utc)
         return value
 
-    limit: Optional[Union[ConstrainedLimit, Literal[""]]] = None
+    limit: Optional[Union[ConstrainedLimit, Literal[""]]] = None  # type: ignore
 
     @validator("limit", always=True)
     def limit_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
