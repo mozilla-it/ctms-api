@@ -150,61 +150,72 @@ def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics)
     assert ("GET", "/ctms/{email_id}", client_id, "4xx") in api_labels
 
 
+def assert_request_metric_inc(
+    metrics_registry: CollectorRegistry,
+    method: str,
+    path_template: str,
+    status_code: int,
+    count: int = 1,
+):
+    """Assert ctms_requests_total with given labels was incremented"""
+    labels = {
+        "method": method,
+        "path_template": path_template,
+        "status_code": str(status_code),
+        "status_code_family": str(status_code)[0] + "xx",
+    }
+    assert metrics_registry.get_sample_value("ctms_requests_total", labels) == count
+
+
+def assert_duration_metric_obs(
+    metrics_registry: CollectorRegistry,
+    method: str,
+    path_template: str,
+    status_code_family: str,
+    limit: float = 0.1,
+    count: int = 1,
+):
+    """Assert ctms_requests_duration_seconds with given labels was observed"""
+    base_name = "ctms_requests_duration_seconds"
+    labels = {
+        "method": method,
+        "path_template": path_template,
+        "status_code_family": status_code_family,
+    }
+    bucket_labels = labels.copy()
+    bucket_labels["le"] = str(limit)
+    assert (
+        metrics_registry.get_sample_value(f"{base_name}_bucket", bucket_labels) == count
+    )
+    assert metrics_registry.get_sample_value(f"{base_name}_count", labels) == count
+    assert metrics_registry.get_sample_value(f"{base_name}_sum", labels) < limit
+
+
+def assert_api_request_metric_inc(
+    metrics_registry: CollectorRegistry,
+    method: str,
+    path_template: str,
+    client_id: str,
+    status_code_family: str,
+    count: int = 1,
+):
+    """Assert ctms_api_requests_total with given labels was incremented"""
+    labels = {
+        "method": method,
+        "path_template": path_template,
+        "client_id": client_id,
+        "status_code_family": status_code_family,
+    }
+    assert metrics_registry.get_sample_value("ctms_api_requests_total", labels) == count
+
+
 def test_homepage_request(anon_client, registry):
     """A homepage request emits metrics for / and /docs"""
     anon_client.get("/")
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_total",
-            {"method": "GET", "path_template": "/", "status_code": "307"},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_total",
-            {"method": "GET", "path_template": "/docs", "status_code": "200"},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_bucket",
-            {
-                "method": "GET",
-                "path_template": "/",
-                "status_code_family": "3xx",
-                "le": "0.1",
-            },
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_count",
-            {"method": "GET", "path_template": "/", "status_code_family": "3xx"},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_sum",
-            {"method": "GET", "path_template": "/", "status_code_family": "3xx"},
-        )
-        < 0.1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_bucket",
-            {
-                "method": "GET",
-                "path_template": "/docs",
-                "status_code_family": "2xx",
-                "le": "0.1",
-            },
-        )
-        == 1
-    )
+    assert_request_metric_inc(registry, "GET", "/", 307)
+    assert_request_metric_inc(registry, "GET", "/docs", 200)
+    assert_duration_metric_obs(registry, "GET", "/", "3xx")
+    assert_duration_metric_obs(registry, "GET", "/docs", "2xx")
 
 
 def test_api_request(client, minimal_contact, registry):
@@ -212,51 +223,9 @@ def test_api_request(client, minimal_contact, registry):
     email_id = minimal_contact.email.email_id
     client.get(f"/ctms/{email_id}")
     path = "/ctms/{email_id}"
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_total",
-            {"method": "GET", "path_template": path, "status_code": "200"},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_bucket",
-            {
-                "method": "GET",
-                "path_template": path,
-                "status_code_family": "2xx",
-                "le": "0.1",
-            },
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_count",
-            {"method": "GET", "path_template": path, "status_code_family": "2xx"},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_duration_seconds_sum",
-            {"method": "GET", "path_template": path, "status_code_family": "2xx"},
-        )
-        < 0.1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_api_requests_total",
-            {
-                "method": "GET",
-                "path_template": path,
-                "client_id": "test_client",
-                "status_code_family": "2xx",
-            },
-        )
-        == 1
-    )
+    assert_request_metric_inc(registry, "GET", path, 200)
+    assert_duration_metric_obs(registry, "GET", path, "2xx")
+    assert_api_request_metric_inc(registry, "GET", path, "test_client", "2xx")
 
 
 @pytest.mark.parametrize(
@@ -271,24 +240,10 @@ def test_bad_api_request(client, dbsession, registry, email_id, status_code):
     resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == status_code
     path = "/ctms/{email_id}"
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_total",
-            {"method": "GET", "path_template": path, "status_code": str(status_code)},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_api_requests_total",
-            {
-                "method": "GET",
-                "path_template": path,
-                "client_id": "test_client",
-                "status_code_family": str(status_code)[0] + "xx",
-            },
-        )
-        == 1
+    assert_request_metric_inc(registry, "GET", path, status_code)
+    status_code_family = str(status_code)[0] + "xx"
+    assert_api_request_metric_inc(
+        registry, "GET", path, "test_client", status_code_family
     )
 
 
@@ -297,25 +252,8 @@ def test_crash_request(client, dbsession, registry):
     path = "/__crash__"
     with pytest.raises(RuntimeError):
         client.get(path)
-    assert (
-        registry.get_sample_value(
-            "ctms_requests_total",
-            {"method": "GET", "path_template": path, "status_code": "500"},
-        )
-        == 1
-    )
-    assert (
-        registry.get_sample_value(
-            "ctms_api_requests_total",
-            {
-                "method": "GET",
-                "path_template": path,
-                "client_id": "test_client",
-                "status_code_family": "5xx",
-            },
-        )
-        == 1
-    )
+    assert_request_metric_inc(registry, "GET", path, 500)
+    assert_api_request_metric_inc(registry, "GET", path, "test_client", "5xx")
 
 
 def test_unknown_path(anon_client, dbsession, registry):
