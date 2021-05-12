@@ -3,15 +3,11 @@ from datetime import datetime, timezone
 from typing import Literal, Optional, Tuple, Union
 
 import dateutil.parser
-from pydantic import conint, validator
+from pydantic import validator
 
 from .base import ComparableBase
 
 BLANK_VALS = [None, ""]
-
-ConstrainedLimit: conint = conint(gt=0, le=1000)
-# Known issue with MyPy and constrained types
-#   https://github.com/samuelcolvin/pydantic/issues/156
 
 
 class BulkRequestSchema(ComparableBase):
@@ -27,12 +23,18 @@ class BulkRequestSchema(ComparableBase):
             return datetime.now(timezone.utc)
         return value
 
-    limit: Optional[Union[ConstrainedLimit, Literal[""]]] = None  # type: ignore
+    limit: Optional[Union[int, Literal[""]]] = None
 
     @validator("limit", always=True)
-    def limit_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
+    def limit_must_adhere_to_validations(
+        cls, value
+    ):  # pylint: disable=no-self-argument
         if value in BLANK_VALS:
             return 100  # Default
+        if value < 0:
+            raise ValueError('"limit" should be greater than 0')
+        if value > 1000:
+            raise ValueError('"limit" should be less than or equal to 1000')
         return value
 
     mofo_relevant: Optional[Union[bool, Literal[""]]] = None
