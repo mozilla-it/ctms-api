@@ -73,7 +73,7 @@ from .schemas import (
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="0.7.2",
+    version="0.8.0",
 )
 SessionLocal = None
 METRICS_REGISTRY = None
