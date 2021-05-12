@@ -127,6 +127,7 @@ def configure_logging(use_mozlog: bool = True, logging_level: str = "INFO") -> N
 def context_from_request(request: Request) -> Dict:
     """Extract data from a log request."""
     context = {
+        "trivial": False,  # For filtering in papertrail, place early in log
         "client_host": request.client.host,
         "method": request.method,
         "path": request.url.path,

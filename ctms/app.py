@@ -396,6 +396,12 @@ async def log_request_middleware(request: Request, call_next):
         context = request.state.log_context
         if request.path_params:
             context["path_params"] = request.path_params
+        if "trivial_code" in context:
+            if status_code == context["trivial_code"]:
+                context["trivial"] = True
+            del context["trivial_code"]
+        if context["trivial"] is False:
+            del context["trivial"]
         log_line = get_log_line(request, status_code, context.get("client_id"))
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)
@@ -411,7 +417,7 @@ async def log_request_middleware(request: Request, call_next):
 
 
 @app.get("/", include_in_schema=False)
-def root():
+def root(request: Request):
     """GET via root redirects to /docs.
 
     - Args:
@@ -419,7 +425,7 @@ def root():
     - Returns:
         - **redirect**: Redirects call to ./docs
     """
-
+    request.state.log_context["trivial_code"] = 307
     return RedirectResponse(url="./docs")
 
 
@@ -748,8 +754,17 @@ def version():
     return get_version()
 
 
-def heartbeat(response: Response, db: Session):
+def heartbeat(request: Request, response: Response, db: Session):
     """Return status of backing services, as required by Dockerflow."""
+    x_nr_synthetics = request.headers.get("x-newrelic-synthetics", "")
+    x_abuse_info = request.headers.get("x-abuse-info", "")
+    user_agent = request.headers.get("user-agent", "")
+    is_newrelic = x_nr_synthetics != "" and x_abuse_info.startswith(
+        "Request sent by a New Relic Synthetics Monitor ("
+    )
+    is_amazon = user_agent.startswith("Amazon-Route53-Health-Check-Service (")
+    if is_newrelic or is_amazon:
+        request.state.log_context["trivial_code"] = 200
     data = {"database": check_database(db)}
     if not data["database"]["up"]:
         response.status_code = 503
@@ -757,28 +772,31 @@ def heartbeat(response: Response, db: Session):
 
 
 @app.get("/__heartbeat__", tags=["Platform"])
-def get_heartbeat(response: Response, db: Session = Depends(get_db)):
-    return heartbeat(response, db)
+def get_heartbeat(request: Request, response: Response, db: Session = Depends(get_db)):
+    return heartbeat(request, response, db)
 
 
 @app.head("/__heartbeat__", tags=["Platform"])
-def head_heartbeat(response: Response, db: Session = Depends(get_db)):
-    return heartbeat(response, db)
+def head_heartbeat(request: Request, response: Response, db: Session = Depends(get_db)):
+    return heartbeat(request, response, db)
 
 
-def lbheartbeat():
+def lbheartbeat(request: Request):
     """Return response when application is running, as required by Dockerflow."""
+    user_agent = request.headers.get("user-agent", "")
+    if user_agent.startswith("kube-probe/"):
+        request.state.log_context["trivial_code"] = 200
     return {"status": "OK"}
 
 
 @app.get("/__lbheartbeat__", tags=["Platform"])
-def get_lbheartbeat():
-    return lbheartbeat()
+def get_lbheartbeat(request: Request):
+    return lbheartbeat(request)
 
 
 @app.head("/__lbheartbeat__", tags=["Platform"])
-def head_lbheartbeat():
-    return lbheartbeat()
+def head_lbheartbeat(request: Request):
+    return lbheartbeat(request)
 
 
 @app.get("/__crash__", tags=["Platform"], include_in_schema=False)
@@ -788,8 +806,11 @@ def crash(api_client: ApiClientSchema = Depends(get_enabled_api_client)):
 
 
 @app.get("/metrics", tags=["Platform"])
-def metrics():
+def metrics(request: Request):
     """Return Prometheus metrics"""
+    agent = request.headers.get("user-agent", "")
+    if agent.startswith("Prometheus/"):
+        request.state.log_context["trivial_code"] = 200
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     return Response(
         generate_latest(get_metrics_registry()), status_code=200, headers=headers
