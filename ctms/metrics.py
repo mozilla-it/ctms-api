@@ -20,8 +20,13 @@ METRICS_PARAMS = {
         Counter,
         {
             "name": "ctms_requests_total",
-            "documentation": "Total count of requests by method, path, and status code.",
-            "labelnames": ["method", "path_template", "status_code"],
+            "documentation": "Total count of requests by method, path, status code, and status code family.",
+            "labelnames": [
+                "method",
+                "path_template",
+                "status_code",
+                "status_code_family",
+            ],
         },
     ),
     "requests_duration": (
@@ -115,7 +120,8 @@ def init_metrics_labels(
 
         for combo in product(methods, status_codes):
             method, status_code = combo
-            request_metric.labels(method, path, status_code)
+            status_code_family = str(status_code)[0] + "xx"
+            request_metric.labels(method, path, status_code, status_code_family)
         for time_combo in product(methods, status_code_families):
             method, status_code_family = time_combo
             timing_metric.labels(method, path, status_code_family)
@@ -144,12 +150,15 @@ def emit_response_metrics(
     method = context["method"]
     duration_s = context["duration_s"]
     status_code = context["status_code"]
+    status_code_family = str(status_code)[0] + "xx"
 
     metrics["requests"].labels(
-        method=method, path_template=path_template, status_code=status_code
+        method=method,
+        path_template=path_template,
+        status_code=status_code,
+        status_code_family=status_code_family,
     ).inc()
 
-    status_code_family = str(status_code)[0] + "xx"
     metrics["requests_duration"].labels(
         method=method,
         path_template=path_template,

@@ -162,6 +162,7 @@ def assert_request_metric_inc(
         "method": method,
         "path_template": path_template,
         "status_code": str(status_code),
+        "status_code_family": str(status_code)[0] + "xx",
     }
     assert metrics_registry.get_sample_value("ctms_requests_total", labels) == count
 
