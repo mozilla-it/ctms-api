@@ -1,12 +1,10 @@
-import base64
 import sys
 import time
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Union
 from uuid import UUID, uuid4
 
-import dateutil.parser
 import sentry_sdk
 import structlog
 import uvicorn
@@ -240,23 +238,6 @@ def get_contacts_by_ids(
     ]
 
 
-def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
-    str_decode = base64.urlsafe_b64decode(after)
-    result_after_list = str(str_decode.decode("utf-8")).split(",")
-    after_email_id = result_after_list[0]
-    after_start_time = dateutil.parser.parse(result_after_list[1])
-    return after_email_id, after_start_time
-
-
-def compressor_for_bulk_encoded_details(last_result: CTMSResponse):
-    last_email_id = last_result.email.email_id
-    last_update_time = last_result.email.update_timestamp
-    result_after_encoded = base64.urlsafe_b64encode(
-        f"{last_email_id},{last_update_time}".encode("utf-8")
-    )
-    return result_after_encoded.decode()
-
-
 def get_bulk_contacts_by_timestamp_or_4xx(
     db: Session,
     start_time: datetime,
@@ -269,9 +250,10 @@ def get_bulk_contacts_by_timestamp_or_4xx(
     after_email_id = None
     after_start_time = start_time
     if after is not None:
-        after_email_id, after_start_time = extractor_for_bulk_encoded_details(
-            after=after
-        )
+        (
+            after_email_id,
+            after_start_time,
+        ) = BulkRequestSchema.extractor_for_bulk_encoded_details(after)
 
     results = get_bulk_contacts(
         db=db,
@@ -302,7 +284,11 @@ def get_bulk_contacts_by_timestamp_or_4xx(
         next_url = None
     else:
         last_result: CTMSResponse = results[-1]
-        after_encoded = compressor_for_bulk_encoded_details(last_result)
+        after_encoded = BulkRequestSchema.compressor_for_bulk_encoded_details(
+            last_email_id=last_result.email.email_id,
+            last_update_time=last_result.email.update_timestamp,
+        )
+
         next_url = (
             f"{get_settings().server_prefix}/updates?"
             f"start={start_time.isoformat()}"

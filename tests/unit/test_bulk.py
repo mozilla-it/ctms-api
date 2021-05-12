@@ -5,8 +5,7 @@ from typing import Tuple
 
 import pytest
 
-from ctms.app import compressor_for_bulk_encoded_details
-from ctms.schemas import CTMSResponse
+from ctms.schemas import BulkRequestSchema, CTMSResponse
 
 INVALID_BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
     (
@@ -90,7 +89,9 @@ def test_get_ctms_bulk_by_timerange(
     )
     first_contact = sorted_list[0]
     last_contact = sorted_list[-1]
-    after = compressor_for_bulk_encoded_details(first_contact)
+    after = BulkRequestSchema.compressor_for_bulk_encoded_details(
+        first_contact.email.email_id, first_contact.email.update_timestamp
+    )
     limit = 1
     start = first_contact.email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())
@@ -123,7 +124,9 @@ def test_get_ctms_bulk_by_timerange_no_results(
     )
     first_contact = sorted_list[0]
     last_contact = sorted_list[-1]
-    after = compressor_for_bulk_encoded_details(last_contact)
+    after = BulkRequestSchema.compressor_for_bulk_encoded_details(
+        last_contact.email.email_id, last_contact.email.update_timestamp
+    )
     limit = 1
     start = first_contact.email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())

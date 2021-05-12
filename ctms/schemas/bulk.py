@@ -1,14 +1,15 @@
 import base64
 from datetime import datetime, timezone
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Tuple, Union
 
-from pydantic import ConstrainedInt, conint, validator
+import dateutil.parser
+from pydantic import conint, validator
 
 from .base import ComparableBase
 
 BLANK_VALS = [None, ""]
 
-ConstrainedLimit: ConstrainedInt = conint(gt=0, le=1000)
+ConstrainedLimit: conint = conint(gt=0, le=1000)
 # Known issue with MyPy and constrained types
 #   https://github.com/samuelcolvin/pydantic/issues/156
 
@@ -50,11 +51,24 @@ class BulkRequestSchema(ComparableBase):
             return None  # Default
         try:
             str_decode = base64.urlsafe_b64decode(value)
-            str(str_decode.decode("utf-8")).split(
-                ","
+            return str(
+                str_decode.decode("utf-8")
             )  # 'after' should be decodable otherwise err and invalid
-            return value
         except Exception as e:
             raise ValueError(
                 "'after' param validation error when decoding value."
             ) from e
+
+    @staticmethod
+    def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
+        result_after_list = after.split(",")
+        after_email_id = result_after_list[0]
+        after_start_time = dateutil.parser.parse(result_after_list[1])
+        return after_email_id, after_start_time
+
+    @staticmethod
+    def compressor_for_bulk_encoded_details(last_email_id, last_update_time):
+        result_after_encoded = base64.urlsafe_b64encode(
+            f"{last_email_id},{last_update_time}".encode("utf-8")
+        )
+        return result_after_encoded.decode()
