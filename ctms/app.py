@@ -320,13 +320,6 @@ def get_bulk_contacts_by_timestamp_or_4xx(
     )
 
 
-def updates_helper(value, default):
-    blank_vals = [None, "", "null"]
-    if value in blank_vals:
-        return default
-    return value
-
-
 def get_api_client(
     request: Request,
     token: str = Depends(oauth2_scheme),
