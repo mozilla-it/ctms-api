@@ -2,6 +2,7 @@
 from uuid import UUID
 
 import pytest
+from structlog.testing import capture_logs
 
 from tests.unit.sample_data import SAMPLE_CONTACTS
 from tests.unit.test_api import _compare_written_contacts
@@ -111,3 +112,48 @@ def test_create_basic_with_email_collision(post_contact):
         modifier=_change_primary_email, code=409, check_redirect=False
     )
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+
+def test_create_without_trace(client, dbsession):
+    """Most contacts are not traced."""
+    data = {"email": {"primary_email": "test+no-trace@example.com"}}
+    with capture_logs() as cap_logs:
+        resp = client.post("/ctms", json=data)
+    assert resp.status_code == 201
+    assert len(cap_logs) == 1
+    assert "trace" not in cap_logs[0]
+
+
+def test_create_with_non_json_is_error(client, dbsession):
+    """When non-JSON is posted /ctms, a 422 is returned"""
+    data = "this is not JSON"
+    with capture_logs() as cap_logs:
+        resp = client.post("/ctms", data=data)
+    assert resp.status_code == 422
+    assert (
+        resp.json()["detail"][0]["msg"] == "Expecting value: line 1 column 1 (char 0)"
+    )
+    assert len(cap_logs) == 1
+    assert "trace" not in cap_logs[0]
+
+
+def test_create_with_trace(client, dbsession, status_code=201):
+    """A contact is traced by email."""
+    data = {
+        "email": {
+            "email_id": "7eec2254-fba7-485b-a921-6308c929dd25",
+            "primary_email": "test+trace-me-mozilla-May-2021@example.com",
+        }
+    }
+    with capture_logs() as cap_logs:
+        resp = client.post("/ctms", json=data)
+    assert resp.status_code == status_code
+    assert len(cap_logs) == 1
+    assert cap_logs[0]["trace"] == "test+trace-me-mozilla-May-2021@example.com"
+    assert cap_logs[0]["trace_json"] == data
+
+
+def test_recreate_with_trace(client, dbsession):
+    """A idempotent re-create is traced by email."""
+    test_create_with_trace(client, dbsession)
+    test_create_with_trace(client, dbsession, 200)

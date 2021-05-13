@@ -1,3 +1,5 @@
+"""The CTMS application, including middleware and routes."""
+import re
 import sys
 import time
 from datetime import datetime, timedelta
@@ -82,6 +84,7 @@ get_metrics_registry = lambda: METRICS_REGISTRY
 get_metrics = lambda: METRICS
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
+re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
 
 
 @lru_cache()
@@ -356,6 +359,18 @@ def get_enabled_api_client(
     return api_client
 
 
+async def get_json(request: Request) -> Dict:
+    """
+    Get the request body as JSON.
+
+    If the body is not valid JSON, FastAPI will return a ValidationError or 400
+    before this dependency is resolved.
+    If the body is form-encoded, it will raise an unknown exception.
+    """
+    the_json: Dict = await request.json()
+    return the_json
+
+
 @app.middleware("http")
 async def log_request_middleware(request: Request, call_next):
     """Add timing and per-request logging context."""
@@ -484,14 +499,20 @@ def get_ctms_response_or_404(db, email_id):
 )
 def create_ctms_contact(
     contact: ContactInSchema,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    content_json: Optional[Dict] = Depends(get_json),
 ):
     contact.email.email_id = contact.email.email_id or uuid4()
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
+        email = existing["email"].primary_email
+        if re_trace_email.match(email):
+            request.state.log_context["trace"] = email
+            request.state.log_context["trace_json"] = content_json
         if ContactInSchema(**existing).idempotent_equal(contact):
             response.headers["Location"] = f"/ctms/{email_id}"
             response.status_code = 200
@@ -508,7 +529,12 @@ def create_ctms_contact(
         raise e from e
     response.headers["Location"] = f"/ctms/{email_id}"
     response.status_code = 201
-    return get_ctms_response_or_404(db=db, email_id=email_id)
+    resp_data = get_ctms_response_or_404(db=db, email_id=email_id)
+    email = resp_data.email.primary_email
+    if re_trace_email.match(email):
+        request.state.log_context["trace"] = email
+        request.state.log_context["trace_json"] = content_json
+    return resp_data
 
 
 @app.put(
@@ -523,10 +549,12 @@ def create_ctms_contact(
 )
 def create_or_update_ctms_contact(
     contact: ContactPutSchema,
+    request: Request,
     response: Response,
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    content_json: Optional[Dict] = Depends(get_json),
 ):
     if contact.email.email_id:
         if contact.email.email_id != email_id:
@@ -536,6 +564,10 @@ def create_or_update_ctms_contact(
             )
     else:
         contact.email.email_id = email_id
+    email = contact.email.primary_email
+    if re_trace_email.match(email):
+        request.state.log_context["trace"] = email
+        request.state.log_context["trace_json"] = content_json
     try:
         create_or_update_contact(db, email_id, contact)
         schedule_acoustic_record(db, email_id)
@@ -565,10 +597,12 @@ def create_or_update_ctms_contact(
 )
 def partial_update_ctms_contact(
     contact: ContactPatchSchema,
+    request: Request,
     response: Response,
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    content_json: Optional[Dict] = Depends(get_json),
 ):
     if (
         contact.email
@@ -582,6 +616,10 @@ def partial_update_ctms_contact(
     current_email = get_email_or_404(db, email_id)
     update_data = contact.dict(exclude_unset=True)
     update_contact(db, current_email, update_data)
+    email = current_email.primary_email
+    if re_trace_email.match(email):
+        request.state.log_context["trace"] = email
+        request.state.log_context["trace_json"] = content_json
     schedule_acoustic_record(db, email_id)
     try:
         db.commit()

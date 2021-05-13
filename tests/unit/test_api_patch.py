@@ -3,6 +3,7 @@ import json
 from uuid import uuid4
 
 import pytest
+from structlog.testing import capture_logs
 
 from ctms.crud import create_contact, get_email
 from ctms.schemas import (
@@ -454,3 +455,26 @@ def test_patch_to_delete_deleted_group(client, minimal_contact):
     actual = resp.json()
     default_mofo = MozillaFoundationSchema().dict()
     assert actual["mofo"] == default_mofo
+
+
+def test_patch_no_trace(client, minimal_contact):
+    """PATCH does not trace most contacts"""
+    email_id = minimal_contact.email.email_id
+    patch_data = {"email": {"first_name": "Jeff"}}
+    with capture_logs() as caplogs:
+        resp = client.patch(f"/ctms/{email_id}", json=patch_data)
+    assert resp.status_code == 200
+    assert len(caplogs) == 1
+    assert "trace" not in caplogs[0]
+
+
+def test_patch_with_trace(client, minimal_contact):
+    """PATCH traces by email"""
+    email_id = minimal_contact.email.email_id
+    patch_data = {"email": {"primary_email": "jeff+trace-me-mozilla-1@example.com"}}
+    with capture_logs() as caplogs:
+        resp = client.patch(f"/ctms/{email_id}", json=patch_data)
+    assert resp.status_code == 200
+    assert len(caplogs) == 1
+    assert caplogs[0]["trace"] == "jeff+trace-me-mozilla-1@example.com"
+    assert caplogs[0]["trace_json"] == patch_data
