@@ -436,6 +436,7 @@ def root(request: Request):
     tags=["Public"],
 )
 def read_ctms_by_any_id(
+    request: Request,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
     ids=Depends(all_ids),
@@ -446,6 +447,13 @@ def read_ctms_by_any_id(
         )
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_ids(db, **ids)
+    traced = []
+    for contact in contacts:
+        email = contact.email.primary_email
+        if re_trace_email.match(email):
+            traced.append(email)
+    if traced:
+        request.state.log_context["trace"] = ",".join(traced)
     return [
         CTMSResponse(
             amo=contact.amo or AddOnsSchema(),
@@ -470,11 +478,16 @@ def read_ctms_by_any_id(
     tags=["Public"],
 )
 def read_ctms_by_email_id(
+    request: Request,
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
-    return get_ctms_response_or_404(db, email_id)
+    resp = get_ctms_response_or_404(db, email_id)
+    email = resp.email.primary_email
+    if re_trace_email.match(email):
+        request.state.log_context["trace"] = email
+    return resp
 
 
 def get_ctms_response_or_404(db, email_id):

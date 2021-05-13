@@ -1,4 +1,9 @@
 """Unit tests for GET /ctms/{email_id}"""
+from uuid import uuid4
+
+from structlog.testing import capture_logs
+
+from ctms.models import Email
 
 
 def test_get_ctms_for_minimal_contact(client, minimal_contact):
@@ -280,3 +285,34 @@ def test_get_ctms_not_found(client, dbsession):
     resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == 404
     assert resp.json() == {"detail": "Unknown email_id"}
+
+
+def test_get_ctms_not_traced(client, example_contact):
+    """Most CTMS contacts are not traced."""
+    email_id = example_contact.email.email_id
+    with capture_logs() as caplog:
+        resp = client.get(f"/ctms/{email_id}")
+    assert resp.status_code == 200
+    assert len(caplog) == 1
+    assert "trace" not in caplog[0]
+
+
+def test_get_ctms_with_tracing(client, dbsession):
+    """The log parameter trace is set when a traced email is requested."""
+    email_id = uuid4()
+    email = "test+trace-me-mozilla-123@example.com"
+    record = Email(
+        email_id=email_id,
+        primary_email=email,
+        double_opt_in=False,
+        email_format="T",
+        has_opted_out_of_email=False,
+    )
+    dbsession.add(record)
+    dbsession.commit()
+    with capture_logs() as caplog:
+        resp = client.get(f"/ctms/{email_id}")
+    assert resp.status_code == 200
+    assert len(caplog) == 1
+    assert caplog[0]["trace"] == email
+    assert "trace_json" not in caplog[0]
