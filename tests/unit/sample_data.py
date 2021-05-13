@@ -1,7 +1,7 @@
 from typing import Dict, Set, Tuple, Union
 from uuid import UUID
 
-from .schemas import (
+from ctms.schemas import (
     AddOnsInSchema,
     AddOnsSchema,
     ContactSchema,
