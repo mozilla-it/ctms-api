@@ -13,7 +13,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk.integrations.logging import ignore_logger
@@ -44,9 +44,9 @@ from .database import get_db_engine
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
+    get_metrics_reporting_registry,
     init_metrics,
     init_metrics_labels,
-    init_metrics_registry,
 )
 from .models import Email
 from .monitor import check_database, get_version
@@ -78,7 +78,7 @@ app = FastAPI(
     version="0.8.0",
 )
 SessionLocal = None
-METRICS_REGISTRY = None
+METRICS_REGISTRY = CollectorRegistry()
 METRICS = None
 get_metrics_registry = lambda: METRICS_REGISTRY
 get_metrics = lambda: METRICS
@@ -123,7 +123,6 @@ def init_sentry():
 if "pytest" not in sys.argv[0]:
     init_sentry()
     app.add_middleware(SentryAsgiMiddleware)
-    METRICS_REGISTRY = init_metrics_registry()
 
 
 @app.on_event("startup")
@@ -846,9 +845,8 @@ def metrics(request: Request):
     if agent.startswith("Prometheus/"):
         request.state.log_context["trivial_code"] = 200
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
-    return Response(
-        generate_latest(get_metrics_registry()), status_code=200, headers=headers
-    )
+    registry = get_metrics_reporting_registry(get_metrics_registry())
+    return Response(generate_latest(registry), status_code=200, headers=headers)
 
 
 if __name__ == "__main__":

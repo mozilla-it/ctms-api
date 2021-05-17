@@ -54,17 +54,23 @@ METRICS_PARAMS = {
 }
 
 
-def init_metrics_registry() -> CollectorRegistry:
+def get_metrics_reporting_registry(
+    process_registry: CollectorRegistry,
+) -> CollectorRegistry:
     """
-    Initialize a metrics registry.
+    Get the metrics registry for reporting metrics.
 
-    If we're running under gunicorn, we need a multiprocess collector that
-    points to a folder that was created empty at startup.
+    If we're running under gunicorn, then each worker has its own process and
+    its own process collector. For reporting, we need a fresh registry with a
+    multiprocess collector that points to the metrics folder (created empty at
+    startup, with a database file for each process and metric type). It will
+    use the databases in this folder to generate combined metrics across the
+    processes, and will not double-count the reporting process's metrics.
 
-    If we're not running under gunicorn, we could use the default REGISTRY, but
-    a fresh registry is easier to reset for tests, and forcing the web code to
-    go through this method will ensure we're using roughly the same code paths
-    in development and production.
+    If we're not running under gunicorn, then return the passed per-process
+    registry, which is the only metrics registry. In the single-process case,
+    We could use the default prometheus_client.REGISTRY, but it makes tests
+    easier to write if it is possible to replace the registry with a fresh one.
     """
     try:
         settings = config.Settings()
@@ -72,10 +78,11 @@ def init_metrics_registry() -> CollectorRegistry:
     except ValidationError:
         prometheus_multiproc_dir = None
 
-    registry = CollectorRegistry()
     if prometheus_multiproc_dir:
+        registry = CollectorRegistry()
         MultiProcessCollector(registry, path=prometheus_multiproc_dir)
-    return registry
+        return registry
+    return process_registry
 
 
 def init_metrics(registry: CollectorRegistry) -> Dict[str, MetricWrapperBase]:
