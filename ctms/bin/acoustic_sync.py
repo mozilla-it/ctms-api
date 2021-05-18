@@ -5,6 +5,7 @@ from time import monotonic, sleep
 
 from ctms import config
 from ctms.database import get_db_engine
+from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
 from ctms.sync import CTMSToAcousticSync
 
@@ -39,6 +40,7 @@ def main(db, settings):
 
 
 if __name__ == "__main__":
+    init_sentry()
     config_settings = config.BackgroundSettings()
     LOGGER = _setup_logging(config_settings)
     engine, session_factory = get_db_engine(config_settings)
