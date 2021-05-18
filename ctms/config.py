@@ -40,3 +40,6 @@ class BackgroundSettings(Settings):
     acoustic_refresh_token: str
     acoustic_main_table_id: int
     acoustic_newsletter_table_id: int
+    logging_level: Literal[
+        "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"
+    ] = "DEBUG"  # Overloaded Default for Background Job

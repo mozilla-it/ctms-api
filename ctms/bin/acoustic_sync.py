@@ -1,41 +1,18 @@
 #!/usr/bin/env python3
 """Run continuously in the background, syncing acoustic with our db."""
-import argparse
 import logging
 from time import monotonic, sleep
 
 from ctms import config
 from ctms.database import get_db_engine
+from ctms.log import configure_logging
 from ctms.sync import CTMSToAcousticSync
 
 LOGGER = None
 
 
-def _setup_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-log",
-        "--log",
-        default="debug",
-        help=("provide logging level to job (default: debug)"),
-    )
-
-    options = parser.parse_args()
-    levels = {
-        "critical": logging.CRITICAL,
-        "error": logging.ERROR,
-        "warn": logging.WARNING,
-        "warning": logging.WARNING,
-        "info": logging.INFO,
-        "debug": logging.DEBUG,
-    }
-    level = levels.get(options.log.lower())
-    if level is None:
-        raise ValueError(
-            f"log level given: {options.log}"
-            f" -- must be one of: {' | '.join(levels.keys())}"
-        )
-    logging.basicConfig(level=level)
+def _setup_logging(settings):
+    configure_logging(logging_level=settings.logging_level)
     return logging.getLogger(__name__)
 
 
@@ -62,13 +39,13 @@ def main(db, settings):
 
 
 if __name__ == "__main__":
-    LOGGER = _setup_args()
-    LOGGER.debug("Begin Acoustic Sync Script.")
     config_settings = config.BackgroundSettings()
+    LOGGER = _setup_logging(config_settings)
     engine, session_factory = get_db_engine(config_settings)
     session = session_factory()
 
     try:
+        LOGGER.debug("Begin Acoustic Sync Script.")
         main(session, config_settings)
     finally:
         session.close()
