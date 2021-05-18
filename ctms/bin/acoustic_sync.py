@@ -30,7 +30,6 @@ def _setup_args():
         "debug": logging.DEBUG,
     }
     level = levels.get(options.log.lower())
-    print("here")
     if level is None:
         raise ValueError(
             f"log level given: {options.log}"
