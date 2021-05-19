@@ -86,7 +86,7 @@ RUN mypy ctms
 RUN black --config ./pyproject.toml --check ctms tests
 RUN isort --recursive --settings-path ./pyproject.toml --check-only ctms
 RUN pylint ctms tests/unit
-CMD ["tail", "-f", "/dev/null"]
+CMD ./scripts/lint.sh
 
 
 # 'test' stage runs our unit tests with pytest and
