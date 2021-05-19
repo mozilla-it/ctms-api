@@ -78,14 +78,15 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 
 
-# 'lint' stage runs black and isort
+# 'lint' stage runs similar checks to pre-commit / scripts/lint.sh
 # running in check mode means build will fail if any linting errors occur
 FROM development AS lint
-RUN isort --settings-path ./pyproject.toml --recursive --check-only
-RUN black --config ./pyproject.toml --check ctms tests
-RUN mypy --no-strict-optional --ignore-missing-imports ctms
 RUN bandit -lll --recursive ctms --exclude "ctms/poetry.lock,ctms/.venv,ctms/.mypy,ctms/build"
-CMD ["tail", "-f", "/dev/null"]
+RUN mypy ctms
+RUN black --config ./pyproject.toml --check ctms tests
+RUN isort --recursive --settings-path ./pyproject.toml --check-only ctms
+RUN pylint ctms tests/unit
+CMD ./scripts/lint.sh
 
 
 # 'test' stage runs our unit tests with pytest and

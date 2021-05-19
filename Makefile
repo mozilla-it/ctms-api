@@ -42,8 +42,8 @@ build: .env
 
 .PHONY: lint
 lint: .env
-	docker-compose -f ./docker-compose.lint.yaml build \
-		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.lint.yaml build \
+		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID} lint
 
 .PHONY: db-only
 db-only: .env
