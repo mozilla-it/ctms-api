@@ -7,7 +7,6 @@ from functools import lru_cache
 from typing import Dict, List, Literal, Optional, Union
 from uuid import UUID, uuid4
 
-import sentry_sdk
 import structlog
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
@@ -16,7 +15,6 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
-from sentry_sdk.integrations.logging import ignore_logger
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
@@ -41,6 +39,7 @@ from .crud import (
     update_contact,
 )
 from .database import get_db_engine
+from .exception_capture import init_sentry
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
@@ -92,34 +91,7 @@ def get_settings():
     return config.Settings()
 
 
-def init_sentry():
-    """
-    Initialize Sentry integrations for capturing exceptions.
-
-    Because FastAPI uses threads to integrate async and sync code, this needs
-    to be called at module import.
-
-    sentry_sdk.init needs a data source name (DSN) URL, which it reads from the
-    environment variable SENTRY_DSN.
-    """
-    try:
-        settings = get_settings()
-    except ValidationError:
-        sentry_debug = False
-    else:
-        sentry_debug = settings.sentry_debug
-
-    # pylint: disable=abstract-class-instantiated
-    sentry_sdk.init(
-        release=get_version().get("commit", None),
-        debug=sentry_debug,
-        send_default_pii=False,
-    )
-    ignore_logger("uvicorn.error")
-    ignore_logger("ctms.web")
-
-
-# Initialize Sentry / Metrics for each thread, unless we're in tests
+# Initialize Sentry for each thread, unless we're in tests
 if "pytest" not in sys.argv[0]:
     init_sentry()
     app.add_middleware(SentryAsgiMiddleware)
