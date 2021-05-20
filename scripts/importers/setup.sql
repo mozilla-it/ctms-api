@@ -28,5 +28,6 @@ ALTER TABLE mofo DROP CONSTRAINT mofo_email_id_fkey;
 ALTER TABLE emails DROP CONSTRAINT emails_pkey;
 ALTER TABLE emails DROP CONSTRAINT emails_basket_token_key;
 ALTER TABLE emails DROP CONSTRAINT emails_primary_email_key;
+DROP INDEX bulk_read_index;
 
 END TRANSACTION;

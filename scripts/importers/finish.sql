@@ -1,5 +1,4 @@
 -- We can set up these right out of the gate because
-
 -- we know these are always defined and unique already
 alter table emails add primary key (email_id);
 alter table amo add primary key (id);
@@ -11,6 +10,9 @@ alter table fxa add constraint fxa_email_id_key unique (email_id);
 alter table newsletters add constraint uix_email_name unique (email_id, "name");
 alter table vpn_waitlist add constraint vpn_waitlist_email_id_key unique (email_id);
 alter table fxa add constraint fxa_fxa_id_key unique (fxa_id);
+
+-- Easy enough to add this now too
+create index bulk_read_index on emails (update_timestamp, email_id);
 
 -- There's nothing we can do to save these (missing primary_email)
 delete from emails where primary_email = ''; -- about 125447 records
@@ -44,3 +46,4 @@ alter table mofo add constraint mofo_email_id_fkey foreign key (email_id) refere
 
 -- One more cleanup
 update newsletters set "format" = 'T' where "format" = 'N';
+alter table newsletters drop column source, add column source text;
