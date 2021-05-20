@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "ctms"
-version = "0.8.0"
+version = "0.8.1"
 description = "Contact Management System API"
 authors = [
     "Brian Stack <bstack@mozilla.com>",
