@@ -26,7 +26,7 @@ def upgrade():
         "idx_email_primary_email_lower",
         "emails",
         [sa.text("lower(primary_email)")],
-        unique=True,
+        unique=False,
     )
     # UserWarning: autogenerate skipping functional index idx_fxa_primary_email_lower; not supported by SQLAlchemy reflection
     op.create_index(
