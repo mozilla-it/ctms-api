@@ -198,7 +198,9 @@ def get_emails_by_any_id(
     if email_id is not None:
         statement = statement.filter(Email.email_id == email_id)
     if primary_email is not None:
-        statement = statement.filter(Email.primary_email == primary_email)
+        statement = statement.filter_by(
+            primary_email_insensitive_comparator=primary_email
+        )
     if basket_token is not None:
         statement = statement.filter(Email.basket_token == str(basket_token))
     if sfdc_id is not None:
@@ -216,8 +218,8 @@ def get_emails_by_any_id(
     if fxa_id is not None:
         statement = statement.join(Email.fxa).filter(FirefoxAccount.fxa_id == fxa_id)
     if fxa_primary_email is not None:
-        statement = statement.join(Email.fxa).filter(
-            FirefoxAccount.primary_email == fxa_primary_email
+        statement = statement.join(Email.fxa).filter_by(
+            fxa_primary_email_insensitive_comparator=fxa_primary_email
         )
     return cast(List[Email], statement.all())
 
