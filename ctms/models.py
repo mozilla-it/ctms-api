@@ -12,16 +12,21 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.functions import func, now
 
 from .database import Base
 
 
+class CaseInsensitiveComparator(Comparator):  # pylint: disable=abstract-method
+    def __eq__(self, other):
+        return func.lower(self.__clause_element__()) == func.lower(other)
+
+
 class Email(Base):
     __tablename__ = "emails"
     __mapper_args__ = {"eager_defaults": True}
-    __table_args__ = (Index("bulk_read_index", "update_timestamp", "email_id"),)
 
     email_id = Column(UUID(as_uuid=True), primary_key=True)
     primary_email = Column(String(255), unique=True, nullable=False)
@@ -54,6 +59,21 @@ class Email(Base):
     vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
+    )
+
+    # Class Comparators
+    @hybrid_property
+    def primary_email_insensitive(self):
+        return self.primary_email.lower()
+
+    @primary_email_insensitive.comparator
+    def primary_email_insensitive_comparator(cls):  # pylint: disable=no-self-argument
+        return CaseInsensitiveComparator(cls.primary_email)
+
+    # Indexes
+    __table_args__ = (
+        Index("bulk_read_index", "update_timestamp", "email_id"),
+        Index("idx_email_primary_email_lower", func.lower(primary_email), unique=True),
     )
 
 
@@ -103,6 +123,20 @@ class FirefoxAccount(Base):
     )
 
     email = relationship("Email", back_populates="fxa", uselist=False)
+
+    # Class Comparators
+    @hybrid_property
+    def fxa_primary_email_insensitive(self):
+        return self.primary_email.lower()
+
+    @fxa_primary_email_insensitive.comparator
+    def fxa_primary_email_insensitive_comparator(
+        cls,
+    ):  # pylint: disable=no-self-argument
+        return CaseInsensitiveComparator(cls.primary_email)
+
+    # Indexes
+    __table_args__ = (Index("idx_fxa_primary_email_lower", func.lower(primary_email)),)
 
 
 class AmoAccount(Base):
