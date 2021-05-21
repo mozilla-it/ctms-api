@@ -236,10 +236,10 @@ class CTMSToAcousticService:
             if newsletter.name in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS.keys():
                 newsletter_dict = newsletter.dict()
                 _today = datetime.date.today().isoformat()
-                newsletter_template["create_date"] = self.dictionary_helper(
+                newsletter_template["create_timestamp"] = self.dictionary_helper(
                     newsletter_dict, "create_timestamp", _today
                 )
-                newsletter_template["update_date"] = self.dictionary_helper(
+                newsletter_template["update_timestamp"] = self.dictionary_helper(
                     newsletter_dict, "update_timestamp", _today
                 )
                 newsletter_template["newsletter_name"] = newsletter.name
