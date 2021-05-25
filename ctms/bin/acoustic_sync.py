@@ -21,7 +21,6 @@ def _setup_logging(settings):
 
 
 def main(db, settings):
-    print("here")
     LOGGER.debug("Setting up sync_service.")
     metrics_registry = CollectorRegistry()
     metric_service = BackgroundMetricService(
