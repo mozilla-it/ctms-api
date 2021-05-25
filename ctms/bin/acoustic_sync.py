@@ -3,7 +3,10 @@
 import logging
 from time import monotonic, sleep
 
+from prometheus_client import CollectorRegistry
+
 from ctms import config
+from ctms.background_metrics import BackgroundMetricService
 from ctms.database import get_db_engine
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
@@ -18,7 +21,13 @@ def _setup_logging(settings):
 
 
 def main(db, settings):
+    print("here")
     LOGGER.debug("Setting up sync_service.")
+    metrics_registry = CollectorRegistry()
+    metric_service = BackgroundMetricService(
+        registry=metrics_registry, pushgateway_url=settings.prometheus_pushgateway_url
+    )
+
     sync_service = CTMSToAcousticSync(
         client_id=settings.acoustic_client_id,
         client_secret=settings.acoustic_client_secret,
@@ -29,11 +38,13 @@ def main(db, settings):
         retry_limit=settings.acoustic_retry_limit,
         batch_limit=settings.acoustic_batch_limit,
         is_acoustic_enabled=settings.acoustic_integration_feature_flag,
+        metric_service=metric_service,
     )
     prev = monotonic()
     LOGGER.debug("Sync Feature Flag is: %s", settings.acoustic_sync_feature_flag)
     while settings.acoustic_sync_feature_flag:
         sync_service.sync_records(db)
+        metric_service.push_to_gateway()
         to_sleep = settings.acoustic_loop_min_secs - (monotonic() - prev)
         if to_sleep > 0:
             sleep(to_sleep)
