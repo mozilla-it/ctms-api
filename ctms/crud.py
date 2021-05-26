@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, desc, or_
+from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -274,29 +274,42 @@ def get_all_acoustic_records_before(
 ) -> List[PendingAcousticRecord]:
     """
     Get all the pending records before a given date. Allows retry limit to be provided at query time."""
-    if batch_limit is None:
-        pending_records: List[PendingAcousticRecord] = (
-            db.query(PendingAcousticRecord)
-            .filter(
-                PendingAcousticRecord.update_timestamp < end_time,
-                PendingAcousticRecord.retry < retry_limit,
-            )
-            .order_by(desc(PendingAcousticRecord.update_timestamp))
-            .all()
-        )
-        return pending_records
-    # else
-    batch_pending_records: List[PendingAcousticRecord] = (
+    query = (
         db.query(PendingAcousticRecord)
         .filter(
             PendingAcousticRecord.update_timestamp < end_time,
             PendingAcousticRecord.retry < retry_limit,
         )
-        .order_by(desc(PendingAcousticRecord.update_timestamp))
-        .limit(batch_limit)
-        .all()
+        .order_by(
+            asc(PendingAcousticRecord.update_timestamp),
+            asc(PendingAcousticRecord.retry),
+        )
     )
-    return batch_pending_records
+    if batch_limit:
+        query = query.limit(batch_limit)
+
+    pending_records: List[PendingAcousticRecord] = query.all()
+    return pending_records
+
+
+def get_all_acoustic_records_count(
+    db: Session, end_time: datetime, retry_limit: int = 5
+) -> int:
+    """
+    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
+    query = (
+        db.query(PendingAcousticRecord)
+        .filter(
+            PendingAcousticRecord.update_timestamp < end_time,
+            PendingAcousticRecord.retry < retry_limit,
+        )
+        .order_by(
+            asc(PendingAcousticRecord.update_timestamp),
+            asc(PendingAcousticRecord.retry),
+        )
+    )
+    pending_records_count: int = query.count()
+    return pending_records_count
 
 
 def get_acoustic_record_as_contact(

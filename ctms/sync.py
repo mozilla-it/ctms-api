@@ -101,6 +101,6 @@ class CTMSToAcousticSync:
         # For each record, attempt downstream sync
         for acoustic_record in all_acoustic_records_before_now:
             self._sync_pending_record(db, acoustic_record)
-            # Commit changes to db after EACH record is processed
-            db.commit()
+        # Commit changes to db after ALL records are batch-processed
+        db.commit()
         self.logger.debug("END: sync.sync_records")
