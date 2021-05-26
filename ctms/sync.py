@@ -23,6 +23,7 @@ class CTMSToAcousticSync:
         acoustic_newsletter_table_id,
         server_number,
         retry_limit=5,
+        batch_limit=100,
         is_acoustic_enabled=True,
     ):
         acoustic_client = Acoustic(
@@ -38,6 +39,7 @@ class CTMSToAcousticSync:
         )
         self.logger = logging.getLogger(__name__)
         self.retry_limit = retry_limit
+        self.batch_limit = batch_limit
         self.is_acoustic_enabled = is_acoustic_enabled
 
     def sync_contact_with_acoustic(self, contact: ContactSchema):
@@ -90,12 +92,15 @@ class CTMSToAcousticSync:
         all_acoustic_records_before_now: List[
             PendingAcousticRecord
         ] = get_all_acoustic_records_before(
-            db, end_time=end_time, retry_limit=self.retry_limit
+            db,
+            end_time=end_time,
+            retry_limit=self.retry_limit,
+            batch_limit=self.batch_limit,
         )
 
         # For each record, attempt downstream sync
         for acoustic_record in all_acoustic_records_before_now:
             self._sync_pending_record(db, acoustic_record)
-        # Commit changes to db after all records are processed
-        db.commit()
+            # Commit changes to db after EACH record is processed
+            db.commit()
         self.logger.debug("END: sync.sync_records")
