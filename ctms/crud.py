@@ -269,24 +269,40 @@ def get_contacts_by_any_id(
     return data
 
 
-def get_all_acoustic_records_before(
-    db: Session,
-    end_time: datetime,
-    retry_limit: int = 5,
-) -> List[PendingAcousticRecord]:
-    """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
-    pending_records: List[PendingAcousticRecord] = (
+def _acoustic_sync_base_query(db: Session, end_time: datetime, retry_limit: int = 5):
+    return (
         db.query(PendingAcousticRecord)
         .filter(
             PendingAcousticRecord.update_timestamp < end_time,
             PendingAcousticRecord.retry < retry_limit,
         )
-        .order_by(asc(PendingAcousticRecord.update_timestamp))
-        .all()
+        .order_by(
+            asc(PendingAcousticRecord.retry),
+            asc(PendingAcousticRecord.update_timestamp),
+        )
     )
 
+
+def get_all_acoustic_records_before(
+    db: Session, end_time: datetime, retry_limit: int = 5, batch_limit=None
+) -> List[PendingAcousticRecord]:
+    """
+    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
+    query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
+    if batch_limit:
+        query = query.limit(batch_limit)
+    pending_records: List[PendingAcousticRecord] = query.all()
     return pending_records
+
+
+def get_all_acoustic_records_count(
+    db: Session, end_time: datetime, retry_limit: int = 5
+) -> int:
+    """
+    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
+    query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
+    pending_records_count: int = query.count()
+    return pending_records_count
 
 
 def get_acoustic_record_as_contact(

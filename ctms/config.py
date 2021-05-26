@@ -33,6 +33,7 @@ class BackgroundSettings(Settings):
         False  # Enable/disable integration w/ Acoustic
     )
     acoustic_retry_limit: int = 6
+    acoustic_batch_limit: int = 20
     acoustic_server_number: int = 6
     acoustic_loop_min_secs: int = 5
     acoustic_client_id: str
