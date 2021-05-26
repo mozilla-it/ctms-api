@@ -23,7 +23,7 @@ class CTMSToAcousticSync:
         acoustic_newsletter_table_id,
         server_number,
         retry_limit=5,
-        batch_limit=100,
+        batch_limit=20,
         is_acoustic_enabled=True,
     ):
         acoustic_client = Acoustic(
