@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, desc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -281,7 +281,7 @@ def get_all_acoustic_records_before(
                 PendingAcousticRecord.update_timestamp < end_time,
                 PendingAcousticRecord.retry < retry_limit,
             )
-            .order_by(asc(PendingAcousticRecord.update_timestamp))
+            .order_by(desc(PendingAcousticRecord.update_timestamp))
             .all()
         )
         return pending_records
@@ -292,7 +292,7 @@ def get_all_acoustic_records_before(
             PendingAcousticRecord.update_timestamp < end_time,
             PendingAcousticRecord.retry < retry_limit,
         )
-        .order_by(asc(PendingAcousticRecord.update_timestamp))
+        .order_by(desc(PendingAcousticRecord.update_timestamp))
         .limit(batch_limit)
         .all()
     )
