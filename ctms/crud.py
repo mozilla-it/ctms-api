@@ -269,6 +269,27 @@ def get_contacts_by_any_id(
     return data
 
 
+def _acoustic_sync_retry_query(db: Session):
+    return (
+        db.query(PendingAcousticRecord)
+        .filter(
+            PendingAcousticRecord.retry > 0,
+        )
+        .order_by(
+            asc(PendingAcousticRecord.retry),
+            asc(PendingAcousticRecord.update_timestamp),
+        )
+    )
+
+
+def get_all_acoustic_retries_count(db: Session) -> int:
+    """
+    Get count of the pending records with >0 retries."""
+    query = _acoustic_sync_retry_query(db=db)
+    pending_retry_count: int = query.count()
+    return pending_retry_count
+
+
 def _acoustic_sync_base_query(db: Session, end_time: datetime, retry_limit: int = 5):
     return (
         db.query(PendingAcousticRecord)

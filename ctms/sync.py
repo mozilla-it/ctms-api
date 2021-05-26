@@ -8,6 +8,8 @@ from ctms.crud import (
     delete_acoustic_record,
     get_acoustic_record_as_contact,
     get_all_acoustic_records_before,
+    get_all_acoustic_records_count,
+    get_all_acoustic_retries_count,
     retry_acoustic_record,
 )
 from ctms.models import PendingAcousticRecord
@@ -94,6 +96,13 @@ class CTMSToAcousticSync:
         if end_time is None:
             end_time = datetime.now(timezone.utc)
         self.logger.debug("START: sync.sync_records")
+        if self.metric_service:
+            all_acoustic_records_count: int = get_all_acoustic_records_count(
+                db=db, end_time=end_time, retry_limit=self.retry_limit
+            )
+            self.metric_service.gauge_acoustic_sync_backlog(all_acoustic_records_count)
+            all_retry_records_count: int = get_all_acoustic_retries_count(db=db)
+            self.metric_service.gauge_acoustic_retry_backlog(all_retry_records_count)
         # Get all Records before current time
         all_acoustic_records_before_now: List[
             PendingAcousticRecord
@@ -103,10 +112,6 @@ class CTMSToAcousticSync:
             retry_limit=self.retry_limit,
             batch_limit=self.batch_limit,
         )
-        if self.metric_service:
-            self.metric_service.gauge_acoustic_sync_backlog(
-                len(all_acoustic_records_before_now)
-            )
 
         # For each record, attempt downstream sync
         for acoustic_record in all_acoustic_records_before_now:

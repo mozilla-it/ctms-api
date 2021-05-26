@@ -294,57 +294,50 @@ class CTMSToAcousticService:
             "sync_fields": sync_fields,
             "columns": columns,
         }
-        if self.metric_service:
+        if self.metric_service is None:
+            self.acoustic.add_recipient(**params)
+        else:  # Metrics are enabled
             start_time = time.monotonic()
-            err = None
             status = "success"
             try:
                 self.acoustic.add_recipient(**params)  # Call to Acoustic
-            except Exception as e:  # pylint: disable=broad-except
-                err = e
+            except Exception:  # pylint: disable=broad-except
                 status = "failure"
-            duration = time.monotonic() - start_time
-            duration_s = round(duration, 3)
-            metric_params = {"method": "add_recipient", "status": status}
-            self.metric_service.inc_acoustic_request_total(**metric_params)
-            metric_params.update({"duration_s": duration_s})
-            self.metric_service.observe_acoustic_request_duration(**metric_params)
-            if err:
-                # Delayed raise for metric analysis
-                raise err
-        else:
-            self.acoustic.add_recipient(**params)
+                raise
+            finally:
+                duration = time.monotonic() - start_time
+                duration_s = round(duration, 3)
+                metric_params = {"method": "add_recipient", "status": status}
+                self.metric_service.inc_acoustic_request_total(**metric_params)
+                metric_params.update({"duration_s": duration_s})
+                self.metric_service.observe_acoustic_request_duration(**metric_params)
 
     def _insert_update_newsletters(self, table_id=None, rows=None):
         if rows is None:
             rows = []
         params = {"table_id": table_id, "rows": rows}
-        if self.metric_service:
+        if self.metric_service is None:
+            self.acoustic.insert_update_relational_table(**params)
+        else:  # Metrics are enabled
             start_time = time.monotonic()
-            err = None
             status = "success"
             try:
                 self.acoustic.insert_update_relational_table(
                     **params
                 )  # Call to Acoustic
-            except Exception as e:  # pylint: disable=broad-except
-                err = e
+            except Exception:  # pylint: disable=broad-except
                 status = "failure"
-            duration = time.monotonic() - start_time
-            duration_s = round(duration, 3)
-            metric_params = {
-                "method": "insert_update_relational_table",
-                "status": status,
-            }
-            self.metric_service.inc_acoustic_request_total(**metric_params)
-            metric_params.update({"duration_s": duration_s})
-            self.metric_service.observe_acoustic_request_duration(**metric_params)
-
-            if err:
-                # Delayed raise for metric analysis
-                raise err
-        else:
-            self.acoustic.insert_update_relational_table(**params)
+                raise
+            finally:
+                duration = time.monotonic() - start_time
+                duration_s = round(duration, 3)
+                metric_params = {
+                    "method": "insert_update_relational_table",
+                    "status": status,
+                }
+                self.metric_service.inc_acoustic_request_total(**metric_params)
+                metric_params.update({"duration_s": duration_s})
+                self.metric_service.observe_acoustic_request_duration(**metric_params)
 
     def attempt_to_upload_ctms_contact(self, contact: ContactSchema) -> bool:
         """
