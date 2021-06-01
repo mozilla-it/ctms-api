@@ -14,6 +14,9 @@ alter table fxa add constraint fxa_fxa_id_key unique (fxa_id);
 -- Easy enough to add this now too
 create index bulk_read_index on emails (update_timestamp, email_id);
 
+-- New matching
+CREATE UNIQUE INDEX idx_email_primary_unique_email_lower ON public.emails USING btree (lower((primary_email)::text));
+
 -- There's nothing we can do to save these (missing primary_email)
 delete from emails where primary_email = ''; -- about 125447 records
 
@@ -23,7 +26,7 @@ update emails set basket_token = uuid_generate_v4() where basket_token = '';
 DROP EXTENSION "uuid-ossp";
 
 -- Get rid of duplicate primary_emails
-delete from emails where email_id in (select email_id from (select email_id, row_number() over w as rnum from emails window w as (partition by primary_email order by email_format, has_opted_out_of_email desc, update_timestamp desc)) t where t.rnum > 1);
+delete from emails where email_id in (select email_id from (select email_id, row_number() over w as rnum from emails window w as (partition by lower(primary_email) order by email_format, has_opted_out_of_email desc, update_timestamp desc)) t where t.rnum > 1);
 -- And duplicate basket_tokens
 delete from emails where email_id in (select email_id from (select email_id, row_number() over w as rnum from emails window w as (partition by basket_token order by email_format, has_opted_out_of_email desc, update_timestamp desc)) t where t.rnum > 1);
 
