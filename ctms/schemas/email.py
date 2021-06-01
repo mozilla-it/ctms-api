@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import UUID4, Field, validator
+from pydantic import UUID4, Field, HttpUrl, validator
 
 from .base import ComparableBase
 
@@ -62,6 +62,11 @@ class EmailBase(ComparableBase):
     unsubscribe_reason: Optional[str] = Field(
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
+    )
+    source: Optional[HttpUrl] = Field(
+        default=None,
+        description="Source URL of original subscription. This will generally be the same as the source for the earliest newsletter subscription this email account has.",
+        example="https://www.mozilla.org/en-US/",
     )
 
     class Config:
