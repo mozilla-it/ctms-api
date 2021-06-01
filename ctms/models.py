@@ -40,6 +40,7 @@ class Email(Base):
     double_opt_in = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
+    source = Column(Text)
 
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
