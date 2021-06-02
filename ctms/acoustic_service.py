@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 from decimal import Decimal
 from typing import List
 from uuid import UUID
@@ -7,6 +8,7 @@ from uuid import UUID
 from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
+from ctms.background_metrics import BackgroundMetricService
 from ctms.schemas import ContactSchema, NewsletterSchema
 
 # Start cherry-picked from django.utils.encoding
@@ -159,6 +161,7 @@ class CTMSToAcousticService:
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
         acoustic_client: Acoustic,
+        metric_service: BackgroundMetricService = None,
     ):
         """
         Construct a CTMSToAcousticService object that can interface between contacts and acoustic forms of data
@@ -167,6 +170,7 @@ class CTMSToAcousticService:
         self.acoustic_main_table_id = int(acoustic_main_table_id)
         self.acoustic_newsletter_table_id = int(acoustic_newsletter_table_id)
         self.logger = logging.getLogger(__name__)
+        self.metric_service = metric_service
 
     def convert_ctms_to_acoustic(self, contact: ContactSchema):
         acoustic_main_table = self._main_table_converter(contact)
@@ -236,11 +240,11 @@ class CTMSToAcousticService:
             if newsletter.name in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS.keys():
                 newsletter_dict = newsletter.dict()
                 _today = datetime.date.today().isoformat()
-                newsletter_template["create_timestamp"] = self.dictionary_helper(
-                    newsletter_dict, "create_timestamp", _today
+                newsletter_template["create_timestamp"] = newsletter_dict.get(
+                    "create_timestamp", _today
                 )
-                newsletter_template["update_timestamp"] = self.dictionary_helper(
-                    newsletter_dict, "update_timestamp", _today
+                newsletter_template["update_timestamp"] = newsletter_dict.get(
+                    "update_timestamp", _today
                 )
                 newsletter_template["newsletter_name"] = newsletter.name
                 newsletter_template["newsletter_unsub_reason"] = newsletter.unsub_reason
@@ -263,12 +267,6 @@ class CTMSToAcousticService:
         return newsletter_rows, acoustic_main_table
 
     @staticmethod
-    def dictionary_helper(dictionary, key, default=None):
-        if key in dictionary:
-            return dictionary[key]
-        return default
-
-    @staticmethod
     def transform_field_for_acoustic(data):
         if isinstance(data, bool):
             if data:
@@ -288,22 +286,58 @@ class CTMSToAcousticService:
             columns = {}
         if sync_fields is None:
             sync_fields = {}
-        self.acoustic.add_recipient(
-            list_id=list_id,
-            created_from=3,
-            update_if_found="TRUE",
-            allow_html=False,
-            sync_fields=sync_fields,
-            columns=columns,
-        )
+        params = {
+            "list_id": list_id,
+            "created_from": 3,
+            "update_if_found": "TRUE",
+            "allow_html": False,
+            "sync_fields": sync_fields,
+            "columns": columns,
+        }
+        if self.metric_service is None:
+            self.acoustic.add_recipient(**params)
+        else:  # Metrics are enabled
+            start_time = time.monotonic()
+            status = "success"
+            try:
+                self.acoustic.add_recipient(**params)  # Call to Acoustic
+            except Exception:  # pylint: disable=broad-except
+                status = "failure"
+                raise
+            finally:
+                duration = time.monotonic() - start_time
+                duration_s = round(duration, 3)
+                metric_params = {"method": "add_recipient", "status": status}
+                self.metric_service.inc_acoustic_request_total(**metric_params)
+                metric_params.update({"duration_s": duration_s})
+                self.metric_service.observe_acoustic_request_duration(**metric_params)
 
     def _insert_update_newsletters(self, table_id=None, rows=None):
         if rows is None:
             rows = []
-        self.acoustic.insert_update_relational_table(
-            table_id=table_id,
-            rows=rows,
-        )
+        params = {"table_id": table_id, "rows": rows}
+        if self.metric_service is None:
+            self.acoustic.insert_update_relational_table(**params)
+        else:  # Metrics are enabled
+            start_time = time.monotonic()
+            status = "success"
+            try:
+                self.acoustic.insert_update_relational_table(
+                    **params
+                )  # Call to Acoustic
+            except Exception:  # pylint: disable=broad-except
+                status = "failure"
+                raise
+            finally:
+                duration = time.monotonic() - start_time
+                duration_s = round(duration, 3)
+                metric_params = {
+                    "method": "insert_update_relational_table",
+                    "status": status,
+                }
+                self.metric_service.inc_acoustic_request_total(**metric_params)
+                metric_params.update({"duration_s": duration_s})
+                self.metric_service.observe_acoustic_request_duration(**metric_params)
 
     def attempt_to_upload_ctms_contact(self, contact: ContactSchema) -> bool:
         """

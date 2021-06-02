@@ -44,3 +44,4 @@ class BackgroundSettings(Settings):
     logging_level: Literal[
         "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"
     ] = "DEBUG"  # Overloaded Default for Background Job
+    prometheus_pushgateway_url: str
