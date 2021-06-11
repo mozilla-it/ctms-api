@@ -63,11 +63,6 @@ class EmailBase(ComparableBase):
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
-    source: Optional[HttpUrl] = Field(
-        default=None,
-        description="Source URL of original subscription. This will generally be the same as the source for the earliest newsletter subscription this email account has.",
-        example="https://www.mozilla.org/en-US/",
-    )
 
     class Config:
         orm_mode = True
@@ -94,6 +89,11 @@ class EmailSchema(EmailBase):
         description="Contact last modified date, LastModifiedDate in Salesforce",
         example="2021-01-28T21:26:57.511Z",
     )
+    source: Optional[HttpUrl] = Field(
+        default=None,
+        description="Source URL of original subscription. This will generally be the same as the source for the earliest newsletter subscription this email account has.",
+        example="https://www.mozilla.org/en-US/",
+    )
 
 
 class EmailTableSchema(EmailSchema):
@@ -104,6 +104,11 @@ class EmailTableSchema(EmailSchema):
     update_timestamp: datetime = Field(
         description="Contact last modified date, LastModifiedDate in Salesforce",
         example="2021-01-28T21:26:57.511Z",
+    )
+    source: Optional[HttpUrl] = Field(
+        default=None,
+        description="Source URL of original subscription. This will generally be the same as the source for the earliest newsletter subscription this email account has.",
+        example="https://www.mozilla.org/en-US/",
     )
 
     class Config:

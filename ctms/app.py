@@ -493,6 +493,11 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
+        # We don't want to compare on this due to it
+        # actually coming from newsletters
+        # TODO: is this necessary now?
+        del existing["email"].source
+
         email = existing["email"].primary_email
         if re_trace_email.match(email):
             request.state.log_context["trace"] = email

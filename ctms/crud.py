@@ -39,6 +39,12 @@ from .schemas import (
 )
 
 
+def _find_source(newsletters):
+    for newsletter in sorted(newsletters):
+        if newsletter.source:
+            return newsletter.source
+
+
 def get_amo_by_email_id(db: Session, email_id: UUID4):
     return db.query(AmoAccount).filter(AmoAccount.email_id == email_id).one_or_none()
 
@@ -357,8 +363,8 @@ def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSch
     db.execute(stmt)
 
 
-def create_email(db: Session, email: EmailInSchema):
-    db_email = Email(**email.dict())
+def create_email(db: Session, email: EmailInSchema, source: str):
+    db_email = Email(**email.dict(), source=source)
     db.add(db_email)
 
 
@@ -488,7 +494,8 @@ def create_or_update_newsletters(
 
 
 def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
-    create_email(db, contact.email)
+    source = _find_source(contact.newsletters)
+    create_email(db, contact.email, source)
     if contact.amo:
         create_amo(db, email_id, contact.amo)
     if contact.fxa:
@@ -502,7 +509,8 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
 
 
 def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSchema):
-    create_or_update_email(db, contact.email)
+    source = _find_source(contact.newsletters)
+    create_or_update_email(db, contact.email, source)
     create_or_update_amo(db, email_id, contact.amo)
     create_or_update_fxa(db, email_id, contact.fxa)
     create_or_update_mofo(db, email_id, contact.mofo)
@@ -555,7 +563,9 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
             existing = {}
             for newsletter in getattr(email, "newsletters", []):
                 existing[newsletter.name] = newsletter
-            for nl_update in update_data["newsletters"]:
+            for nl_update in sorted(update_data["newsletters"]):
+                if not email.source and nl_update["source"]:
+                    email.source = nl_update["source"]
                 if nl_update["name"] in existing:
                     update_orm(existing[nl_update["name"]], nl_update)
                 elif nl_update.get("subscribed", True):

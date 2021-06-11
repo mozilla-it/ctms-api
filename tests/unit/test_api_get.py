@@ -126,7 +126,7 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
             "has_opted_out_of_email": False,
             "last_name": "of Mozilla",
             "mailing_country": "ca",
-            "source": None,
+            "source": "https://www.mozilla.org/en-US/contribute/studentambassadors/",
             "primary_email": "mozilla-fan@example.com",
             "sfdc_id": "001A000001aMozFan",
             "unsubscribe_reason": "done with this mailing list",

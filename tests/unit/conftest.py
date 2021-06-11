@@ -248,7 +248,16 @@ def post_contact(request, client, dbsession):
         if code in {200, 201}:
             dbsession.expunge_all()
             get_resp = client.get(resp.headers["location"])
-            assert resp.json() == get_resp.json()
+            resp = resp.json()
+            get_resp = get_resp.json()
+            if resp["newsletters"]:
+                for newsletter in resp["newsletters"]:
+                    if newsletter["source"]:
+                        resp["email"]["source"] = newsletter["source"]
+                        break
+            print(resp["email"]["source"])
+            print(get_resp["email"]["source"])
+            assert resp == get_resp
 
         return saved, sample, email_id
 
