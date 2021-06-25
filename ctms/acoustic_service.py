@@ -299,9 +299,9 @@ class CTMSToAcousticService:
             return "0"
         if isinstance(data, datetime.datetime):
             # Acoustic doesn't have timestamps, so make timestamps into dates.
-            return data.date().isoformat()
+            data = data.date()
         if isinstance(data, datetime.date):
-            return data.isoformat()
+            return data.strftime("%m/%d/%Y")
         if isinstance(data, UUID):
             return str(data)
         return data
