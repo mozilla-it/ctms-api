@@ -123,3 +123,27 @@ def test_transform_field(base_ctms_acoustic_service):
         assert isinstance(is_date, datetime.date)
     except:  # pylint: disable=W0702
         assert False, "Failure with timestamp validation"
+
+
+def test_transform_fxa_created_date(base_ctms_acoustic_service):
+    fxa_created_date = "2021-06-16T20:09:41.121000"
+    fxa_datetime = base_ctms_acoustic_service.fxa_created_date_string_to_datetime(
+        fxa_created_date
+    )
+    assert isinstance(fxa_datetime, datetime.datetime)
+    # converted successfully and will be transformed by alternate method to acoustic-readable
+    # later to be a noop/passthrough when fixed upstream.
+
+    fxa_created_date = fxa_datetime  # now a datetime, still will be.
+    fxa_unchanged = base_ctms_acoustic_service.fxa_created_date_string_to_datetime(
+        fxa_created_date
+    )
+    assert isinstance(fxa_unchanged, datetime.datetime)
+    assert fxa_created_date is fxa_unchanged
+
+    fxa_created_date = 123  # Ok, data upstream must be weird.
+    fxa_still_int = base_ctms_acoustic_service.fxa_created_date_string_to_datetime(
+        fxa_created_date
+    )
+    assert isinstance(fxa_still_int, int)
+    assert fxa_created_date is fxa_still_int
