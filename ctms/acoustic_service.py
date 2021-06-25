@@ -213,7 +213,7 @@ class CTMSToAcousticService:
                         acoustic_field_name
                         in AcousticResources.VALID_ACOUSTIC_MAIN_TABLE_FIELDS
                     ):
-                        if acoustic_field_name == "created_date":
+                        if acoustic_field_name == "fxa_created_date":
                             inner_value = self.fxa_created_date_string_to_datetime(
                                 inner_value
                             )
