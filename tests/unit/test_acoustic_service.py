@@ -107,20 +107,36 @@ def test_transform_field(base_ctms_acoustic_service):
     assert is_true == "1"
     is_false = base_ctms_acoustic_service.transform_field_for_acoustic(False)
     assert is_false == "0"
-    is_datetime = base_ctms_acoustic_service.transform_field_for_acoustic(
+    transformed_from_datetime = base_ctms_acoustic_service.transform_field_for_acoustic(
         datetime.datetime.now()
     )
-    assert is_datetime is not None
-    is_date = base_ctms_acoustic_service.transform_field_for_acoustic(
+    assert (
+        transformed_from_datetime is not None
+    ), "Error when using method to transform datetime object"
+    transformed_from_date = base_ctms_acoustic_service.transform_field_for_acoustic(
         datetime.date.today()
     )
-    assert is_date is not None
+    assert (
+        transformed_from_date is not None
+    ), "Error when using method to transform date object"
 
     try:
-        is_datetime = datetime.date.fromisoformat(is_datetime)
-        assert isinstance(is_datetime, datetime.date)
-        is_date = datetime.date.fromisoformat(is_date)
-        assert isinstance(is_date, datetime.date)
+        assert transformed_from_datetime == transformed_from_date, (
+            "The result of the transformation process of a "
+            "date and datetime should be identical, "
+            "when starting values are equivalent in date "
+        )
+
+        is_datetime_parsed = datetime.datetime.strptime(
+            transformed_from_datetime, "%m/%d/%Y"
+        )
+        assert isinstance(
+            is_datetime_parsed, datetime.date
+        ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
+        is_date_parsed = datetime.datetime.strptime(transformed_from_date, "%m/%d/%Y")
+        assert isinstance(
+            is_date_parsed, datetime.date
+        ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
     except:  # pylint: disable=W0702
         assert False, "Failure with timestamp validation"
 
