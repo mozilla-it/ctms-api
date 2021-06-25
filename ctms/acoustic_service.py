@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import List
 from uuid import UUID
 
+import dateutil
 from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
@@ -212,6 +213,11 @@ class CTMSToAcousticService:
                         acoustic_field_name
                         in AcousticResources.VALID_ACOUSTIC_MAIN_TABLE_FIELDS
                     ):
+                        if acoustic_field_name == "created_date":
+                            inner_value = self.fxa_created_date_string_to_datetime(
+                                inner_value
+                            )
+
                         acoustic_main_table[
                             acoustic_field_name
                         ] = self.transform_field_for_acoustic(inner_value)
@@ -222,6 +228,25 @@ class CTMSToAcousticService:
                             inner_attr,
                         )
         return acoustic_main_table
+
+    def fxa_created_date_string_to_datetime(self, inner_value):
+        if isinstance(inner_value, str):
+            self.logger.debug("created_date found; attempting conversion from string.")
+            try:
+                inner_value = dateutil.parser.parse(inner_value)
+                self.logger.debug(
+                    "Success, created_date converted to datetime in pre-processing."
+                )
+            except Exception:  # pylint: disable=broad-except
+                self.logger.exception(
+                    "Failure in attempt to convert created_date, using original value."
+                )
+        else:
+            self.logger.debug(
+                "No op. created_date found; but not as a string as a: %s.",
+                type(inner_value),
+            )
+        return inner_value
 
     def _newsletter_converter(self, acoustic_main_table, contact):
         # create the RT rows for the newsletter table in acoustic
