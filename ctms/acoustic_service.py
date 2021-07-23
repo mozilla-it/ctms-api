@@ -115,6 +115,7 @@ class AcousticResources:
         "test-pilot": "sub_test_pilot",
         "about-mozilla": "sub_about_mozilla",
         "app-dev": "sub_apps_and_hacks",
+        "mozilla-rally": "sub_rally",
     }
 
 
