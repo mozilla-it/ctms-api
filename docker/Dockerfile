@@ -33,12 +33,18 @@ RUN mkdir -p $POETRY_HOME && \
     mkdir -p /app && \
     chown app:app /app
 
+RUN apt-get update && \
+    apt-get install --assume-yes apt-utils && \
+    echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
+    apt-get install --no-install-recommends -y \
+      libpq5
+
 # builder-base is used to build dependencies
 FROM python-base as builder-base
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y \
-    curl \
-    build-essential
+RUN apt-get install --no-install-recommends -y \
+      curl \
+      build-essential \
+      libpq-dev
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
 USER app
