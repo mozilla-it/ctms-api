@@ -31,6 +31,21 @@ Install ALL deps including DEV dependencies:
 poetry install
 ```
 
+If these fail with an error like:
+
+```
+Error: pg_config executable not found.
+
+pg_config is required to build psycopg2 from source.  Please add the directory
+containing pg_config to the $PATH or specify the full executable path with the
+option:
+...
+```
+
+then you need to install the `psycopg2` prerequisites, like the PostgreSQL development package. See
+[psycopg2 build prerequisites](https://www.psycopg.org/docs/install.html#build-prerequisites)
+for help.
+
 ### Using Poetry
 Opens shell with corresponding dependencies to the poetry(.lock) in the directory that you make the call:
 

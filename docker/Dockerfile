@@ -3,7 +3,7 @@
 # See https://docs.docker.com/develop/develop-images/multistage-build/
 
 # Creating a python base with shared environment variables
-FROM python:3.8.10-slim as python-base
+FROM python:3.8.12-slim as python-base
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -33,12 +33,18 @@ RUN mkdir -p $POETRY_HOME && \
     mkdir -p /app && \
     chown app:app /app
 
+RUN apt-get update && \
+    apt-get install --assume-yes apt-utils && \
+    echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
+    apt-get install --no-install-recommends -y \
+      libpq5
+
 # builder-base is used to build dependencies
 FROM python-base as builder-base
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y \
-    curl \
-    build-essential
+RUN apt-get install --no-install-recommends -y \
+      curl \
+      build-essential \
+      libpq-dev
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
 USER app
