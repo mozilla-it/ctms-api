@@ -236,3 +236,20 @@ class PendingAcousticRecord(Base):
     )
 
     email = relationship("Email", uselist=False)
+
+
+class StripeCustomerRecord(Base):
+    __tablename__ = "stripe_customer"
+
+    id = Column(Integer, primary_key=True)
+    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    customer_id = Column(String(20), nullable=False, unique=True, index=True)
+    customer_created = Column(DateTime(timezone=True), nullable=False)
+    create_timestamp = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    update_timestamp = Column(
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
+    )
+
+    email = relationship("Email", uselist=False)
