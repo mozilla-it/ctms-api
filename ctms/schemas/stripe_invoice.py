@@ -1,28 +1,91 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 
-from pydantic import Field
+from pydantic import constr, Field
 
 from .base import ComparableBase
 
 
+class StripeInvoiceStatusEnum(str, Enum):
+    """
+    Stripe Invoice status values.
+
+    See https://stripe.com/docs/api/invoices/object#invoice_object-status
+    """
+
+    DRAFT = "draft"
+    OPEN = "open"
+    PAID = "paid"
+    UNCOLLECTABLE = "uncollectable"
+    VOID = "void"
+
+
 class StripeInvoiceBase(ComparableBase):
-    """A Stripe Invoice."""
+    """A Stripe Invoice.
 
-    currency: Optional[str]
+    The subset of fields from a Stripe Invoice record needed for CTMS.
+    See https://stripe.com/docs/api/invoices.
+
+    Relations:
+    * An Invoice has one Customer
+    * An Invoice has one or more Invoice Items
+    * An Invoice has zero or one default Payment Method
+    """
+
+    stripe_id: Optional[str]
     stripe_created: Optional[datetime]
+    currency: Optional[constr(to_lower=True, min_length=3, max_length=3)]
     total: Optional[int]
-    status: Optional[str]
+    status: Optional[StripeInvoiceStatusEnum]
+    default_payment_method: Optional[str]
 
-    payment_type: Optional[str]
-    payment_card_brand: Optional[str]
-    payment_card_last4: Optional[str]
+    class Config:
+        fields = {
+            "stripe_id": {
+                "description": "Stripe Invoice ID",
+                "example": "in_1JmPBbKb9q6OnNsLb8ofPsbX",
+            },
+            "stripe_created": {
+                "description": "Invoice creation time in Stripe",
+                "example": "2021-10-11T19:18:03.350435+00:00",
+            },
+            "currency": {
+                "description": "Three-letter ISO currency code, in lowercase.",
+                "example": "usd",
+            },
+            "total": {
+                "description": "Total after discounts and taxes.",
+                "example": 999,
+            },
+            "status": {
+                "description": "The status of the invoice",
+                "example": "paid",
+            },
+            "default_payment_method": {
+                "description": (
+                    "ID of the default payment source for the invoice."
+                    " If not set, defaults to the subscription’s default"
+                    " source, if any, or to the customer’s default source."
+                ),
+                "example": ""
+            },
+        }
 
 
-StripeInvoiceCreateSchema = StripeInvoiceBase
-StripeInvoiceUpsertSchema = StripeInvoiceCreateSchema
+class StripeInvoiceCreateSchema(StripeInvoiceBase):
+    stripe_id: str
+    stripe_created: datetime
+    currency: constr(to_lower=True, min_length=3, max_length=3)
+    total: int
+    status: StripeInvoiceStatusEnum
+    default_payment_method: str = ""
+
+
+class StripeInvoiceUpsertSchema(StripeInvoiceCreateSchema):
+    default_payment_method: str
 
 
 class StripeInvoiceOutputSchema(StripeInvoiceUpsertSchema):
@@ -45,7 +108,15 @@ class StripeInvoiceOutputSchema(StripeInvoiceUpsertSchema):
             },
         }
 
-
+# pylint: disable=too-many-ancestors
 class StripeInvoiceModelSchema(StripeInvoiceOutputSchema):
+    stripe_customer_id = str
+
     class Config:
         extra = "forbid"
+        fields = {
+            "stripe_customer_id": {
+                "description": "Stripe Customer ID",
+                "example": "cus_8epDebVEl8Bs2V",
+            },
+        }
