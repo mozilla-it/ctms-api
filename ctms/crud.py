@@ -17,6 +17,8 @@ from .models import (
     MozillaFoundationContact,
     Newsletter,
     PendingAcousticRecord,
+    StripeCustomer,
+    StripeProduct,
     VpnWaitlist,
 )
 from .schemas import (
@@ -30,6 +32,8 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
+    StripeCustomerCreateSchema,
+    StripeProductCreateSchema,
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
@@ -608,3 +612,31 @@ def get_active_api_client_ids(db: Session) -> List[str]:
         .all()
     )
     return [row.client_id for row in rows]
+
+
+def create_stripe_customer(
+    db: Session, email_id: UUID4, customer: StripeCustomerCreateSchema
+) -> Optional[StripeCustomer]:
+    if customer.is_default():
+        return None
+    db_customer = StripeCustomer(email_id=email_id, **customer.dict())
+    db.add(db_customer)
+    return db_customer
+
+
+def create_stripe_product(
+    db: Session, product: StripeProductCreateSchema
+) -> Optional[StripeProduct]:
+    if product.is_default():
+        return None
+    db_product = StripeProduct(**product.dict())
+    db.add(db_product)
+    return db_product
+
+
+# def create_stripe_price(
+# def create_stripe_payment_method(
+# def create_stripe_invoice_item(
+# def create_stripe_invoice(
+# def create_stripe_subscription(
+# def create_stripe_subscription_item(

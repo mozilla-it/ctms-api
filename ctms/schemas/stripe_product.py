@@ -23,7 +23,6 @@ class StripeProductBase(ComparableBase):
     stripe_created: Optional[datetime]
     stripe_updated: Optional[datetime]
     name: Optional[str]
-    acoustic_name: Optional[str]
 
     class Config:
         fields = {
@@ -43,10 +42,6 @@ class StripeProductBase(ComparableBase):
                 "description": "The product’s name, meant to be displayable to the customer.",
                 "example": "Staging Managed Hubs",
             },
-            "acoustic_name": {
-                "description": "Product name as synced to Acoustic.",
-                "example": "Hubs",
-            },
         }
 
 
@@ -54,21 +49,21 @@ class StripeProductCreateSchema(StripeProductBase):
     stripe_id: str
     stripe_created: datetime
     stripe_updated: datetime
+    name: str
 
 
 StripeProductUpsertSchema = StripeProductCreateSchema
 
 
 class StripeProductOutputSchema(StripeProductUpsertSchema):
-    orm_mode = True
 
-    acoustic_name: str
     create_timestamp: datetime
     update_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
     class Config:
+        orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS create timestamp.",

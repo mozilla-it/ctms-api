@@ -49,7 +49,6 @@ class StripeCustomerBase(ComparableBase):
 class StripeCustomerCreateSchema(StripeCustomerBase):
     stripe_id: str
     stripe_created: datetime
-    invoice_settings_default_payment_method: str = ""
 
 
 # No changes for upsert
@@ -57,13 +56,14 @@ StripeCustomerUpsertSchema = StripeCustomerCreateSchema
 
 
 class StripeCustomerOutputSchema(StripeCustomerUpsertSchema):
-    orm_mode = True
+    invoice_settings_default_payment_method: Optional[str]
     create_timestamp: datetime
     update_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
     class Config:
+        # orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS Stripe Customer create timestamp.",

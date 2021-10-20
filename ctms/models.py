@@ -282,7 +282,6 @@ class StripeProduct(Base):
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     stripe_updated = Column(DateTime(timezone=True), nullable=False)
     name = Column(String(255), nullable=False)
-    acoustic_name = Column(String(255), nullable=False)
 
     create_timestamp = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=now()
