@@ -309,9 +309,9 @@ class StripePrice(Base):
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     currency = Column(String(3), nullable=False)
-    recurring_interval = Column(String(5), nullable=False)
-    recurring_interval_count = Column(Integer, nullable=False)
-    unit_amount = Column(Integer, nullable=False)
+    recurring_interval = Column(String(5), nullable=True)
+    recurring_interval_count = Column(Integer, nullable=True)
+    unit_amount = Column(Integer, nullable=True)
 
     create_timestamp = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=now()

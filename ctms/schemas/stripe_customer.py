@@ -63,7 +63,7 @@ class StripeCustomerOutputSchema(StripeCustomerUpsertSchema):
     )
 
     class Config:
-        # orm_mode = True
+        orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS Stripe Customer create timestamp.",
