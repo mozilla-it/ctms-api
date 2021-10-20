@@ -4,9 +4,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from pydantic import constr, Field
+from pydantic import Field
 
 from .base import ComparableBase
+from .stripe_price import StripeCurrencyType
 
 
 class StripeInvoiceStatusEnum(str, Enum):
@@ -37,7 +38,7 @@ class StripeInvoiceBase(ComparableBase):
 
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
-    currency: Optional[constr(to_lower=True, min_length=3, max_length=3)]
+    currency: Optional[StripeCurrencyType]
     total: Optional[int]
     status: Optional[StripeInvoiceStatusEnum]
     default_payment_method: Optional[str]
@@ -70,7 +71,7 @@ class StripeInvoiceBase(ComparableBase):
                     " If not set, defaults to the subscription’s default"
                     " source, if any, or to the customer’s default source."
                 ),
-                "example": ""
+                "example": "",
             },
         }
 
@@ -78,7 +79,7 @@ class StripeInvoiceBase(ComparableBase):
 class StripeInvoiceCreateSchema(StripeInvoiceBase):
     stripe_id: str
     stripe_created: datetime
-    currency: constr(to_lower=True, min_length=3, max_length=3)
+    currency: StripeCurrencyType
     total: int
     status: StripeInvoiceStatusEnum
     default_payment_method: Optional[str] = None
@@ -106,6 +107,7 @@ class StripeInvoiceOutputSchema(StripeInvoiceUpsertSchema):
                 "example": "2021-10-11T19:27:46.440Z",
             },
         }
+
 
 class StripeInvoiceModelSchema(StripeInvoiceOutputSchema):
     stripe_customer_id = str

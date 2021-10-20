@@ -107,7 +107,7 @@ class StripeSubscriptionBase(ComparableBase):
                     " subscription. If unset, invoices will use the"
                     " customer’s invoice_settings.default_payment_method"
                 ),
-                "example": ""
+                "example": "",
             },
         }
 

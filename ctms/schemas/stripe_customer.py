@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import Field, UUID4
+from pydantic import UUID4, Field
 
 from .base import ComparableBase
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
@@ -42,7 +42,7 @@ class StripeCustomerBase(ComparableBase):
             "invoice_settings_default_payment_method": {
                 "description": "Default payment method for the Customer.",
                 "example": "pm_1JmPBfKb9q6OnNsLlzx8GamM",
-            }
+            },
         }
 
 

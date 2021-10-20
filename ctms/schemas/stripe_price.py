@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from pydantic import constr, Field
+from pydantic import ConstrainedStr, Field
 
 from .base import ComparableBase
 
@@ -22,6 +22,12 @@ class StripePriceIntervalEnum(str, Enum):
     YEAR = "year"
 
 
+class StripeCurrencyType(ConstrainedStr):
+    to_lower = True
+    min_length = 3
+    max_length = 3
+
+
 class StripePriceBase(ComparableBase):
     """
     A Stripe Price.
@@ -35,7 +41,7 @@ class StripePriceBase(ComparableBase):
 
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
-    currency: Optional[constr(to_lower=True, min_length=3, max_length=3)]
+    currency: Optional[StripeCurrencyType]
     recurring_interval: Optional[StripePriceIntervalEnum]
     recurring_interval_count: Optional[int]
     unit_amount: Optional[int]
@@ -76,7 +82,7 @@ class StripePriceCreateSchema(StripePriceBase):
     stripe_id: str
     stripe_created: datetime
     unit_amount: int
-    currency: constr(to_lower=True, min_length=3, max_length=3)
+    currency: StripeCurrencyType
     recurring_interval: StripePriceIntervalEnum
     recurring_interval_count: int
 

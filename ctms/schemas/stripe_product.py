@@ -45,7 +45,7 @@ class StripeProductBase(ComparableBase):
             },
             "acoustic_name": {
                 "description": "Product name as synced to Acoustic.",
-                "example": "Hubs"
+                "example": "Hubs",
             },
         }
 

@@ -19,6 +19,7 @@ class StripeSubscriptionItemBase(ComparableBase):
     * A Subscription Item has one Subscription
     * A Subscription Item has one Price
     """
+
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
 
@@ -33,6 +34,7 @@ class StripeSubscriptionItemBase(ComparableBase):
                 "example": "2021-10-14T18:33:09.348050+00:00",
             },
         }
+
 
 class StripeSubscriptionItemCreateSchema(StripeSubscriptionItemBase):
     stripe_id: str
@@ -77,5 +79,5 @@ class StripeSubscriptionItemModelSchema(StripeSubscriptionItemOutputSchema):
             "stripe_price_id": {
                 "description": "Stripe Price ID",
                 "example": "plan_FvPMH5lVx1vhV0",
-            }
+            },
         }

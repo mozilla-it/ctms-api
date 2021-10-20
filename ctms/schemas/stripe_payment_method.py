@@ -15,6 +15,7 @@ class StripePaymentMethodTypeEnum(str, Enum):
 
     See https://stripe.com/docs/api/payment_methods/object#payment_method_object-type
     """
+
     ACSS_DEBIT = "acss_debit"
     AFTERPAY_CLEARPAY = "afterpay_clearpay"
     ALIPAY = "alipay"
@@ -47,6 +48,7 @@ class StripePaymentMethodCardBrandEnum(str, Enum):
 
     See https://stripe.com/docs/api/payment_methods/object#payment_method_object-card-brand
     """
+
     AMEX = "amex"
     DINERS = "diners"
     DISCOVER = "discover"
@@ -55,6 +57,7 @@ class StripePaymentMethodCardBrandEnum(str, Enum):
     UNIONPAY = "unionpay"
     VISA = "visa"
     UNKNOWN = "unknown"
+
 
 class StripePaymentMethodBase(ComparableBase):
     """A Stripe Payment Method.
@@ -88,7 +91,8 @@ class StripePaymentMethodBase(ComparableBase):
             "payment_type": {
                 "description": (
                     "The type of the PaymentMethod. If 'card', then card"
-                    " data will be included."),
+                    " data will be included."
+                ),
                 "example": "card",
             },
             "billing_address_country": {
@@ -98,16 +102,12 @@ class StripePaymentMethodBase(ComparableBase):
                 ),
                 "example": "US",
             },
-            "card_brand": {
-                "description": "Card brand",
-                "example": "visa"
-            },
+            "card_brand": {"description": "Card brand", "example": "visa"},
             "card_country": {
                 "description": (
-                    "Two-letter ISO code representing the country of the"
-                    " card."
+                    "Two-letter ISO code representing the country of the" " card."
                 ),
-                "example": "US"
+                "example": "US",
             },
             "card_last4": {
                 "description": "The last four digits of the card.",

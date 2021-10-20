@@ -262,12 +262,14 @@ class StripeCustomer(Base):
 
     email = relationship("Email", uselist=False)
     payment_methods = relationship(
-       "StripePaymentMethod", back_populates="customer", uselist=True,
-       primaryjoin="StripeCustomer.stripe_id==StripePaymentMethod.stripe_customer_id",
+        "StripePaymentMethod",
+        back_populates="customer",
+        uselist=True,
+        primaryjoin="StripeCustomer.stripe_id==StripePaymentMethod.stripe_customer_id",
     )
     invoices = relationship("StripeInvoice", back_populates="customer", uselist=True)
     subscriptions = relationship(
-       "StripeSubscription", back_populates="customer", uselist=True
+        "StripeSubscription", back_populates="customer", uselist=True
     )
 
 
@@ -280,7 +282,7 @@ class StripeProduct(Base):
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     stripe_updated = Column(DateTime(timezone=True), nullable=False)
     name = Column(String(255), nullable=False)
-    acoustic_name: Column(String(255), nullable=False)
+    acoustic_name = Column(String(255), nullable=False)
 
     create_timestamp = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=now()
@@ -310,7 +312,7 @@ class StripePrice(Base):
     currency = Column(String(3), nullable=False)
     recurring_interval = Column(String(5), nullable=False)
     recurring_interval_count = Column(Integer, nullable=False)
-    unit_amount: Column(Integer, nullable=False)
+    unit_amount = Column(Integer, nullable=False)
 
     create_timestamp = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=now()
@@ -330,6 +332,7 @@ class StripePrice(Base):
         "StripeSubscriptionItem", back_populates="price", uselist=True
     )
 
+
 class StripePaymentMethod(Base):
     __tablename__ = "stripe_payment_method"
 
@@ -342,9 +345,9 @@ class StripePaymentMethod(Base):
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     payment_type = Column(String(20), nullable=False)
     billing_address_country = Column(String(20), nullable=False)
-    card_brand: Column(String(12), nullable=False)
-    card_country: Column(String(2), nullable=False)
-    card_last4: Column(String(4), nullable=False)
+    card_brand = Column(String(12), nullable=False)
+    card_country = Column(String(2), nullable=False)
+    card_last4 = Column(String(4), nullable=False)
 
     create_timestamp = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=now()
