@@ -26,12 +26,16 @@ class ContactSchema(ComparableBase):
     email: EmailSchema
     fxa: Optional[FirefoxAccountsSchema] = None
     mofo: Optional[MozillaFoundationSchema] = None
-    newsletters: List[NewsletterSchema] = Field(
-        default=[],
-        description="List of newsletters for which the contact is or was subscribed",
-        example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
-    )
+    newsletters: List[NewsletterSchema] = []
     vpn_waitlist: Optional[VpnWaitlistSchema] = None
+
+    class Config:
+        fields = {
+            "newsletters": {
+                "description": "List of newsletters for which the contact is or was subscribed",
+                "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
+            }
+        }
 
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
