@@ -31,8 +31,6 @@ if TYPE_CHECKING:
 def create_stripe_customer(
     db: Session, email_id: UUID4, customer: StripeCustomerCreateSchema
 ) -> Optional[StripeCustomer]:
-    if customer.is_default():
-        return None
     db_customer = StripeCustomer(email_id=email_id, **customer.dict())
     db.add(db_customer)
     return db_customer
@@ -41,8 +39,6 @@ def create_stripe_customer(
 def create_stripe_product(
     db: Session, product: StripeProductCreateSchema
 ) -> Optional[StripeProduct]:
-    if product.is_default():
-        return None
     db_product = StripeProduct(**product.dict())
     db.add(db_product)
     return db_product
@@ -51,8 +47,6 @@ def create_stripe_product(
 def create_stripe_price(
     db: Session, product_id: str, price: StripePriceCreateSchema
 ) -> Optional[StripePrice]:
-    if price.is_default():
-        return None
     db_price = StripePrice(stripe_product_id=product_id, **price.dict())
     db.add(db_price)
     return db_price
@@ -61,8 +55,6 @@ def create_stripe_price(
 def create_stripe_payment_method(
     db: Session, customer_id: str, payment_method: StripePaymentMethodCreateSchema
 ) -> Optional[StripePaymentMethod]:
-    if payment_method.is_default():
-        return None
     db_payment_method = StripePaymentMethod(
         stripe_customer_id=customer_id, **payment_method.dict()
     )
@@ -75,8 +67,6 @@ def create_stripe_invoice(
     customer_id: str,
     invoice: StripeInvoiceCreateSchema,
 ) -> Optional[StripeInvoice]:
-    if invoice.is_default():
-        return None
     db_invoice = StripeInvoice(stripe_customer_id=customer_id, **invoice.dict())
     db.add(db_invoice)
     return db_invoice
@@ -88,8 +78,6 @@ def create_stripe_invoice_item(
     price_id: str,
     invoice_item: StripeInvoiceItemCreateSchema,
 ) -> Optional[StripeInvoiceItem]:
-    if invoice_item.is_default():
-        return None
     db_invoice_item = StripeInvoiceItem(
         stripe_invoice_id=invoice_id, stripe_price_id=price_id, **invoice_item.dict()
     )
@@ -102,8 +90,6 @@ def create_stripe_subscription(
     customer_id: str,
     subscription: StripeSubscriptionCreateSchema,
 ) -> Optional[StripeSubscription]:
-    if subscription.is_default():
-        return None
     db_subscription = StripeSubscription(
         stripe_customer_id=customer_id, **subscription.dict()
     )
@@ -117,8 +103,6 @@ def create_stripe_subscription_item(
     price_id: str,
     subscription_item: StripeSubscriptionItemCreateSchema,
 ) -> Optional[StripeSubscriptionItem]:
-    if subscription_item.is_default():
-        return None
     db_subscription_item = StripeSubscriptionItem(
         stripe_subscription_id=subscription_id,
         stripe_price_id=price_id,
