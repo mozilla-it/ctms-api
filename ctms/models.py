@@ -343,10 +343,10 @@ class StripePaymentMethod(Base):
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     payment_type = Column(String(20), nullable=False)
-    billing_address_country = Column(String(20), nullable=False)
-    card_brand = Column(String(12), nullable=False)
-    card_country = Column(String(2), nullable=False)
-    card_last4 = Column(String(4), nullable=False)
+    billing_address_country = Column(String(20), nullable=True)
+    card_brand = Column(String(12), nullable=True)
+    card_country = Column(String(2), nullable=True)
+    card_last4 = Column(String(4), nullable=True)
 
     create_timestamp = Column(
         TIMESTAMP(timezone=True), nullable=False, server_default=now()

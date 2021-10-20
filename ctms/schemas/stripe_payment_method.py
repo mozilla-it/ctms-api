@@ -73,10 +73,10 @@ class StripePaymentMethodBase(ComparableBase):
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
     payment_type: Optional[StripePaymentMethodTypeEnum]
-    billing_address_country: Optional[str]
-    card_brand: Optional[StripePaymentMethodCardBrandEnum]
-    card_country: Optional[str]
-    card_last4: Optional[str]
+    billing_address_country: Optional[str] = None
+    card_brand: Optional[StripePaymentMethodCardBrandEnum] = None
+    card_country: Optional[str] = None
+    card_last4: Optional[str] = None
 
     class Config:
         fields = {
@@ -120,24 +120,19 @@ class StripePaymentMethodCreateSchema(StripePaymentMethodBase):
     stripe_id: str
     stripe_created: datetime
     payment_type: StripePaymentMethodTypeEnum
-    billing_address_country: str
-    card_brand: StripePaymentMethodCardBrandEnum
-    card_country: str
-    card_last4: str
 
 
 StripePaymentMethodUpsertSchema = StripePaymentMethodCreateSchema
 
 
 class StripePaymentMethodOutputSchema(StripePaymentMethodUpsertSchema):
-    orm_mode = True
-
     create_timestamp: datetime
     update_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
     class Config:
+        orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS Stripe PaymentMethod create timestamp.",

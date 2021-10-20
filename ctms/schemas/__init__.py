@@ -49,6 +49,12 @@ from .stripe_invoice import (
     StripeInvoiceOutputSchema,
     StripeInvoiceUpsertSchema,
 )
+from .stripe_payment_method import (
+    StripePaymentMethodCreateSchema,
+    StripePaymentMethodModelSchema,
+    StripePaymentMethodOutputSchema,
+    StripePaymentMethodUpsertSchema,
+)
 from .stripe_price import (
     StripePriceCreateSchema,
     StripePriceModelSchema,

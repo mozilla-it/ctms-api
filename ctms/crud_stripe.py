@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from .models import StripeCustomer, StripePrice, StripeProduct
+from .models import StripeCustomer, StripePaymentMethod, StripePrice, StripeProduct
 from .schemas import (
     StripeCustomerCreateSchema,
+    StripePaymentMethodCreateSchema,
     StripePriceCreateSchema,
     StripeProductCreateSchema,
 )
@@ -44,7 +45,18 @@ def create_stripe_price(
     return db_price
 
 
-# def create_stripe_payment_method(
+def create_stripe_payment_method(
+    db: Session, customer_id: str, payment_method: StripePaymentMethodCreateSchema
+) -> Optional[StripePaymentMethod]:
+    if payment_method.is_default():
+        return None
+    db_payment_method = StripePaymentMethod(
+        stripe_customer_id=customer_id, **payment_method.dict()
+    )
+    db.add(db_payment_method)
+    return db_payment_method
+
+
 # def create_stripe_invoice_item(
 # def create_stripe_invoice(
 # def create_stripe_subscription(
