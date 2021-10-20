@@ -463,10 +463,10 @@ class StripeSubscription(Base):
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     cancel_at_period_end = Column(Boolean, nullable=False)
-    canceled_at = Column(DateTime(timezone=True), nullable=False)
+    canceled_at = Column(DateTime(timezone=True), nullable=True)
     current_period_end = Column(DateTime(timezone=True), nullable=False)
     current_period_start = Column(DateTime(timezone=True), nullable=False)
-    ended_at = Column(DateTime(timezone=True), nullable=False)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
     start_date = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(20), nullable=False)
 

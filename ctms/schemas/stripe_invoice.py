@@ -89,14 +89,13 @@ StripeInvoiceUpsertSchema = StripeInvoiceCreateSchema
 
 
 class StripeInvoiceOutputSchema(StripeInvoiceUpsertSchema):
-    orm_mode = True
-
     create_timestamp: datetime
     update_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
     class Config:
+        orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS Stripe Invoice create timestamp.",

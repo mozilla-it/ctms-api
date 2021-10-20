@@ -116,10 +116,10 @@ class StripeSubscriptionCreateSchema(StripeSubscriptionBase):
     stripe_id: str
     stripe_created: datetime
     cancel_at_period_end: bool
-    canceled_at: datetime
+    canceled_at: Optional[datetime] = None
     current_period_end: datetime
     current_period_start: datetime
-    ended_at: datetime
+    ended_at: Optional[datetime] = None
     start_date: datetime
     status: StripeSubscriptionStatusEnum
     default_payment_method: Optional[str] = None
@@ -129,14 +129,13 @@ StripeSubscriptionUpsertSchema = StripeSubscriptionCreateSchema
 
 
 class StripeSubscriptionOutputSchema(StripeSubscriptionUpsertSchema):
-    orm_mode = True
-
     create_timestamp: datetime
     update_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
     class Config:
+        orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS create timestamp.",

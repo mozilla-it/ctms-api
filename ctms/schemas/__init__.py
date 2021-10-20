@@ -49,6 +49,12 @@ from .stripe_invoice import (
     StripeInvoiceOutputSchema,
     StripeInvoiceUpsertSchema,
 )
+from .stripe_invoice_item import (
+    StripeInvoiceItemCreateSchema,
+    StripeInvoiceItemModelSchema,
+    StripeInvoiceItemOutputSchema,
+    StripeInvoiceItemUpsertSchema,
+)
 from .stripe_payment_method import (
     StripePaymentMethodCreateSchema,
     StripePaymentMethodModelSchema,
@@ -72,6 +78,12 @@ from .stripe_subscription import (
     StripeSubscriptionModelSchema,
     StripeSubscriptionOutputSchema,
     StripeSubscriptionUpsertSchema,
+)
+from .stripe_subscription_item import (
+    StripeSubscriptionItemCreateSchema,
+    StripeSubscriptionItemModelSchema,
+    StripeSubscriptionItemOutputSchema,
+    StripeSubscriptionItemUpsertSchema,
 )
 from .vpn import (
     UpdatedVpnWaitlistInSchema,
