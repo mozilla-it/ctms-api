@@ -61,17 +61,24 @@ class StripePriceBase(ComparableBase):
                 "example": "usd",
             },
             "recurring_interval": {
-                "description": "The frequency at which a subscription is billed.",
+                "description": (
+                    "The frequency at which a subscription is billed."
+                    " None if type=one_time."
+                ),
                 "example": "month",
             },
             "recurring_interval_count": {
-                "description": "The number of intervals between subscription billings.",
+                "description": (
+                    "The number of intervals between subscription billings."
+                    " None if type=one_time."
+                ),
                 "example": 1,
             },
             "unit_amount": {
                 "description": (
                     "A positive integer in cents (or 0 for a free price)"
                     " representing how much to charge."
+                    " None if billing_scheme=tiered."
                 ),
                 "example": 999,
             },
@@ -81,24 +88,20 @@ class StripePriceBase(ComparableBase):
 class StripePriceCreateSchema(StripePriceBase):
     stripe_id: str
     stripe_created: datetime
-    unit_amount: int
     currency: StripeCurrencyType
-    recurring_interval: StripePriceIntervalEnum
-    recurring_interval_count: int
 
 
 StripePriceUpsertSchema = StripePriceCreateSchema
 
 
 class StripePriceOutputSchema(StripePriceUpsertSchema):
-    orm_mode = True
-
     create_timestamp: datetime
     update_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
 
     class Config:
+        orm_mode = True
         fields = {
             "create_timestamp": {
                 "description": "CTMS create timestamp.",

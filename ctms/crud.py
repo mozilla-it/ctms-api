@@ -18,6 +18,7 @@ from .models import (
     Newsletter,
     PendingAcousticRecord,
     StripeCustomer,
+    StripePrice,
     StripeProduct,
     VpnWaitlist,
 )
@@ -33,6 +34,7 @@ from .schemas import (
     MozillaFoundationInSchema,
     NewsletterInSchema,
     StripeCustomerCreateSchema,
+    StripePriceCreateSchema,
     StripeProductCreateSchema,
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
@@ -634,7 +636,16 @@ def create_stripe_product(
     return db_product
 
 
-# def create_stripe_price(
+def create_stripe_price(
+    db: Session, product_id: str, price: StripePriceCreateSchema
+) -> Optional[StripePrice]:
+    if price.is_default():
+        return None
+    db_price = StripePrice(stripe_product_id=product_id, **price.dict())
+    db.add(db_price)
+    return db_price
+
+
 # def create_stripe_payment_method(
 # def create_stripe_invoice_item(
 # def create_stripe_invoice(
