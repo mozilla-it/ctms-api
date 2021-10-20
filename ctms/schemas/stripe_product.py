@@ -54,7 +54,6 @@ class StripeProductCreateSchema(StripeProductBase):
     stripe_id: str
     stripe_created: datetime
     stripe_updated: datetime
-    name: str
 
 
 StripeProductUpsertSchema = StripeProductCreateSchema

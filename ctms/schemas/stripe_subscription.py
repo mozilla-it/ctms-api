@@ -122,11 +122,10 @@ class StripeSubscriptionCreateSchema(StripeSubscriptionBase):
     ended_at: datetime
     start_date: datetime
     status: StripeSubscriptionStatusEnum
-    default_payment_method: str = ""
+    default_payment_method: Optional[str] = None
 
 
-class StripeSubscriptionUpsertSchema(StripeSubscriptionCreateSchema):
-    default_payment_method: str
+StripeSubscriptionUpsertSchema = StripeSubscriptionCreateSchema
 
 
 class StripeSubscriptionOutputSchema(StripeSubscriptionUpsertSchema):
@@ -150,7 +149,6 @@ class StripeSubscriptionOutputSchema(StripeSubscriptionUpsertSchema):
         }
 
 
-# pylint: disable=too-many-ancestors
 class StripeSubscriptionModelSchema(StripeSubscriptionOutputSchema):
     stripe_customer_id: str
 

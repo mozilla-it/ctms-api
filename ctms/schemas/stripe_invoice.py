@@ -81,11 +81,10 @@ class StripeInvoiceCreateSchema(StripeInvoiceBase):
     currency: constr(to_lower=True, min_length=3, max_length=3)
     total: int
     status: StripeInvoiceStatusEnum
-    default_payment_method: str = ""
+    default_payment_method: Optional[str] = None
 
 
-class StripeInvoiceUpsertSchema(StripeInvoiceCreateSchema):
-    default_payment_method: str
+StripeInvoiceUpsertSchema = StripeInvoiceCreateSchema
 
 
 class StripeInvoiceOutputSchema(StripeInvoiceUpsertSchema):
@@ -108,7 +107,6 @@ class StripeInvoiceOutputSchema(StripeInvoiceUpsertSchema):
             },
         }
 
-# pylint: disable=too-many-ancestors
 class StripeInvoiceModelSchema(StripeInvoiceOutputSchema):
     stripe_customer_id = str
 

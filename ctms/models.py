@@ -60,6 +60,9 @@ class Email(Base):
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
+    stripe_customer = relationship(
+        "StripeCustomer", back_populates="email", uselist=False
+    )
 
     # Class Comparators
     @hybrid_property
@@ -238,13 +241,18 @@ class PendingAcousticRecord(Base):
     email = relationship("Email", uselist=False)
 
 
-class StripeCustomerRecord(Base):
+class StripeCustomer(Base):
     __tablename__ = "stripe_customer"
 
     id = Column(Integer, primary_key=True)
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
-    customer_id = Column(String(20), nullable=False, unique=True, index=True)
-    customer_created = Column(DateTime(timezone=True), nullable=False)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    invoice_settings_default_payment_method = Column(
+        String(255), ForeignKey("stripe_payment_method.stripe_id"), nullable=True
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -253,3 +261,265 @@ class StripeCustomerRecord(Base):
     )
 
     email = relationship("Email", uselist=False)
+    payment_methods = relationship(
+       "StripePaymentMethod", back_populates="customer", uselist=True,
+       primaryjoin="StripeCustomer.stripe_id==StripePaymentMethod.stripe_customer_id",
+    )
+    invoices = relationship("StripeInvoice", back_populates="customer", uselist=True)
+    subscriptions = relationship(
+       "StripeSubscription", back_populates="customer", uselist=True
+    )
+
+
+class StripeProduct(Base):
+    __tablename__ = "stripe_product"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+    stripe_updated = Column(DateTime(timezone=True), nullable=False)
+    name = Column(String(255), nullable=False)
+    acoustic_name: Column(String(255), nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    prices = relationship("StripePrice", back_populates="product", uselist=True)
+
+
+class StripePrice(Base):
+    __tablename__ = "stripe_price"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    stripe_product_id = Column(
+        String(255),
+        ForeignKey(StripeProduct.stripe_id),
+        nullable=False,
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+    currency = Column(String(3), nullable=False)
+    recurring_interval = Column(String(5), nullable=False)
+    recurring_interval_count = Column(Integer, nullable=False)
+    unit_amount: Column(Integer, nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    product = relationship("StripeProduct", back_populates="prices", uselist=False)
+    invoice_items = relationship(
+        "StripeInvoiceItem", back_populates="price", uselist=True
+    )
+    subscription_items = relationship(
+        "StripeSubscriptionItem", back_populates="price", uselist=True
+    )
+
+class StripePaymentMethod(Base):
+    __tablename__ = "stripe_payment_method"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    stripe_customer_id = Column(
+        String(255), ForeignKey(StripeCustomer.stripe_id), nullable=False
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+    payment_type = Column(String(20), nullable=False)
+    billing_address_country = Column(String(20), nullable=False)
+    card_brand: Column(String(12), nullable=False)
+    card_country: Column(String(2), nullable=False)
+    card_last4: Column(String(4), nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    customer = relationship(
+        "StripeCustomer",
+        foreign_keys=[stripe_customer_id],
+        back_populates="payment_methods",
+        uselist=False,
+    )
+    invoices = relationship(
+        "StripeInvoice", back_populates="payment_method", uselist=True
+    )
+    subscriptions = relationship(
+        "StripeSubscription", back_populates="payment_method", uselist=True
+    )
+
+
+class StripeInvoiceItem(Base):
+    __tablename__ = "stripe_invoice_item"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    stripe_invoice_id = Column(
+        String(255),
+        ForeignKey("stripe_invoice.stripe_id"),
+        nullable=False,
+    )
+    stripe_price_id = Column(
+        String(255),
+        ForeignKey(StripePrice.stripe_id),
+        nullable=False,
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    invoice = relationship(
+        "StripeInvoice", back_populates="invoice_items", uselist=False
+    )
+    price = relationship("StripePrice", back_populates="invoice_items", uselist=False)
+
+
+class StripeInvoice(Base):
+    __tablename__ = "stripe_invoice"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    stripe_customer_id = Column(
+        String(255), ForeignKey(StripeCustomer.stripe_id), nullable=False
+    )
+    default_payment_method = Column(
+        String(255),
+        ForeignKey(StripePaymentMethod.stripe_id),
+        nullable=True,
+        default=None,
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+    currency = Column(String(3), nullable=False)
+    total = Column(Integer, nullable=False)
+    status = Column(String(15), nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    customer = relationship("StripeCustomer", back_populates="invoices", uselist=False)
+    payment_method = relationship(
+        "StripePaymentMethod", back_populates="invoices", uselist=False
+    )
+    invoice_items = relationship(
+        "StripeInvoiceItem", back_populates="invoice", uselist=True
+    )
+
+
+class StripeSubscription(Base):
+    __tablename__ = "stripe_subscription"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    stripe_customer_id = Column(
+        String(255),
+        ForeignKey(StripeCustomer.stripe_id),
+        nullable=False,
+    )
+    default_payment_method = Column(
+        String(255),
+        ForeignKey(StripePaymentMethod.stripe_id),
+        nullable=True,
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+    cancel_at_period_end = Column(Boolean, nullable=False)
+    canceled_at = Column(DateTime(timezone=True), nullable=False)
+    current_period_end = Column(DateTime(timezone=True), nullable=False)
+    current_period_start = Column(DateTime(timezone=True), nullable=False)
+    ended_at = Column(DateTime(timezone=True), nullable=False)
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String(20), nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    customer = relationship(
+        "StripeCustomer", back_populates="subscriptions", uselist=False
+    )
+    payment_method = relationship(
+        "StripePaymentMethod", back_populates="subscriptions", uselist=False
+    )
+    subscription_items = relationship(
+        "StripeSubscriptionItem", back_populates="subscription", uselist=True
+    )
+
+
+class StripeSubscriptionItem(Base):
+    __tablename__ = "stripe_subscription_item"
+
+    id = Column(Integer, primary_key=True)
+    stripe_id = Column(String(255), nullable=False, unique=True, index=True)
+    stripe_subscription_id = Column(
+        String(255),
+        ForeignKey(StripeSubscription.stripe_id),
+        nullable=False,
+    )
+    stripe_price_id = Column(
+        String(255),
+        ForeignKey(StripePrice.stripe_id),
+        nullable=False,
+    )
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+
+    create_timestamp = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=now()
+    )
+    update_timestamp = Column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=now(),
+        server_onupdate=now(),
+    )
+
+    subscription = relationship(
+        "StripeSubscription", back_populates="subscription_items", uselist=False
+    )
+    price = relationship(
+        "StripePrice", back_populates="subscription_items", uselist=False
+    )
