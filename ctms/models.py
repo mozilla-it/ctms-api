@@ -252,6 +252,7 @@ class StripeCustomer(Base):
     )
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
+    deleted = Column(Boolean, nullable=False, default=False)
 
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -281,6 +282,7 @@ class StripeProduct(Base):
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     stripe_updated = Column(DateTime(timezone=True), nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
     name = Column(String(255), nullable=False)
 
     create_timestamp = Column(
@@ -308,6 +310,7 @@ class StripePrice(Base):
     )
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
     currency = Column(String(3), nullable=False)
     recurring_interval = Column(String(5), nullable=True)
     recurring_interval_count = Column(Integer, nullable=True)

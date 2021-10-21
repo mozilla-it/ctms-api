@@ -27,6 +27,7 @@ class StripeCustomerBase(ComparableBase):
 
     stripe_id: Optional[str] = None
     stripe_created: Optional[datetime] = None
+    deleted: Optional[bool] = None
     invoice_settings_default_payment_method: Optional[str] = None
 
     class Config:
@@ -39,6 +40,10 @@ class StripeCustomerBase(ComparableBase):
                 "description": "Customer creation time in Stripe",
                 "example": "2021-10-11T19:18:03.350435+00:00",
             },
+            "deleted": {
+                "description": "Has the customer has been deleted in Stripe?",
+                "example": False,
+            },
             "invoice_settings_default_payment_method": {
                 "description": "Default payment method for the Customer.",
                 "example": "pm_1JmPBfKb9q6OnNsLlzx8GamM",
@@ -49,6 +54,7 @@ class StripeCustomerBase(ComparableBase):
 class StripeCustomerCreateSchema(StripeCustomerBase):
     stripe_id: str
     stripe_created: datetime
+    deleted: bool = False
 
 
 # No changes for upsert

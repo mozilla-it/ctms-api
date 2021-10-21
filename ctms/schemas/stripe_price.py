@@ -41,6 +41,7 @@ class StripePriceBase(ComparableBase):
 
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
+    active: Optional[bool]
     currency: Optional[StripeCurrencyType]
     recurring_interval: Optional[StripePriceIntervalEnum]
     recurring_interval_count: Optional[int]
@@ -55,6 +56,10 @@ class StripePriceBase(ComparableBase):
             "stripe_created": {
                 "description": "Price creation time in Stripe.",
                 "example": "2021-10-14T18:33:09.348050+00:00",
+            },
+            "active": {
+                "description": "Whether the price can be used for new purchases",
+                "example": True,
             },
             "currency": {
                 "description": "Three-letter ISO currency code, in lowercase.",
@@ -88,6 +93,7 @@ class StripePriceBase(ComparableBase):
 class StripePriceCreateSchema(StripePriceBase):
     stripe_id: str
     stripe_created: datetime
+    active: bool = True
     currency: StripeCurrencyType
 
 

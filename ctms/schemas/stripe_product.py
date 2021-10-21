@@ -22,6 +22,7 @@ class StripeProductBase(ComparableBase):
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
     stripe_updated: Optional[datetime]
+    active: Optional[bool]
     name: Optional[str]
 
     class Config:
@@ -37,6 +38,10 @@ class StripeProductBase(ComparableBase):
             "stripe_updated": {
                 "description": "Product update time in Stripe.",
                 "example": "2021-10-14T18:33:09.348050+00:00",
+            },
+            "active": {
+                "description": "Whether the product is currently available for purchase",
+                "example": True,
             },
             "name": {
                 "description": "The product’s name, meant to be displayable to the customer.",
