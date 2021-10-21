@@ -249,8 +249,7 @@ class StripeCustomer(Base):
     stripe_id = Column(String(255), nullable=False, unique=True, index=True)
     invoice_settings_default_payment_method = Column(
         String(255),
-        # After CREATE TABLE stripe_payment_method migration
-        # ForeignKey("stripe_payment_method.stripe_id"),
+        ForeignKey("stripe_payment_method.stripe_id"),
         nullable=True,
     )
 
@@ -265,13 +264,12 @@ class StripeCustomer(Base):
     )
 
     email = relationship("Email", uselist=False)
-    # After CREATE TABLE stripe_payment_method migration
-    # payment_methods = relationship(
-    #     "StripePaymentMethod",
-    #     back_populates="customer",
-    #     uselist=True,
-    #     primaryjoin="StripeCustomer.stripe_id==StripePaymentMethod.stripe_customer_id",
-    # )
+    payment_methods = relationship(
+        "StripePaymentMethod",
+        back_populates="customer",
+        uselist=True,
+        primaryjoin="StripeCustomer.stripe_id==StripePaymentMethod.stripe_customer_id",
+    )
     invoices = relationship("StripeInvoice", back_populates="customer", uselist=True)
     subscriptions = relationship(
         "StripeSubscription", back_populates="customer", uselist=True
@@ -368,8 +366,7 @@ class StripePaymentMethod(Base):
     customer = relationship(
         "StripeCustomer",
         foreign_keys=[stripe_customer_id],
-        # After CREATE TABLE stripe_payment_method migration
-        # back_populates="payment_methods",
+        back_populates="payment_methods",
         uselist=False,
     )
     invoices = relationship(
