@@ -26,12 +26,16 @@ class ContactSchema(ComparableBase):
     email: EmailSchema
     fxa: Optional[FirefoxAccountsSchema] = None
     mofo: Optional[MozillaFoundationSchema] = None
-    newsletters: List[NewsletterSchema] = Field(
-        default=[],
-        description="List of newsletters for which the contact is or was subscribed",
-        example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
-    )
+    newsletters: List[NewsletterSchema] = []
     vpn_waitlist: Optional[VpnWaitlistSchema] = None
+
+    class Config:
+        fields = {
+            "newsletters": {
+                "description": "List of newsletters for which the contact is or was subscribed",
+                "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
+            }
+        }
 
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
@@ -74,12 +78,16 @@ class ContactInBase(ComparableBase):
     email: EmailBase
     fxa: Optional[FirefoxAccountsInSchema] = None
     mofo: Optional[MozillaFoundationInSchema] = None
-    newsletters: List[NewsletterInSchema] = Field(
-        default=[],
-        description="List of newsletters for which the contact is or was subscribed",
-        example=([{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}]),
-    )
+    newsletters: List[NewsletterInSchema] = []
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
+
+    class Config:
+        fields = {
+            "newsletters": {
+                "description": "List of newsletters for which the contact is or was subscribed",
+                "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
+            }
+        }
 
     def idempotent_equal(self, other):
         def _noneify(field):
