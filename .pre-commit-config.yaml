@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: pylint
         name: pylint
-        entry: pylint
+        entry: poetry run pylint
         language: system
         exclude: ^migrations/
         types: [python]
@@ -23,33 +23,45 @@ repos:
         ]
         exclude: 'k8s/secret.json'
       - id: trailing-whitespace
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.782
+  - repo: local
     hooks:
       - id: mypy
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.6.2
+        name: mypy
+        entry: poetry run mypy
+        language: system
+        types: [python]
+  - repo: local
     hooks:
       - id: bandit
+        name: bandit
+        entry: poetry run bandit
         args: [-lll, --recursive]
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v0.14.3
+        language: system
+  - repo: local
     hooks:
       - id: detect-secrets
+        name: detect-secrets
+        entry: poetry run detect-secrets-hook
         args: ['--baseline', '.secrets.baseline']
         exclude: "poetry.lock"
+        language: system
   - repo: https://github.com/asottile/seed-isort-config
     rev: v1.9.3
     hooks:
       - id: seed-isort-config
-  - repo: https://github.com/PyCQA/isort
-    rev: 4.3.21
+  - repo: local
     hooks:
       - id: isort
-        additional_dependencies: [pyproject, toml]
+        name: isort
+        entry: poetry run isort
         args: ["--recursive", "--settings-path", "./pyproject.toml", "."]
-  - repo: https://github.com/psf/black
-    rev: 20.8b1
+        language: system
+        types: [python]
+  - repo: local
     hooks:
       - id: black
+        name: black
+        entry: poetry run black
         args: ["--config","./pyproject.toml", "."]
+        types: [python]
+        language: system
