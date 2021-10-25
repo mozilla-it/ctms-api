@@ -47,10 +47,11 @@ lint: .env
 
 .PHONY: db-only
 db-only: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --service-ports postgres
+	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --service-ports postgres postgres-admin
 
 .PHONY: setup
 setup: .env
+	docker-compose stop postgres-admin
 	docker-compose up -d postgres
 	docker-compose exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
 	docker-compose exec postgres dropdb postgres --user postgres

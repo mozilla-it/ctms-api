@@ -27,3 +27,10 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
       LC_COLLATE: en_US.UTF8
       LC_CTYPE: en_US.UTF8
+  postgres-admin:
+    image: adminer
+    restart: always
+    depends_on:
+      - postgres
+    ports:
+      - 8080:8080
