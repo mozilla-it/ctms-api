@@ -85,8 +85,7 @@ The command `deactivate` might not work to full disengage the poetry shell as it
 Using poetry (pre-commit is located in the [pyproject.toml](../pyproject.toml) )
 
 ```sh
-poetry shell
-pre-commit install
+poetry run pre-commit install
 ```
 
 You should get the following response after installing pre-commit into the githooks:
@@ -102,13 +101,17 @@ When you commit in git, the pre-commit hooks will engage and perform the outline
 
 ### Force Run on the Entire Codebase (Optional)
 
-Run the following command where you installed pre-commit.
+Run the following to check all files
 ```sh
-pre-commit run --all-files
+poetry run pre-commit run --all-files
 ```
 
 ### Bypass Hook (Not Recommended)
-The option `--no-verify` should allow a committer to bypass the hooks when committing.
+The option `--no-verify` allows a committer to bypass the hooks when committing:
+
+```sh
+git commit --no-verify
+```
 
 ---
 ## Docker
