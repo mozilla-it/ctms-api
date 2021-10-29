@@ -60,6 +60,9 @@ class Email(Base):
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
+    stripe_customer = relationship(
+        "StripeCustomer", back_populates="email", uselist=False
+    )
 
     # Class Comparators
     @hybrid_property
@@ -228,6 +231,33 @@ class PendingAcousticRecord(Base):
     id = Column(Integer, primary_key=True)
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     retry = Column(Integer, nullable=False, default=0)
+    create_timestamp = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    update_timestamp = Column(
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
+    )
+
+    email = relationship("Email", uselist=False)
+
+
+class StripeBase(Base):
+    """Base class for Stripe objects."""
+
+    __abstract__ = True
+
+
+class StripeCustomer(StripeBase):
+    __tablename__ = "stripe_customer"
+
+    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    stripe_id = Column(String(255), nullable=False, primary_key=True)
+    default_source_id = Column(String(255), nullable=True)
+    invoice_settings_default_payment_method_id = Column(String(255), nullable=True)
+
+    stripe_created = Column(DateTime(timezone=True), nullable=False)
+    deleted = Column(Boolean, nullable=False, default=False)
+
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

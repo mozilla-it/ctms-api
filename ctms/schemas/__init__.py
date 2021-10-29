@@ -37,6 +37,12 @@ from .newsletter import (
     NewsletterTableSchema,
     UpdatedNewsletterInSchema,
 )
+from .stripe_customer import (
+    StripeCustomerCreateSchema,
+    StripeCustomerModelSchema,
+    StripeCustomerOutputSchema,
+    StripeCustomerUpsertSchema,
+)
 from .vpn import (
     UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,
