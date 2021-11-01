@@ -646,9 +646,6 @@ def _create_stripe(
 create_stripe_customer = partial(
     _create_stripe, StripeCustomer, StripeCustomerCreateSchema
 )
-create_stripe_customer = partial(
-    _create_stripe, StripeCustomer, StripeCustomerCreateSchema
-)
 create_stripe_invoice = partial(
     _create_stripe, StripeInvoice, StripeInvoiceCreateSchema
 )
