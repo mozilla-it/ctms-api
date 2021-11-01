@@ -20,3 +20,11 @@ The [Subscription object](https://stripe.com/docs/api/subscriptions/object) samp
 
 * [subscription_01.json](./subscription_01.json) - An active subscription. This includes
   the `plan` member, an FxA addition that duplicates some of the `price` data.
+
+
+## Invoice
+
+The [Invoice object](https://stripe.com/docs/api/invoices/object) sample files:
+
+* [invoice_01.json](./invoice_01.json) - An invoice for a daily subscription. This
+  includes the `plan` member, an FxA addition that duplicates some of the `price` data.

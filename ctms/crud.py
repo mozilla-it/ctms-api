@@ -22,6 +22,8 @@ from .models import (
     PendingAcousticRecord,
     StripeBase,
     StripeCustomer,
+    StripeInvoice,
+    StripeInvoiceLineItem,
     StripePrice,
     StripeSubscription,
     StripeSubscriptionItem,
@@ -39,6 +41,8 @@ from .schemas import (
     MozillaFoundationInSchema,
     NewsletterInSchema,
     StripeCustomerCreateSchema,
+    StripeInvoiceCreateSchema,
+    StripeInvoiceLineItemCreateSchema,
     StripePriceCreateSchema,
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
@@ -642,6 +646,15 @@ def _create_stripe(
 create_stripe_customer = partial(
     _create_stripe, StripeCustomer, StripeCustomerCreateSchema
 )
+create_stripe_customer = partial(
+    _create_stripe, StripeCustomer, StripeCustomerCreateSchema
+)
+create_stripe_invoice = partial(
+    _create_stripe, StripeInvoice, StripeInvoiceCreateSchema
+)
+create_stripe_invoice_line_item = partial(
+    _create_stripe, StripeInvoiceLineItem, StripeInvoiceLineItemCreateSchema
+)
 create_stripe_price = partial(_create_stripe, StripePrice, StripePriceCreateSchema)
 create_stripe_subscription = partial(
     _create_stripe, StripeSubscription, StripeSubscriptionCreateSchema
@@ -662,6 +675,8 @@ def _get_stripe(
 
 
 get_stripe_customer_by_stripe_id = partial(_get_stripe, StripeCustomer)
+get_stripe_invoice_by_stripe_id = partial(_get_stripe, StripeInvoice)
+get_stripe_invoice_line_item_by_stripe_id = partial(_get_stripe, StripeInvoiceLineItem)
 get_stripe_price_by_stripe_id = partial(_get_stripe, StripePrice)
 get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
 get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)

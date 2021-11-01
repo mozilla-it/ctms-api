@@ -43,6 +43,18 @@ from .stripe_customer import (
     StripeCustomerOutputSchema,
     StripeCustomerUpsertSchema,
 )
+from .stripe_invoice import (
+    StripeInvoiceCreateSchema,
+    StripeInvoiceModelSchema,
+    StripeInvoiceOutputSchema,
+    StripeInvoiceUpsertSchema,
+)
+from .stripe_invoice_line_item import (
+    StripeInvoiceLineItemCreateSchema,
+    StripeInvoiceLineItemModelSchema,
+    StripeInvoiceLineItemOutputSchema,
+    StripeInvoiceLineItemUpsertSchema,
+)
 from .stripe_price import (
     StripePriceCreateSchema,
     StripePriceModelSchema,

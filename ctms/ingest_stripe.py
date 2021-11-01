@@ -24,11 +24,15 @@ from ctms.crud import (
     create_email,
     create_fxa,
     create_stripe_customer,
+    create_stripe_invoice,
+    create_stripe_invoice_line_item,
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
     get_emails_by_any_id,
     get_stripe_customer_by_stripe_id,
+    get_stripe_invoice_by_stripe_id,
+    get_stripe_invoice_line_item_by_stripe_id,
     get_stripe_price_by_stripe_id,
     get_stripe_subscription_by_stripe_id,
     get_stripe_subscription_item_by_stripe_id,
@@ -36,6 +40,8 @@ from ctms.crud import (
 from ctms.models import (  # TODO: Move into TYPE_CHECKING after pylint update
     StripeBase,
     StripeCustomer,
+    StripeInvoice,
+    StripeInvoiceLineItem,
     StripePrice,
     StripeSubscription,
     StripeSubscriptionItem,
@@ -44,6 +50,8 @@ from ctms.schemas import (
     EmailInSchema,
     FirefoxAccountsInSchema,
     StripeCustomerCreateSchema,
+    StripeInvoiceCreateSchema,
+    StripeInvoiceLineItemCreateSchema,
     StripePriceCreateSchema,
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
@@ -259,8 +267,97 @@ def ingest_stripe_price(db_session: Session, data: Dict[str, Any]) -> StripePric
     return price
 
 
+def ingest_stripe_invoice(db_session: Session, data: Dict[str, Any]) -> StripeInvoice:
+    """
+    Ingest a Stripe Invoice object.
+
+    TODO: Handle expanded customer
+    TODO: Handle expanded subscription
+    TODO: Handle expanded default_payment_method
+    TODO: Handle expanded default_source
+    """
+    assert data["object"] == "invoice", data.get("object", "[MISSING]")
+    invoice_id = data["id"]
+    invoice = get_stripe_invoice_by_stripe_id(db_session, invoice_id)
+    if invoice:
+        invoice.stripe_created = from_ts(data["created"])
+        invoice.stripe_customer_id = data["customer"]
+        invoice.currency = data["currency"]
+        invoice.total = data["total"]
+        invoice.status = data["status"]
+        invoice.default_payment_method_id = data["default_payment_method"]
+        invoice.default_source = data["default_source"]
+        lines_to_delete = {line.stripe_id for line in invoice.line_items}
+    else:
+        schema = StripeInvoiceCreateSchema(
+            stripe_id=invoice_id,
+            stripe_created=data["created"],
+            stripe_customer_id=data["customer"],
+            currency=data["currency"],
+            total=data["total"],
+            status=data["status"],
+            default_payment_method_id=data["default_payment_method"],
+            default_source=data["default_source"],
+        )
+        invoice = create_stripe_invoice(db_session, schema)
+        lines_to_delete = set()
+
+    for line_data in data["lines"]["data"]:
+        lines_to_delete.discard(line_data["id"])
+        ingest_stripe_invoice_line_item(db_session, invoice_id, line_data)
+
+    # Remove any orphaned invoice items
+    if lines_to_delete:
+        (
+            db_session.query(StripeInvoiceLineItem)
+            .filter(StripeInvoiceLineItem.stripe_id.in_(lines_to_delete))
+            .delete(synchronize_session=False)
+        )
+
+    return invoice
+
+
+def ingest_stripe_invoice_line_item(
+    db_session: Session, invoice_id: str, data: Dict[str, Any]
+) -> StripeInvoiceLineItem:
+    """Ingest a Stripe Line Item object."""
+    assert data["object"] == "line_item", data.get("object", "[MISSING]")
+
+    # Price is always included, and should be created first if new
+    price = ingest_stripe_price(db_session, data["price"])
+
+    invoice_line_item_id = data["id"]
+    invoice_line_item = get_stripe_invoice_line_item_by_stripe_id(
+        db_session, invoice_line_item_id
+    )
+    if invoice_line_item:
+        invoice_line_item.stripe_type = data["type"]
+        invoice_line_item.stripe_price_id = price.stripe_id
+        invoice_line_item.stripe_invoice_item_id = data.get("invoice_item")
+        invoice_line_item.stripe_subscription_id = data.get("subscription")
+        invoice_line_item.stripe_subscription_item = data.get("subscription_item")
+        invoice_line_item.amount = data["amount"]
+        invoice_line_item.currency = data["currency"]
+    else:
+        schema = StripeInvoiceLineItemCreateSchema(
+            stripe_id=invoice_line_item_id,
+            stripe_type=data["type"],
+            stripe_price_id=price.stripe_id,
+            stripe_invoice_id=invoice_id,
+            stripe_invoice_item_id=data.get("invoice_item"),
+            stripe_subscription_id=data.get("subscription"),
+            stripe_subscription_item_id=data.get("subscription_item"),
+            amount=data["amount"],
+            currency=data["currency"],
+        )
+        invoice_line_item = create_stripe_invoice_line_item(db_session, schema)
+
+    return invoice_line_item
+
+
 INGESTERS: Dict[str, Callable[[Session, Dict[str, Any]], StripeBase]] = {
     "customer": ingest_stripe_customer,
+    "invoice": ingest_stripe_invoice,
     "subscription": ingest_stripe_subscription,
     "subscription_item": ingest_stripe_subscription_item,
     "price": ingest_stripe_price,

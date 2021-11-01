@@ -15,6 +15,8 @@ import pytest
 from ctms.crud import (
     create_email,
     create_stripe_customer,
+    create_stripe_invoice,
+    create_stripe_invoice_line_item,
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
@@ -24,6 +26,7 @@ from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
     StripeIngestUnknownObjectError,
     ingest_stripe_customer,
+    ingest_stripe_invoice,
     ingest_stripe_object,
     ingest_stripe_price,
     ingest_stripe_subscription,
@@ -31,6 +34,8 @@ from ctms.ingest_stripe import (
 from ctms.schemas import (
     EmailInSchema,
     StripeCustomerCreateSchema,
+    StripeInvoiceCreateSchema,
+    StripeInvoiceLineItemCreateSchema,
     StripePriceCreateSchema,
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
@@ -46,6 +51,7 @@ def fake_stripe_id(prefix: str, seed: str, suffix: Optional[str] = None) -> str:
 # Documentation and test Stripe IDs
 FAKE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
 FAKE_INVOICE_ID = fake_stripe_id("in", "invoice")
+FAKE_INVOICE_LINE_ITEM_ID = fake_stripe_id("il", "invoice line item")
 FAKE_PAYMENT_METHOD_ID = fake_stripe_id("pm", "payment_method")
 FAKE_PRICE_ID = fake_stripe_id("price", "price")
 FAKE_PRODUCT_ID = fake_stripe_id("prod", "product")
@@ -195,10 +201,74 @@ def stripe_price(dbsession):
     return db_price
 
 
+def stripe_invoice_data() -> Dict:
+    """Return minimal Stripe invoice data."""
+    return {
+        "id": FAKE_INVOICE_ID,
+        "object": "invoice",
+        "created": unix_timestamp(datetime(2021, 10, 28, tzinfo=timezone.utc)),
+        "customer": FAKE_CUSTOMER_ID,
+        "currency": "usd",
+        "total": 1000,
+        "default_source": None,
+        "default_payment_method": None,
+        "status": "open",
+        "lines": {
+            "object": "list",
+            "total_count": 1,
+            "has_more": False,
+            "url": f"/v1/invoices/{FAKE_INVOICE_ID}/lines",
+            "data": [
+                {
+                    "id": FAKE_INVOICE_LINE_ITEM_ID,
+                    "object": "line_item",
+                    "type": "subscription",
+                    "subscription": FAKE_SUBSCRIPTION_ID,
+                    "subscription_item": FAKE_SUBSCRIPTION_ITEM_ID,
+                    "price": stripe_price_data(),
+                    "amount": 1000,
+                    "currency": "usd",
+                }
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def stripe_invoice(dbsession, stripe_customer, stripe_price):
+    invoice = StripeInvoiceCreateSchema(
+        stripe_id=FAKE_INVOICE_ID,
+        stripe_created=datetime(2021, 10, 28, tzinfo=timezone.utc),
+        stripe_customer_id=stripe_customer.stripe_id,
+        currency="usd",
+        total=1000,
+        status="open",
+    )
+    db_invoice = create_stripe_invoice(dbsession, invoice)
+    assert db_invoice
+
+    invoice_item = StripeInvoiceLineItemCreateSchema(
+        stripe_id=FAKE_INVOICE_LINE_ITEM_ID,
+        stripe_price_id=stripe_price.stripe_id,
+        stripe_invoice_id=FAKE_INVOICE_ID,
+        stripe_subscription_id=FAKE_SUBSCRIPTION_ID,
+        stripe_subscription_item_id=FAKE_SUBSCRIPTION_ITEM_ID,
+        stripe_type="subscription",
+        amount=1000,
+        currency="usd",
+    )
+    db_invoice_item = create_stripe_invoice_line_item(dbsession, invoice_item)
+    assert db_invoice_item
+    dbsession.commit()
+    dbsession.refresh(db_invoice)
+    return db_invoice
+
+
 def test_ids():
     """Get the fake IDs, to make it easier to copy to schemas."""
     assert FAKE_CUSTOMER_ID == "cus_Y3VzdG9tZXI"
     assert FAKE_INVOICE_ID == "in_aW52b2ljZQ"
+    assert FAKE_INVOICE_LINE_ITEM_ID == "il_aW52b2ljZSBsaW5lIGl0ZW0"
     assert FAKE_PAYMENT_METHOD_ID == "pm_cGF5bWVudF9tZXRob2Q"
     assert FAKE_PRICE_ID == "price_cHJpY2U"
     assert FAKE_PRODUCT_ID == "prod_cHJvZHVjdA"
@@ -457,7 +527,80 @@ def test_ingest_non_recurring_price(dbsession):
     assert price.unit_amount is None
 
 
-@pytest.mark.parametrize("filename", ("customer_01.json", "subscription_01.json"))
+def test_ingest_new_invoice(dbsession):
+    """A new Stripe Invoice is ingested."""
+    data = stripe_invoice_data()
+
+    invoice = ingest_stripe_invoice(dbsession, data)
+    dbsession.commit()
+    assert invoice.stripe_id == FAKE_INVOICE_ID
+    assert invoice.stripe_created == datetime(2021, 10, 28, tzinfo=timezone.utc)
+    assert invoice.stripe_customer_id == FAKE_CUSTOMER_ID
+    assert invoice.currency == "usd"
+    assert invoice.total == 1000
+    assert invoice.status == "open"
+    assert invoice.default_payment_method_id is None
+    assert invoice.default_source_id is None
+
+    # Can be created without the Customer object
+    assert invoice.customer is None
+
+    assert len(invoice.line_items) == 1
+    item = invoice.line_items[0]
+    assert item.stripe_id == FAKE_INVOICE_LINE_ITEM_ID
+    assert item.invoice == invoice
+    assert item.stripe_subscription_id == FAKE_SUBSCRIPTION_ID
+    assert item.stripe_subscription_item_id == FAKE_SUBSCRIPTION_ITEM_ID
+    assert item.stripe_invoice_item_id is None
+    assert item.amount == 1000
+    assert item.currency == "usd"
+
+    price = item.price
+    assert price.stripe_id == FAKE_PRICE_ID
+    assert price.stripe_created == datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc)
+    assert price.stripe_product_id == FAKE_PRODUCT_ID
+    assert price.active
+    assert price.currency == "usd"
+    assert price.recurring_interval == "month"
+    assert price.recurring_interval_count == 1
+    assert price.unit_amount == 999
+
+
+def test_ingest_updated_invoice(dbsession, stripe_invoice):
+    """An existing Stripe Invoice is updated."""
+    assert stripe_invoice.status == "open"
+    data = stripe_invoice_data()
+    data["status"] = "void"
+    invoice = ingest_stripe_invoice(dbsession, data)
+    dbsession.commit()
+    assert invoice.status == "void"
+    assert len(invoice.line_items) == 1
+
+
+def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
+    """The Stripe Invoice lines are synced on update."""
+    data = stripe_invoice_data()
+    new_line_item_id = fake_stripe_id("il", "new line item")
+    data["lines"]["data"][0] = {
+        "id": new_line_item_id,
+        "object": "line_item",
+        "type": "subscription",
+        "created": unix_timestamp(datetime(2021, 10, 28, tzinfo=timezone.utc)),
+        "subscription": FAKE_SUBSCRIPTION_ID,
+        "subscription_item": FAKE_SUBSCRIPTION_ITEM_ID,
+        "price": stripe_price_data(),
+        "amount": 500,
+        "currency": "usd",
+    }
+    invoice = ingest_stripe_invoice(dbsession, data)
+    dbsession.commit()
+    assert len(invoice.line_items) == 1
+    assert invoice.line_items[0].stripe_id == new_line_item_id
+
+
+@pytest.mark.parametrize(
+    "filename", ("customer_01.json", "subscription_01.json", "invoice_01.json")
+)
 def test_ingest_sample_data(dbsession, filename):
     """Stripe sample data can be ingested."""
     my_folder = os.path.dirname(__file__)
