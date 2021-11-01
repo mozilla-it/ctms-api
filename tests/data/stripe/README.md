@@ -12,3 +12,11 @@ The [Customer object](https://stripe.com/docs/api/customers/object) sample files
 
 * [customer_01.json](./customer_01.json) - A customer with a default payment
   method.
+
+
+## Subscriptions
+
+The [Subscription object](https://stripe.com/docs/api/subscriptions/object) sample files:
+
+* [subscription_01.json](./subscription_01.json) - An active subscription. This includes
+  the `plan` member, an FxA addition that duplicates some of the `price` data.

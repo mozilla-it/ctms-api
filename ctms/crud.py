@@ -22,6 +22,9 @@ from .models import (
     PendingAcousticRecord,
     StripeBase,
     StripeCustomer,
+    StripePrice,
+    StripeSubscription,
+    StripeSubscriptionItem,
     VpnWaitlist,
 )
 from .schemas import (
@@ -36,6 +39,9 @@ from .schemas import (
     MozillaFoundationInSchema,
     NewsletterInSchema,
     StripeCustomerCreateSchema,
+    StripePriceCreateSchema,
+    StripeSubscriptionCreateSchema,
+    StripeSubscriptionItemCreateSchema,
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
@@ -636,6 +642,13 @@ def _create_stripe(
 create_stripe_customer = partial(
     _create_stripe, StripeCustomer, StripeCustomerCreateSchema
 )
+create_stripe_price = partial(_create_stripe, StripePrice, StripePriceCreateSchema)
+create_stripe_subscription = partial(
+    _create_stripe, StripeSubscription, StripeSubscriptionCreateSchema
+)
+create_stripe_subscription_item = partial(
+    _create_stripe, StripeSubscriptionItem, StripeSubscriptionItemCreateSchema
+)
 
 
 def _get_stripe(
@@ -649,3 +662,6 @@ def _get_stripe(
 
 
 get_stripe_customer_by_stripe_id = partial(_get_stripe, StripeCustomer)
+get_stripe_price_by_stripe_id = partial(_get_stripe, StripePrice)
+get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
+get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)

@@ -24,17 +24,29 @@ from ctms.crud import (
     create_email,
     create_fxa,
     create_stripe_customer,
+    create_stripe_price,
+    create_stripe_subscription,
+    create_stripe_subscription_item,
     get_emails_by_any_id,
     get_stripe_customer_by_stripe_id,
+    get_stripe_price_by_stripe_id,
+    get_stripe_subscription_by_stripe_id,
+    get_stripe_subscription_item_by_stripe_id,
 )
 from ctms.models import (  # TODO: Move into TYPE_CHECKING after pylint update
     StripeBase,
     StripeCustomer,
+    StripePrice,
+    StripeSubscription,
+    StripeSubscriptionItem,
 )
 from ctms.schemas import (
     EmailInSchema,
     FirefoxAccountsInSchema,
     StripeCustomerCreateSchema,
+    StripePriceCreateSchema,
+    StripeSubscriptionCreateSchema,
+    StripeSubscriptionItemCreateSchema,
 )
 
 if TYPE_CHECKING:
@@ -122,8 +134,136 @@ def ingest_stripe_customer(
     return create_stripe_customer(db_session, schema)
 
 
+def ingest_stripe_subscription(
+    db_session: Session, data: Dict[str, Any]
+) -> StripeSubscription:
+    """
+    Ingest a Stripe Subscription object.
+
+    TODO: Handle expanded customer
+    TODO: Handle expanded default_payment_method
+    TODO: Handle expanded latest_invoice
+    TODO: Handle expanded default_source
+    """
+    assert data["object"] == "subscription", data.get("object", "[MISSING]")
+    subscription_id = data["id"]
+
+    subscription = get_stripe_subscription_by_stripe_id(db_session, subscription_id)
+    if subscription:
+        subscription.stripe_created = from_ts(data["created"])
+        subscription.stripe_customer_id = data["customer"]
+        subscription.default_payment_method_id = data["default_payment_method"]
+        subscription.default_source_id = data["default_source"]
+        subscription.cancel_at_period_end = data["cancel_at_period_end"]
+        subscription.canceled_at = from_ts(data["canceled_at"])
+        subscription.current_period_end = from_ts(data["current_period_end"])
+        subscription.current_period_start = from_ts(data["current_period_start"])
+        subscription.ended_at = from_ts(data["ended_at"])
+        subscription.start_date = from_ts(data["start_date"])
+        subscription.status = data["status"]
+        sub_items_to_delete = {
+            sub_item.stripe_id for sub_item in subscription.subscription_items
+        }
+    else:
+        schema = StripeSubscriptionCreateSchema(
+            stripe_id=subscription_id,
+            stripe_created=data["created"],
+            stripe_customer_id=data["customer"],
+            default_payment_method_id=data["default_payment_method"],
+            default_source_id=data["default_source"],
+            cancel_at_period_end=data["cancel_at_period_end"],
+            canceled_at=data["canceled_at"],
+            current_period_end=data["current_period_end"],
+            current_period_start=data["current_period_start"],
+            ended_at=data["ended_at"],
+            start_date=data["start_date"],
+            status=data["status"],
+        )
+        subscription = create_stripe_subscription(db_session, schema)
+        sub_items_to_delete = set()
+
+    for item_data in data["items"]["data"]:
+        sub_items_to_delete.discard(item_data["id"])
+        ingest_stripe_subscription_item(db_session, item_data)
+
+    # Remove any orphaned subscription items
+    if sub_items_to_delete:
+        (
+            db_session.query(StripeSubscriptionItem)
+            .filter(StripeSubscriptionItem.stripe_id.in_(sub_items_to_delete))
+            .delete(synchronize_session=False)
+        )
+
+    return subscription
+
+
+def ingest_stripe_subscription_item(
+    db_session: Session, data: Dict[str, Any]
+) -> StripeSubscriptionItem:
+    """Ingest a Stripe Subscription Item object."""
+    assert data["object"] == "subscription_item", data.get("object", "[MISSING]")
+
+    # Price is always included, and should be created first if new
+    price = ingest_stripe_price(db_session, data["price"])
+
+    subscription_item_id = data["id"]
+    subscription_item = get_stripe_subscription_item_by_stripe_id(
+        db_session, subscription_item_id
+    )
+    if subscription_item:
+        subscription_item.stripe_created = from_ts(data["created"])
+        subscription_item.stripe_price_id = price.stripe_id
+        subscription_item.stripe_subscription_id = data["subscription"]
+    else:
+        schema = StripeSubscriptionItemCreateSchema(
+            stripe_id=subscription_item_id,
+            stripe_created=data["created"],
+            stripe_price_id=price.stripe_id,
+            stripe_subscription_id=data["subscription"],
+        )
+        subscription_item = create_stripe_subscription_item(db_session, schema)
+
+    return subscription_item
+
+
+def ingest_stripe_price(db_session: Session, data: Dict[str, Any]) -> StripePrice:
+    """
+    Ingest a Stripe Price object.
+
+    TODO: Handle expanded product
+    """
+    assert data["object"] == "price", data.get("object", "[MISSING]")
+    price_id = data["id"]
+    recurring = data.get("recurring", {})
+    price = get_stripe_price_by_stripe_id(db_session, price_id)
+    if price:
+        price.stripe_created = from_ts(data["created"])
+        price.stripe_product_id = data["product"]
+        price.active = data["active"]
+        price.currency = data["currency"]
+        price.recurring_interval = recurring.get("interval")
+        price.recurring_interval_count = recurring.get("interval_count")
+        price.unit_amount = data.get("unit_amount")
+    else:
+        schema = StripePriceCreateSchema(
+            stripe_id=price_id,
+            stripe_created=data["created"],
+            stripe_product_id=data["product"],
+            active=data["active"],
+            currency=data["currency"],
+            recurring_interval=recurring.get("interval"),
+            recurring_interval_count=recurring.get("interval_count"),
+            unit_amount=data.get("unit_amount"),
+        )
+        price = create_stripe_price(db_session, schema)
+    return price
+
+
 INGESTERS: Dict[str, Callable[[Session, Dict[str, Any]], StripeBase]] = {
     "customer": ingest_stripe_customer,
+    "subscription": ingest_stripe_subscription,
+    "subscription_item": ingest_stripe_subscription_item,
+    "price": ingest_stripe_price,
 }
 
 
