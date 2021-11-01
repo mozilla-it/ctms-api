@@ -163,6 +163,22 @@ make help  # Shows the CTMS make rules
 make build # Build the docker containers
 ```
 
+### Viewing the Database
+The tool [adminer](https://www.adminer.org/) is included as `postgres-admin`,
+allowing you to view the database in the development environment.  To start it:
+
+```sh
+docker-compose up -d postgres-admin
+```
+
+The adminer website runs at http://localhost:8080. Log in with these credentials:
+
+* System: PostgreSQL (from dropdown)
+* Server: `postgres`
+* Username: `postgres`
+* Password: `postgres`
+* Database: `postgres`
+
 ---
 ## FastAPI
 
