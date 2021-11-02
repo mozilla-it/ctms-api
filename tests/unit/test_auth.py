@@ -1,15 +1,31 @@
 """Test authentication"""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
+from google.auth.exceptions import TransportError
 from jose import jwt
 from requests.auth import HTTPBasicAuth
 from structlog.testing import capture_logs
 
-from ctms.app import _token_settings, app
+from ctms.app import _pubsub_settings, _token_settings, app, get_settings
 from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import get_api_client_by_id
+from tests.unit.test_api_stripe import pubsub_wrap
+from tests.unit.test_ingest_stripe import stripe_customer_data
+
+# Sample token claim from https://cloud.google.com/pubsub/docs/push
+SAMPLE_GCP_JWT_CLAIM = {
+    "aud": "https://example.com",
+    "azp": "113774264463038321964",
+    "email": "gae-gcp@appspot.gserviceaccount.com",
+    "sub": "113774264463038321964",
+    "email_verified": True,
+    "exp": 1550185935,
+    "iat": 1550182335,
+    "iss": "https://accounts.google.com",
+}
 
 
 @pytest.fixture
@@ -24,6 +40,21 @@ def test_token_settings():
     app.dependency_overrides[_token_settings] = lambda: settings
     yield settings
     del app.dependency_overrides[_token_settings]
+
+
+@pytest.fixture
+def test_pubsub_settings():
+    """Set pubsub settings for tests."""
+
+    settings = {
+        "audience": "https://example.com",
+        "email": "gae-gcp@appspot.gserviceaccount.com",
+        "verification": "a_shared_secret",
+    }
+
+    app.dependency_overrides[_pubsub_settings] = lambda: settings
+    yield settings
+    del app.dependency_overrides[_pubsub_settings]
 
 
 def test_post_token_header(anon_client, test_token_settings, client_id_and_secret):
@@ -177,6 +208,11 @@ def test_get_ctms_with_token(
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
     )
+    token_headers = jwt.get_unverified_headers(token)
+    assert token_headers == {
+        "alg": "HS256",
+        "typ": "JWT",
+    }
     resp = anon_client.get(
         f"/ctms/{example_contact.email.email_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -289,3 +325,146 @@ def test_hashed_passwords():
     hashed2 = hash_password("password")
     assert verify_password("password", hashed1)
     assert hashed1 != hashed2
+
+
+def test_post_pubsub_token(dbsession, anon_client, test_pubsub_settings):
+    """A PubSub client can authenticate."""
+
+    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+        mock_get.return_value = SAMPLE_GCP_JWT_CLAIM
+        with capture_logs() as caplog:
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=a_shared_secret",
+                headers={"Authorization": "Bearer gcp_generated_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+    assert resp.status_code == 200, resp.json()
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert "auth_fail" not in log
+    assert log["client_allowed"]
+    assert log["pubsub_email"] == "gae-gcp@appspot.gserviceaccount.com"
+
+
+@pytest.mark.parametrize("name", ("pubsub_email", "pubsub_verification"))
+def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
+    """PubSub fails if settings are unset."""
+
+    class FakeSettings:
+        pubsub_audience = "https://example.com"  # Unchecked due to fallback
+        pubsub_email = "gae-gcp@appspot.gserviceaccount.com"
+        pubsub_verification = "a_shared_secret"
+
+    settings = FakeSettings()
+    setattr(settings, name, None)
+    app.dependency_overrides[get_settings] = lambda: settings
+    try:
+        with pytest.raises(Exception, match=f"{name.upper()} is unset"):
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=a_shared_secret",
+                headers={"Authorization": "Bearer a_fake_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+            assert resp.status_code == 500
+    finally:
+        del app.dependency_overrides[get_settings]
+
+
+def test_post_pubsub_token_fail_verification(
+    dbsession, anon_client, test_pubsub_settings
+):
+    """An error is returned if verification is incorrect."""
+    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+        mock_get.side_effect = Exception("Should not be called.")
+        with capture_logs() as caplog:
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=the_wrong_secret",
+                headers={"Authorization": "Bearer a_fake_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Could not validate credentials"}
+    assert len(caplog) == 1
+    assert caplog[0]["auth_fail"] == "Verification mismatch"
+
+
+def test_post_pubsub_token_unknown_key(dbsession, anon_client, test_pubsub_settings):
+    """An error is returned if the jwt 'kid' doesn't refer to a known cert."""
+    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+        mock_get.side_effect = ValueError(
+            "Certificate for key id the_kid_value not found."
+        )
+        with capture_logs() as caplog:
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=a_shared_secret",
+                headers={"Authorization": "Bearer a_fake_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Could not validate credentials"}
+    assert len(caplog) == 1
+    assert caplog[0]["auth_fail"] == "Unknown key"
+
+
+def test_post_pubsub_token_fail_ssl_fetch(dbsession, anon_client, test_pubsub_settings):
+    """An error is returned if there is an issue fetching certs."""
+    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+        mock_get.side_effect = TransportError(
+            "Could not fetch certificates at https://example.com"
+        )
+        with capture_logs() as caplog:
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=a_shared_secret",
+                headers={"Authorization": "Bearer a_fake_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Could not validate credentials"}
+    assert len(caplog) == 1
+    assert caplog[0]["auth_fail"] == "Google authentication failure"
+
+
+def test_post_pubsub_token_fail_wrong_email(
+    dbsession, anon_client, test_pubsub_settings
+):
+    """An error is returned if the claim email doesn't match."""
+    claim = SAMPLE_GCP_JWT_CLAIM.copy()
+    claim["email"] = "different_email@example.com"
+    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+        mock_get.return_value = claim
+        with capture_logs() as caplog:
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=a_shared_secret",
+                headers={"Authorization": "Bearer a_fake_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Could not validate credentials"}
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert log["auth_fail"] == "Wrong email"
+    assert log["pubsub_email"] == "different_email@example.com"
+    assert log["pubsub_email_verified"]
+
+
+def test_post_pubsub_token_fail_unverified_email(
+    dbsession, anon_client, test_pubsub_settings
+):
+    """An error is returned if the claim email isn't verified."""
+    claim = SAMPLE_GCP_JWT_CLAIM.copy()
+    del claim["email_verified"]
+    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+        mock_get.return_value = claim
+        with capture_logs() as caplog:
+            resp = anon_client.post(
+                "/stripe_from_pubsub?verification=a_shared_secret",
+                headers={"Authorization": "Bearer a_fake_token"},
+                json=pubsub_wrap(stripe_customer_data()),
+            )
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Could not validate credentials"}
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert log["auth_fail"] == "Email not verified"
+    assert log["pubsub_email"] == "gae-gcp@appspot.gserviceaccount.com"
+    assert "pubsub_email_verified" not in log

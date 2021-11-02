@@ -118,7 +118,7 @@ def init_metrics_labels(
                     status_codes.extend(
                         [int(code) for code in list(mspec.get("responses", [200]))]
                     )
-                    is_api |= "security" in mspec
+                    is_api |= "security" in mspec and not path.endswith("from_pubsub")
         elif path == "/":
             status_codes = [307]
         else:
