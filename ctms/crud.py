@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
 from sqlalchemy import asc, or_
@@ -17,6 +20,13 @@ from .models import (
     MozillaFoundationContact,
     Newsletter,
     PendingAcousticRecord,
+    StripeBase,
+    StripeCustomer,
+    StripeInvoice,
+    StripeInvoiceLineItem,
+    StripePrice,
+    StripeSubscription,
+    StripeSubscriptionItem,
     VpnWaitlist,
 )
 from .schemas import (
@@ -30,6 +40,12 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
+    StripeCustomerCreateSchema,
+    StripeInvoiceCreateSchema,
+    StripeInvoiceLineItemCreateSchema,
+    StripePriceCreateSchema,
+    StripeSubscriptionCreateSchema,
+    StripeSubscriptionItemCreateSchema,
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
@@ -37,6 +53,7 @@ from .schemas import (
     UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,
 )
+from .schemas.base import BaseModel
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):
@@ -608,3 +625,55 @@ def get_active_api_client_ids(db: Session) -> List[str]:
         .all()
     )
     return [row.client_id for row in rows]
+
+
+StripeModel = TypeVar("StripeModel", bound=StripeBase)
+StripeCreateSchema = TypeVar("StripeCreateSchema", bound=BaseModel)
+
+
+def _create_stripe(
+    model: Type[StripeModel],
+    schema: Type[StripeCreateSchema],
+    db: Session,
+    data: StripeCreateSchema,
+) -> StripeModel:
+    """Create a Stripe Model."""
+    db_obj = model(**data.dict())
+    db.add(db_obj)
+    return db_obj
+
+
+create_stripe_customer = partial(
+    _create_stripe, StripeCustomer, StripeCustomerCreateSchema
+)
+create_stripe_invoice = partial(
+    _create_stripe, StripeInvoice, StripeInvoiceCreateSchema
+)
+create_stripe_invoice_line_item = partial(
+    _create_stripe, StripeInvoiceLineItem, StripeInvoiceLineItemCreateSchema
+)
+create_stripe_price = partial(_create_stripe, StripePrice, StripePriceCreateSchema)
+create_stripe_subscription = partial(
+    _create_stripe, StripeSubscription, StripeSubscriptionCreateSchema
+)
+create_stripe_subscription_item = partial(
+    _create_stripe, StripeSubscriptionItem, StripeSubscriptionItemCreateSchema
+)
+
+
+def _get_stripe(
+    model: Type[StripeModel], db_session: Session, stripe_id: str
+) -> Optional[StripeModel]:
+    """Get a Stripe object by its ID, or None if not found."""
+    return cast(
+        Optional[StripeModel],
+        db_session.query(model).get(stripe_id),
+    )
+
+
+get_stripe_customer_by_stripe_id = partial(_get_stripe, StripeCustomer)
+get_stripe_invoice_by_stripe_id = partial(_get_stripe, StripeInvoice)
+get_stripe_invoice_line_item_by_stripe_id = partial(_get_stripe, StripeInvoiceLineItem)
+get_stripe_price_by_stripe_id = partial(_get_stripe, StripePrice)
+get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
+get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)
