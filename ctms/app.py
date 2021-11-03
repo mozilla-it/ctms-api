@@ -92,13 +92,13 @@ def get_settings():
 
 
 # Initialize Sentry for each thread, unless we're in tests
-if "pytest" not in sys.argv[0]:
+if "pytest" not in sys.argv[0]:  # pragma: no cover
     init_sentry()
     app.add_middleware(SentryAsgiMiddleware)
 
 
 @app.on_event("startup")
-def startup_event():
+def startup_event():  # pragma: no cover
     global SessionLocal, METRICS  # pylint:disable = W0603
     settings = get_settings()
     configure_logging(settings.use_mozlog, settings.logging_level)
@@ -107,7 +107,7 @@ def startup_event():
     init_metrics_labels(SessionLocal(), app, METRICS)
 
 
-def get_db():
+def get_db():  # pragma: no cover
     db = SessionLocal()
     try:
         yield db
