@@ -49,7 +49,7 @@ def test_pubsub_settings():
     settings = {
         "audience": "https://example.com",
         "email": "gae-gcp@appspot.gserviceaccount.com",
-        "verification": "a_shared_secret",
+        "client": "a_shared_secret",
     }
 
     app.dependency_overrides[_pubsub_settings] = lambda: settings
@@ -334,7 +334,7 @@ def test_post_pubsub_token(dbsession, anon_client, test_pubsub_settings):
         mock_get.return_value = SAMPLE_GCP_JWT_CLAIM
         with capture_logs() as caplog:
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=a_shared_secret",
+                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer gcp_generated_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
@@ -346,14 +346,14 @@ def test_post_pubsub_token(dbsession, anon_client, test_pubsub_settings):
     assert log["pubsub_email"] == "gae-gcp@appspot.gserviceaccount.com"
 
 
-@pytest.mark.parametrize("name", ("pubsub_email", "pubsub_verification"))
+@pytest.mark.parametrize("name", ("pubsub_email", "pubsub_client"))
 def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
     """PubSub fails if settings are unset."""
 
     class FakeSettings:
         pubsub_audience = "https://example.com"  # Unchecked due to fallback
         pubsub_email = "gae-gcp@appspot.gserviceaccount.com"
-        pubsub_verification = "a_shared_secret"
+        pubsub_client = "a_shared_secret"
 
     settings = FakeSettings()
     setattr(settings, name, None)
@@ -361,7 +361,7 @@ def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
     try:
         with pytest.raises(Exception, match=f"{name.upper()} is unset"):
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=a_shared_secret",
+                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
@@ -370,15 +370,13 @@ def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
         del app.dependency_overrides[get_settings]
 
 
-def test_post_pubsub_token_fail_verification(
-    dbsession, anon_client, test_pubsub_settings
-):
-    """An error is returned if verification is incorrect."""
+def test_post_pubsub_token_fail_client(dbsession, anon_client, test_pubsub_settings):
+    """An error is returned if pubsub_client is incorrect."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = Exception("Should not be called.")
         with capture_logs() as caplog:
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=the_wrong_secret",
+                "/stripe_from_pubsub?pubsub_client=the_wrong_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
@@ -396,7 +394,7 @@ def test_post_pubsub_token_unknown_key(dbsession, anon_client, test_pubsub_setti
         )
         with capture_logs() as caplog:
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=a_shared_secret",
+                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
@@ -414,7 +412,7 @@ def test_post_pubsub_token_fail_ssl_fetch(dbsession, anon_client, test_pubsub_se
         )
         with capture_logs() as caplog:
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=a_shared_secret",
+                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
@@ -434,7 +432,7 @@ def test_post_pubsub_token_fail_wrong_email(
         mock_get.return_value = claim
         with capture_logs() as caplog:
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=a_shared_secret",
+                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
@@ -457,7 +455,7 @@ def test_post_pubsub_token_fail_unverified_email(
         mock_get.return_value = claim
         with capture_logs() as caplog:
             resp = anon_client.post(
-                "/stripe_from_pubsub?verification=a_shared_secret",
+                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )

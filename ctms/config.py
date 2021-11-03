@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     pubsub_audience: Optional[str] = None
     pubsub_email: Optional[str] = None
-    pubsub_verification: Optional[str] = None
+    pubsub_client: Optional[str] = None
 
     class Config:
         env_prefix = "ctms_"

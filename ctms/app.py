@@ -136,7 +136,7 @@ def _pubsub_settings(
     return {
         "audience": settings.pubsub_audience or settings.server_prefix,
         "email": settings.pubsub_email,
-        "verification": settings.pubsub_verification,
+        "client": settings.pubsub_client,
     }
 
 
@@ -350,9 +350,9 @@ def get_pubsub_claim(
     request: Request,
     token: str = Depends(oauth2_scheme),
     pubsub_settings=Depends(_pubsub_settings),
-    verification: str = None,
+    pubsub_client: str = None,
 ):
-    for name in ("audience", "email", "verification"):
+    for name in ("audience", "email", "client"):
         if not pubsub_settings[name]:
             raise Exception(f"PUBSUB_{name.upper()} is unset")
 
@@ -363,9 +363,11 @@ def get_pubsub_claim(
     )
     log_context = request.state.log_context
     log_context["client_allowed"] = False
-    if verification != pubsub_settings["verification"]:
+
+    if pubsub_client != pubsub_settings["client"]:
         log_context["auth_fail"] = "Verification mismatch"
         raise credentials_exception
+
     try:
         claim = get_claim_from_pubsub_token(token, pubsub_settings["audience"])
     except ValueError as exception:
