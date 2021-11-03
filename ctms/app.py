@@ -40,6 +40,7 @@ from .crud import (
 )
 from .database import get_db_engine
 from .exception_capture import init_sentry
+from .ingest_stripe import ingest_stripe_object
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
@@ -819,6 +820,28 @@ def metrics(request: Request):
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_reporting_registry(get_metrics_registry())
     return Response(generate_latest(registry), status_code=200, headers=headers)
+
+
+@app.post(
+    "/stripe",
+    summary="Add or update Stripe data",
+    tags=["Public"],
+)
+def stripe(
+    db_session: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    data: Optional[Dict] = Depends(get_json),
+):
+    if not ("object" in data and "id" in data):
+        raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
+    try:
+        ingest_stripe_object(db_session, data)
+    except (KeyError, ValueError, TypeError) as exception:
+        raise HTTPException(
+            400, detail="Unable to process Stripe object."
+        ) from exception
+    db_session.commit()
+    return {"status": "OK"}
 
 
 if __name__ == "__main__":
