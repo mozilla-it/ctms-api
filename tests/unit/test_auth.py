@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from jose import jwt
 from requests.auth import HTTPBasicAuth
+from structlog.testing import capture_logs
 
 from ctms.app import _token_settings, app
 from ctms.auth import create_access_token, hash_password, verify_password
@@ -119,17 +120,39 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
 
 def test_post_token_fails_no_credentials(anon_client, dbsession):
     """If no credentials are passed, token generation fails."""
-    resp = anon_client.post("/token", {"grant_type": "client_credentials"})
+    with capture_logs() as caplog:
+        resp = anon_client.post("/token", {"grant_type": "client_credentials"})
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
+    assert caplog[0]["token_fail"] == "No credentials"
+
+
+def test_post_token_fails_unknown_api_client(
+    dbsession, anon_client, client_id_and_secret
+):
+    """Authentication failes on unknown api_client ID."""
+    good_id, good_secret = client_id_and_secret
+    with capture_logs() as caplog:
+        resp = anon_client.post(
+            "/token", auth=HTTPBasicAuth(good_id + "x", good_secret)
+        )
+    assert resp.status_code == 400
+    assert resp.json() == {"detail": "Incorrect username or password"}
+    assert caplog[0]["token_creds_from"] == "header"
+    assert caplog[0]["token_fail"] == "No client record"
 
 
 def test_post_token_fails_bad_credentials(anon_client, client_id_and_secret):
     """Authentication fails on bad credentials."""
     good_id, good_secret = client_id_and_secret
-    resp = anon_client.post("/token", auth=HTTPBasicAuth(good_id, good_secret + "x"))
+    with capture_logs() as caplog:
+        resp = anon_client.post(
+            "/token", auth=HTTPBasicAuth(good_id, good_secret + "x")
+        )
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
+    assert caplog[0]["token_creds_from"] == "header"
+    assert caplog[0]["token_fail"] == "Bad credentials"
 
 
 def test_post_token_fails_disabled_client(dbsession, anon_client, client_id_and_secret):
@@ -138,9 +161,12 @@ def test_post_token_fails_disabled_client(dbsession, anon_client, client_id_and_
     api_client = get_api_client_by_id(dbsession, client_id)
     api_client.enabled = False
     dbsession.commit()
-    resp = anon_client.post("/token", auth=HTTPBasicAuth(client_id, client_secret))
+    with capture_logs() as caplog:
+        resp = anon_client.post("/token", auth=HTTPBasicAuth(client_id, client_secret))
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
+    assert caplog[0]["token_creds_from"] == "header"
+    assert caplog[0]["token_fail"] == "Client disabled"
 
 
 def test_get_ctms_with_token(
@@ -168,12 +194,14 @@ def test_get_ctms_with_invalid_token_fails(
         secret_key="secret_key_from_other_deploy",
         expires_delta=test_token_settings["expires_delta"],
     )
-    resp = anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    with capture_logs() as caplog:
+        resp = anon_client.get(
+            f"/ctms/{example_contact.email.email_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
+    assert caplog[0]["auth_fail"] == "No or bad token"
 
 
 def test_get_ctms_with_invalid_namespace_fails(
@@ -182,12 +210,14 @@ def test_get_ctms_with_invalid_namespace_fails(
     """Calling an authenticated API with an unexpected namespace is an error"""
     client_id = client_id_and_secret[0]
     token = create_access_token({"sub": f"unknown:{client_id}"}, **test_token_settings)
-    resp = anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    with capture_logs() as caplog:
+        resp = anon_client.get(
+            f"/ctms/{example_contact.email.email_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
+    assert caplog[0]["auth_fail"] == "Bad namespace"
 
 
 def test_get_ctms_with_unknown_client_fails(
@@ -198,12 +228,14 @@ def test_get_ctms_with_unknown_client_fails(
     token = create_access_token(
         {"sub": f"api_client:not_{client_id}"}, **test_token_settings
     )
-    resp = anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    with capture_logs() as caplog:
+        resp = anon_client.get(
+            f"/ctms/{example_contact.email.email_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
+    assert caplog[0]["auth_fail"] == "No client record"
 
 
 def test_get_ctms_with_expired_token_fails(
@@ -215,12 +247,14 @@ def test_get_ctms_with_expired_token_fails(
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings, now=yesterday
     )
-    resp = anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    with capture_logs() as caplog:
+        resp = anon_client.get(
+            f"/ctms/{example_contact.email.email_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
+    assert caplog[0]["auth_fail"] == "No or bad token"
 
 
 def test_get_ctms_with_disabled_client_fails(
@@ -235,12 +269,14 @@ def test_get_ctms_with_disabled_client_fails(
     api_client.enabled = False
     dbsession.commit()
 
-    resp = anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    with capture_logs() as caplog:
+        resp = anon_client.get(
+            f"/ctms/{example_contact.email.email_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
     assert resp.status_code == 400
     assert resp.json() == {"detail": "API Client has been disabled"}
+    assert caplog[0]["auth_fail"] == "Client disabled"
 
 
 def test_hashed_passwords():
