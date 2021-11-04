@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from base64 import b64encode
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from typing import Dict, Optional
@@ -38,23 +37,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-
-
-def fake_stripe_id(prefix: str, seed: str, suffix: Optional[str] = None) -> str:
-    """Create a fake Stripe ID for testing"""
-    body = b64encode(seed.encode()).decode().replace("=", "")
-    return f"{prefix}_{body}{suffix if suffix else ''}"
-
-
-# Documentation and test Stripe IDs
-FAKE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
-FAKE_INVOICE_ID = fake_stripe_id("in", "invoice")
-FAKE_INVOICE_LINE_ITEM_ID = fake_stripe_id("il", "invoice line item")
-FAKE_PAYMENT_METHOD_ID = fake_stripe_id("pm", "payment_method")
-FAKE_PRICE_ID = fake_stripe_id("price", "price")
-FAKE_PRODUCT_ID = fake_stripe_id("prod", "product")
-FAKE_SUBSCRIPTION_ID = fake_stripe_id("sub", "subscription")
-FAKE_SUBSCRIPTION_ITEM_ID = fake_stripe_id("si", "subscription_item")
+from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA, fake_stripe_id
 
 
 def unix_timestamp(the_time: Optional[datetime] = None) -> int:
@@ -66,15 +49,18 @@ def unix_timestamp(the_time: Optional[datetime] = None) -> int:
 def stripe_customer_data() -> Dict:
     """Return minimal Stripe customer data."""
     fxa_id = str(uuid4())
+    sample = SAMPLE_STRIPE_DATA["Customer"]
     return {
-        "id": FAKE_CUSTOMER_ID,
+        "id": sample["stripe_id"],
         "object": "customer",
-        "created": unix_timestamp(datetime(2021, 10, 25, 15, 34, tzinfo=timezone.utc)),
+        "created": unix_timestamp(sample["stripe_created"]),
         "description": fxa_id,
         "email": "fxa_email@example.com",
-        "default_source": None,
+        "default_source": sample["default_source_id"],
         "invoice_settings": {
-            "default_payment_method": FAKE_PAYMENT_METHOD_ID,
+            "default_payment_method": sample[
+                "invoice_settings_default_payment_method_id"
+            ],
         },
     }
 
@@ -82,13 +68,8 @@ def stripe_customer_data() -> Dict:
 @pytest.fixture
 def stripe_customer(dbsession, example_contact):
     """Return a Stripe Customer associated with the example contact."""
-    schema = StripeCustomerCreateSchema(
-        stripe_id=FAKE_CUSTOMER_ID,
-        stripe_created=datetime(2021, 10, 25, 15, 34, tzinfo=timezone.utc),
-        email_id=example_contact.email.email_id,
-        default_source_id=None,
-        invoice_settings_default_payment_method_id=FAKE_PAYMENT_METHOD_ID,
-    )
+    data = SAMPLE_STRIPE_DATA["Customer"]
+    schema = StripeCustomerCreateSchema(**data)
     customer = create_stripe_customer(dbsession, schema)
     dbsession.commit()
     dbsession.refresh(customer)
@@ -97,37 +78,33 @@ def stripe_customer(dbsession, example_contact):
 
 def stripe_subscription_data() -> Dict:
     """Return minimal Stripe subscription data."""
+    data = SAMPLE_STRIPE_DATA["Subscription"]
+    item_data = SAMPLE_STRIPE_DATA["SubscriptionItem"]
     return {
-        "id": FAKE_SUBSCRIPTION_ID,
+        "id": data["stripe_id"],
         "object": "subscription",
-        "created": unix_timestamp(datetime(2021, 9, 27, tzinfo=timezone.utc)),
-        "customer": FAKE_CUSTOMER_ID,
-        "cancel_at_period_end": False,
-        "canceled_at": None,
-        "current_period_start": unix_timestamp(
-            datetime(2021, 10, 27, tzinfo=timezone.utc)
-        ),
-        "current_period_end": unix_timestamp(
-            datetime(2021, 11, 27, tzinfo=timezone.utc)
-        ),
-        "ended_at": None,
-        "start_date": unix_timestamp(datetime(2021, 9, 27, tzinfo=timezone.utc)),
-        "status": "active",
-        "default_source": None,
-        "default_payment_method": None,
+        "created": unix_timestamp(data["stripe_created"]),
+        "customer": data["stripe_customer_id"],
+        "cancel_at_period_end": data["cancel_at_period_end"],
+        "canceled_at": data["canceled_at"],
+        "current_period_start": unix_timestamp(data["current_period_start"]),
+        "current_period_end": unix_timestamp(data["current_period_end"]),
+        "ended_at": data["ended_at"],
+        "start_date": unix_timestamp(data["start_date"]),
+        "status": data["status"],
+        "default_source": data["default_source_id"],
+        "default_payment_method": data["default_payment_method_id"],
         "items": {
             "object": "list",
             "total_count": 1,
             "has_more": False,
-            "url": f"/v1/subscription_items?subscription={FAKE_SUBSCRIPTION_ID}",
+            "url": f"/v1/subscription_items?subscription={data['stripe_id']}",
             "data": [
                 {
-                    "id": FAKE_SUBSCRIPTION_ITEM_ID,
+                    "id": item_data["stripe_id"],
                     "object": "subscription_item",
-                    "created": unix_timestamp(
-                        datetime(2021, 9, 27, tzinfo=timezone.utc)
-                    ),
-                    "subscription": FAKE_SUBSCRIPTION_ID,
+                    "created": unix_timestamp(item_data["stripe_created"]),
+                    "subscription": item_data["stripe_subscription_id"],
                     "price": stripe_price_data(),
                 }
             ],
@@ -137,25 +114,11 @@ def stripe_subscription_data() -> Dict:
 
 @pytest.fixture
 def stripe_subscription(dbsession, stripe_price):
-    subscription = StripeSubscriptionCreateSchema(
-        stripe_id=FAKE_SUBSCRIPTION_ID,
-        stripe_created=datetime(2021, 9, 27, tzinfo=timezone.utc),
-        stripe_customer_id=FAKE_CUSTOMER_ID,
-        cancel_at_period_end=True,
-        canceled_at=None,
-        current_period_start=datetime(2021, 10, 27, tzinfo=timezone.utc),
-        current_period_end=datetime(2021, 11, 27, tzinfo=timezone.utc),
-        ended_at=None,
-        start_date=datetime(2021, 9, 27, tzinfo=timezone.utc),
-        status="active",
-    )
+    data = SAMPLE_STRIPE_DATA["Subscription"]
+    subscription = StripeSubscriptionCreateSchema(**data)
     db_subscription = create_stripe_subscription(dbsession, subscription)
-    subscription_item = StripeSubscriptionItemCreateSchema(
-        stripe_id=FAKE_SUBSCRIPTION_ITEM_ID,
-        stripe_created=datetime(2021, 9, 27, tzinfo=timezone.utc),
-        stripe_subscription_id=FAKE_SUBSCRIPTION_ID,
-        stripe_price_id=FAKE_PRICE_ID,
-    )
+    item_data = SAMPLE_STRIPE_DATA["SubscriptionItem"]
+    subscription_item = StripeSubscriptionItemCreateSchema(**item_data)
     db_subscription_item = create_stripe_subscription_item(dbsession, subscription_item)
     assert db_subscription_item
 
@@ -166,32 +129,26 @@ def stripe_subscription(dbsession, stripe_price):
 
 def stripe_price_data() -> Dict:
     """Return minimal Stripe price data."""
+    data = SAMPLE_STRIPE_DATA["Price"]
     return {
-        "id": FAKE_PRICE_ID,
+        "id": data["stripe_id"],
         "object": "price",
-        "created": unix_timestamp(datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc)),
-        "product": FAKE_PRODUCT_ID,
-        "active": True,
-        "currency": "usd",
+        "created": unix_timestamp(data["stripe_created"]),
+        "product": data["stripe_product_id"],
+        "active": data["active"],
+        "currency": data["currency"],
         "recurring": {
-            "interval": "month",
-            "interval_count": 1,
+            "interval": data["recurring_interval"],
+            "interval_count": data["recurring_interval_count"],
         },
-        "unit_amount": 999,
+        "unit_amount": data["unit_amount"],
     }
 
 
 @pytest.fixture
 def stripe_price(dbsession):
-    price = StripePriceCreateSchema(
-        stripe_id=FAKE_PRICE_ID,
-        stripe_created=datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc),
-        stripe_product_id=FAKE_PRODUCT_ID,
-        currency="usd",
-        recurring_interval="month",
-        recurring_interval_count=1,
-        unit_amount=999,
-    )
+    data = SAMPLE_STRIPE_DATA["Price"]
+    price = StripePriceCreateSchema(**data)
     db_price = create_stripe_price(dbsession, price)
     assert db_price
     dbsession.commit()
@@ -201,31 +158,33 @@ def stripe_price(dbsession):
 
 def stripe_invoice_data() -> Dict:
     """Return minimal Stripe invoice data."""
+    data = SAMPLE_STRIPE_DATA["Invoice"]
+    item_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"]
     return {
-        "id": FAKE_INVOICE_ID,
+        "id": data["stripe_id"],
         "object": "invoice",
-        "created": unix_timestamp(datetime(2021, 10, 28, tzinfo=timezone.utc)),
-        "customer": FAKE_CUSTOMER_ID,
-        "currency": "usd",
-        "total": 1000,
-        "default_source": None,
-        "default_payment_method": None,
-        "status": "open",
+        "created": unix_timestamp(data["stripe_created"]),
+        "customer": data["stripe_customer_id"],
+        "currency": data["currency"],
+        "total": data["total"],
+        "default_source": data["default_source_id"],
+        "default_payment_method": data["default_payment_method_id"],
+        "status": data["status"],
         "lines": {
             "object": "list",
             "total_count": 1,
             "has_more": False,
-            "url": f"/v1/invoices/{FAKE_INVOICE_ID}/lines",
+            "url": f"/v1/invoices/{data['stripe_id']}/lines",
             "data": [
                 {
-                    "id": FAKE_INVOICE_LINE_ITEM_ID,
+                    "id": item_data["stripe_id"],
                     "object": "line_item",
-                    "type": "subscription",
-                    "subscription": FAKE_SUBSCRIPTION_ID,
-                    "subscription_item": FAKE_SUBSCRIPTION_ITEM_ID,
+                    "type": item_data["stripe_type"],
+                    "subscription": item_data["stripe_subscription_id"],
+                    "subscription_item": item_data["stripe_subscription_item_id"],
                     "price": stripe_price_data(),
-                    "amount": 1000,
-                    "currency": "usd",
+                    "amount": item_data["amount"],
+                    "currency": item_data["currency"],
                 }
             ],
         },
@@ -234,27 +193,13 @@ def stripe_invoice_data() -> Dict:
 
 @pytest.fixture
 def stripe_invoice(dbsession, stripe_customer, stripe_price):
-    invoice = StripeInvoiceCreateSchema(
-        stripe_id=FAKE_INVOICE_ID,
-        stripe_created=datetime(2021, 10, 28, tzinfo=timezone.utc),
-        stripe_customer_id=stripe_customer.stripe_id,
-        currency="usd",
-        total=1000,
-        status="open",
-    )
+    data = SAMPLE_STRIPE_DATA["Invoice"]
+    invoice = StripeInvoiceCreateSchema(**data)
     db_invoice = create_stripe_invoice(dbsession, invoice)
     assert db_invoice
 
-    invoice_item = StripeInvoiceLineItemCreateSchema(
-        stripe_id=FAKE_INVOICE_LINE_ITEM_ID,
-        stripe_price_id=stripe_price.stripe_id,
-        stripe_invoice_id=FAKE_INVOICE_ID,
-        stripe_subscription_id=FAKE_SUBSCRIPTION_ID,
-        stripe_subscription_item_id=FAKE_SUBSCRIPTION_ITEM_ID,
-        stripe_type="subscription",
-        amount=1000,
-        currency="usd",
-    )
+    item_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"]
+    invoice_item = StripeInvoiceLineItemCreateSchema(**item_data)
     db_invoice_item = create_stripe_invoice_line_item(dbsession, invoice_item)
     assert db_invoice_item
     dbsession.commit()
@@ -264,14 +209,14 @@ def stripe_invoice(dbsession, stripe_customer, stripe_price):
 
 def test_ids():
     """Get the fake IDs, to make it easier to copy to schemas."""
-    assert FAKE_CUSTOMER_ID == "cus_Y3VzdG9tZXI"
-    assert FAKE_INVOICE_ID == "in_aW52b2ljZQ"
-    assert FAKE_INVOICE_LINE_ITEM_ID == "il_aW52b2ljZSBsaW5lIGl0ZW0"
-    assert FAKE_PAYMENT_METHOD_ID == "pm_cGF5bWVudF9tZXRob2Q"
-    assert FAKE_PRICE_ID == "price_cHJpY2U"
-    assert FAKE_PRODUCT_ID == "prod_cHJvZHVjdA"
-    assert FAKE_SUBSCRIPTION_ID == "sub_c3Vic2NyaXB0aW9u"
-    assert FAKE_SUBSCRIPTION_ITEM_ID == "si_c3Vic2NyaXB0aW9uX2l0ZW0"
+    assert FAKE_STRIPE_ID["Customer"] == "cus_Y3VzdG9tZXI"
+    assert FAKE_STRIPE_ID["Invoice"] == "in_aW52b2ljZQ"
+    assert FAKE_STRIPE_ID["(Invoice) Line Item"] == "il_aW52b2ljZSBsaW5lIGl0ZW0"
+    assert FAKE_STRIPE_ID["Payment Method"] == "pm_cGF5bWVudF9tZXRob2Q"
+    assert FAKE_STRIPE_ID["Price"] == "price_cHJpY2U"
+    assert FAKE_STRIPE_ID["Product"] == "prod_cHJvZHVjdA"
+    assert FAKE_STRIPE_ID["Subscription"] == "sub_c3Vic2NyaXB0aW9u"
+    assert FAKE_STRIPE_ID["Subscription Item"] == "si_c3Vic2NyaXB0aW9uX2l0ZW0"
 
 
 def test_ingest_existing_contact(dbsession, example_contact):
@@ -282,10 +227,13 @@ def test_ingest_existing_contact(dbsession, example_contact):
     customer = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
     dbsession.refresh(customer)
-    assert customer.stripe_id == FAKE_CUSTOMER_ID
+    assert customer.stripe_id == FAKE_STRIPE_ID["Customer"]
     assert not customer.deleted
     assert customer.default_source_id is None
-    assert customer.invoice_settings_default_payment_method_id == FAKE_PAYMENT_METHOD_ID
+    assert (
+        customer.invoice_settings_default_payment_method_id
+        == FAKE_STRIPE_ID["Payment Method"]
+    )
     assert customer.email_id == example_contact.email.email_id
 
 
@@ -306,7 +254,7 @@ def test_ingest_new_but_deleted_customer(dbsession):
     """A deleted Stripe Customer does not create a new contact."""
     data = {
         "deleted": True,
-        "id": FAKE_CUSTOMER_ID,
+        "id": FAKE_STRIPE_ID["Customer"],
         "object": "customer",
     }
     customer = ingest_stripe_customer(dbsession, data)
@@ -374,9 +322,9 @@ def test_ingest_new_subscription(dbsession):
     subscription = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
     dbsession.refresh(subscription)
-    assert subscription.stripe_id == FAKE_SUBSCRIPTION_ID
+    assert subscription.stripe_id == FAKE_STRIPE_ID["Subscription"]
     assert subscription.stripe_created == datetime(2021, 9, 27, tzinfo=timezone.utc)
-    assert subscription.stripe_customer_id == FAKE_CUSTOMER_ID
+    assert subscription.stripe_customer_id == FAKE_STRIPE_ID["Customer"]
     assert not subscription.cancel_at_period_end
     assert subscription.canceled_at is None
     assert subscription.current_period_end == datetime(
@@ -395,13 +343,13 @@ def test_ingest_new_subscription(dbsession):
 
     assert len(subscription.subscription_items) == 1
     item = subscription.subscription_items[0]
-    assert item.stripe_id == FAKE_SUBSCRIPTION_ITEM_ID
+    assert item.stripe_id == FAKE_STRIPE_ID["Subscription Item"]
     assert item.subscription == subscription
 
     price = item.price
-    assert price.stripe_id == FAKE_PRICE_ID
+    assert price.stripe_id == FAKE_STRIPE_ID["Price"]
     assert price.stripe_created == datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc)
-    assert price.stripe_product_id == FAKE_PRODUCT_ID
+    assert price.stripe_product_id == FAKE_STRIPE_ID["Product"]
     assert price.active
     assert price.currency == "usd"
     assert price.recurring_interval == "month"
@@ -425,7 +373,7 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
             "id": fake_stripe_id("price", "yearly price"),
             "object": "price",
             "created": unix_timestamp(si_created),
-            "product": FAKE_PRODUCT_ID,
+            "product": FAKE_STRIPE_ID["Product"],
             "active": True,
             "currency": "usd",
             "recurring": {
@@ -490,7 +438,7 @@ def test_ingest_update_subscription_item(dbsession, stripe_subscription):
         "id": fake_stripe_id("price", "monthly special"),
         "object": "price",
         "created": unix_timestamp(datetime(2021, 10, 27, tzinfo=timezone.utc)),
-        "product": FAKE_PRODUCT_ID,
+        "product": FAKE_STRIPE_ID["Product"],
         "active": True,
         "currency": "usd",
         "recurring": {
@@ -514,7 +462,7 @@ def test_ingest_non_recurring_price(dbsession):
         "id": fake_stripe_id("price", "non-recurring"),
         "object": "price",
         "created": unix_timestamp(),
-        "product": FAKE_PRODUCT_ID,
+        "product": FAKE_STRIPE_ID["Product"],
         "active": True,
         "type": "one_time",
         "currency": "usd",
@@ -531,9 +479,9 @@ def test_ingest_new_invoice(dbsession):
 
     invoice = ingest_stripe_invoice(dbsession, data)
     dbsession.commit()
-    assert invoice.stripe_id == FAKE_INVOICE_ID
+    assert invoice.stripe_id == FAKE_STRIPE_ID["Invoice"]
     assert invoice.stripe_created == datetime(2021, 10, 28, tzinfo=timezone.utc)
-    assert invoice.stripe_customer_id == FAKE_CUSTOMER_ID
+    assert invoice.stripe_customer_id == FAKE_STRIPE_ID["Customer"]
     assert invoice.currency == "usd"
     assert invoice.total == 1000
     assert invoice.status == "open"
@@ -545,18 +493,18 @@ def test_ingest_new_invoice(dbsession):
 
     assert len(invoice.line_items) == 1
     item = invoice.line_items[0]
-    assert item.stripe_id == FAKE_INVOICE_LINE_ITEM_ID
+    assert item.stripe_id == FAKE_STRIPE_ID["(Invoice) Line Item"]
     assert item.invoice == invoice
-    assert item.stripe_subscription_id == FAKE_SUBSCRIPTION_ID
-    assert item.stripe_subscription_item_id == FAKE_SUBSCRIPTION_ITEM_ID
+    assert item.stripe_subscription_id == FAKE_STRIPE_ID["Subscription"]
+    assert item.stripe_subscription_item_id == FAKE_STRIPE_ID["Subscription Item"]
     assert item.stripe_invoice_item_id is None
     assert item.amount == 1000
     assert item.currency == "usd"
 
     price = item.price
-    assert price.stripe_id == FAKE_PRICE_ID
+    assert price.stripe_id == FAKE_STRIPE_ID["Price"]
     assert price.stripe_created == datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc)
-    assert price.stripe_product_id == FAKE_PRODUCT_ID
+    assert price.stripe_product_id == FAKE_STRIPE_ID["Product"]
     assert price.active
     assert price.currency == "usd"
     assert price.recurring_interval == "month"
@@ -584,8 +532,8 @@ def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
         "object": "line_item",
         "type": "subscription",
         "created": unix_timestamp(datetime(2021, 10, 28, tzinfo=timezone.utc)),
-        "subscription": FAKE_SUBSCRIPTION_ID,
-        "subscription_item": FAKE_SUBSCRIPTION_ITEM_ID,
+        "subscription": FAKE_STRIPE_ID["Subscription"],
+        "subscription_item": FAKE_STRIPE_ID["Subscription Item"],
         "price": stripe_price_data(),
         "amount": 500,
         "currency": "usd",
