@@ -120,25 +120,22 @@ def test_transform_field(base_ctms_acoustic_service):
         transformed_from_date is not None
     ), "Error when using method to transform date object"
 
-    try:
-        assert transformed_from_datetime == transformed_from_date, (
-            "The result of the transformation process of a "
-            "date and datetime should be identical, "
-            "when starting values are equivalent in date "
-        )
+    assert transformed_from_datetime == transformed_from_date, (
+        "The result of the transformation process of a "
+        "date and datetime should be identical, "
+        "when starting values are equivalent in date "
+    )
 
-        is_datetime_parsed = datetime.datetime.strptime(
-            transformed_from_datetime, "%m/%d/%Y"
-        )
-        assert isinstance(
-            is_datetime_parsed, datetime.date
-        ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
-        is_date_parsed = datetime.datetime.strptime(transformed_from_date, "%m/%d/%Y")
-        assert isinstance(
-            is_date_parsed, datetime.date
-        ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
-    except:  # pylint: disable=W0702
-        assert False, "Failure with timestamp validation"
+    is_datetime_parsed = datetime.datetime.strptime(
+        transformed_from_datetime, "%m/%d/%Y"
+    )
+    assert isinstance(
+        is_datetime_parsed, datetime.date
+    ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
+    is_date_parsed = datetime.datetime.strptime(transformed_from_date, "%m/%d/%Y")
+    assert isinstance(
+        is_date_parsed, datetime.date
+    ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
 
 
 def test_transform_fxa_created_date(base_ctms_acoustic_service):
