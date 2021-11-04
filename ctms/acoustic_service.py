@@ -263,7 +263,7 @@ class CTMSToAcousticService:
                 "newsletter_lang": contact_email_lang,
             }
 
-            if newsletter.name in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS.keys():
+            if newsletter.name in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS:
                 newsletter_dict = newsletter.dict()
                 _today = datetime.date.today().isoformat()
                 newsletter_template["create_timestamp"] = newsletter_dict.get(
