@@ -109,7 +109,7 @@ SAMPLE_MAXIMAL = ContactSchema(
 
 def _gather_examples(schema_class) -> Dict[str, str]:
     """Gather the examples from a schema definition"""
-    examples = dict()
+    examples = {}
     for key, props in schema_class.schema()["properties"].items():
         if "example" in props:
             examples[key] = props["example"]
