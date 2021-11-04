@@ -1,17 +1,21 @@
 """The CTMS application, including middleware and routes."""
+import json
 import re
 import sys
 import time
+from base64 import b64decode
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Dict, List, Literal, Optional, Union
 from uuid import UUID, uuid4
 
+import sentry_sdk
 import structlog
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from google.auth.exceptions import GoogleAuthError
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
@@ -24,6 +28,7 @@ from .auth import (
     OAuth2ClientCredentials,
     OAuth2ClientCredentialsRequestForm,
     create_access_token,
+    get_claim_from_pubsub_token,
     get_subject_from_token,
     verify_password,
 )
@@ -40,6 +45,7 @@ from .crud import (
 )
 from .database import get_db_engine
 from .exception_capture import init_sentry
+from .ingest_stripe import ingest_stripe_object
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
@@ -92,13 +98,13 @@ def get_settings():
 
 
 # Initialize Sentry for each thread, unless we're in tests
-if "pytest" not in sys.argv[0]:
+if "pytest" not in sys.argv[0]:  # pragma: no cover
     init_sentry()
     app.add_middleware(SentryAsgiMiddleware)
 
 
 @app.on_event("startup")
-def startup_event():
+def startup_event():  # pragma: no cover
     global SessionLocal, METRICS  # pylint:disable = W0603
     settings = get_settings()
     configure_logging(settings.use_mozlog, settings.logging_level)
@@ -107,7 +113,7 @@ def startup_event():
     init_metrics_labels(SessionLocal(), app, METRICS)
 
 
-def get_db():
+def get_db():  # pragma: no cover
     db = SessionLocal()
     try:
         yield db
@@ -121,6 +127,16 @@ def _token_settings(
     return {
         "expires_delta": settings.token_expiration,
         "secret_key": settings.secret_key,
+    }
+
+
+def _pubsub_settings(
+    settings: config.Settings = Depends(get_settings),
+) -> Dict[str, str]:
+    return {
+        "audience": settings.pubsub_audience or settings.server_prefix,
+        "email": settings.pubsub_email,
+        "client": settings.pubsub_client,
     }
 
 
@@ -328,6 +344,55 @@ def get_enabled_api_client(
         raise HTTPException(status_code=400, detail="API Client has been disabled")
     log_context["client_allowed"] = True
     return api_client
+
+
+def get_pubsub_claim(
+    request: Request,
+    token: str = Depends(oauth2_scheme),
+    pubsub_settings=Depends(_pubsub_settings),
+    pubsub_client: str = None,
+):
+    for name in ("audience", "email", "client"):
+        if not pubsub_settings[name]:
+            raise Exception(f"PUBSUB_{name.upper()} is unset")
+
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    log_context = request.state.log_context
+    log_context["client_allowed"] = False
+
+    if pubsub_client != pubsub_settings["client"]:
+        log_context["auth_fail"] = "Verification mismatch"
+        raise credentials_exception
+
+    try:
+        claim = get_claim_from_pubsub_token(token, pubsub_settings["audience"])
+    except ValueError as exception:
+        sentry_sdk.capture_exception(exception)
+        log_context["auth_fail"] = "Unknown key"
+        raise credentials_exception from exception
+    except GoogleAuthError as exception:
+        sentry_sdk.capture_exception(exception)
+        log_context["auth_fail"] = "Google authentication failure"
+        raise credentials_exception from exception
+
+    # Add claim as context for debugging
+    for key, value in claim.items():
+        log_context[f"pubsub_{key}"] = value
+
+    if claim.get("email") != pubsub_settings["email"]:
+        log_context["auth_fail"] = "Wrong email"
+        raise credentials_exception
+
+    if not claim.get("email_verified"):
+        log_context["auth_fail"] = "Email not verified"
+        raise credentials_exception
+
+    log_context["client_allowed"] = True
+    return claim
 
 
 async def get_json(request: Request) -> Dict:
@@ -819,6 +884,60 @@ def metrics(request: Request):
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_reporting_registry(get_metrics_registry())
     return Response(generate_latest(registry), status_code=200, headers=headers)
+
+
+@app.post(
+    "/stripe",
+    summary="Add or update Stripe data",
+    tags=["Public"],
+)
+def stripe(
+    db_session: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    data: Optional[Dict] = Depends(get_json),
+):
+    if not ("object" in data and "id" in data):
+        raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
+    try:
+        ingest_stripe_object(db_session, data)
+    except (KeyError, ValueError, TypeError) as exception:
+        raise HTTPException(
+            400, detail="Unable to process Stripe object."
+        ) from exception
+    db_session.commit()
+    return {"status": "OK"}
+
+
+@app.post(
+    "/stripe_from_pubsub",
+    summary="Add or update Stripe data from PubSub",
+    tags=["Private"],
+)
+def stripe_pubsub(
+    db_session: Session = Depends(get_db),
+    pubsub_claim=Depends(get_pubsub_claim),
+    wrapped_data: Optional[Dict] = Depends(get_json),
+):
+    if not ("message" in wrapped_data and "subscription" in wrapped_data):
+        content = {
+            "status": "Accepted but not processed",
+            "message": "Message does not appear to be from pubsub, do not send again.",
+        }
+        return JSONResponse(content=content, status_code=202)
+
+    data = json.loads(b64decode(wrapped_data["message"]["data"]).decode())
+    try:
+        ingest_stripe_object(db_session, data)
+    except (KeyError, ValueError, TypeError) as exception:
+        # PubSub will resend on negative status codes. Send exception to Sentry but acknowledge.
+        sentry_sdk.capture_exception(exception)
+        content = {
+            "status": "Accepted but not processed",
+            "message": "Errors processing the data, do not send again.",
+        }
+        return JSONResponse(content=content, status_code=202)
+    db_session.commit()
+    return {"status": "OK"}
 
 
 if __name__ == "__main__":

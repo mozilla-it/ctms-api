@@ -1,4 +1,7 @@
 """pytest fixtures for the CTMS app"""
+import json
+import os.path
+from glob import glob
 from typing import Callable, Optional
 from uuid import UUID
 
@@ -331,3 +334,33 @@ def put_contact(request, client, dbsession):
         return saved, sample, sample_email_id
 
     return _add
+
+
+def pytest_generate_tests(metafunc):
+    """Dynamicaly generate fixtures."""
+
+    if "stripe_test_json" in metafunc.fixturenames:
+        # Get names of Stripe test JSON files in test/data/stripe
+        my_folder = os.path.dirname(__file__)
+        test_folder = os.path.dirname(my_folder)
+        stripe_data_folder = os.path.join(test_folder, "data", "stripe")
+        test_paths = glob(os.path.join(stripe_data_folder, "*.json"))
+        test_files = [os.path.basename(test_path) for test_path in test_paths]
+        metafunc.parametrize("stripe_test_json", test_files, indirect=True)
+
+
+@pytest.fixture
+def stripe_test_json(request):
+    """
+    Return contents of Stripe test JSON file.
+
+    The filenames are initialized by pytest_generate_tests.
+    """
+    filename = request.param
+    my_folder = os.path.dirname(__file__)
+    test_folder = os.path.dirname(my_folder)
+    stripe_data_folder = os.path.join(test_folder, "data", "stripe")
+    sample_filepath = os.path.join(stripe_data_folder, filename)
+    with open(sample_filepath, "r", encoding="utf8") as the_file:
+        data = json.load(the_file)
+    return data

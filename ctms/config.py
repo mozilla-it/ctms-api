@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     is_gunicorn: bool = False
     prometheus_multiproc_dir: Optional[DirectoryPath] = None
 
+    pubsub_audience: Optional[str] = None
+    pubsub_email: Optional[str] = None
+    pubsub_client: Optional[str] = None
+
     class Config:
         env_prefix = "ctms_"
 

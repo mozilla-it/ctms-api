@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import os.path
 from base64 import b64encode
 from datetime import datetime, timedelta, timezone
 from time import mktime
@@ -598,18 +596,9 @@ def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
     assert invoice.line_items[0].stripe_id == new_line_item_id
 
 
-@pytest.mark.parametrize(
-    "filename", ("customer_01.json", "subscription_01.json", "invoice_01.json")
-)
-def test_ingest_sample_data(dbsession, filename):
-    """Stripe sample data can be ingested."""
-    my_folder = os.path.dirname(__file__)
-    test_folder = os.path.dirname(my_folder)
-    stripe_data_folder = os.path.join(test_folder, "data", "stripe")
-    sample_filepath = os.path.join(stripe_data_folder, filename)
-    with open(sample_filepath, "r") as the_file:
-        data = json.load(the_file)
-    obj = ingest_stripe_object(dbsession, data)
+def test_ingest_sample_data(dbsession, stripe_test_json):
+    """Stripe sample JSON can be ingested."""
+    obj = ingest_stripe_object(dbsession, stripe_test_json)
     assert obj is not None
 
 
