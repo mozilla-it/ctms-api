@@ -5,9 +5,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from ctms import acoustic_service
+from ctms.acoustic_service import CTMSToAcousticService
 
 CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
 CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
+CTMS_ACOUSTIC_PRODUCT_TABLE_ID = "10"
 
 
 @pytest.fixture
@@ -31,6 +33,7 @@ def base_ctms_acoustic_service(acoustic_client):
             acoustic_client=acoustic_client,
             acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
             acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
+            acoustic_product_table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID,
         )
 
 
@@ -53,9 +56,11 @@ def test_ctms_to_acoustic(
 
     for contact in contact_list:
         expected = expected_results.get(contact.email.email_id)
-        _main, _newsletter = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-            contact
-        )
+        (
+            _main,
+            _newsletter,
+            _product,
+        ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(contact)
         assert _main is not None
         assert _newsletter is not None
         assert (
@@ -70,6 +75,7 @@ def test_ctms_to_acoustic(
         for row in _newsletter:
             assert row["email_id"] == str(contact.email.email_id)
             assert row["newsletter_name"] is not None
+        assert len(_product) == 0
 
 
 def test_ctms_to_acoustic_mocked(
@@ -78,11 +84,12 @@ def test_ctms_to_acoustic_mocked(
 ):
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
-    _main, _newsletter = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
     assert _newsletter is not None
+    assert len(_product) == 0
     results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(maximal_contact)
     assert results  # success
     acoustic_mock.add_recipient.assert_called()
@@ -99,6 +106,29 @@ def test_ctms_to_acoustic_mocked(
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
         table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID, rows=_newsletter
+    )
+
+    acoustic_mock.insert_update_product_table.assert_not_called()
+
+
+def test_ctms_to_acoustic_with_subscription(
+    base_ctms_acoustic_service, contact_with_stripe_subscription
+):
+    acoustic_mock = MagicMock()
+    base_ctms_acoustic_service.acoustic = acoustic_mock
+    _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        contact_with_stripe_subscription
+    )  # To be used as in testing, for expected inputs to downstream methods
+    assert _main is not None
+    assert len(_newsletter) == 0  # None in Main Table Subscriber flags
+    assert len(_product) == 1
+    results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+        contact_with_stripe_subscription
+    )
+    assert results  # success
+
+    acoustic_mock.insert_update_relational_table.assert_called_with(
+        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
     )
 
 
@@ -136,6 +166,27 @@ def test_transform_field(base_ctms_acoustic_service):
     assert isinstance(
         is_date_parsed, datetime.date
     ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (("true", "Yes"), (True, "Yes"), (False, "No"), ("false", "No"), ("", "No")),
+)
+def test_to_acoustic_bool(value, expected):
+    """Python and JS booleans are converted to Acoustic Yes/No bools."""
+    assert CTMSToAcousticService.to_acoustic_bool(value) == expected
+
+
+def test_to_acoustic_timestamp():
+    """Python datetimes are converted to Acoustic timestamps."""
+    the_datetime = datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc)
+    acoustic_ts = CTMSToAcousticService.to_acoustic_timestamp(the_datetime)
+    assert acoustic_ts == "11/08/2021 09:06:00"
+
+
+def test_to_acoustic_timestamp_null():
+    """Null datetimes are converted to an empty string."""
+    assert CTMSToAcousticService.to_acoustic_timestamp(None) == ""
 
 
 def test_transform_fxa_created_date(base_ctms_acoustic_service):

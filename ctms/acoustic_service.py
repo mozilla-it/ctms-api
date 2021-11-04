@@ -162,6 +162,7 @@ class CTMSToAcousticService:
         self,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
+        acoustic_product_table_id,
         acoustic_client: Acoustic,
         metric_service: BackgroundMetricService = None,
     ):
@@ -170,7 +171,10 @@ class CTMSToAcousticService:
         """
         self.acoustic = acoustic_client
         self.acoustic_main_table_id = int(acoustic_main_table_id)
-        self.acoustic_newsletter_table_id = int(acoustic_newsletter_table_id)
+        self.relational_tables = {
+            "newsletter": str(int(acoustic_newsletter_table_id)),
+            "product": str(int(acoustic_product_table_id)),
+        }
         self.logger = logging.getLogger(__name__)
         self.metric_service = metric_service
 
@@ -179,7 +183,8 @@ class CTMSToAcousticService:
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
             acoustic_main_table, contact
         )
-        return acoustic_main_table, newsletter_rows
+        product_rows = self._product_converter(contact)
+        return acoustic_main_table, newsletter_rows, product_rows
 
     def _main_table_converter(self, contact):
         acoustic_main_table = {
@@ -294,6 +299,7 @@ class CTMSToAcousticService:
 
     @staticmethod
     def transform_field_for_acoustic(data):
+        """Transform data for main contact table."""
         if isinstance(data, bool):
             if data:
                 return "1"
@@ -306,6 +312,62 @@ class CTMSToAcousticService:
         if isinstance(data, UUID):
             return str(data)
         return data
+
+    @staticmethod
+    def to_acoustic_bool(bool_str):
+        """Transform bool for products relational table."""
+        if bool_str in (True, "true"):
+            return "Yes"
+        return "No"
+
+    @staticmethod
+    def to_acoustic_timestamp(dt_val):
+        """Transform datetime for products relational table."""
+        if dt_val:
+            return dt_val.strftime("%m/%d/%Y %H:%M:%S")
+        return ""
+
+    def _product_converter(self, contact):
+        """Create the rows for the product subscription table in Acoustic."""
+        contact_email_id = str(contact.email.email_id)
+        product_rows = []
+        template = {"email_id": contact_email_id}
+        to_ts = CTMSToAcousticService.to_acoustic_timestamp
+        for product in contact.products:
+            row = template.copy()
+            row.update(
+                {
+                    "product_name": product.product_name or "",
+                    "product_id": product.product_id,
+                    "segment": product.segment,
+                    "changed": product.changed,
+                    "sub_count": product.sub_count,
+                    "payment_service": product.payment_service,
+                    "payment_type": product.payment_type or "",
+                    "card_brand": product.card_brand or "",
+                    "card_last4": product.card_last4 or "",
+                    "currency": product.currency or "",
+                    "amount": -1 if product.amount is None else product.amount,
+                    "billing_country": product.billing_country or "",
+                    "status": product.status or "",
+                    "interval_count": (
+                        -1 if product.interval_count is None else product.interval_count
+                    ),
+                    "interval": product.interval or "",
+                    "created": to_ts(product.created),
+                    "start": to_ts(product.start),
+                    "current_period_start": to_ts(product.current_period_start),
+                    "current_period_end": to_ts(product.current_period_end),
+                    "canceled_at": to_ts(product.canceled_at),
+                    "cancel_at_period_end": CTMSToAcousticService.to_acoustic_bool(
+                        product.cancel_at_period_end
+                    ),
+                    "ended_at": to_ts(product.ended_at),
+                }
+            )
+            product_rows.append(row)
+
+        return product_rows
 
     def _add_contact(self, list_id=None, sync_fields=None, columns=None):
         if columns is None:
@@ -338,31 +400,30 @@ class CTMSToAcousticService:
                 metric_params.update({"duration_s": duration_s})
                 self.metric_service.observe_acoustic_request_duration(**metric_params)
 
-    def _insert_update_newsletters(self, table_id=None, rows=None):
-        if rows is None:
-            rows = []
-        params = {"table_id": table_id, "rows": rows}
-        if self.metric_service is None:
-            self.acoustic.insert_update_relational_table(**params)
-        else:  # Metrics are enabled
-            start_time = time.monotonic()
-            status = "success"
-            try:
-                self.acoustic.insert_update_relational_table(
-                    **params
-                )  # Call to Acoustic
-            except Exception:  # pylint: disable=broad-except
-                status = "failure"
-                raise
-            finally:
+    def _insert_update_relational_table(self, table_name, rows):
+        if not rows:
+            return
+        start_time = time.monotonic()
+        status = "success"
+        table_id = self.relational_tables[table_name]
+        try:
+            self.acoustic.insert_update_relational_table(
+                table_id=table_id, rows=rows
+            )  # Call to Acoustic
+        except Exception:  # pylint: disable=broad-except
+            status = "failure"
+            raise
+        finally:
+            if self.metric_service:
                 duration = time.monotonic() - start_time
                 duration_s = round(duration, 3)
                 metric_params = {
                     "method": "insert_update_relational_table",
                     "status": status,
+                    "table": table_name,
                 }
                 self.metric_service.inc_acoustic_request_total(**metric_params)
-                metric_params.update({"duration_s": duration_s})
+                metric_params["duration_s"] = duration_s
                 self.metric_service.observe_acoustic_request_duration(**metric_params)
 
     def attempt_to_upload_ctms_contact(self, contact: ContactSchema) -> bool:
@@ -373,15 +434,15 @@ class CTMSToAcousticService:
         """
         self.logger.debug("Converting and uploading contact to acoustic...")
         try:
-            main_table_data, nl_data = self.convert_ctms_to_acoustic(contact)
+            main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(contact)
             main_table_id = str(self.acoustic_main_table_id)
             self._add_contact(
                 list_id=main_table_id,
                 sync_fields={"email_id": main_table_data["email_id"]},
                 columns=main_table_data,
             )
-            newsletter_table_id = str(self.acoustic_newsletter_table_id)
-            self._insert_update_newsletters(table_id=newsletter_table_id, rows=nl_data)
+            self._insert_update_relational_table("newsletter", nl_data)
+            self._insert_update_relational_table("product", prod_data)
             # success
             self.logger.debug("Successfully sync'd contact to acoustic...")
             return True

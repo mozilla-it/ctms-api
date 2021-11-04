@@ -16,6 +16,7 @@ def ctms_to_acoustic_sync():
     ctms_acoustic_refresh_token = "REFRESH"
     ctms_acoustic_main_table_id = "1"
     ctms_acoustic_newsletter_table_id = "9"
+    ctms_acoustic_product_table_id = "10"
     with mock.patch("ctms.acoustic_service.Acoustic"):
         yield CTMSToAcousticSync(
             client_id=ctms_acoustic_client_id,
@@ -23,6 +24,7 @@ def ctms_to_acoustic_sync():
             refresh_token=ctms_acoustic_refresh_token,
             acoustic_main_table_id=ctms_acoustic_main_table_id,
             acoustic_newsletter_table_id=ctms_acoustic_newsletter_table_id,
+            acoustic_product_table_id=ctms_acoustic_product_table_id,
             server_number=6,
         )
 
