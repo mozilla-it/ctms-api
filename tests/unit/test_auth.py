@@ -360,12 +360,11 @@ def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
     app.dependency_overrides[get_settings] = lambda: settings
     try:
         with pytest.raises(Exception, match=f"{name.upper()} is unset"):
-            resp = anon_client.post(
+            anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
                 json=pubsub_wrap(stripe_customer_data()),
             )
-            assert resp.status_code == 500
     finally:
         del app.dependency_overrides[get_settings]
 
