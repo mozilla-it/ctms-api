@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
@@ -40,6 +41,7 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
+    ProductBaseSchema,
     StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
@@ -93,6 +95,10 @@ def _contact_base_query(db):
         .options(joinedload(Email.mofo))
         .options(joinedload(Email.vpn_waitlist))
         .options(selectinload("newsletters"))
+        .options(joinedload(Email.stripe_customer))
+        .options(selectinload("stripe_customer.subscriptions"))
+        .options(selectinload("stripe_customer.subscriptions.subscription_items"))
+        .options(selectinload("stripe_customer.subscriptions.subscription_items.price"))
     )
 
 
@@ -170,6 +176,8 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
     email = get_email(db, email_id)
     if email is None:
         return None
+    products = []
+    products.extend(get_stripe_products(email))
     return {
         "amo": email.amo,
         "email": email,
@@ -177,6 +185,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
         "mofo": email.mofo,
         "newsletters": email.newsletters,
         "vpn_waitlist": email.vpn_waitlist,
+        "products": products,
     }
 
 
@@ -677,3 +686,86 @@ get_stripe_invoice_line_item_by_stripe_id = partial(_get_stripe, StripeInvoiceLi
 get_stripe_price_by_stripe_id = partial(_get_stripe, StripePrice)
 get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
 get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)
+
+
+def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
+    """Return a list of Stripe products for the contact, if any."""
+    if not email.stripe_customer:
+        return []
+
+    base_data: Dict[str, Any] = {
+        "payment_service": "stripe",
+        # These come from the Payment Method, not imported from Stripe.
+        "payment_type": None,
+        "card_brand": None,
+        "card_last4": None,
+        "billing_country": None,
+    }
+    by_product = defaultdict(list)
+
+    for subscription in email.stripe_customer.subscriptions:
+        subscription_data = base_data.copy()
+        subscription_data.update(
+            {
+                "status": subscription.status,
+                "created": subscription.stripe_created,
+                "start": subscription.start_date,
+                "current_period_start": subscription.current_period_start,
+                "current_period_end": subscription.current_period_end,
+                "canceled_at": subscription.canceled_at,
+                "cancel_at_period_end": subscription.cancel_at_period_end,
+                "ended_at": subscription.ended_at,
+            }
+        )
+        for item in subscription.subscription_items:
+            product_data = subscription_data.copy()
+            price = item.price
+            product_data.update(
+                {
+                    "product_id": price.stripe_product_id,
+                    "product_name": None,  # Products are not imported
+                    "price_id": price.stripe_id,
+                    "currency": price.currency,
+                    "amount": price.unit_amount,
+                    "interval_count": price.recurring_interval_count,
+                    "interval": price.recurring_interval,
+                }
+            )
+            by_product[price.stripe_product_id].append(product_data)
+
+    products = []
+    for subscriptions in by_product.values():
+        # Sort to find the latest subscription
+        subscriptions.sort(key=lambda x: x["current_period_end"], reverse=True)
+        latest = subscriptions[0]
+        data = latest.copy()
+        if len(subscriptions) == 1:
+            segment_prefix = ""
+        else:
+            segment_prefix = "re-"
+        if latest["status"] == "active":
+            if latest["canceled_at"]:
+                segment = "cancelling"
+                changed = latest["canceled_at"]
+            else:
+                segment = "active"
+                changed = latest["start"]
+        elif latest["status"] == "canceled":
+            segment = "canceled"
+            changed = latest["ended_at"]
+        else:
+            segment = "other"
+            changed = latest["created"]
+
+        assert changed
+        data.update(
+            {
+                "sub_count": len(subscriptions),
+                "segment": f"{segment_prefix}{segment}",
+                "changed": changed,
+            }
+        )
+        products.append(ProductBaseSchema(**data))
+
+    products.sort(key=lambda x: x.product_id)
+    return products

@@ -37,6 +37,7 @@ from .newsletter import (
     NewsletterTableSchema,
     UpdatedNewsletterInSchema,
 )
+from .product import ProductBaseSchema
 from .stripe_customer import (
     StripeCustomerCreateSchema,
     StripeCustomerModelSchema,

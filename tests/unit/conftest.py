@@ -17,16 +17,29 @@ from ctms.config import Settings
 from ctms.crud import (
     create_api_client,
     create_contact,
+    create_stripe_customer,
+    create_stripe_price,
+    create_stripe_subscription,
+    create_stripe_subscription_item,
     get_amo_by_email_id,
     get_contacts_by_any_id,
+    get_email,
     get_fxa_by_email_id,
     get_mofo_by_email_id,
     get_newsletters_by_email_id,
+    get_stripe_products,
     get_vpn_by_email_id,
 )
 from ctms.models import Base
-from ctms.schemas import ApiClientSchema, ContactSchema
-from tests.unit.sample_data import SAMPLE_CONTACTS
+from ctms.schemas import (
+    ApiClientSchema,
+    ContactSchema,
+    StripeCustomerCreateSchema,
+    StripePriceCreateSchema,
+    StripeSubscriptionCreateSchema,
+    StripeSubscriptionItemCreateSchema,
+)
+from tests.unit.sample_data import SAMPLE_CONTACTS, SAMPLE_STRIPE_DATA
 
 
 @pytest.fixture(scope="session")
@@ -364,3 +377,31 @@ def stripe_test_json(request):
     with open(sample_filepath, "r", encoding="utf8") as the_file:
         data = json.load(the_file)
     return data
+
+
+@pytest.fixture
+def contact_with_stripe_customer(dbsession, example_contact):
+    """Return the example contact with an associated Stripe Customer account."""
+    create_stripe_customer(
+        dbsession, StripeCustomerCreateSchema(**SAMPLE_STRIPE_DATA["Customer"])
+    )
+    dbsession.commit()
+    return example_contact
+
+
+@pytest.fixture
+def contact_with_stripe_subscription(dbsession, contact_with_stripe_customer):
+    create_stripe_price(
+        dbsession, StripePriceCreateSchema(**SAMPLE_STRIPE_DATA["Price"])
+    )
+    create_stripe_subscription(
+        dbsession, StripeSubscriptionCreateSchema(**SAMPLE_STRIPE_DATA["Subscription"])
+    )
+    create_stripe_subscription_item(
+        dbsession,
+        StripeSubscriptionItemCreateSchema(**SAMPLE_STRIPE_DATA["SubscriptionItem"]),
+    )
+    dbsession.commit()
+    email = get_email(dbsession, contact_with_stripe_customer.email.email_id)
+    contact_with_stripe_customer.products = get_stripe_products(email)
+    return contact_with_stripe_customer
