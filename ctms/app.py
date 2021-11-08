@@ -899,12 +899,15 @@ def stripe(
     if not ("object" in data and "id" in data):
         raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
     try:
-        ingest_stripe_object(db_session, data)
+        obj = ingest_stripe_object(db_session, data)
     except (KeyError, ValueError, TypeError) as exception:
         raise HTTPException(
             400, detail="Unable to process Stripe object."
         ) from exception
     db_session.commit()
+    email_id = obj.get_email_id()
+    if email_id:
+        schedule_acoustic_record(db_session, email_id)
     return {"status": "OK"}
 
 
@@ -927,7 +930,7 @@ def stripe_pubsub(
 
     data = json.loads(b64decode(wrapped_data["message"]["data"]).decode())
     try:
-        ingest_stripe_object(db_session, data)
+        obj = ingest_stripe_object(db_session, data)
     except (KeyError, ValueError, TypeError) as exception:
         # PubSub will resend on negative status codes. Send exception to Sentry but acknowledge.
         sentry_sdk.capture_exception(exception)
@@ -937,6 +940,9 @@ def stripe_pubsub(
         }
         return JSONResponse(content=content, status_code=202)
     db_session.commit()
+    email_id = obj.get_email_id()
+    if email_id:
+        schedule_acoustic_record(db_session, email_id)
     return {"status": "OK"}
 
 

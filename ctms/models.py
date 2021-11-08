@@ -1,3 +1,6 @@
+from typing import Optional, cast
+from uuid import UUID as PythonUUID
+
 from sqlalchemy import (
     TIMESTAMP,
     Boolean,
@@ -246,6 +249,10 @@ class StripeBase(Base):
 
     __abstract__ = True
 
+    def get_email_id(self) -> Optional[UUID]:
+        """Return the email_id of the associated contact, if any."""
+        raise NotImplementedError()
+
 
 class StripeCustomer(StripeBase):
     __tablename__ = "stripe_customer"
@@ -285,6 +292,9 @@ class StripeCustomer(StripeBase):
         ),
     )
 
+    def get_email_id(self) -> PythonUUID:
+        return cast(PythonUUID, self.email_id)
+
 
 class StripePrice(StripeBase):
     __tablename__ = "stripe_price"
@@ -315,6 +325,10 @@ class StripePrice(StripeBase):
     subscription_items = relationship(
         "StripeSubscriptionItem", back_populates="price", uselist=True
     )
+
+    def get_email_id(self) -> None:
+        """Prices can be related to multiple Customers, so return None."""
+        return None
 
 
 class StripeInvoice(StripeBase):
@@ -352,6 +366,11 @@ class StripeInvoice(StripeBase):
     line_items = relationship(
         "StripeInvoiceLineItem", back_populates="invoice", uselist=True
     )
+
+    def get_email_id(self) -> Optional[PythonUUID]:
+        if self.customer:
+            return cast(PythonUUID, self.customer.get_email_id())
+        return None
 
 
 class StripeInvoiceLineItem(StripeBase):
@@ -406,6 +425,9 @@ class StripeInvoiceLineItem(StripeBase):
         ),
     )
 
+    def get_email_id(self) -> Optional[PythonUUID]:
+        return cast(Optional[PythonUUID], self.invoice.get_email_id())
+
 
 class StripeSubscription(StripeBase):
     __tablename__ = "stripe_subscription"
@@ -447,6 +469,11 @@ class StripeSubscription(StripeBase):
         "StripeSubscriptionItem", back_populates="subscription", uselist=True
     )
 
+    def get_email_id(self) -> Optional[PythonUUID]:
+        if self.customer:
+            return cast(PythonUUID, self.customer.get_email_id())
+        return None
+
 
 class StripeSubscriptionItem(StripeBase):
     __tablename__ = "stripe_subscription_item"
@@ -481,3 +508,6 @@ class StripeSubscriptionItem(StripeBase):
     price = relationship(
         "StripePrice", back_populates="subscription_items", uselist=False
     )
+
+    def get_email_id(self) -> Optional[PythonUUID]:
+        return cast(Optional[PythonUUID], self.subscription.get_email_id())

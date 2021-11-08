@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from typing import Dict, Optional
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -18,6 +18,12 @@ from ctms.crud import (
     create_stripe_subscription,
     create_stripe_subscription_item,
     get_contact_by_email_id,
+    get_stripe_customer_by_stripe_id,
+    get_stripe_invoice_by_stripe_id,
+    get_stripe_invoice_line_item_by_stripe_id,
+    get_stripe_price_by_stripe_id,
+    get_stripe_subscription_by_stripe_id,
+    get_stripe_subscription_item_by_stripe_id,
 )
 from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
@@ -235,6 +241,7 @@ def test_ingest_existing_contact(dbsession, example_contact):
         == FAKE_STRIPE_ID["Payment Method"]
     )
     assert customer.email_id == example_contact.email.email_id
+    assert customer.get_email_id() == example_contact.email.email_id
 
 
 def test_ingest_new_contact(dbsession):
@@ -248,6 +255,7 @@ def test_ingest_new_contact(dbsession):
     assert contact["fxa"].fxa_id == data["description"]
     assert contact["fxa"].primary_email == data["email"]
     assert contact["email"].primary_email == data["email"]
+    assert customer.get_email_id() == contact["email"].email_id
 
 
 def test_ingest_new_but_deleted_customer(dbsession):
@@ -279,6 +287,7 @@ def test_ingest_new_fxa_user(dbsession):
     assert contact["fxa"].fxa_id == fxa_id
     assert contact["fxa"].primary_email == fxa_email
     assert contact["email"].primary_email == fxa_email
+    assert customer.get_email_id() == contact["email"].email_id
 
 
 def test_ingest_update_customer(dbsession, stripe_customer):
@@ -314,6 +323,7 @@ def test_ingest_existing_but_deleted_customer(dbsession, stripe_customer):
         customer.invoice_settings_default_payment_method_id
         == stripe_customer.invoice_settings_default_payment_method_id
     )
+    assert customer.get_email_id() == customer.email_id
 
 
 def test_ingest_new_subscription(dbsession):
@@ -337,6 +347,7 @@ def test_ingest_new_subscription(dbsession):
     assert subscription.start_date == datetime(2021, 9, 27, tzinfo=timezone.utc)
     assert subscription.status == "active"
     assert subscription.default_payment_method_id is None
+    assert subscription.get_email_id() is None
 
     # Can be created without the Customer object
     assert subscription.customer is None
@@ -345,6 +356,7 @@ def test_ingest_new_subscription(dbsession):
     item = subscription.subscription_items[0]
     assert item.stripe_id == FAKE_STRIPE_ID["Subscription Item"]
     assert item.subscription == subscription
+    assert item.get_email_id() is None
 
     price = item.price
     assert price.stripe_id == FAKE_STRIPE_ID["Price"]
@@ -355,6 +367,7 @@ def test_ingest_new_subscription(dbsession):
     assert price.recurring_interval == "month"
     assert price.recurring_interval_count == 1
     assert price.unit_amount == 999
+    assert price.get_email_id() is None
 
 
 def test_ingest_update_subscription(dbsession, stripe_subscription):
@@ -471,12 +484,12 @@ def test_ingest_non_recurring_price(dbsession):
     assert price.recurring_interval is None
     assert price.recurring_interval_count is None
     assert price.unit_amount is None
+    assert price.get_email_id() is None
 
 
 def test_ingest_new_invoice(dbsession):
     """A new Stripe Invoice is ingested."""
     data = stripe_invoice_data()
-
     invoice = ingest_stripe_invoice(dbsession, data)
     dbsession.commit()
     assert invoice.stripe_id == FAKE_STRIPE_ID["Invoice"]
@@ -487,6 +500,7 @@ def test_ingest_new_invoice(dbsession):
     assert invoice.status == "open"
     assert invoice.default_payment_method_id is None
     assert invoice.default_source_id is None
+    assert invoice.get_email_id() is None
 
     # Can be created without the Customer object
     assert invoice.customer is None
@@ -500,6 +514,7 @@ def test_ingest_new_invoice(dbsession):
     assert item.stripe_invoice_item_id is None
     assert item.amount == 1000
     assert item.currency == "usd"
+    assert item.get_email_id() is None
 
     price = item.price
     assert price.stripe_id == FAKE_STRIPE_ID["Price"]
@@ -510,6 +525,7 @@ def test_ingest_new_invoice(dbsession):
     assert price.recurring_interval == "month"
     assert price.recurring_interval_count == 1
     assert price.unit_amount == 999
+    assert price.get_email_id() is None
 
 
 def test_ingest_updated_invoice(dbsession, stripe_invoice):
@@ -548,6 +564,51 @@ def test_ingest_sample_data(dbsession, stripe_test_json):
     """Stripe sample JSON can be ingested."""
     obj = ingest_stripe_object(dbsession, stripe_test_json)
     assert obj is not None
+    assert type(obj.get_email_id()) in (type(None), UUID)
+
+
+def test_get_email_id_customer(dbsession, contact_with_stripe_customer):
+    """A Stripe Customer can return the related email_id."""
+    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+    assert customer.get_email_id() == contact_with_stripe_customer.email.email_id
+
+
+def test_get_email_id_subscription(dbsession, contact_with_stripe_subscription):
+    """A Stripe Subscription and related objects can return the related email_id."""
+    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+    subscription = get_stripe_subscription_by_stripe_id(
+        dbsession, FAKE_STRIPE_ID["Subscription"]
+    )
+    subscription_item = get_stripe_subscription_item_by_stripe_id(
+        dbsession, FAKE_STRIPE_ID["Subscription Item"]
+    )
+    price = get_stripe_price_by_stripe_id(dbsession, FAKE_STRIPE_ID["Price"])
+
+    email_id = contact_with_stripe_subscription.email.email_id
+    assert customer.get_email_id() == email_id
+    assert subscription.get_email_id() == email_id
+    assert subscription_item.get_email_id() == email_id
+    # Prices always return None since they can relate to multiple contacts.
+    assert price.get_email_id() is None
+
+
+def test_get_email_id_invoice(dbsession, contact_with_stripe_customer):
+    """A Stripe Invoice and related objects can return the related email_id."""
+    invoice = ingest_stripe_invoice(dbsession, stripe_invoice_data())
+    dbsession.commit()
+    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+    invoice = get_stripe_invoice_by_stripe_id(dbsession, FAKE_STRIPE_ID["Invoice"])
+    line_item = get_stripe_invoice_line_item_by_stripe_id(
+        dbsession, FAKE_STRIPE_ID["(Invoice) Line Item"]
+    )
+    price = get_stripe_price_by_stripe_id(dbsession, FAKE_STRIPE_ID["Price"])
+
+    email_id = contact_with_stripe_customer.email.email_id
+    assert customer.get_email_id() == email_id
+    assert invoice.get_email_id() == email_id
+    assert line_item.get_email_id() == email_id
+    # Prices always return None since they can relate to multiple contacts.
+    assert price.get_email_id() is None
 
 
 def test_ingest_unknown_stripe_object_raises(dbsession):
