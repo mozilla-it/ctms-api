@@ -16,6 +16,7 @@ from .email import (
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
+from .product import ProductBaseSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
 
 
@@ -28,6 +29,7 @@ class ContactSchema(ComparableBase):
     mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterSchema] = []
     vpn_waitlist: Optional[VpnWaitlistSchema] = None
+    products: List[ProductBaseSchema] = []
 
     class Config:
         fields = {

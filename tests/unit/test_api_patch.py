@@ -233,6 +233,10 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert actual["amo"]["update_timestamp"] != new_ts
     expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
+    # products list is not (yet) in output schema
+    assert expected["products"] == []
+    assert "products" not in actual
+    actual["products"] = []
     assert actual == expected
 
 
