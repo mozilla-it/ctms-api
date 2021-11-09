@@ -76,7 +76,7 @@ class StatementWatcher:
 
 
 def test_get_email(dbsession, example_contact):
-    """An email is retrived in two queries, and newsletters are sorted by name."""
+    """An email is retrieved in two queries, and newsletters are sorted by name."""
     email_id = example_contact.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         email = get_email(dbsession, email_id)
@@ -90,7 +90,7 @@ def test_get_email(dbsession, example_contact):
 
 
 def test_get_email_with_stripe_customer(dbsession, contact_with_stripe_customer):
-    """An email with a Stripe subscription retrived in three queries."""
+    """An email with a Stripe subscription retrieved in three queries."""
     email_id = contact_with_stripe_customer.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         email = get_email(dbsession, email_id)
@@ -109,7 +109,7 @@ def test_get_email_with_stripe_customer(dbsession, contact_with_stripe_customer)
 def test_get_email_with_stripe_subscription(
     dbsession, contact_with_stripe_subscription
 ):
-    """An email with a Stripe subscription retrived in five queries."""
+    """An email with a Stripe subscription retrieved in five queries."""
     email_id = contact_with_stripe_subscription.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         email = get_email(dbsession, email_id)

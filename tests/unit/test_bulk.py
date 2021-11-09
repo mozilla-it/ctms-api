@@ -111,7 +111,6 @@ def test_get_ctms_bulk_by_timerange(
     dict_contact_expected = sorted_list[1].dict()
     dict_contact_actual = CTMSResponse.parse_obj(results["items"][0]).dict()
     # products list is not (yet) in output schema
-    # products list is not (yet) in output schema
     assert dict_contact_expected["products"] == []
     assert "products" not in dict_contact_actual
     dict_contact_actual["products"] = []
