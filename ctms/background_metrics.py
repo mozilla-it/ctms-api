@@ -79,20 +79,22 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
         self.pushgateway_url = pushgateway_url
         self.job_name = "prometheus-pushgateway"
 
-    def inc_acoustic_request_total(self, method, status):
+    def inc_acoustic_request_total(self, method, status, table):
         self.requests.labels(
             method=method,
             status=status,
+            table=table,
             app_kubernetes_io_component=self.app_kubernetes_io_component,
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).inc()
         self.logger.debug("METRICS: Incrementing acoustic request")
 
-    def observe_acoustic_request_duration(self, method, status, duration_s):
+    def observe_acoustic_request_duration(self, method, status, table, duration_s):
         self.requests_duration.labels(
             method=method,
             status=status,
+            table=table,
             app_kubernetes_io_component=self.app_kubernetes_io_component,
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
