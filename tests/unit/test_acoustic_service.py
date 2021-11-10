@@ -144,7 +144,6 @@ def test_ctms_to_acoustic_with_subscription(
     )
 
 
-@pytest.mark.xfail
 def test_ctms_to_acoustic_with_subscription_and_metrics(
     metrics_ctms_acoustic_service, contact_with_stripe_subscription
 ):
