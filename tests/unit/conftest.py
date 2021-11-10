@@ -3,16 +3,19 @@ import json
 import os.path
 from glob import glob
 from typing import Callable, Optional
+from unittest import mock
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms.app import app, get_api_client, get_db
+from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
     create_api_client,
@@ -405,3 +408,11 @@ def contact_with_stripe_subscription(dbsession, contact_with_stripe_customer):
     email = get_email(dbsession, contact_with_stripe_customer.email.email_id)
     contact_with_stripe_customer.products = get_stripe_products(email)
     return contact_with_stripe_customer
+
+
+@pytest.fixture
+def background_metric_service():
+    """Return a BackgroundMetricService with push_to_gateway mocked."""
+    service = BackgroundMetricService(CollectorRegistry(), "https://push.example.com")
+    with mock.patch("ctms.background_metrics.BackgroundMetricService.push_to_gateway"):
+        yield service

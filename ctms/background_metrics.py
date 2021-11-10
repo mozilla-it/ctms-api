@@ -25,6 +25,7 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             labelnames=[
                 "method",
                 "status",
+                "table",
                 "app_kubernetes_io_component",
                 "app_kubernetes_io_instance",
                 "app_kubernetes_io_name",
@@ -38,6 +39,7 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             labelnames=[
                 "method",
                 "status",
+                "table",
                 "app_kubernetes_io_component",
                 "app_kubernetes_io_instance",
                 "app_kubernetes_io_name",

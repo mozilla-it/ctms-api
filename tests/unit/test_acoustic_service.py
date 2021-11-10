@@ -37,6 +37,18 @@ def base_ctms_acoustic_service(acoustic_client):
         )
 
 
+@pytest.fixture
+def metrics_ctms_acoustic_service(acoustic_client, background_metric_service):
+    with mock.patch("ctms.acoustic_service.Acoustic"):
+        yield acoustic_service.CTMSToAcousticService(
+            acoustic_client=acoustic_client,
+            acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
+            acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
+            acoustic_product_table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID,
+            metric_service=background_metric_service,
+        )
+
+
 def test_base_service_creation(base_ctms_acoustic_service):
     assert base_ctms_acoustic_service is not None
 
@@ -130,6 +142,47 @@ def test_ctms_to_acoustic_with_subscription(
     acoustic_mock.insert_update_relational_table.assert_called_with(
         table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
     )
+
+
+def test_ctms_to_acoustic_with_subscription_and_metrics(
+    metrics_ctms_acoustic_service, contact_with_stripe_subscription
+):
+    acoustic_mock = MagicMock()
+    acoustic_svc = metrics_ctms_acoustic_service
+    acoustic_svc.acoustic = acoustic_mock
+    _main, _newsletter, _product = acoustic_svc.convert_ctms_to_acoustic(
+        contact_with_stripe_subscription
+    )  # To be used as in testing, for expected inputs to downstream methods
+    assert _main is not None
+    assert len(_newsletter) == 0  # None in Main Table Subscriber flags
+    assert len(_product) == 1
+    results = acoustic_svc.attempt_to_upload_ctms_contact(
+        contact_with_stripe_subscription
+    )
+    assert results  # success
+
+    acoustic_mock.insert_update_relational_table.assert_called_with(
+        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
+    )
+
+    registry = acoustic_svc.metric_service.registry
+    main_labels = {
+        "method": "add_recipient",
+        "status": "success",
+        "table": "main",
+        "app_kubernetes_io_component": "background",
+        "app_kubernetes_io_instance": "ctms",
+        "app_kubernetes_io_name": "ctms",
+    }
+    rt_labels = main_labels.copy()
+    rt_labels.update({"method": "insert_update_relational_table", "table": "product"})
+    metrics = (
+        "ctms_background_acoustic_request_total",
+        "ctms_background_acoustic_requests_duration_count",
+    )
+    for metric in metrics:
+        for labels in (main_labels, rt_labels):
+            assert registry.get_sample_value(metric, labels) == 1, (metric, labels)
 
 
 def test_transform_field(base_ctms_acoustic_service):
