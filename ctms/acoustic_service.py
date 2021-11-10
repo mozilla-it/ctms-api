@@ -395,7 +395,11 @@ class CTMSToAcousticService:
             finally:
                 duration = time.monotonic() - start_time
                 duration_s = round(duration, 3)
-                metric_params = {"method": "add_recipient", "status": status}
+                metric_params = {
+                    "method": "add_recipient",
+                    "status": status,
+                    "table": "main",
+                }
                 self.metric_service.inc_acoustic_request_total(**metric_params)
                 metric_params.update({"duration_s": duration_s})
                 self.metric_service.observe_acoustic_request_duration(**metric_params)
