@@ -5,6 +5,7 @@ from base64 import b64encode
 from datetime import datetime, timezone
 
 import pytest
+from structlog.testing import capture_logs
 
 from ctms.app import app, get_pubsub_claim
 from ctms.models import PendingAcousticRecord
@@ -157,3 +158,14 @@ def test_api_post_pubsub_sample_data(dbsession, pubsub_client, stripe_test_json)
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(stripe_test_json))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
+
+
+def test_api_post_stripe_unknown_stripe_object(dbsession, pubsub_client):
+    """An unknown Stripe object is silently ignored."""
+    data = {"object": "payment_method", "id": "pm_ABC123"}
+    with capture_logs() as cap_logs:
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 0}
+    assert len(cap_logs) == 1
+    assert cap_logs[0]["stripe_unknown_objects"] == ["payment_method"]
