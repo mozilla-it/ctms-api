@@ -45,7 +45,7 @@ from .crud import (
 )
 from .database import get_db_engine
 from .exception_capture import init_sentry
-from .ingest_stripe import ingest_stripe_object
+from .ingest_stripe import StripeIngestUnknownObjectError, ingest_stripe_object
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
@@ -918,6 +918,7 @@ def stripe(
     tags=["Private"],
 )
 def stripe_pubsub(
+    request: Request,
     db_session: Session = Depends(get_db),
     pubsub_claim=Depends(get_pubsub_claim),
     wrapped_data: Optional[Dict] = Depends(get_json),
@@ -949,6 +950,10 @@ def stripe_pubsub(
     for item in items:
         try:
             obj = ingest_stripe_object(db_session, item)
+        except StripeIngestUnknownObjectError as exception:
+            request.state.log_context.setdefault("stripe_unknown_objects", []).append(
+                exception.object_value
+            )
         except (KeyError, ValueError, TypeError) as exception:
             sentry_sdk.capture_exception(exception)
             has_error = True
