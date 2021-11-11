@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pytest
 
 from ctms.app import app, get_pubsub_claim
+from ctms.models import PendingAcousticRecord
 from tests.unit.test_ingest_stripe import (
     stripe_customer_data,
     stripe_invoice_data,
@@ -58,8 +59,11 @@ def pubsub_client(anon_client):
 
 def test_api_post_stripe_customer(client, dbsession):
     """Stripe customer data can be imported."""
-    resp = client.post("/stripe", json=stripe_customer_data())
+    data = stripe_customer_data()
+    resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
+    par = dbsession.query(PendingAcousticRecord).one_or_none()
+    assert par.email.stripe_customer.stripe_id == data["id"]
 
 
 def test_api_post_stripe_customer_bad_data(client, dbsession):
@@ -68,6 +72,7 @@ def test_api_post_stripe_customer_bad_data(client, dbsession):
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Request JSON is not recognized."}
+    assert dbsession.query(PendingAcousticRecord).one_or_none() is None
 
 
 def test_api_post_stripe_customer_missing_data(client, dbsession):
@@ -87,11 +92,12 @@ def test_api_post_sample_data(dbsession, client, stripe_test_json):
 
 def test_api_post_stripe_from_pubsub_customer(dbsession, pubsub_client):
     """Stripe customer data as a PubSub push can be imported."""
-    resp = pubsub_client.post(
-        "/stripe_from_pubsub", json=pubsub_wrap(stripe_customer_data())
-    )
+    data = stripe_customer_data()
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
+    par = dbsession.query(PendingAcousticRecord).one_or_none()
+    assert par.email.stripe_customer.stripe_id == data["id"]
 
 
 def test_api_post_stripe_from_pubsub_item_dict(dbsession, pubsub_client):
@@ -107,6 +113,8 @@ def test_api_post_stripe_from_pubsub_item_dict(dbsession, pubsub_client):
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(item_dict))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 3}
+    par = dbsession.query(PendingAcousticRecord).one_or_none()
+    assert par.email.stripe_customer.stripe_id == customer_data["id"]
 
 
 def test_api_post_stripe_from_pubsub_customer_missing_data(dbsession, pubsub_client):
@@ -119,6 +127,7 @@ def test_api_post_stripe_from_pubsub_customer_missing_data(dbsession, pubsub_cli
         "status": "Accepted but not processed",
         "message": "Errors processing the data, do not send again.",
     }
+    assert dbsession.query(PendingAcousticRecord).one_or_none() is None
 
 
 def test_api_post_stripe_from_pubsub_bad_data(dbsession, pubsub_client):
