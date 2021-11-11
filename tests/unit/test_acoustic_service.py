@@ -142,6 +142,8 @@ def test_ctms_to_acoustic_with_subscription(
     acoustic_mock.insert_update_relational_table.assert_called_with(
         table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
     )
+    for name, value in _product[0].items():
+        assert isinstance(value, (str, int)), name
 
 
 def test_ctms_to_acoustic_with_subscription_and_metrics(
