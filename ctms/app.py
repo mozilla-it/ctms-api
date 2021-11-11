@@ -928,22 +928,46 @@ def stripe_pubsub(
         }
         return JSONResponse(content=content, status_code=202)
 
-    data = json.loads(b64decode(wrapped_data["message"]["data"]).decode())
-    try:
-        obj = ingest_stripe_object(db_session, data)
-    except (KeyError, ValueError, TypeError) as exception:
-        # PubSub will resend on negative status codes. Send exception to Sentry but acknowledge.
-        sentry_sdk.capture_exception(exception)
+    payload = json.loads(b64decode(wrapped_data["message"]["data"]).decode())
+    if hasattr(payload, "keys"):
+        if all(key.count(":") == 1 and "object" in val for key, val in payload.items()):
+            # Item dictionary, "firebase_table:id" -> Stripe object
+            items = payload.values()
+        else:
+            items = [payload]  # One Stripe object, or maybe unknown dictionary
+    else:
+        content = {
+            "status": "Accepted but not processed",
+            "message": "Unknown payload type, do not send again.",
+        }
+        return JSONResponse(content=content, status_code=202)
+
+    email_ids = set()
+    has_error = False
+    count = 0
+    for item in items:
+        try:
+            obj = ingest_stripe_object(db_session, item)
+        except (KeyError, ValueError, TypeError) as exception:
+            sentry_sdk.capture_exception(exception)
+            has_error = True
+        else:
+            db_session.commit()
+            count += 1
+            email_id = obj.get_email_id()
+            if email_id:
+                email_ids.add(email_id)
+
+    for email_id in email_ids:
+        schedule_acoustic_record(db_session, email_id)
+
+    if has_error:
         content = {
             "status": "Accepted but not processed",
             "message": "Errors processing the data, do not send again.",
         }
         return JSONResponse(content=content, status_code=202)
-    db_session.commit()
-    email_id = obj.get_email_id()
-    if email_id:
-        schedule_acoustic_record(db_session, email_id)
-    return {"status": "OK"}
+    return {"status": "OK", "count": count}
 
 
 if __name__ == "__main__":

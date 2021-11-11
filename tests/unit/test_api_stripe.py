@@ -7,7 +7,11 @@ from datetime import datetime, timezone
 import pytest
 
 from ctms.app import app, get_pubsub_claim
-from tests.unit.test_ingest_stripe import stripe_customer_data
+from tests.unit.test_ingest_stripe import (
+    stripe_customer_data,
+    stripe_invoice_data,
+    stripe_subscription_data,
+)
 
 
 def pubsub_wrap(data):
@@ -87,6 +91,22 @@ def test_api_post_stripe_from_pubsub_customer(dbsession, pubsub_client):
         "/stripe_from_pubsub", json=pubsub_wrap(stripe_customer_data())
     )
     assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 1}
+
+
+def test_api_post_stripe_from_pubsub_item_dict(dbsession, pubsub_client):
+    """A PubSub push of multiple items, keyed by table:id, can be imported."""
+    customer_data = stripe_customer_data()
+    subscription_data = stripe_subscription_data()
+    invoice_data = stripe_invoice_data()
+    item_dict = {
+        f"from_customer_table:{customer_data['description']}": customer_data,
+        f"from_subscription_table:{subscription_data['id']}": subscription_data,
+        f"from_invoice_table:{invoice_data['id']}": invoice_data,
+    }
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(item_dict))
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 3}
 
 
 def test_api_post_stripe_from_pubsub_customer_missing_data(dbsession, pubsub_client):
@@ -95,6 +115,10 @@ def test_api_post_stripe_from_pubsub_customer_missing_data(dbsession, pubsub_cli
     del data["description"]  # The FxA ID
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 202  # Accepted
+    assert resp.json() == {
+        "status": "Accepted but not processed",
+        "message": "Errors processing the data, do not send again.",
+    }
 
 
 def test_api_post_stripe_from_pubsub_bad_data(dbsession, pubsub_client):
@@ -102,9 +126,25 @@ def test_api_post_stripe_from_pubsub_bad_data(dbsession, pubsub_client):
     data = stripe_customer_data()
     resp = pubsub_client.post("/stripe_from_pubsub", json=data)
     assert resp.status_code == 202  # Accepted
+    assert resp.json() == {
+        "status": "Accepted but not processed",
+        "message": "Message does not appear to be from pubsub, do not send again.",
+    }
+
+
+def test_api_post_stripe_from_pubsub_list(dbsession, pubsub_client):
+    """A list from a PubSub push is a 202, accepted but not processed."""
+    customer_data = stripe_customer_data()
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap([customer_data]))
+    assert resp.status_code == 202
+    assert resp.json() == {
+        "status": "Accepted but not processed",
+        "message": "Unknown payload type, do not send again.",
+    }
 
 
 def test_api_post_pubsub_sample_data(dbsession, pubsub_client, stripe_test_json):
     """Stripe sample data can be POSTed from PubSub."""
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(stripe_test_json))
     assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 1}
