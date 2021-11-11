@@ -143,7 +143,7 @@ def test_ctms_to_acoustic_with_subscription(
         table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
     )
     for name, value in _product[0].items():
-        assert isinstance(value, (str, int)), name
+        assert isinstance(value, str), name
 
 
 def test_ctms_to_acoustic_with_subscription_and_metrics(
