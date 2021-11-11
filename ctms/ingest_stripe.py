@@ -392,6 +392,20 @@ class StripeIngestUnknownObjectError(StripeIngestError):
         return f"{self.__class__.__name__}({self.object_value!r})"
 
 
+class StripeIngestKnownObjectError(StripeIngestError):
+    def __init__(self, object_value, *args, **kwargs):
+        self.object_value = object_value
+        StripeIngestError.__init__(self, *args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"Known Stripe object, not processing at this time {self.object_value!r}."
+        )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.object_value!r})"
+
+
 def ingest_stripe_object(
     db_session: Session, data: Dict[str, Any]
 ) -> Optional[StripeBase]:
@@ -404,6 +418,8 @@ def ingest_stripe_object(
     try:
         ingester = INGESTERS[object_type]
     except KeyError as exception:
+        if object_type == "payment_method":
+            raise StripeIngestKnownObjectError(object_type) from exception
         raise StripeIngestUnknownObjectError(object_type) from exception
 
     return ingester(db_session, data)

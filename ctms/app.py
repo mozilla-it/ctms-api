@@ -45,7 +45,7 @@ from .crud import (
 )
 from .database import get_db_engine
 from .exception_capture import init_sentry
-from .ingest_stripe import ingest_stripe_object
+from .ingest_stripe import StripeIngestKnownObjectError, ingest_stripe_object
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
@@ -949,6 +949,8 @@ def stripe_pubsub(
     for item in items:
         try:
             obj = ingest_stripe_object(db_session, item)
+        except StripeIngestKnownObjectError:  # Silenced Exception
+            continue
         except (KeyError, ValueError, TypeError) as exception:
             sentry_sdk.capture_exception(exception)
             has_error = True

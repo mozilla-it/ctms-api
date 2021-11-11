@@ -27,6 +27,7 @@ from ctms.crud import (
 )
 from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
+    StripeIngestKnownObjectError,
     StripeIngestUnknownObjectError,
     ingest_stripe_customer,
     ingest_stripe_invoice,
@@ -622,6 +623,22 @@ def test_ingest_unknown_stripe_object_raises(dbsession):
     exception = excinfo.value
     assert str(exception) == "Unknown Stripe object 'refund'."
     assert repr(exception) == "StripeIngestUnknownObjectError('refund')"
+
+
+def test_ingest_known_stripe_object_raises(dbsession):
+    """Ingesting an known type of Stripe object raises an exception."""
+    data = {
+        "id": fake_stripe_id("pm", "payment_method"),
+        "object": "payment_method",
+    }
+    with pytest.raises(StripeIngestKnownObjectError) as excinfo:
+        ingest_stripe_object(dbsession, data)
+    exception = excinfo.value
+    assert (
+        str(exception)
+        == "Known Stripe object, not processing at this time 'payment_method'."
+    )
+    assert repr(exception) == "StripeIngestKnownObjectError('payment_method')"
 
 
 @pytest.mark.parametrize(
