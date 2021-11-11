@@ -959,8 +959,9 @@ def stripe_pubsub(
             if email_id:
                 email_ids.add(email_id)
 
-    for email_id in email_ids:
-        schedule_acoustic_record(db_session, email_id)
+    if email_ids:
+        for email_id in email_ids:
+            schedule_acoustic_record(db_session, email_id)
         db_session.commit()
 
     if has_error:
