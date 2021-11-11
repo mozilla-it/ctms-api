@@ -341,17 +341,19 @@ class CTMSToAcousticService:
                     "product_id": product.product_id,
                     "segment": product.segment,
                     "changed": to_ts(product.changed),
-                    "sub_count": product.sub_count,
+                    "sub_count": str(product.sub_count),
                     "payment_service": product.payment_service,
                     "payment_type": product.payment_type or "",
                     "card_brand": product.card_brand or "",
                     "card_last4": product.card_last4 or "",
                     "currency": product.currency or "",
-                    "amount": -1 if product.amount is None else product.amount,
+                    "amount": "-1" if product.amount is None else str(product.amount),
                     "billing_country": product.billing_country or "",
                     "status": product.status or "",
                     "interval_count": (
-                        -1 if product.interval_count is None else product.interval_count
+                        "-1"
+                        if product.interval_count is None
+                        else str(product.interval_count)
                     ),
                     "interval": product.interval or "",
                     "created": to_ts(product.created),
