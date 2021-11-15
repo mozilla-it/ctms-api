@@ -824,7 +824,7 @@ def version():
     return get_version()
 
 
-def heartbeat(request: Request, response: Response, db: Session):
+def heartbeat(request: Request, db: Session):
     """Return status of backing services, as required by Dockerflow."""
     x_nr_synthetics = request.headers.get("x-newrelic-synthetics", "")
     x_abuse_info = request.headers.get("x-abuse-info", "")
@@ -836,19 +836,20 @@ def heartbeat(request: Request, response: Response, db: Session):
     if is_newrelic or is_amazon:
         request.state.log_context["trivial_code"] = 200
     data = {"database": check_database(db)}
+    status_code = 200
     if not data["database"]["up"]:
-        response.status_code = 503
-    return data
+        status_code = 503
+    return JSONResponse(content=data, status_code=status_code)
 
 
 @app.get("/__heartbeat__", tags=["Platform"])
-def get_heartbeat(request: Request, response: Response, db: Session = Depends(get_db)):
-    return heartbeat(request, response, db)
+def get_heartbeat(request: Request, db: Session = Depends(get_db)):
+    return heartbeat(request, db)
 
 
 @app.head("/__heartbeat__", tags=["Platform"])
-def head_heartbeat(request: Request, response: Response, db: Session = Depends(get_db)):
-    return heartbeat(request, response, db)
+def head_heartbeat(request: Request, db: Session = Depends(get_db)):
+    return heartbeat(request, db)
 
 
 def lbheartbeat(request: Request):
