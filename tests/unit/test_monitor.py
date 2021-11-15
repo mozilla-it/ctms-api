@@ -1,5 +1,5 @@
 """Unit tests for dockerflow health monitoring endpoints"""
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy.exc import TimeoutError as SQATimeoutError
@@ -27,7 +27,19 @@ def test_read_heartbeat(anon_client, dbsession):
         resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 200
     data = resp.json()
-    expected = {"database": {"up": True, "time_ms": data["database"]["time_ms"]}}
+    expected = {
+        "database": {
+            "up": True,
+            "time_ms": data["database"]["time_ms"],
+            "acoustic": {
+                "success": True,
+                "backlog": 0,
+                "retry_backlog": 0,
+                "retry_limit": 6,
+                "time_ms": data["database"]["acoustic"]["time_ms"],
+            },
+        }
+    }
     assert data == expected
     assert len(cap_logs) == 1
     assert "trivial" not in cap_logs[0]
@@ -43,10 +55,34 @@ def test_read_heartbeat_no_db_fails(anon_client, mock_db):
     assert data == expected
 
 
+def test_read_heartbeat_acoustic_fails(anon_client, dbsession):
+    """/__heartbeat__ returns 200 when measuring the acoustic backlog fails."""
+    with patch(
+        "ctms.monitor.get_all_acoustic_records_count", side_effect=SQATimeoutError()
+    ):
+        resp = anon_client.get("/__heartbeat__")
+    assert resp.status_code == 200
+    data = resp.json()
+    expected = {
+        "database": {
+            "up": True,
+            "time_ms": data["database"]["time_ms"],
+            "acoustic": {
+                "success": False,
+                "backlog": None,
+                "retry_backlog": None,
+                "retry_limit": 6,
+                "time_ms": data["database"]["acoustic"]["time_ms"],
+            },
+        }
+    }
+    assert data == expected
+
+
 @pytest.mark.parametrize("method", ("GET", "HEAD"))
 @pytest.mark.parametrize("agent", ("newrelic", "amazon"))
 @pytest.mark.parametrize("success", (True, False))
-def test_read_heartbeat_by_bot(anon_client, mock_db, method, agent, success):
+def test_read_heartbeat_by_bot(anon_client, mock_db, success, agent, method):
     """When a known bot calls heartbeat, mark trivial on success."""
     if agent == "newrelic":
         headers = {
@@ -56,10 +92,13 @@ def test_read_heartbeat_by_bot(anon_client, mock_db, method, agent, success):
     else:
         assert agent == "amazon"
         headers = {"user-agent": "Amazon-Route53-Health-Check-Service (ref ..."}
+
     if not success:
         mock_db.execute.side_effect = SQATimeoutError()
 
-    with capture_logs() as cap_logs:
+    with capture_logs() as cap_logs, patch(
+        "ctms.monitor.get_all_acoustic_records_count", return_value=0
+    ), patch("ctms.monitor.get_all_acoustic_retries_count", return_value=0):
         resp = anon_client.request(method, "/__heartbeat__", headers=headers)
     assert len(cap_logs) == 1
 

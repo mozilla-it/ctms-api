@@ -3,10 +3,13 @@
 import json
 import os.path
 import time
+from datetime import datetime, timezone
 from functools import lru_cache
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import func, select
+
+from ctms.crud import get_all_acoustic_records_count, get_all_acoustic_retries_count
 
 
 def check_database(db_session):
@@ -19,7 +22,32 @@ def check_database(db_session):
     else:
         success = True
     duration_s = time.monotonic() - start_time
-    return {"up": success, "time_ms": int(round(1000 * duration_s))}
+    status = {"up": success, "time_ms": int(round(1000 * duration_s))}
+    if not success:
+        return status
+
+    acoustic_start_time = time.monotonic()
+    count = None
+    retry_count = None
+    retry_limit = 6  # TODO: Read from CTMS_ACOUSTIC_RETRY_LIMIT
+    try:
+        end_time = datetime.now(tz=timezone.utc)
+        count = get_all_acoustic_records_count(db_session, end_time, retry_limit)
+        retry_count = get_all_acoustic_retries_count(db_session)
+    except SQLAlchemyError:
+        acoustic_success = False
+    else:
+        acoustic_success = True
+    acoustic_duration_s = time.monotonic() - acoustic_start_time
+    status["acoustic"] = {
+        "success": acoustic_success,
+        "backlog": count,
+        "retry_backlog": retry_count,
+        "retry_limit": retry_limit,
+        "time_ms": int(round(1000 * acoustic_duration_s)),
+    }
+
+    return status
 
 
 @lru_cache()
@@ -33,6 +61,6 @@ def get_version():
     version_path = os.path.join(ctms_root, "version.json")
     info = {}
     if os.path.exists(version_path):
-        with open(version_path, "r") as version_file:
+        with open(version_path, "r", encoding="utf8") as version_file:
             info = json.load(version_file)
     return info
