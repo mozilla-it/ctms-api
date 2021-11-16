@@ -50,7 +50,9 @@ def test_read_heartbeat(anon_client, dbsession, test_settings):
             "acoustic": {
                 "success": True,
                 "backlog": 0,
+                "max_backlog": None,
                 "retry_backlog": 0,
+                "max_retry_backlog": None,
                 "retry_limit": 5,
                 "batch_limit": 25,
                 "loop_min_sec": 10,
@@ -88,7 +90,9 @@ def test_read_heartbeat_acoustic_fails(anon_client, dbsession, test_settings):
             "acoustic": {
                 "success": False,
                 "backlog": None,
+                "max_backlog": None,
                 "retry_backlog": None,
+                "max_retry_backlog": None,
                 "retry_limit": 5,
                 "batch_limit": 25,
                 "loop_min_sec": 10,
@@ -97,6 +101,27 @@ def test_read_heartbeat_acoustic_fails(anon_client, dbsession, test_settings):
         }
     }
     assert data == expected
+
+
+@pytest.mark.parametrize("backlog, retry_backlog", ((51, 1), (1, 51)))
+def test_read_heartbeat_backlog_over_limit(
+    anon_client, dbsession, test_settings, backlog, retry_backlog
+):
+    """/__heartbeat__ returns 503 when measuring the acoustic backlog fails."""
+    test_settings["acoustic_max_backlog"] = 50
+    test_settings["acoustic_max_retry_backlog"] = 50
+    backlog = 1
+    retry_backlog = 1
+    with patch(
+        "ctms.monitor.get_all_acoustic_records_count", return_value=backlog
+    ), patch("ctms.monitor.get_all_acoustic_retries_count", return_value=retry_backlog):
+        resp = anon_client.get("/__heartbeat__")
+    assert resp.status_code == 503
+    data = resp.json()
+    assert data["database"]["acoustic"]["backlog"] == backlog
+    assert data["database"]["acoustic"]["max_backlog"] == 50
+    assert data["database"]["acoustic"]["retry_backlog"] == retry_backlog
+    assert data["database"]["acoustic"]["max_retry_backlog"] == 50
 
 
 @pytest.mark.parametrize("method", ("GET", "HEAD"))

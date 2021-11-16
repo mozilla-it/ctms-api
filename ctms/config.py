@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     acoustic_batch_limit: int = 20
     acoustic_server_number: int = 6
     acoustic_loop_min_secs: int = 5
+    acoustic_max_backlog: Optional[int] = None
+    acoustic_max_retry_backlog: Optional[int] = None
 
     # Background settings, optional for API
     acoustic_client_id: Optional[str] = None

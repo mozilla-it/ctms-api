@@ -42,7 +42,9 @@ def check_database(db_session, settings):
     status["acoustic"] = {
         "success": acoustic_success,
         "backlog": count,
+        "max_backlog": settings.acoustic_max_backlog,
         "retry_backlog": retry_count,
+        "max_retry_backlog": settings.acoustic_max_retry_backlog,
         "retry_limit": retry_limit,
         "batch_limit": settings.acoustic_batch_limit,
         "loop_min_sec": settings.acoustic_loop_min_secs,

@@ -1,4 +1,5 @@
 """The CTMS application, including middleware and routes."""
+# pylint:disable = too-many-lines
 import json
 import re
 import sys
@@ -839,6 +840,16 @@ def heartbeat(request: Request, db: Session, settings: config.Settings):
     status_code = 200
     if not data["database"]["up"]:
         status_code = 503
+    if "acoustic" in data["database"]:
+        backlog = data["database"]["acoustic"]["backlog"]
+        retry_backlog = data["database"]["acoustic"]["retry_backlog"]
+        max_backlog = data["database"]["acoustic"]["max_backlog"]
+        max_retry_backlog = data["database"]["acoustic"]["max_retry_backlog"]
+
+        if max_backlog is not None and max_backlog > backlog:
+            status_code = 503
+        if max_retry_backlog is not None and max_retry_backlog > retry_backlog:
+            status_code = 503
     return JSONResponse(content=data, status_code=status_code)
 
 
