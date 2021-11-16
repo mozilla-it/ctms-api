@@ -97,6 +97,7 @@ def ingest_stripe_customer(
         else:
             # Update existing customer
             customer.created = from_ts(data["created"])
+            customer.fxa_id = data["description"]
             customer.default_source_id = data["default_source"]
             _dpm = data["invoice_settings"]["default_payment_method"]
             customer.invoice_settings_default_payment_method_id = _dpm
@@ -135,6 +136,7 @@ def ingest_stripe_customer(
         stripe_id=customer_id,
         stripe_created=data["created"],
         email_id=email_id,
+        fxa_id=fxa_id,
         deleted=data.get("deleted", False),
         default_source_id=data["default_source"],
         invoice_settings_default_payment_method_id=_dpm,

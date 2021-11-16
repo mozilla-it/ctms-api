@@ -216,6 +216,7 @@ SAMPLE_STRIPE_DATA = {
         "stripe_id": FAKE_STRIPE_ID["Customer"],
         "stripe_created": datetime(2021, 10, 25, 15, 34, tzinfo=timezone.utc),
         "email_id": SAMPLE_EXAMPLE.email.email_id,
+        "fxa_id": SAMPLE_EXAMPLE.fxa.fxa_id,
         "default_source_id": None,
         "invoice_settings_default_payment_method_id": FAKE_STRIPE_ID["Payment Method"],
     },
