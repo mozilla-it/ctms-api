@@ -5,7 +5,8 @@ import pytest
 from sqlalchemy.exc import TimeoutError as SQATimeoutError
 from structlog.testing import capture_logs
 
-from ctms.app import app, get_db
+from ctms.app import app, get_db, get_settings
+from ctms.config import Settings
 
 
 @pytest.fixture
@@ -21,7 +22,22 @@ def mock_db():
     del app.dependency_overrides[get_db]
 
 
-def test_read_heartbeat(anon_client, dbsession):
+@pytest.fixture
+def test_settings():
+    """Set settings for heartbeat tests."""
+
+    settings = {
+        "acoustic_retry_limit": 5,
+        "acoustic_batch_limit": 25,
+        "acoustic_loop_min_secs": 10,
+    }
+
+    app.dependency_overrides[get_settings] = lambda: Settings(**settings)
+    yield settings
+    del app.dependency_overrides[get_settings]
+
+
+def test_read_heartbeat(anon_client, dbsession, test_settings):
     """The platform calls /__heartbeat__ to check backing services."""
     with capture_logs() as cap_logs:
         resp = anon_client.get("/__heartbeat__")
@@ -35,7 +51,9 @@ def test_read_heartbeat(anon_client, dbsession):
                 "success": True,
                 "backlog": 0,
                 "retry_backlog": 0,
-                "retry_limit": 6,
+                "retry_limit": 5,
+                "batch_limit": 25,
+                "loop_min_sec": 10,
                 "time_ms": data["database"]["acoustic"]["time_ms"],
             },
         }
@@ -55,7 +73,7 @@ def test_read_heartbeat_no_db_fails(anon_client, mock_db):
     assert data == expected
 
 
-def test_read_heartbeat_acoustic_fails(anon_client, dbsession):
+def test_read_heartbeat_acoustic_fails(anon_client, dbsession, test_settings):
     """/__heartbeat__ returns 200 when measuring the acoustic backlog fails."""
     with patch(
         "ctms.monitor.get_all_acoustic_records_count", side_effect=SQATimeoutError()
@@ -71,7 +89,9 @@ def test_read_heartbeat_acoustic_fails(anon_client, dbsession):
                 "success": False,
                 "backlog": None,
                 "retry_backlog": None,
-                "retry_limit": 6,
+                "retry_limit": 5,
+                "batch_limit": 25,
+                "loop_min_sec": 10,
                 "time_ms": data["database"]["acoustic"]["time_ms"],
             },
         }

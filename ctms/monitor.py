@@ -12,7 +12,7 @@ from sqlalchemy.sql import func, select
 from ctms.crud import get_all_acoustic_records_count, get_all_acoustic_retries_count
 
 
-def check_database(db_session):
+def check_database(db_session, settings):
     """Check database availability and migration state."""
     start_time = time.monotonic()
     try:
@@ -29,7 +29,7 @@ def check_database(db_session):
     acoustic_start_time = time.monotonic()
     count = None
     retry_count = None
-    retry_limit = 6  # TODO: Read from CTMS_ACOUSTIC_RETRY_LIMIT
+    retry_limit = settings.acoustic_retry_limit
     try:
         end_time = datetime.now(tz=timezone.utc)
         count = get_all_acoustic_records_count(db_session, end_time, retry_limit)
@@ -44,6 +44,8 @@ def check_database(db_session):
         "backlog": count,
         "retry_backlog": retry_count,
         "retry_limit": retry_limit,
+        "batch_limit": settings.acoustic_batch_limit,
+        "loop_min_sec": settings.acoustic_loop_min_secs,
         "time_ms": int(round(1000 * acoustic_duration_s)),
     }
 

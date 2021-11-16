@@ -93,7 +93,7 @@ re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
 
 
 @lru_cache()
-def get_settings():
+def get_settings() -> config.Settings:
     return config.Settings()
 
 
@@ -824,7 +824,7 @@ def version():
     return get_version()
 
 
-def heartbeat(request: Request, db: Session):
+def heartbeat(request: Request, db: Session, settings: config.Settings):
     """Return status of backing services, as required by Dockerflow."""
     x_nr_synthetics = request.headers.get("x-newrelic-synthetics", "")
     x_abuse_info = request.headers.get("x-abuse-info", "")
@@ -835,7 +835,7 @@ def heartbeat(request: Request, db: Session):
     is_amazon = user_agent.startswith("Amazon-Route53-Health-Check-Service (")
     if is_newrelic or is_amazon:
         request.state.log_context["trivial_code"] = 200
-    data = {"database": check_database(db)}
+    data = {"database": check_database(db, settings)}
     status_code = 200
     if not data["database"]["up"]:
         status_code = 503
@@ -843,13 +843,21 @@ def heartbeat(request: Request, db: Session):
 
 
 @app.get("/__heartbeat__", tags=["Platform"])
-def get_heartbeat(request: Request, db: Session = Depends(get_db)):
-    return heartbeat(request, db)
+def get_heartbeat(
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: config.Settings = Depends(get_settings),
+):
+    return heartbeat(request, db, settings)
 
 
 @app.head("/__heartbeat__", tags=["Platform"])
-def head_heartbeat(request: Request, db: Session = Depends(get_db)):
-    return heartbeat(request, db)
+def head_heartbeat(
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: config.Settings = Depends(get_settings),
+):
+    return heartbeat(request, db, settings)
 
 
 def lbheartbeat(request: Request):
