@@ -241,6 +241,7 @@ def test_ingest_existing_contact(dbsession, example_contact):
         == FAKE_STRIPE_ID["Payment Method"]
     )
     assert customer.email_id == example_contact.email.email_id
+    assert customer.fxa_id == example_contact.fxa.fxa_id
     assert customer.get_email_id() == example_contact.email.email_id
 
 
