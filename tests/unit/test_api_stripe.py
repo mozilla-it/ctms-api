@@ -58,13 +58,22 @@ def pubsub_client(anon_client):
     del app.dependency_overrides[get_pubsub_claim]
 
 
-def test_api_post_stripe_customer(client, dbsession):
+def test_api_post_stripe_customer(client, dbsession, example_contact):
     """Stripe customer data can be imported."""
     data = stripe_customer_data()
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
     par = dbsession.query(PendingAcousticRecord).one_or_none()
     assert par.email.stripe_customer.stripe_id == data["id"]
+
+
+def test_api_post_stripe_customer_without_contact(client, dbsession):
+    """Stripe customer data without a related contact can be imported."""
+    data = stripe_customer_data()
+    resp = client.post("/stripe", json=data)
+    assert resp.status_code == 200
+    par = dbsession.query(PendingAcousticRecord).one_or_none()
+    assert par is None
 
 
 def test_api_post_stripe_customer_bad_data(client, dbsession):
@@ -91,7 +100,9 @@ def test_api_post_sample_data(dbsession, client, stripe_test_json):
     assert resp.status_code == 200
 
 
-def test_api_post_stripe_from_pubsub_customer(dbsession, pubsub_client):
+def test_api_post_stripe_from_pubsub_customer(
+    dbsession, pubsub_client, example_contact
+):
     """Stripe customer data as a PubSub push can be imported."""
     data = stripe_customer_data()
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
@@ -101,7 +112,19 @@ def test_api_post_stripe_from_pubsub_customer(dbsession, pubsub_client):
     assert par.email.stripe_customer.stripe_id == data["id"]
 
 
-def test_api_post_stripe_from_pubsub_item_dict(dbsession, pubsub_client):
+def test_api_post_stripe_from_pubsub_without_contact(pubsub_client, dbsession):
+    """Stripe customer data without a related contact can be imported from pubsub."""
+    data = stripe_customer_data()
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 1}
+    par = dbsession.query(PendingAcousticRecord).one_or_none()
+    assert par is None
+
+
+def test_api_post_stripe_from_pubsub_item_dict(
+    dbsession, pubsub_client, example_contact
+):
     """A PubSub push of multiple items, keyed by table:id, can be imported."""
     customer_data = stripe_customer_data()
     subscription_data = stripe_subscription_data()

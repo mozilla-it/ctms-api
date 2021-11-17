@@ -5,19 +5,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from typing import Dict, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
 from ctms.crud import (
-    create_email,
     create_stripe_customer,
     create_stripe_invoice,
     create_stripe_invoice_line_item,
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
-    get_contact_by_email_id,
     get_stripe_customer_by_stripe_id,
     get_stripe_invoice_by_stripe_id,
     get_stripe_invoice_line_item_by_stripe_id,
@@ -35,7 +33,6 @@ from ctms.ingest_stripe import (
     ingest_stripe_subscription,
 )
 from ctms.schemas import (
-    EmailInSchema,
     StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
@@ -54,13 +51,12 @@ def unix_timestamp(the_time: Optional[datetime] = None) -> int:
 
 def stripe_customer_data() -> Dict:
     """Return minimal Stripe customer data."""
-    fxa_id = str(uuid4())
     sample = SAMPLE_STRIPE_DATA["Customer"]
     return {
         "id": sample["stripe_id"],
         "object": "customer",
         "created": unix_timestamp(sample["stripe_created"]),
-        "description": fxa_id,
+        "description": sample["fxa_id"],
         "email": "fxa_email@example.com",
         "default_source": sample["default_source_id"],
         "invoice_settings": {
@@ -240,27 +236,21 @@ def test_ingest_existing_contact(dbsession, example_contact):
         customer.invoice_settings_default_payment_method_id
         == FAKE_STRIPE_ID["Payment Method"]
     )
-    assert customer.email_id == example_contact.email.email_id
     assert customer.fxa_id == example_contact.fxa.fxa_id
     assert customer.get_email_id() == example_contact.email.email_id
 
 
-def test_ingest_new_contact(dbsession):
-    """A Stripe Customer creates a new contact if needed."""
+def test_ingest_without_contact(dbsession):
+    """A Stripe Customer can be ingested without a contact."""
     data = stripe_customer_data()
     customer = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
     dbsession.refresh(customer)
-    email_id = customer.email.email_id
-    contact = get_contact_by_email_id(dbsession, email_id)
-    assert contact["fxa"].fxa_id == data["description"]
-    assert contact["fxa"].primary_email == data["email"]
-    assert contact["email"].primary_email == data["email"]
-    assert customer.get_email_id() == contact["email"].email_id
+    assert customer.email is None
 
 
-def test_ingest_new_but_deleted_customer(dbsession):
-    """A deleted Stripe Customer does not create a new contact."""
+def test_ingest_deleted_customer(dbsession):
+    """A deleted Stripe Customer is not ingested."""
     data = {
         "deleted": True,
         "id": FAKE_STRIPE_ID["Customer"],
@@ -268,27 +258,6 @@ def test_ingest_new_but_deleted_customer(dbsession):
     }
     customer = ingest_stripe_customer(dbsession, data)
     assert customer is None
-
-
-def test_ingest_new_fxa_user(dbsession):
-    """A Stripe Customer creates a new FxA association if needed."""
-    data = stripe_customer_data()
-    fxa_id = data["description"]
-    fxa_email = data["email"]
-    email_id = str(uuid4())
-    new_email = EmailInSchema(email_id=email_id, primary_email=fxa_email)
-    create_email(dbsession, new_email)
-    dbsession.commit()
-
-    customer = ingest_stripe_customer(dbsession, data)
-    dbsession.commit()
-    dbsession.refresh(customer)
-    email_id = customer.email.email_id
-    contact = get_contact_by_email_id(dbsession, email_id)
-    assert contact["fxa"].fxa_id == fxa_id
-    assert contact["fxa"].primary_email == fxa_email
-    assert contact["email"].primary_email == fxa_email
-    assert customer.get_email_id() == contact["email"].email_id
 
 
 def test_ingest_update_customer(dbsession, stripe_customer):
@@ -306,7 +275,9 @@ def test_ingest_update_customer(dbsession, stripe_customer):
     assert customer.invoice_settings_default_payment_method_id is None
 
 
-def test_ingest_existing_but_deleted_customer(dbsession, stripe_customer):
+def test_ingest_existing_but_deleted_customer(
+    dbsession, stripe_customer, example_contact
+):
     """A deleted Stripe Customer is noted for later deletion."""
     assert not stripe_customer.deleted
 
@@ -324,7 +295,7 @@ def test_ingest_existing_but_deleted_customer(dbsession, stripe_customer):
         customer.invoice_settings_default_payment_method_id
         == stripe_customer.invoice_settings_default_payment_method_id
     )
-    assert customer.get_email_id() == customer.email_id
+    assert customer.get_email_id() == example_contact.email.email_id
 
 
 def test_ingest_new_subscription(dbsession):

@@ -18,18 +18,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
-from uuid import uuid4
 
 from ctms.crud import (
-    create_email,
-    create_fxa,
     create_stripe_customer,
     create_stripe_invoice,
     create_stripe_invoice_line_item,
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
-    get_emails_by_any_id,
     get_stripe_customer_by_stripe_id,
     get_stripe_invoice_by_stripe_id,
     get_stripe_invoice_line_item_by_stripe_id,
@@ -47,8 +43,6 @@ from ctms.models import (  # TODO: Move into TYPE_CHECKING after pylint update
     StripeSubscriptionItem,
 )
 from ctms.schemas import (
-    EmailInSchema,
-    FirefoxAccountsInSchema,
     StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
@@ -107,36 +101,11 @@ def ingest_stripe_customer(
         # Do not create records for deleted Customer records.
         return None
 
-    # Create new customer
-    fxa_id = data["description"]
-    emails = get_emails_by_any_id(db_session, fxa_id=fxa_id)
-    if len(emails) == 0:
-        # Try by primary email
-        email = data["email"]
-        emails = get_emails_by_any_id(db_session, primary_email=email)
-        if emails:
-            assert len(emails) == 1
-            email_id = emails[0].email_id
-        else:
-            # Create new contact
-            email_id = uuid4()
-            new_email = EmailInSchema(email_id=email_id, primary_email=email)
-            create_email(db_session, new_email)
-
-        # Create new FxA row
-        new_fxa = FirefoxAccountsInSchema(fxa_id=fxa_id, primary_email=email)
-        create_fxa(db_session, email_id, new_fxa)
-    else:
-        # Associate with existing contact
-        assert len(emails) == 1
-        email_id = emails[0].email_id
-
     _dpm = data["invoice_settings"]["default_payment_method"]
     schema = StripeCustomerCreateSchema(
         stripe_id=customer_id,
         stripe_created=data["created"],
-        email_id=email_id,
-        fxa_id=fxa_id,
+        fxa_id=data["description"],
         deleted=data.get("deleted", False),
         default_source_id=data["default_source"],
         invoice_settings_default_payment_method_id=_dpm,
