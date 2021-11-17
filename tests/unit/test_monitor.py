@@ -5,7 +5,8 @@ import pytest
 from sqlalchemy.exc import TimeoutError as SQATimeoutError
 from structlog.testing import capture_logs
 
-from ctms.app import app, get_db
+from ctms.app import app, get_db, get_settings
+from ctms.config import Settings
 
 
 @pytest.fixture
@@ -21,7 +22,22 @@ def mock_db():
     del app.dependency_overrides[get_db]
 
 
-def test_read_heartbeat(anon_client, dbsession):
+@pytest.fixture
+def test_settings():
+    """Set settings for heartbeat tests."""
+
+    settings = {
+        "acoustic_retry_limit": 5,
+        "acoustic_batch_limit": 25,
+        "acoustic_loop_min_secs": 10,
+    }
+
+    app.dependency_overrides[get_settings] = lambda: Settings(**settings)
+    yield settings
+    del app.dependency_overrides[get_settings]
+
+
+def test_read_heartbeat(anon_client, dbsession, test_settings):
     """The platform calls /__heartbeat__ to check backing services."""
     with capture_logs() as cap_logs:
         resp = anon_client.get("/__heartbeat__")
@@ -34,8 +50,12 @@ def test_read_heartbeat(anon_client, dbsession):
             "acoustic": {
                 "success": True,
                 "backlog": 0,
+                "max_backlog": None,
                 "retry_backlog": 0,
-                "retry_limit": 6,
+                "max_retry_backlog": None,
+                "retry_limit": 5,
+                "batch_limit": 25,
+                "loop_min_sec": 10,
                 "time_ms": data["database"]["acoustic"]["time_ms"],
             },
         }
@@ -55,7 +75,7 @@ def test_read_heartbeat_no_db_fails(anon_client, mock_db):
     assert data == expected
 
 
-def test_read_heartbeat_acoustic_fails(anon_client, dbsession):
+def test_read_heartbeat_acoustic_fails(anon_client, dbsession, test_settings):
     """/__heartbeat__ returns 200 when measuring the acoustic backlog fails."""
     with patch(
         "ctms.monitor.get_all_acoustic_records_count", side_effect=SQATimeoutError()
@@ -70,13 +90,38 @@ def test_read_heartbeat_acoustic_fails(anon_client, dbsession):
             "acoustic": {
                 "success": False,
                 "backlog": None,
+                "max_backlog": None,
                 "retry_backlog": None,
-                "retry_limit": 6,
+                "max_retry_backlog": None,
+                "retry_limit": 5,
+                "batch_limit": 25,
+                "loop_min_sec": 10,
                 "time_ms": data["database"]["acoustic"]["time_ms"],
             },
         }
     }
     assert data == expected
+
+
+@pytest.mark.parametrize("backlog, retry_backlog", ((51, 1), (1, 51)))
+def test_read_heartbeat_backlog_over_limit(
+    anon_client, dbsession, test_settings, backlog, retry_backlog
+):
+    """/__heartbeat__ returns 503 when measuring the acoustic backlog fails."""
+    test_settings["acoustic_max_backlog"] = 50
+    test_settings["acoustic_max_retry_backlog"] = 50
+    backlog = 1
+    retry_backlog = 1
+    with patch(
+        "ctms.monitor.get_all_acoustic_records_count", return_value=backlog
+    ), patch("ctms.monitor.get_all_acoustic_retries_count", return_value=retry_backlog):
+        resp = anon_client.get("/__heartbeat__")
+    assert resp.status_code == 503
+    data = resp.json()
+    assert data["database"]["acoustic"]["backlog"] == backlog
+    assert data["database"]["acoustic"]["max_backlog"] == 50
+    assert data["database"]["acoustic"]["retry_backlog"] == retry_backlog
+    assert data["database"]["acoustic"]["max_retry_backlog"] == 50
 
 
 @pytest.mark.parametrize("method", ("GET", "HEAD"))

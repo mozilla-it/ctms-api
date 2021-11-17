@@ -1,7 +1,16 @@
 from datetime import timedelta
-from typing import Literal, Optional
+from enum import Enum
+from typing import Optional
 
 from pydantic import BaseSettings, DirectoryPath, PostgresDsn
+
+
+class LogLevel(str, Enum):
+    CRITICAL = "CRITICAL"
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    INFO = "INFO"
+    DEBUG = "DEBUG"
 
 
 class Settings(BaseSettings):
@@ -10,7 +19,7 @@ class Settings(BaseSettings):
     token_expiration: timedelta = timedelta(minutes=60)
     server_prefix: str = "http://localhost:8000"
     use_mozlog: bool = True
-    logging_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
+    logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
     fastapi_env: Optional[str] = None
@@ -20,6 +29,27 @@ class Settings(BaseSettings):
     pubsub_audience: Optional[str] = None
     pubsub_email: Optional[str] = None
     pubsub_client: Optional[str] = None
+
+    # Background settings
+    acoustic_sync_feature_flag: bool = False  # Enable/disable whole background sync job
+    acoustic_integration_feature_flag: bool = (
+        False  # Enable/disable integration w/ Acoustic
+    )
+    acoustic_retry_limit: int = 6
+    acoustic_batch_limit: int = 20
+    acoustic_server_number: int = 6
+    acoustic_loop_min_secs: int = 5
+    acoustic_max_backlog: Optional[int] = None
+    acoustic_max_retry_backlog: Optional[int] = None
+
+    # Background settings, optional for API
+    acoustic_client_id: Optional[str] = None
+    acoustic_client_secret: Optional[str] = None
+    acoustic_refresh_token: Optional[str] = None
+    acoustic_main_table_id: Optional[int] = None
+    acoustic_newsletter_table_id: Optional[int] = None
+    acoustic_product_subscriptions_id: Optional[int] = None
+    prometheus_pushgateway_url: Optional[str] = None
 
     class Config:
         env_prefix = "ctms_"
@@ -32,21 +62,13 @@ class Settings(BaseSettings):
 
 
 class BackgroundSettings(Settings):
-    acoustic_sync_feature_flag: bool = False  # Enable/disable whole background sync job
-    acoustic_integration_feature_flag: bool = (
-        False  # Enable/disable integration w/ Acoustic
-    )
-    acoustic_retry_limit: int = 6
-    acoustic_batch_limit: int = 20
-    acoustic_server_number: int = 6
-    acoustic_loop_min_secs: int = 5
+    # Required background settings
     acoustic_client_id: str
     acoustic_client_secret: str
     acoustic_refresh_token: str
     acoustic_main_table_id: int
     acoustic_newsletter_table_id: int
     acoustic_product_subscriptions_id: int
-    logging_level: Literal[
-        "CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"
-    ] = "DEBUG"  # Overloaded Default for Background Job
     prometheus_pushgateway_url: str
+
+    logging_level: LogLevel = LogLevel.DEBUG  # Overloaded Default for Background Job
