@@ -64,7 +64,12 @@ class Email(Base):
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
     stripe_customer = relationship(
-        "StripeCustomer", back_populates="email", uselist=False
+        "StripeCustomer",
+        uselist=False,
+        viewonly=True,
+        primaryjoin="foreign(Email.email_id)==remote(FirefoxAccount.email_id)",
+        secondaryjoin="foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)",
+        secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
     )
 
     # Class Comparators
@@ -263,7 +268,8 @@ class StripeBase(Base):
 class StripeCustomer(StripeBase):
     __tablename__ = "stripe_customer"
 
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=True)
+    # TODO - remove column with migration
+    # email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=True)
     stripe_id = Column(String(255), nullable=False, primary_key=True)
     fxa_id = Column(String(255), nullable=True, unique=True, index=True)
     default_source_id = Column(String(255), nullable=True)
@@ -279,7 +285,14 @@ class StripeCustomer(StripeBase):
         DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
-    email = relationship("Email", uselist=False)
+    email = relationship(
+        "Email",
+        uselist=False,
+        viewonly=True,
+        primaryjoin="foreign(Email.email_id)==remote(FirefoxAccount.email_id)",
+        secondaryjoin="foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)",
+        secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
+    )
     fxa = relationship(
         "FirefoxAccount",
         back_populates="stripe_customer",
@@ -306,8 +319,6 @@ class StripeCustomer(StripeBase):
     )
 
     def get_email_id(self) -> Optional[PythonUUID]:
-        if self.email_id:
-            return cast(PythonUUID, self.email_id)
         if self.fxa:
             return cast(PythonUUID, self.fxa.email.email_id)
         return None
