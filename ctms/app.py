@@ -108,7 +108,7 @@ if "pytest" not in sys.argv[0]:  # pragma: no cover
 def startup_event():  # pragma: no cover
     global SessionLocal, METRICS  # pylint:disable = W0603
     settings = get_settings()
-    configure_logging(settings.use_mozlog, settings.logging_level)
+    configure_logging(settings.use_mozlog, settings.logging_level.name)
     _, SessionLocal = get_db_engine(get_settings())
     METRICS = init_metrics(METRICS_REGISTRY)
     init_metrics_labels(SessionLocal(), app, METRICS)
