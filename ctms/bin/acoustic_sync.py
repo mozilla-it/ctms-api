@@ -16,7 +16,7 @@ LOGGER = None
 
 
 def _setup_logging(settings):
-    configure_logging(logging_level=settings.logging_level)
+    configure_logging(logging_level=settings.logging_level.name)
     return logging.getLogger(__name__)
 
 
