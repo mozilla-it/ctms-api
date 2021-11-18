@@ -17,9 +17,8 @@ class StripeCustomerBase(ComparableBase):
     See https://stripe.com/docs/api/customers.
 
     Relations:
-    * A Customer (should have) exactly one FxA user. In Stripe, the
-      "description" field is used to store the FxA ID, and in this
-      database, it is related through the email_id.
+    * A Customer has 0 or 1 FxA users. In Stripe, the "description" field is
+      used to store the FxA ID.
     * A Customer has 0 or more Subscriptions
     * A Customer has 0 or 1 default Payment Methods
     * A Customer has 0 or 1 default Sources (Older API, can be viewed as
@@ -30,6 +29,7 @@ class StripeCustomerBase(ComparableBase):
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
     email_id: Optional[UUID4]
+    fxa_id: Optional[str]
     deleted: Optional[bool]
     default_source_id: Optional[str]
     invoice_settings_default_payment_method_id: Optional[str]
@@ -47,6 +47,10 @@ class StripeCustomerBase(ComparableBase):
             "email_id": {
                 "description": EMAIL_ID_DESCRIPTION,
                 "example": EMAIL_ID_EXAMPLE,
+            },
+            "fxa_id": {
+                "description": "The Firefox Account ID",
+                "example": "6eb6ed6ac3b64259968aa490c6c0b9df",  # pragma: allowlist secret
             },
             "deleted": {
                 "description": "Has the customer has been deleted in Stripe?",
@@ -71,6 +75,7 @@ class StripeCustomerCreateSchema(StripeCustomerBase):
     stripe_id: str
     stripe_created: datetime
     email_id: UUID4
+    fxa_id: str
     deleted: bool = False
 
 
