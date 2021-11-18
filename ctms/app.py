@@ -484,13 +484,13 @@ def read_ctms_by_any_id(
         )
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_ids(db, **ids)
-    traced = []
+    traced = set()
     for contact in contacts:
         email = contact.email.primary_email
         if re_trace_email.match(email):
-            traced.append(email)
+            traced.add(email)
     if traced:
-        request.state.log_context["trace"] = ",".join(traced)
+        request.state.log_context["trace"] = ",".join(sorted(traced))
     return [
         CTMSResponse(
             amo=contact.amo or AddOnsSchema(),
