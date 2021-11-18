@@ -3,10 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import UUID4, Field
+from pydantic import Field
 
 from .base import ComparableBase
-from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class StripeCustomerBase(ComparableBase):
@@ -18,7 +17,8 @@ class StripeCustomerBase(ComparableBase):
 
     Relations:
     * A Customer has 0 or 1 FxA users. In Stripe, the "description" field is
-      used to store the FxA ID.
+      used to store the FxA ID. The FxA user may be created by Basket after the
+      Customer is created.
     * A Customer has 0 or more Subscriptions
     * A Customer has 0 or 1 default Payment Methods
     * A Customer has 0 or 1 default Sources (Older API, can be viewed as
@@ -28,7 +28,6 @@ class StripeCustomerBase(ComparableBase):
 
     stripe_id: Optional[str]
     stripe_created: Optional[datetime]
-    email_id: Optional[UUID4]
     fxa_id: Optional[str]
     deleted: Optional[bool]
     default_source_id: Optional[str]
@@ -43,10 +42,6 @@ class StripeCustomerBase(ComparableBase):
             "stripe_created": {
                 "description": "Customer creation time in Stripe",
                 "example": "2021-10-11T19:18:03.350435+00:00",
-            },
-            "email_id": {
-                "description": EMAIL_ID_DESCRIPTION,
-                "example": EMAIL_ID_EXAMPLE,
             },
             "fxa_id": {
                 "description": "The Firefox Account ID",
@@ -74,7 +69,6 @@ class StripeCustomerBase(ComparableBase):
 class StripeCustomerCreateSchema(StripeCustomerBase):
     stripe_id: str
     stripe_created: datetime
-    email_id: UUID4
     fxa_id: str
     deleted: bool = False
 
