@@ -178,6 +178,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
         "interval_count": "1",
         "payment_service": "stripe",
         "payment_type": "",
+        "price_id": "price_cHJpY2U",
         "product_id": "prod_cHJvZHVjdA",
         "product_name": "",
         "segment": "active",

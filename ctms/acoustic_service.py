@@ -339,6 +339,7 @@ class CTMSToAcousticService:
                 {
                     "product_name": product.product_name or "",
                     "product_id": product.product_id,
+                    "price_id": product.price_id,
                     "segment": product.segment.value,
                     "changed": to_ts(product.changed),
                     "sub_count": str(product.sub_count),
