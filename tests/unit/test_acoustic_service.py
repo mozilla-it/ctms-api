@@ -158,6 +158,36 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     assert _main is not None
     assert len(_newsletter) == 0  # None in Main Table Subscriber flags
     assert len(_product) == 1
+
+    # Alpha-sorted, to ease cross-check with Acoustic table displays
+    expected_product = {
+        "amount": "999",
+        "billing_country": "",
+        "cancel_at_period_end": "No",
+        "canceled_at": "",
+        "card_brand": "",
+        "card_last4": "",
+        "changed": "09/27/2021 00:00:00",
+        "created": "09/27/2021 00:00:00",
+        "currency": "usd",
+        "current_period_end": "11/27/2021 00:00:00",
+        "current_period_start": "10/27/2021 00:00:00",
+        "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+        "ended_at": "",
+        "interval": "month",
+        "interval_count": "1",
+        "payment_service": "stripe",
+        "payment_type": "",
+        "price_id": "price_cHJpY2U",
+        "product_id": "prod_cHJvZHVjdA",
+        "product_name": "",
+        "segment": "active",
+        "start": "09/27/2021 00:00:00",
+        "status": "active",
+        "sub_count": "1",
+    }
+    assert _product[0] == expected_product
+
     results = acoustic_svc.attempt_to_upload_ctms_contact(
         contact_with_stripe_subscription
     )
