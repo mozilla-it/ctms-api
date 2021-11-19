@@ -7,7 +7,7 @@ import time
 from base64 import b64decode
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 import sentry_sdk
@@ -906,12 +906,39 @@ def metrics(request: Request):
     return Response(generate_latest(registry), status_code=200, headers=headers)
 
 
+def _process_stripe_object(
+    db_session: Session, data: Dict
+) -> Tuple[Optional[UUID], Optional[str]]:
+    """
+    Ingest a Stripe Object and extract related data.
+
+    Return is a tuple:
+    - email_id - The related Contact email_id, or None if no contact.
+    - trace_email - The email to trace, or None if not Customer or doesn't match
+
+    Raises:
+    - StripeIngestBadObjectError if the data isn't a Stripe object
+    - StripeIngestUnknownObjectError if the data is an unhandled Stripe object
+    - Other errors (ValueError, KeyError) if the Stripe object has unexpected
+      data for keys that CTMS examines. Extra data is ignored.
+    """
+    obj = ingest_stripe_object(db_session, data)
+    db_session.commit()
+    email_id = obj.get_email_id()
+    if data["object"] == "customer" and re_trace_email.match(data.get("email", "")):
+        trace_email = data["email"]
+    else:
+        trace_email = None
+    return email_id, trace_email
+
+
 @app.post(
     "/stripe",
     summary="Add or update Stripe data",
     tags=["Public"],
 )
 def stripe(
+    request: Request,
     db_session: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
     data: Optional[Dict] = Depends(get_json),
@@ -919,16 +946,18 @@ def stripe(
     if not ("object" in data and "id" in data):
         raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
     try:
-        obj = ingest_stripe_object(db_session, data)
+        email_id, trace_email = _process_stripe_object(db_session, data)
     except (KeyError, ValueError, TypeError) as exception:
         raise HTTPException(
             400, detail="Unable to process Stripe object."
         ) from exception
-    db_session.commit()
-    email_id = obj.get_email_id()
     if email_id:
         schedule_acoustic_record(db_session, email_id)
         db_session.commit()
+    if trace_email:
+        request.state.log_context["trace"] = trace_email
+        request.state.log_context["trace_json"] = data
+
     return {"status": "OK"}
 
 
@@ -965,11 +994,13 @@ def stripe_pubsub(
         return JSONResponse(content=content, status_code=202)
 
     email_ids = set()
+    traced_emails = set()
+    traced_data = []
     has_error = False
     count = 0
     for item in items:
         try:
-            obj = ingest_stripe_object(db_session, item)
+            email_id, trace_email = _process_stripe_object(db_session, item)
         except StripeIngestUnknownObjectError as exception:
             request.state.log_context.setdefault("stripe_unknown_objects", []).append(
                 exception.object_value
@@ -978,16 +1009,20 @@ def stripe_pubsub(
             sentry_sdk.capture_exception(exception)
             has_error = True
         else:
-            db_session.commit()
             count += 1
-            email_id = obj.get_email_id()
             if email_id:
                 email_ids.add(email_id)
+            if trace_email:
+                traced_emails.add(trace_email)
+                traced_data.append(item)
 
     if email_ids:
         for email_id in email_ids:
             schedule_acoustic_record(db_session, email_id)
         db_session.commit()
+    if traced_emails:
+        request.state.log_context["trace"] = ",".join(sorted(traced_emails))
+        request.state.log_context["trace_json"] = traced_data
 
     if has_error:
         content = {

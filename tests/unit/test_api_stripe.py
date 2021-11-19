@@ -100,6 +100,20 @@ def test_api_post_sample_data(dbsession, client, stripe_test_json):
     assert resp.status_code == 200
 
 
+def test_api_post_stripe_trace_customer(client, dbsession, example_contact):
+    """Stripe customer data can be traced via email."""
+    data = stripe_customer_data()
+    email = data["email"] = "customer+trace-me-mozilla-123@example.com"
+    with capture_logs() as caplog:
+        resp = client.post("/stripe", json=data)
+    assert resp.status_code == 200
+    par = dbsession.query(PendingAcousticRecord).one_or_none()
+    assert par.email.stripe_customer.stripe_id == data["id"]
+    assert len(caplog) == 1
+    assert caplog[0]["trace"] == email
+    assert caplog[0]["trace_json"] == data
+
+
 def test_api_post_stripe_from_pubsub_customer(
     dbsession, pubsub_client, example_contact
 ):
@@ -183,7 +197,7 @@ def test_api_post_pubsub_sample_data(dbsession, pubsub_client, stripe_test_json)
     assert resp.json() == {"status": "OK", "count": 1}
 
 
-def test_api_post_stripe_unknown_stripe_object(dbsession, pubsub_client):
+def test_api_post_pubsub_unknown_stripe_object(dbsession, pubsub_client):
     """An unknown Stripe object is silently ignored."""
     data = {"object": "payment_method", "id": "pm_ABC123"}
     with capture_logs() as cap_logs:
@@ -192,3 +206,16 @@ def test_api_post_stripe_unknown_stripe_object(dbsession, pubsub_client):
     assert resp.json() == {"status": "OK", "count": 0}
     assert len(cap_logs) == 1
     assert cap_logs[0]["stripe_unknown_objects"] == ["payment_method"]
+
+
+def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
+    """Stripe customer data from PubSub can be traced via email."""
+    data = stripe_customer_data()
+    email = data["email"] = "customer+trace-me-mozilla-123@example.com"
+    with capture_logs() as caplog:
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 1}
+    assert len(caplog) == 1
+    assert caplog[0]["trace"] == email
+    assert caplog[0]["trace_json"] == [data]  # Returned as list
