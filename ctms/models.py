@@ -268,10 +268,8 @@ class StripeBase(Base):
 class StripeCustomer(StripeBase):
     __tablename__ = "stripe_customer"
 
-    # TODO - remove column with migration
-    # email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=True)
     stripe_id = Column(String(255), nullable=False, primary_key=True)
-    fxa_id = Column(String(255), nullable=True, unique=True, index=True)
+    fxa_id = Column(String(255), nullable=False, unique=True, index=True)
     default_source_id = Column(String(255), nullable=True)
     invoice_settings_default_payment_method_id = Column(String(255), nullable=True)
 
