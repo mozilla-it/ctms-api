@@ -2,7 +2,7 @@ import datetime
 import logging
 import time
 from decimal import Decimal
-from typing import List
+from typing import Dict, List
 from uuid import UUID
 
 import dateutil
@@ -331,15 +331,15 @@ class CTMSToAcousticService:
         """Create the rows for the product subscription table in Acoustic."""
         contact_email_id = str(contact.email.email_id)
         product_rows = []
-        template = {"email_id": contact_email_id}
+        template: Dict[str, str] = {"email_id": contact_email_id}
         to_ts = CTMSToAcousticService.to_acoustic_timestamp
         for product in contact.products:
-            row = template.copy()
+            row: Dict[str, str] = template.copy()
             row.update(
                 {
                     "product_name": product.product_name or "",
                     "product_id": product.product_id,
-                    "segment": product.segment,
+                    "segment": product.segment.value,
                     "changed": to_ts(product.changed),
                     "sub_count": str(product.sub_count),
                     "payment_service": product.payment_service,
@@ -349,7 +349,7 @@ class CTMSToAcousticService:
                     "currency": product.currency or "",
                     "amount": "-1" if product.amount is None else str(product.amount),
                     "billing_country": product.billing_country or "",
-                    "status": product.status or "",
+                    "status": product.status.value if product.status else "",
                     "interval_count": (
                         "-1"
                         if product.interval_count is None
