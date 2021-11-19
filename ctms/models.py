@@ -260,7 +260,7 @@ class StripeBase(Base):
 
     __abstract__ = True
 
-    def get_email_id(self) -> Optional[UUID]:
+    def get_email_id(self) -> Optional[PythonUUID]:
         """Return the email_id of the associated contact, if any."""
         raise NotImplementedError()
 
