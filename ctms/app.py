@@ -906,6 +906,25 @@ def metrics(request: Request):
     return Response(generate_latest(registry), status_code=200, headers=headers)
 
 
+def _process_stripe_object(db_session: Session, data: Dict) -> Optional[UUID]:
+    """
+    Ingest a Stripe Object and extract related data.
+
+    Return is:
+    - email_id - The related Contact email_id, or None if no contact.
+
+    Raises:
+    - StripeIngestBadObjectError if the data isn't a Stripe object
+    - StripeIngestUnknownObjectError if the data is an unhandled Stripe object
+    - Other errors (ValueError, KeyError) if the Stripe object has unexpected
+      data for keys that CTMS examines. Extra data is ignored.
+    """
+    obj = ingest_stripe_object(db_session, data)
+    db_session.commit()
+    email_id = obj.get_email_id()
+    return email_id
+
+
 @app.post(
     "/stripe",
     summary="Add or update Stripe data",
@@ -919,13 +938,11 @@ def stripe(
     if not ("object" in data and "id" in data):
         raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
     try:
-        obj = ingest_stripe_object(db_session, data)
+        email_id = _process_stripe_object(db_session, data)
     except (KeyError, ValueError, TypeError) as exception:
         raise HTTPException(
             400, detail="Unable to process Stripe object."
         ) from exception
-    db_session.commit()
-    email_id = obj.get_email_id()
     if email_id:
         schedule_acoustic_record(db_session, email_id)
         db_session.commit()
@@ -969,7 +986,7 @@ def stripe_pubsub(
     count = 0
     for item in items:
         try:
-            obj = ingest_stripe_object(db_session, item)
+            email_id = _process_stripe_object(db_session, item)
         except StripeIngestUnknownObjectError as exception:
             request.state.log_context.setdefault("stripe_unknown_objects", []).append(
                 exception.object_value
@@ -978,9 +995,7 @@ def stripe_pubsub(
             sentry_sdk.capture_exception(exception)
             has_error = True
         else:
-            db_session.commit()
             count += 1
-            email_id = obj.get_email_id()
             if email_id:
                 email_ids.add(email_id)
 
