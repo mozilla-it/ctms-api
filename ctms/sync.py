@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timezone
-from typing import List
+from typing import Dict, List, Union
 
 from ctms.acoustic_service import Acoustic, CTMSToAcousticService
 from ctms.background_metrics import BackgroundMetricService
@@ -64,6 +64,7 @@ class CTMSToAcousticSync:
             return False
 
     def _sync_pending_record(self, db, pending_record: PendingAcousticRecord):
+        state = "unknown"
         try:
             if self.is_acoustic_enabled:
                 contact: ContactSchema = get_acoustic_record_as_contact(
@@ -80,30 +81,39 @@ class CTMSToAcousticSync:
             if is_success:
                 # on success delete pending_record from table
                 delete_acoustic_record(db, pending_record)
-                self.logger.debug(
-                    "Successfully sync'd contact; deleting pending_record in table."
-                )
+                if self.is_acoustic_enabled:
+                    state = "synced"
+                else:
+                    state = "skipped"
                 if self.metric_service:
                     self.metric_service.inc_acoustic_sync_total()
             else:
                 # on failure increment retry of record in table
                 retry_acoustic_record(db, pending_record)
-                self.logger.debug(
-                    "Failure on sync; incrementing retry for pending_record in table."
-                )
+                state = "retry"
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Exception occurred when processing acoustic record.")
+            state = "exception"
+        return state
 
     def sync_records(self, db, end_time=None):
+        context: Dict[str, Union[int, str]] = {
+            "batch_limit": self.batch_limit,
+            "retry_limit": self.retry_limit,
+        }
         if end_time is None:
+            context["end_time"] = "now"
             end_time = datetime.now(timezone.utc)
-        self.logger.debug("START: sync.sync_records")
+        else:
+            context["end_time"] = end_time.isoformat()
         if self.metric_service:
             all_acoustic_records_count: int = get_all_acoustic_records_count(
                 db=db, end_time=end_time, retry_limit=self.retry_limit
             )
+            context["sync_backlog"] = all_acoustic_records_count
             self.metric_service.gauge_acoustic_sync_backlog(all_acoustic_records_count)
             all_retry_records_count: int = get_all_acoustic_retries_count(db=db)
+            context["retry_backlog"] = all_acoustic_records_count
             self.metric_service.gauge_acoustic_retry_backlog(all_retry_records_count)
         # Get all Records before current time
         all_acoustic_records_before_now: List[
@@ -116,8 +126,11 @@ class CTMSToAcousticSync:
         )
 
         # For each record, attempt downstream sync
+        context["count_total"] = 0
         for acoustic_record in all_acoustic_records_before_now:
-            self._sync_pending_record(db, acoustic_record)
+            state = self._sync_pending_record(db, acoustic_record)
+            context["count_total"] += 1
+            context[f"count_{state}"] = context.get(f"count_{state}", 0) + 1
         # Commit changes to db after ALL records are batch-processed
         db.commit()
-        self.logger.debug("END: sync.sync_records")
+        return context

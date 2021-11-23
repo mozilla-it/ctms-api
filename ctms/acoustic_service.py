@@ -1,11 +1,11 @@
 import datetime
-import logging
 import time
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, List, Union
 from uuid import UUID
 
 import dateutil
+import structlog
 from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
@@ -118,6 +118,11 @@ class AcousticResources:
         "mozilla-rally": "sub_rally",
     }
 
+    SKIP_FIELDS = set(
+        # Known skipped fields from CTMS
+        ("email", "update_timestamp"),
+    )
+
 
 class Acoustic(Silverpop):
     """
@@ -175,7 +180,8 @@ class CTMSToAcousticService:
             "newsletter": str(int(acoustic_newsletter_table_id)),
             "product": str(int(acoustic_product_table_id)),
         }
-        self.logger = logging.getLogger(__name__)
+        self.logger = structlog.get_logger(__name__)
+        self.context: Dict[str, Union[str, int, List[str]]] = {}
         self.metric_service = metric_service
 
     def convert_ctms_to_acoustic(self, contact: ContactSchema):
@@ -198,6 +204,7 @@ class CTMSToAcousticService:
             ("fxa", "fxa_id"): "fxa_id",
             ("email", "primary_email"): "email",
         }
+        skipped_fields = []
         for contact_attr in contact.dict():
             subdict_value = getattr(contact, contact_attr)
             contact_attr_name = str(contact_attr)
@@ -227,31 +234,27 @@ class CTMSToAcousticService:
                         acoustic_main_table[
                             acoustic_field_name
                         ] = self.transform_field_for_acoustic(inner_value)
+                    elif (contact_attr, inner_attr) in AcousticResources.SKIP_FIELDS:
+                        pass
                     else:
-                        self.logger.debug(
-                            "Skipping CTMS field (%s, %s) because no match in Acoustic",
-                            contact_attr,
-                            inner_attr,
-                        )
+                        skipped_fields.append([contact_attr, inner_attr])
+        if skipped_fields:
+            self.context["skipped_fields"] = sorted(skipped_fields)
         return acoustic_main_table
 
     def fxa_created_date_string_to_datetime(self, inner_value):
+        self.context["fxa_created_date_type"] = str(type(inner_value))
         if isinstance(inner_value, str):
-            self.logger.debug("created_date found; attempting conversion from string.")
             try:
                 inner_value = dateutil.parser.parse(inner_value)
-                self.logger.debug(
-                    "Success, created_date converted to datetime in pre-processing."
-                )
+                self.context["fxa_created_date_converted"] = "success"
             except Exception:  # pylint: disable=broad-except
+                self.context["fxa_created_date_converted"] = "failure"
                 self.logger.exception(
                     "Failure in attempt to convert created_date, using original value."
                 )
         else:
-            self.logger.debug(
-                "No op. created_date found; but not as a string as a: %s.",
-                type(inner_value),
-            )
+            self.context["fxa_created_date_converted"] = "skipped"
         return inner_value
 
     def _newsletter_converter(self, acoustic_main_table, contact):
@@ -261,6 +264,7 @@ class CTMSToAcousticService:
         contact_email_id = str(contact.email.email_id)
         contact_email_format = contact.email.email_format
         contact_email_lang = contact.email.email_lang
+        skipped = []
         for newsletter in contact_newsletters:
             newsletter_template = {
                 "email_id": contact_email_id,
@@ -291,10 +295,9 @@ class CTMSToAcousticService:
                         AcousticResources.MAIN_TABLE_SUBSCR_FLAGS[newsletter.name]
                     ] = "1"
             else:
-                self.logger.debug(
-                    "Skipping Newsletter (%s) because no match in Acoustic",
-                    newsletter.name,
-                )
+                skipped.append(newsletter.name)
+        if skipped:
+            self.context["newsletters_skipped"] = sorted(skipped)
         return newsletter_rows, acoustic_main_table
 
     @staticmethod
@@ -406,6 +409,8 @@ class CTMSToAcousticService:
                 self.metric_service.inc_acoustic_request_total(**metric_params)
                 metric_params.update({"duration_s": duration_s})
                 self.metric_service.observe_acoustic_request_duration(**metric_params)
+                self.context["main_status"] = status
+                self.context["main_duration_s"] = duration_s
 
     def _insert_update_relational_table(self, table_name, rows):
         if not rows:
@@ -432,6 +437,8 @@ class CTMSToAcousticService:
                 self.metric_service.inc_acoustic_request_total(**metric_params)
                 metric_params["duration_s"] = duration_s
                 self.metric_service.observe_acoustic_request_duration(**metric_params)
+                self.context[f"{table_name}_status"] = status
+                self.context[f"{table_name}_duration_s"] = duration_s
 
     def attempt_to_upload_ctms_contact(self, contact: ContactSchema) -> bool:
         """
@@ -439,21 +446,34 @@ class CTMSToAcousticService:
         :param contact: to be converted to acoustic table rows and uploaded
         :return: Boolean indicating True (success) or False (failure)
         """
-        self.logger.debug("Converting and uploading contact to acoustic...")
+        self.context = {}
         try:
             main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(contact)
             main_table_id = str(self.acoustic_main_table_id)
+            email_id = main_table_data["email_id"]
+            self.context["email_id"] = email_id
+            self.context["newsletter_count"] = len(nl_data)
+            self.context["product_count"] = len(prod_data)
             self._add_contact(
                 list_id=main_table_id,
-                sync_fields={"email_id": main_table_data["email_id"]},
+                sync_fields={"email_id": email_id},
                 columns=main_table_data,
             )
             self._insert_update_relational_table("newsletter", nl_data)
             self._insert_update_relational_table("product", prod_data)
+
             # success
-            self.logger.debug("Successfully sync'd contact to acoustic...")
+            self.logger.debug(
+                "Successfully sync'd contact to acoustic...",
+                success=True,
+                **self.context,
+            )
             return True
         except SilverpopResponseException:
             # failure
-            self.logger.exception("Failure for contact in sync to acoustic...")
+            self.logger.exception(
+                "Failure for contact in sync to acoustic...",
+                success=False,
+                **self.context,
+            )
             return False

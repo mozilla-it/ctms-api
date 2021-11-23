@@ -90,7 +90,6 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).inc()
-        self.logger.debug("METRICS: Incrementing acoustic request")
 
     def observe_acoustic_request_duration(self, method, status, table, duration_s):
         self.requests_duration.labels(
@@ -101,7 +100,6 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).observe(duration_s)
-        self.logger.debug("METRICS: Observing acoustic request duration")
 
     def inc_acoustic_sync_total(self):
         self.sync_requests.labels(
@@ -109,7 +107,6 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).inc()
-        self.logger.debug("METRICS: Incrementing sync'd records")
 
     def gauge_acoustic_sync_backlog(self, value):
         self.backlog_gauge.labels(
@@ -117,7 +114,6 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).set(value)
-        self.logger.debug("METRICS: Setting backlog gauge")
 
     def gauge_acoustic_retry_backlog(self, value):
         self.retry_gauge.labels(
@@ -125,8 +121,6 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).set(value)
-        self.logger.debug("METRICS: Setting retry gauge")
 
     def push_to_gateway(self):
         push_to_gateway(self.pushgateway_url, job=self.job_name, registry=self.registry)
-        self.logger.debug("METRICS: Pushing metrics to pushgateway")
