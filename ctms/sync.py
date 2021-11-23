@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Dict, List, Union
 
@@ -126,11 +127,15 @@ class CTMSToAcousticSync:
         )
 
         # For each record, attempt downstream sync
-        context["count_total"] = 0
+        total = 0
+        states: Dict[str, int] = defaultdict(int)
         for acoustic_record in all_acoustic_records_before_now:
             state = self._sync_pending_record(db, acoustic_record)
-            context["count_total"] += 1
-            context[f"count_{state}"] = context.get(f"count_{state}", 0) + 1
+            total += 1
+            states[state] += 1
+        context["count_total"] = total
+        for state, count in states.items():
+            context[f"count_{state}"] = count
         # Commit changes to db after ALL records are batch-processed
         db.commit()
         return context
