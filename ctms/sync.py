@@ -63,7 +63,7 @@ class CTMSToAcousticSync:
             self.logger.exception("Error executing sync.sync_contact_with_acoustic")
             return False
 
-    def _sync_pending_record(self, db, pending_record: PendingAcousticRecord):
+    def _sync_pending_record(self, db, pending_record: PendingAcousticRecord) -> str:
         state = "unknown"
         try:
             if self.is_acoustic_enabled:
@@ -96,7 +96,7 @@ class CTMSToAcousticSync:
             state = "exception"
         return state
 
-    def sync_records(self, db, end_time=None):
+    def sync_records(self, db, end_time=None) -> Dict[str, Union[int, str]]:
         context: Dict[str, Union[int, str]] = {
             "batch_limit": self.batch_limit,
             "retry_limit": self.retry_limit,
