@@ -71,20 +71,30 @@ def test_sync_acoustic_record_retry_path(dbsession, sync_obj, maximal_contact):
     )
     _setup_pending_record(dbsession, email_id=maximal_contact.email.email_id)
     no_metrics = sync_obj.metric_service is None
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
     with StatementWatcher(dbsession.connection()) as watcher:
-        sync_obj.sync_records(
-            dbsession, end_time=datetime.now(timezone.utc) + timedelta(hours=12)
-        )
+        context = sync_obj.sync_records(dbsession, end_time=end_time)
         dbsession.flush()
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
         maximal_contact
     )
+    expected_context = {
+        "batch_limit": 20,
+        "retry_limit": 5,
+        "count_total": 1,
+        "count_retry": 1,
+        "end_time": end_time.isoformat(),
+    }
     if no_metrics:
         assert watcher.count == 4  # Get All Records, Get Contact(x2), Increment Retry
+        assert context == expected_context
         return
 
     # Metrics adds two DB queries (total records and retries)
     assert watcher.count == 6
+    expected_context["retry_backlog"] = 1
+    expected_context["sync_backlog"] = 1
+    assert context == expected_context
 
     registry = sync_obj.metric_service.registry
     labels = {
@@ -102,6 +112,7 @@ def test_sync_acoustic_record_delete_path(
     dbsession,
     sync_obj,
     maximal_contact,
+    settings,
 ):
     no_metrics = sync_obj.metric_service is None
     sync_obj.ctms_to_acoustic = MagicMock(
@@ -109,20 +120,30 @@ def test_sync_acoustic_record_delete_path(
     )
     _setup_pending_record(dbsession, email_id=maximal_contact.email.email_id)
 
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
     with StatementWatcher(dbsession.connection()) as watcher:
-        sync_obj.sync_records(
-            dbsession, end_time=datetime.now(timezone.utc) + timedelta(hours=12)
-        )
+        context = sync_obj.sync_records(dbsession, end_time=end_time)
         dbsession.flush()
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
         maximal_contact
     )
+    expected_context = {
+        "batch_limit": 20,
+        "retry_limit": 5,
+        "count_total": 1,
+        "count_synced": 1,
+        "end_time": end_time.isoformat(),
+    }
     if no_metrics:
         assert watcher.count == 4  # Get All Records, Get Contact(x2), Increment Retry
+        assert context == expected_context
         return
 
     # Metrics adds two DB queries (total records and retries)
     assert watcher.count == 6
+    expected_context["retry_backlog"] = 1
+    expected_context["sync_backlog"] = 1
+    assert context == expected_context
 
     registry = sync_obj.metric_service.registry
     labels = {

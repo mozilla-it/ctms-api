@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run continuously in the background, syncing acoustic with our db."""
-import logging
 from time import monotonic, sleep
 
+import structlog
 from prometheus_client import CollectorRegistry
 
 from ctms import config
@@ -17,11 +17,14 @@ LOGGER = None
 
 def _setup_logging(settings):
     configure_logging(logging_level=settings.logging_level.name)
-    return logging.getLogger(__name__)
+    return structlog.get_logger(__name__)
 
 
 def main(db, settings):
-    LOGGER.debug("Setting up sync_service.")
+    LOGGER.info(
+        "Setting up sync_service.",
+        sync_feature_flag=settings.acoustic.sync_feature_flag,
+    )
     metrics_registry = CollectorRegistry()
     metric_service = BackgroundMetricService(
         registry=metrics_registry, pushgateway_url=settings.prometheus_pushgateway_url
@@ -41,11 +44,17 @@ def main(db, settings):
         metric_service=metric_service,
     )
     prev = monotonic()
-    LOGGER.debug("Sync Feature Flag is: %s", settings.acoustic_sync_feature_flag)
     while settings.acoustic_sync_feature_flag:
-        sync_service.sync_records(db)
+        context = sync_service.sync_records(db)
         metric_service.push_to_gateway()
-        to_sleep = settings.acoustic_loop_min_secs - (monotonic() - prev)
+        duration_s = monotonic() - prev
+        to_sleep = settings.acoustic_loop_min_secs - duration_s
+        LOGGER.info(
+            "sync_service cycle complete",
+            loop_duration_s=round(duration_s, 3),
+            loop_sleep_s=round(to_sleep, 3),
+            **context
+        )
         if to_sleep > 0:
             sleep(to_sleep)
         prev = monotonic()
@@ -59,7 +68,6 @@ if __name__ == "__main__":
     session = session_factory()
 
     try:
-        LOGGER.debug("Begin Acoustic Sync Script.")
         main(session, config_settings)
     finally:
         session.close()
