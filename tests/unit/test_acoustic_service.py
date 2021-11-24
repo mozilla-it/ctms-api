@@ -273,6 +273,50 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     assert log == expected_log
 
 
+def test_ctms_to_acoustic_traced_email(
+    base_ctms_acoustic_service,
+    example_contact,
+):
+    """A contact requesting tracing is traced in the logs."""
+    email = "tester+trace-me-mozilla-nov24@example.com"
+    example_contact.email.primary_email = email
+    acoustic_mock: MagicMock = MagicMock()
+    base_ctms_acoustic_service.acoustic = acoustic_mock
+    _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        example_contact
+    )  # To be used as in testing, for expected inputs to downstream methods
+    assert _main is not None
+    assert _newsletter is not None
+    assert len(_product) == 0
+    with capture_logs() as caplog:
+        results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+            example_contact
+        )
+    assert results  # success
+
+    acoustic_mock.add_recipient.assert_called_once_with(
+        list_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
+        created_from=3,
+        update_if_found="TRUE",
+        allow_html=False,
+        sync_fields={"email_id": _main["email_id"]},
+        columns=_main,
+    )
+    acoustic_mock.insert_update_relational_table.assert_not_called()
+    acoustic_mock.insert_update_product_table.assert_not_called()
+
+    assert len(caplog) == 1
+    expected_log = EXPECTED_LOG.copy()
+    expected_log.update(
+        {
+            "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+            "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
+            "trace": email,
+        }
+    )
+    assert caplog[0] == expected_log
+
+
 def test_transform_field(base_ctms_acoustic_service):
     is_true = base_ctms_acoustic_service.transform_field_for_acoustic(True)
     assert is_true == "1"

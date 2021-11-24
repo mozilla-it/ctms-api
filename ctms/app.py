@@ -1,7 +1,6 @@
 """The CTMS application, including middleware and routes."""
 # pylint:disable = too-many-lines
 import json
-import re
 import sys
 import time
 from base64 import b64decode
@@ -33,6 +32,7 @@ from .auth import (
     get_subject_from_token,
     verify_password,
 )
+from .config import re_trace_email
 from .crud import (
     create_contact,
     create_or_update_contact,
@@ -90,7 +90,6 @@ get_metrics_registry = lambda: METRICS_REGISTRY
 get_metrics = lambda: METRICS
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
-re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
 
 
 @lru_cache()

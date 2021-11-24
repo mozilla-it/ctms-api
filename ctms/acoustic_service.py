@@ -10,6 +10,7 @@ from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
 from ctms.background_metrics import BackgroundMetricService
+from ctms.config import re_trace_email
 from ctms.schemas import ContactSchema, NewsletterSchema
 
 # Start cherry-picked from django.utils.encoding
@@ -225,6 +226,10 @@ class CTMSToAcousticService:
                     special_key = (contact_attr_name, inner_attr_name)
                     if special_key in special_cases:
                         acoustic_field_name = special_cases.get(special_key)
+                    if acoustic_field_name == "email" and re_trace_email.match(
+                        inner_value
+                    ):
+                        self.context["trace"] = inner_value
 
                     if (
                         acoustic_field_name

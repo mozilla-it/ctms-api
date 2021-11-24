@@ -1,8 +1,12 @@
+import re
 from datetime import timedelta
 from enum import Enum
 from typing import Optional
 
 from pydantic import BaseSettings, DirectoryPath, PostgresDsn
+
+# If primary email matches, then add trace to logs
+re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
 
 
 class LogLevel(str, Enum):
