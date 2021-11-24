@@ -218,4 +218,4 @@ def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
     assert resp.json() == {"status": "OK", "count": 1}
     assert len(caplog) == 1
     assert caplog[0]["trace"] == email
-    assert caplog[0]["trace_json"] == [data]  # Returned as list
+    assert caplog[0]["trace_json"] == data

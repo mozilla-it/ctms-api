@@ -10,6 +10,7 @@ from lxml import etree
 from silverpop.api import Silverpop, SilverpopResponseException
 
 from ctms.background_metrics import BackgroundMetricService
+from ctms.config import re_trace_email
 from ctms.schemas import ContactSchema, NewsletterSchema
 
 # Start cherry-picked from django.utils.encoding
@@ -119,8 +120,12 @@ class AcousticResources:
     }
 
     SKIP_FIELDS = set(
-        # Known skipped fields from CTMS
-        ("email", "update_timestamp"),
+        (
+            # Known skipped fields from CTMS
+            ("email", "update_timestamp"),
+            ("amo", "update_timestamp"),
+            ("amo", "create_timestamp"),
+        )
     )
 
 
@@ -221,6 +226,10 @@ class CTMSToAcousticService:
                     special_key = (contact_attr_name, inner_attr_name)
                     if special_key in special_cases:
                         acoustic_field_name = special_cases.get(special_key)
+                    if acoustic_field_name == "email" and re_trace_email.match(
+                        inner_value
+                    ):
+                        self.context["trace"] = inner_value
 
                     if (
                         acoustic_field_name
@@ -237,23 +246,24 @@ class CTMSToAcousticService:
                     elif (contact_attr, inner_attr) in AcousticResources.SKIP_FIELDS:
                         pass
                     else:
-                        skipped_fields.append([contact_attr, inner_attr])
+                        skipped_fields.append(f"{contact_attr}.{inner_attr}")
         if skipped_fields:
             self.context["skipped_fields"] = sorted(skipped_fields)
         return acoustic_main_table
 
     def fxa_created_date_string_to_datetime(self, inner_value):
-        self.context["fxa_created_date_type"] = str(type(inner_value))
         if isinstance(inner_value, str):
             try:
                 inner_value = dateutil.parser.parse(inner_value)
                 self.context["fxa_created_date_converted"] = "success"
             except Exception:  # pylint: disable=broad-except
+                self.context["fxa_created_date_type"] = str(type(inner_value))
                 self.context["fxa_created_date_converted"] = "failure"
                 self.logger.exception(
                     "Failure in attempt to convert created_date, using original value."
                 )
         else:
+            self.context["fxa_created_date_type"] = str(type(inner_value))
             self.context["fxa_created_date_converted"] = "skipped"
         return inner_value
 
