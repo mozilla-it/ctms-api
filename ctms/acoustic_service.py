@@ -119,8 +119,12 @@ class AcousticResources:
     }
 
     SKIP_FIELDS = set(
-        # Known skipped fields from CTMS
-        ("email", "update_timestamp"),
+        (
+            # Known skipped fields from CTMS
+            ("email", "update_timestamp"),
+            ("amo", "update_timestamp"),
+            ("amo", "create_timestamp"),
+        )
     )
 
 
@@ -237,7 +241,7 @@ class CTMSToAcousticService:
                     elif (contact_attr, inner_attr) in AcousticResources.SKIP_FIELDS:
                         pass
                     else:
-                        skipped_fields.append([contact_attr, inner_attr])
+                        skipped_fields.append(f"{contact_attr}.{inner_attr}")
         if skipped_fields:
             self.context["skipped_fields"] = sorted(skipped_fields)
         return acoustic_main_table

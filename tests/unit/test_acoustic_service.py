@@ -100,11 +100,6 @@ EXPECTED_LOG = {
     "log_level": "debug",
     "newsletter_count": 0,
     "product_count": 0,
-    "skipped_fields": [
-        ["amo", "create_timestamp"],
-        ["amo", "update_timestamp"],
-        ["email", "update_timestamp"],
-    ],
     "success": True,
 }
 
