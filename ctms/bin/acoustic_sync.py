@@ -14,7 +14,7 @@ from ctms.sync import CTMSToAcousticSync
 
 
 def main(db, settings):
-    logger = structlog.get_logger(__name__)
+    logger = structlog.get_logger("ctms.bin.acoustic_sync")
     logger.info(
         "Setting up sync_service.",
         sync_feature_flag=settings.acoustic_sync_feature_flag,
