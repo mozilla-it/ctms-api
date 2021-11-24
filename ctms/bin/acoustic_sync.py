@@ -23,7 +23,7 @@ def _setup_logging(settings):
 def main(db, settings):
     LOGGER.info(
         "Setting up sync_service.",
-        sync_feature_flag=settings.acoustic.sync_feature_flag,
+        sync_feature_flag=settings.acoustic_sync_feature_flag,
     )
     metrics_registry = CollectorRegistry()
     metric_service = BackgroundMetricService(
