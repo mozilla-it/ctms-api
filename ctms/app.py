@@ -1013,6 +1013,7 @@ def stripe_pubsub(
             if trace_email:
                 trace = trace_email
 
+    request.state.log_context["email_ids"] = email_ids
     if email_ids:
         for email_id in email_ids:
             schedule_acoustic_record(db_session, email_id)
