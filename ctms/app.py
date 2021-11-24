@@ -993,8 +993,7 @@ def stripe_pubsub(
         return JSONResponse(content=content, status_code=202)
 
     email_ids = set()
-    traced_emails = set()
-    traced_data = []
+    trace = None
     has_error = False
     count = 0
     for item in items:
@@ -1012,16 +1011,15 @@ def stripe_pubsub(
             if email_id:
                 email_ids.add(email_id)
             if trace_email:
-                traced_emails.add(trace_email)
-                traced_data.append(item)
+                trace = trace_email
 
     if email_ids:
         for email_id in email_ids:
             schedule_acoustic_record(db_session, email_id)
         db_session.commit()
-    if traced_emails:
-        request.state.log_context["trace"] = ",".join(sorted(traced_emails))
-        request.state.log_context["trace_json"] = traced_data
+    if trace:
+        request.state.log_context["trace"] = trace
+        request.state.log_context["trace_json"] = payload
 
     if has_error:
         content = {
