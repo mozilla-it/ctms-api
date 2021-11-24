@@ -247,17 +247,18 @@ class CTMSToAcousticService:
         return acoustic_main_table
 
     def fxa_created_date_string_to_datetime(self, inner_value):
-        self.context["fxa_created_date_type"] = str(type(inner_value))
         if isinstance(inner_value, str):
             try:
                 inner_value = dateutil.parser.parse(inner_value)
                 self.context["fxa_created_date_converted"] = "success"
             except Exception:  # pylint: disable=broad-except
+                self.context["fxa_created_date_type"] = str(type(inner_value))
                 self.context["fxa_created_date_converted"] = "failure"
                 self.logger.exception(
                     "Failure in attempt to convert created_date, using original value."
                 )
         else:
+            self.context["fxa_created_date_type"] = str(type(inner_value))
             self.context["fxa_created_date_converted"] = "skipped"
         return inner_value
 

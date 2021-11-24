@@ -96,7 +96,6 @@ EXPECTED_LOG = {
     "email_id": "CHANGE_ME",
     "event": "Successfully sync'd contact to acoustic...",
     "fxa_created_date_converted": "success",
-    "fxa_created_date_type": "<class 'str'>",
     "log_level": "debug",
     "newsletter_count": 0,
     "product_count": 0,
