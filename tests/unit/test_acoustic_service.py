@@ -3,6 +3,7 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
+from structlog.testing import capture_logs
 
 from ctms import acoustic_service
 from ctms.acoustic_service import CTMSToAcousticService
@@ -90,6 +91,24 @@ def test_ctms_to_acoustic(
         assert len(_product) == 0
 
 
+# Expected log context from successful .attempt_to_upload_ctms_contact()
+EXPECTED_LOG = {
+    "email_id": "CHANGE_ME",
+    "event": "Successfully sync'd contact to acoustic...",
+    "fxa_created_date_converted": "success",
+    "fxa_created_date_type": "<class 'str'>",
+    "log_level": "debug",
+    "newsletter_count": 0,
+    "product_count": 0,
+    "skipped_fields": [
+        ["amo", "create_timestamp"],
+        ["amo", "update_timestamp"],
+        ["email", "update_timestamp"],
+    ],
+    "success": True,
+}
+
+
 def test_ctms_to_acoustic_mocked(
     base_ctms_acoustic_service,
     maximal_contact,
@@ -102,7 +121,10 @@ def test_ctms_to_acoustic_mocked(
     assert _main is not None
     assert _newsletter is not None
     assert len(_product) == 0
-    results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(maximal_contact)
+    with capture_logs() as caplog:
+        results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+            maximal_contact
+        )
     assert results  # success
     acoustic_mock.add_recipient.assert_called()
     acoustic_mock.insert_update_relational_table.assert_called()
@@ -122,6 +144,17 @@ def test_ctms_to_acoustic_mocked(
 
     acoustic_mock.insert_update_product_table.assert_not_called()
 
+    assert len(caplog) == 1
+    expected_log = EXPECTED_LOG.copy()
+    expected_log.update(
+        {
+            "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+            "newsletter_count": 5,
+            "newsletters_skipped": ["ambassadors", "firefox-os"],
+        }
+    )
+    assert caplog[0] == expected_log
+
 
 def test_ctms_to_acoustic_with_subscription(
     base_ctms_acoustic_service, contact_with_stripe_subscription
@@ -134,9 +167,10 @@ def test_ctms_to_acoustic_with_subscription(
     assert _main is not None
     assert len(_newsletter) == 0  # None in Main Table Subscriber flags
     assert len(_product) == 1
-    results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
-        contact_with_stripe_subscription
-    )
+    with capture_logs() as caplog:
+        results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+            contact_with_stripe_subscription
+        )
     assert results  # success
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
@@ -144,6 +178,17 @@ def test_ctms_to_acoustic_with_subscription(
     )
     for name, value in _product[0].items():
         assert isinstance(value, str), name
+
+    assert len(caplog) == 1
+    expected_log = EXPECTED_LOG.copy()
+    expected_log.update(
+        {
+            "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+            "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
+            "product_count": 1,
+        }
+    )
+    assert caplog[0] == expected_log
 
 
 def test_ctms_to_acoustic_with_subscription_and_metrics(
@@ -188,9 +233,10 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     }
     assert _product[0] == expected_product
 
-    results = acoustic_svc.attempt_to_upload_ctms_contact(
-        contact_with_stripe_subscription
-    )
+    with capture_logs() as caplog:
+        results = acoustic_svc.attempt_to_upload_ctms_contact(
+            contact_with_stripe_subscription
+        )
     assert results  # success
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
@@ -215,6 +261,22 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     for metric in metrics:
         for labels in (main_labels, rt_labels):
             assert registry.get_sample_value(metric, labels) == 1, (metric, labels)
+
+    assert len(caplog) == 1
+    log = caplog[0]
+    expected_log = EXPECTED_LOG.copy()
+    expected_log.update(
+        {
+            "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+            "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
+            "product_count": 1,
+            "main_status": "success",
+            "product_status": "success",
+            "main_duration_s": log["main_duration_s"],
+            "product_duration_s": log["product_duration_s"],
+        }
+    )
+    assert log == expected_log
 
 
 def test_transform_field(base_ctms_acoustic_service):
