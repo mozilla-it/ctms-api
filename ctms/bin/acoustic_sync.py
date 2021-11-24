@@ -12,16 +12,10 @@ from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
 from ctms.sync import CTMSToAcousticSync
 
-LOGGER = None
-
-
-def _setup_logging(settings):
-    configure_logging(logging_level=settings.logging_level.name)
-    return structlog.get_logger(__name__)
-
 
 def main(db, settings):
-    LOGGER.info(
+    logger = structlog.get_logger(__name__)
+    logger.info(
         "Setting up sync_service.",
         sync_feature_flag=settings.acoustic_sync_feature_flag,
     )
@@ -49,7 +43,7 @@ def main(db, settings):
         metric_service.push_to_gateway()
         duration_s = monotonic() - prev
         to_sleep = settings.acoustic_loop_min_secs - duration_s
-        LOGGER.info(
+        logger.info(
             "sync_service cycle complete",
             loop_duration_s=round(duration_s, 3),
             loop_sleep_s=round(to_sleep, 3),
@@ -63,7 +57,7 @@ def main(db, settings):
 if __name__ == "__main__":
     init_sentry()
     config_settings = config.BackgroundSettings()
-    LOGGER = _setup_logging(config_settings)
+    configure_logging(logging_level=config_settings.logging_level.name)
     engine, session_factory = get_db_engine(config_settings)
     session = session_factory()
 
