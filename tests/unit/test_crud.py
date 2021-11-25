@@ -962,7 +962,6 @@ def test_relations_to_stripe_objects(stripe_objects, contact_idx):
     assert contact.fxa.stripe_customer == customer
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("contact_idx", range(2))
 def test_relations_on_stripe_customer(stripe_objects, contact_idx):
     """StripeCustomer relationships are correct."""

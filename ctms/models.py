@@ -66,9 +66,9 @@ class Email(Base):
     stripe_customer = relationship(
         "StripeCustomer",
         uselist=False,
-        viewonly=True,
-        primaryjoin="foreign(Email.email_id)==remote(FirefoxAccount.email_id)",
-        secondaryjoin="foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)",
+        back_populates="email",
+        primaryjoin="Email.email_id==FirefoxAccount.email_id",
+        secondaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
     )
 
@@ -136,8 +136,8 @@ class FirefoxAccount(Base):
     email = relationship("Email", back_populates="fxa", uselist=False)
     stripe_customer = relationship(
         "StripeCustomer",
-        back_populates="fxa",
         uselist=False,
+        viewonly=True,
         primaryjoin=("foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)"),
     )
 
@@ -286,16 +286,16 @@ class StripeCustomer(StripeBase):
     email = relationship(
         "Email",
         uselist=False,
-        viewonly=True,
-        primaryjoin="foreign(Email.email_id)==remote(FirefoxAccount.email_id)",
-        secondaryjoin="foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)",
+        back_populates="stripe_customer",
+        primaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
+        secondaryjoin="remote(Email.email_id)==foreign(FirefoxAccount.email_id)",
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
     )
     fxa = relationship(
         "FirefoxAccount",
-        back_populates="stripe_customer",
         uselist=False,
-        primaryjoin=("foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)"),
+        viewonly=True,
+        primaryjoin=("remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)"),
     )
     invoices = relationship(
         "StripeInvoice",
