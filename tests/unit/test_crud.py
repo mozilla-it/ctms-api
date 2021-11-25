@@ -1043,7 +1043,6 @@ def test_relations_on_stripe_invoice_line_items(
     assert line_item.get_email_id() == email_id
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("contact_idx", range(2))
 @pytest.mark.parametrize("sub_idx", range(2))
 def test_relations_on_stripe_subscription(stripe_objects, contact_idx, sub_idx):
@@ -1059,7 +1058,6 @@ def test_relations_on_stripe_subscription(stripe_objects, contact_idx, sub_idx):
     assert subscription.get_email_id() == email_id
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("contact_idx", range(2))
 @pytest.mark.parametrize("sub_idx", range(2))
 @pytest.mark.parametrize("si_idx", range(2))

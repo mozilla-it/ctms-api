@@ -484,11 +484,10 @@ class StripeSubscription(StripeBase):
 
     customer = relationship(
         "StripeCustomer",
-        back_populates="subscriptions",
         uselist=False,
         primaryjoin=(
-            "foreign(StripeCustomer.stripe_id)=="
-            " remote(StripeSubscription.stripe_customer_id)"
+            " remote(StripeCustomer.stripe_id)=="
+            "foreign(StripeSubscription.stripe_customer_id)"
         ),
     )
     subscription_items = relationship(
