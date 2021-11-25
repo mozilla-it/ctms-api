@@ -1003,7 +1003,6 @@ def test_relations_on_stripe_price(stripe_objects, si_idx, item_idx):
     assert price.get_email_id() is None
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("contact_idx", range(2))
 @pytest.mark.parametrize("inv_idx", range(2))
 def test_relations_on_stripe_invoice(stripe_objects, contact_idx, inv_idx):

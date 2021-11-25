@@ -299,8 +299,8 @@ class StripeCustomer(StripeBase):
     )
     invoices = relationship(
         "StripeInvoice",
-        back_populates="customer",
         uselist=True,
+        viewonly=True,
         primaryjoin=(
             "foreign(StripeCustomer.stripe_id) =="
             " remote(StripeInvoice.stripe_customer_id)"
@@ -382,11 +382,11 @@ class StripeInvoice(StripeBase):
 
     customer = relationship(
         "StripeCustomer",
-        back_populates="invoices",
         uselist=False,
+        viewonly=True,
         primaryjoin=(
-            "foreign(StripeCustomer.stripe_id) =="
-            " remote(StripeInvoice.stripe_customer_id)"
+            " remote(StripeCustomer.stripe_id) =="
+            "foreign(StripeInvoice.stripe_customer_id)"
         ),
     )
     line_items = relationship(
