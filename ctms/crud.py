@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
+import structlog
 from pydantic import UUID4
 from sqlalchemy import asc, or_
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -674,9 +676,13 @@ def _get_stripe(
     model: Type[StripeModel], db_session: Session, stripe_id: str
 ) -> Optional[StripeModel]:
     """Get a Stripe object by its ID, or None if not found."""
+    _get = db_session.query(model).get(stripe_id)
+    _get_str = str(_get.statement.compile(dialect=postgresql.dialect()))
+    logger = structlog.get_logger("ctms.crud")
+    logger.info("Query Plan", query=_get_str)
     return cast(
         Optional[StripeModel],
-        db_session.query(model).get(stripe_id),
+        _get,
     )
 
 
