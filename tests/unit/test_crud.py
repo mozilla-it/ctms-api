@@ -1018,7 +1018,6 @@ def test_relations_on_stripe_invoice(stripe_objects, contact_idx, inv_idx):
     assert invoice.get_email_id() == email_id
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("contact_idx", range(2))
 @pytest.mark.parametrize("inv_idx", range(2))
 @pytest.mark.parametrize("li_idx", range(2))

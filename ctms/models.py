@@ -438,16 +438,16 @@ class StripeInvoiceLineItem(StripeBase):
         "StripeSubscription",
         uselist=False,
         primaryjoin=(
-            "foreign(StripeSubscription.stripe_id) =="
-            " remote(StripeInvoiceLineItem.stripe_subscription_id)"
+            " remote(StripeSubscription.stripe_id) =="
+            "foreign(StripeInvoiceLineItem.stripe_subscription_id)"
         ),
     )
     subscription_item = relationship(
         "StripeSubscriptionItem",
         uselist=False,
         primaryjoin=(
-            "foreign(StripeSubscriptionItem.stripe_id) =="
-            " remote(StripeInvoiceLineItem.stripe_subscription_item_id)"
+            " remote(StripeSubscriptionItem.stripe_id) =="
+            "foreign(StripeInvoiceLineItem.stripe_subscription_item_id)"
         ),
     )
 
