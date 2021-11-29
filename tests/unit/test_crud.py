@@ -1,4 +1,5 @@
 """Test database operations"""
+# pylint: disable=too-many-lines
 from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import uuid4
@@ -12,6 +13,9 @@ from ctms.crud import (
     create_fxa,
     create_mofo,
     create_newsletter,
+    create_stripe_customer,
+    create_stripe_invoice,
+    create_stripe_invoice_line_item,
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
@@ -34,11 +38,17 @@ from ctms.schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
+    StripeCustomerCreateSchema,
+    StripeInvoiceCreateSchema,
+    StripeInvoiceLineItemCreateSchema,
     StripePriceCreateSchema,
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA
+from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA, fake_stripe_id
+
+# Treat all SQLAlchemy warnings as errors
+pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
 
 
 class StatementWatcher:
@@ -827,3 +837,241 @@ def test_get_multiple_contacts_by_any_id(
     for contact in contacts:
         newsletter_names = [nl.name for nl in contact["newsletters"]]
         assert sorted(newsletter_names) == newsletter_names
+
+
+@pytest.fixture()
+def stripe_objects(dbsession, example_contact, maximal_contact):
+    """
+    Create two complete trees of Stripe objects.
+
+    We don't use ForeignKeys for Stripe relations, because the object may come
+    out of order for foreign key contraints. This helps check that the manually
+    created relationships are correct.
+
+    When following a relationship, look for this warning in the logs:
+    SAWarning: Multiple rows returned with uselist=False for lazily-loaded attribute
+
+    This suggests that SQLAlchemy is joining tables without a limiting WHERE clause,
+    and the first item will be returned rather than the related item.
+    """
+    # Create prices / products
+    # Both customers are subscribed to all four, 2 per subscription
+    prices = []
+    for price_idx in range(4):
+        price_data = SAMPLE_STRIPE_DATA["Price"].copy()
+        price_data["stripe_id"] = fake_stripe_id("price", f"price_{price_idx}")
+        price_data["stripe_product_id"] = fake_stripe_id("prod", f"prod_{price_idx}")
+        prices.append(
+            create_stripe_price(dbsession, StripePriceCreateSchema(**price_data))
+        )
+
+    objs = []
+    for contact_idx, contact in enumerate((example_contact, maximal_contact)):
+        email_id = contact.email.email_id
+        email = get_email(dbsession, email_id)
+        obj = {
+            "email_id": email_id,
+            "contact": email,
+            "customer": None,
+            "subscription": [],
+            "invoice": [],
+        }
+        objs.append(obj)
+
+        # Create Customer data
+        cus_data = SAMPLE_STRIPE_DATA["Customer"].copy()
+        cus_data["stripe_id"] = fake_stripe_id("cus", f"cus_{contact_idx}")
+        cus_data["fxa_id"] = contact.fxa.fxa_id
+        obj["customer"] = create_stripe_customer(
+            dbsession, StripeCustomerCreateSchema(**cus_data)
+        )
+
+        # Create Subscriptions / Invoices and related items
+        for sub_inv_idx in range(2):
+            sub_data = SAMPLE_STRIPE_DATA["Subscription"].copy()
+            sub_data["stripe_id"] = fake_stripe_id(
+                "sub", f"cus_{contact_idx}_sub_{sub_inv_idx}"
+            )
+            sub_data["stripe_customer_id"] = cus_data["stripe_id"]
+            sub_obj = {
+                "obj": create_stripe_subscription(
+                    dbsession, StripeSubscriptionCreateSchema(**sub_data)
+                ),
+                "items": [],
+            }
+            obj["subscription"].append(sub_obj)
+
+            inv_data = SAMPLE_STRIPE_DATA["Invoice"].copy()
+            inv_data["stripe_id"] = fake_stripe_id(
+                "sub", f"cus_{contact_idx}_inv_{sub_inv_idx}"
+            )
+            inv_data["stripe_customer_id"] = cus_data["stripe_id"]
+            inv_obj = {
+                "obj": create_stripe_invoice(
+                    dbsession, StripeInvoiceCreateSchema(**inv_data)
+                ),
+                "line_items": [],
+            }
+            obj["invoice"].append(inv_obj)
+
+            for item_idx in range(2):
+                price = prices[sub_inv_idx * 2 + item_idx]
+
+                si_data = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
+                si_data["stripe_id"] = fake_stripe_id(
+                    "si", f"cus_{contact_idx}_sub_{sub_inv_idx}_si_{item_idx}"
+                )
+                si_data["stripe_price_id"] = price.stripe_id
+                si_data["stripe_subscription_id"] = sub_data["stripe_id"]
+                sub_obj["items"].append(
+                    {
+                        "obj": create_stripe_subscription_item(
+                            dbsession, StripeSubscriptionItemCreateSchema(**si_data)
+                        ),
+                        "price": price,
+                    }
+                )
+
+                li_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"].copy()
+                li_data["stripe_id"] = fake_stripe_id(
+                    "il", f"cus_{contact_idx}_inv_{sub_inv_idx}_il_{item_idx}"
+                )
+                li_data["stripe_invoice_id"] = inv_data["stripe_id"]
+                li_data["stripe_price_id"] = price.stripe_id
+                li_data["stripe_subscription_id"] = sub_data["stripe_id"]
+                li_data["stripe_subscription_item_id"] = si_data["stripe_id"]
+                inv_obj["line_items"].append(
+                    {
+                        "obj": create_stripe_invoice_line_item(
+                            dbsession, StripeInvoiceLineItemCreateSchema(**li_data)
+                        ),
+                        "price": price,
+                    }
+                )
+    dbsession.commit()
+    return objs
+
+
+@pytest.mark.parametrize("contact_idx", range(2))
+def test_relations_to_stripe_objects(stripe_objects, contact_idx):
+    """Non-stripe objects have correct relations to Stripe objects."""
+    contact = stripe_objects[contact_idx]["contact"]
+    customer = stripe_objects[contact_idx]["customer"]
+
+    assert contact.stripe_customer == customer
+    assert contact.fxa.stripe_customer == customer
+
+
+@pytest.mark.parametrize("contact_idx", range(2))
+def test_relations_on_stripe_customer(stripe_objects, contact_idx):
+    """StripeCustomer relationships are correct."""
+    contact = stripe_objects[contact_idx]
+    email = contact["contact"]
+    email_id = contact["email_id"]
+    customer = contact["customer"]
+    invoices = set(inv["obj"] for inv in contact["invoice"])
+    subscriptions = set(sub["obj"] for sub in contact["subscription"])
+
+    assert customer.email == email
+    assert customer.fxa == email.fxa
+    assert set(customer.invoices) == invoices
+    assert set(customer.subscriptions) == subscriptions
+    assert customer.get_email_id() == email_id
+
+
+@pytest.mark.parametrize("si_idx", range(2))
+@pytest.mark.parametrize("item_idx", range(2))
+def test_relations_on_stripe_price(stripe_objects, si_idx, item_idx):
+    """StripePrice relations are correct."""
+    price = None
+    subscription_items = set()
+    invoice_line_items = set()
+    for contact in stripe_objects:
+        subscription_item = contact["subscription"][si_idx]["items"][item_idx]
+        if price:
+            assert subscription_item["price"] == price
+        else:
+            price = subscription_item["price"]
+        subscription_items.add(subscription_item["obj"])
+
+        invoice_line_item = contact["invoice"][si_idx]["line_items"][item_idx]
+        assert invoice_line_item["price"] == price
+        invoice_line_items.add(invoice_line_item["obj"])
+
+    assert set(price.invoice_line_items) == invoice_line_items
+    assert set(price.subscription_items) == subscription_items
+    assert price.get_email_id() is None
+
+
+@pytest.mark.parametrize("contact_idx", range(2))
+@pytest.mark.parametrize("inv_idx", range(2))
+def test_relations_on_stripe_invoice(stripe_objects, contact_idx, inv_idx):
+    """StripeInvoice relations are correct."""
+    contact = stripe_objects[contact_idx]
+    customer = contact["customer"]
+    email_id = contact["email_id"]
+    invoice = contact["invoice"][inv_idx]["obj"]
+    line_items = set(item["obj"] for item in contact["invoice"][inv_idx]["line_items"])
+
+    assert invoice.customer == customer
+    assert set(invoice.line_items) == line_items
+    assert invoice.get_email_id() == email_id
+
+
+@pytest.mark.parametrize("contact_idx", range(2))
+@pytest.mark.parametrize("inv_idx", range(2))
+@pytest.mark.parametrize("li_idx", range(2))
+def test_relations_on_stripe_invoice_line_items(
+    stripe_objects, contact_idx, inv_idx, li_idx
+):
+    """StripeInvoiceLineItem relations are correct."""
+    contact = stripe_objects[contact_idx]
+    email_id = contact["email_id"]
+    inv_data = contact["invoice"][inv_idx]
+    invoice = inv_data["obj"]
+    line_item = inv_data["line_items"][li_idx]["obj"]
+    price = inv_data["line_items"][li_idx]["price"]
+    sub_data = contact["subscription"][inv_idx]
+    subscription = sub_data["obj"]
+    subscription_item = sub_data["items"][li_idx]["obj"]
+    assert sub_data["items"][li_idx]["price"] == price
+
+    assert line_item.invoice == invoice
+    assert line_item.price == price
+    assert line_item.subscription == subscription
+    assert line_item.subscription_item == subscription_item
+    assert line_item.get_email_id() == email_id
+
+
+@pytest.mark.parametrize("contact_idx", range(2))
+@pytest.mark.parametrize("sub_idx", range(2))
+def test_relations_on_stripe_subscription(stripe_objects, contact_idx, sub_idx):
+    """StripeSubscription relations are correct."""
+    contact = stripe_objects[contact_idx]
+    customer = contact["customer"]
+    email_id = contact["email_id"]
+    subscription = contact["subscription"][sub_idx]["obj"]
+    items = set(item["obj"] for item in contact["subscription"][sub_idx]["items"])
+
+    assert subscription.customer == customer
+    assert set(subscription.subscription_items) == items
+    assert subscription.get_email_id() == email_id
+
+
+@pytest.mark.parametrize("contact_idx", range(2))
+@pytest.mark.parametrize("sub_idx", range(2))
+@pytest.mark.parametrize("si_idx", range(2))
+def test_relations_on_stripe_subscription_items(
+    stripe_objects, contact_idx, sub_idx, si_idx
+):
+    """StripeSubscriptionItem relations are correct."""
+    contact = stripe_objects[contact_idx]
+    email_id = contact["email_id"]
+    sub_data = contact["subscription"][sub_idx]
+    subscription = sub_data["obj"]
+    subscription_item = sub_data["items"][si_idx]["obj"]
+    price = sub_data["items"][si_idx]["price"]
+
+    assert subscription_item.subscription == subscription
+    assert subscription_item.price == price
+    assert subscription_item.get_email_id() == email_id
