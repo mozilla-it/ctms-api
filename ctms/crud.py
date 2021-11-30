@@ -364,9 +364,12 @@ def get_acoustic_record_as_contact(
 def schedule_acoustic_record(
     db: Session,
     email_id: UUID4,
+    metrics: Optional[Dict] = None,
 ) -> None:
     db_pending_record = PendingAcousticRecord(email_id=email_id)
     db.add(db_pending_record)
+    if metrics:
+        metrics["pending_acoustic_sync"].inc()
 
 
 def retry_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
