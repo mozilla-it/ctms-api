@@ -1,6 +1,6 @@
 # Stripe Subscription Event Data Empowering Email User Journeys
 
-* Status: proposed
+* Status: implemented
 * Deciders: Bryan Sieber, John Whitlock, Ben Bangert, Jon Buckley, (Benson Wong, Stephen Hood)
 * Date: September 30, 2021
 
