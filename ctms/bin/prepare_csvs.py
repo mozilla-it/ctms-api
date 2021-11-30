@@ -34,7 +34,7 @@ def csv_reader(
     estimated_total,
 ):
     path = os.path.join(directory, f)
-    with open(path, "r", newline="") as csvfile:
+    with open(path, "r", newline="", encoding="utf8") as csvfile:
         reader = csv.DictReader(csvfile)
         for i, line in enumerate(reader):
             total += 1
@@ -94,20 +94,22 @@ def main(test_args=None) -> int:
     skip_writes: Set[str] = set()
     canonical_mapping: Dict[str, str] = {}
 
-    with open(args.duplicates, "r") as dups:
+    with open(args.duplicates, "r", encoding="utf8") as dups:
         for line in dups:
             ids = line.strip("\n").split(" ")
             for _id in ids[1:]:
                 canonical_mapping[_id] = ids[0]
 
-    with open(os.path.join(args.out, "emails.csv"), "w") as email_out, open(
-        os.path.join(args.out, "fxa.csv"), "w"
+    with open(
+        os.path.join(args.out, "emails.csv"), "w", encoding="utf8"
+    ) as email_out, open(
+        os.path.join(args.out, "fxa.csv"), "w", encoding="utf8"
     ) as fxa_out, open(
-        os.path.join(args.out, "newsletters.csv"), "w"
+        os.path.join(args.out, "newsletters.csv"), "w", encoding="utf8"
     ) as newsletters_out, open(
-        os.path.join(args.out, "vpn_waitlist.csv"), "w"
+        os.path.join(args.out, "vpn_waitlist.csv"), "w", encoding="utf8"
     ) as vpn_waitlist_out, open(
-        os.path.join(args.out, "amo.csv"), "w"
+        os.path.join(args.out, "amo.csv"), "w", encoding="utf8"
     ) as amo_out:
         email_writer = csv.DictWriter(
             email_out,

@@ -20,7 +20,7 @@ def main(db_session: Session, filenames: List[str]) -> None:
 
     for filename in filenames:
         logger.info("Reading data from %s...", filename)
-        with open(filename, "r") as data_file:
+        with open(filename, "r", encoding="utf8") as data_file:
             data = json.load(data_file)
 
         if isinstance(data, dict):

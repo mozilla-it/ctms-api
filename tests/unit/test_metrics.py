@@ -89,7 +89,7 @@ def test_get_metrics_reporting_registry_settings_error():
         settings.side_effect = ValidationError(errors=[], model=Mock)
         the_registry = get_metrics_reporting_registry(passed_registry)
     assert the_registry is passed_registry
-    assert the_registry._collector_to_names == {}  # pylint: disable=protected-access
+    assert not the_registry._collector_to_names  # pylint: disable=protected-access
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):

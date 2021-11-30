@@ -26,7 +26,8 @@ def test_read_version(anon_client):
     here = os.path.dirname(__file__)
     root_dir = os.path.dirname(os.path.dirname(here))
     version_path = os.path.join(root_dir, "version.json")
-    version_contents = open(version_path, "r").read()
+    with open(version_path, "r", encoding="utf8") as vp_file:
+        version_contents = vp_file.read()
     expected = json.loads(version_contents)
     resp = anon_client.get("/__version__")
     assert resp.status_code == 200
