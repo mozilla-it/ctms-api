@@ -414,7 +414,7 @@ def test_get_acoustic_record_no_stripe_customer(dbsession, example_contact):
     """A contact with no associated Stripe customer has no subscriptions."""
     pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
     contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert contact.products == []
+    assert not contact.products
 
 
 def test_get_acoustic_record_no_stripe_subscriptions(
@@ -424,7 +424,7 @@ def test_get_acoustic_record_no_stripe_subscriptions(
     email_id = contact_with_stripe_customer.email.email_id
     pending = PendingAcousticRecord(email_id=email_id)
     contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert contact.products == []
+    assert not contact.products
 
 
 def test_get_acoustic_record_one_stripe_subscription(

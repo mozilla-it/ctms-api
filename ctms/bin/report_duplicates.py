@@ -27,11 +27,11 @@ def main(test_args=None) -> int:
     total = 0
     estimated_records = 87339348
     # TODO: THIS NEEDS TO WORK FOR BASKET TOKEN TOO
-    with open(args.collectfile, "w") as col:
+    with open(args.collectfile, "w", encoding="utf8") as col:
         for f in os.listdir(directory):
             if "contact_to_email" in f:
                 path = os.path.join(directory, f)
-                with open(path, "r", newline="") as csvfile:
+                with open(path, "r", newline="", encoding="utf8") as csvfile:
                     reader = csv.DictReader(csvfile)
                     for i, line in enumerate(reader):
                         print(line["primary_email"], line["email_id"], file=col)
@@ -47,7 +47,7 @@ def main(test_args=None) -> int:
 
     # TODO: Add a shell out to sort the file here, write it to the sorted_ file
 
-    with open(sorted_file, "r") as sorted_records:
+    with open(sorted_file, "r", encoding="utf8") as sorted_records:
         previous = None
         ids: Set[str] = set()
         for row in sorted_records:

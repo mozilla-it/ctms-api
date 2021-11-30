@@ -33,7 +33,7 @@ def csv_reader(
     skip_writes: Set[str],
 ):
     path = os.path.join(directory, f)
-    with open(path, "r", newline="") as csvfile:
+    with open(path, "r", newline="", encoding="utf8") as csvfile:
         reader = csv.DictReader(csvfile)
         for i, line in enumerate(reader):
             newline = {}
@@ -49,7 +49,7 @@ def csv_reader(
                     str(e),
                     file=sys.stderr,
                 )
-            except NonCanonicalError as e:
+            except NonCanonicalError:
                 print(
                     newline["email_id"],
                     "is non-canonical, skipping.",
@@ -95,7 +95,7 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     skip_writes: Set[str] = set()
     canonical_mapping: Dict[str, str] = {}
 
-    with open(args.duplicates, "r") as dups:
+    with open(args.duplicates, "r", encoding="utf8") as dups:
         for line in dups:
             ids = line.strip("\n").split(" ")
             for _id in ids[1:]:

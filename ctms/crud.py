@@ -736,7 +736,10 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
     products = []
     for subscriptions in by_product.values():
         # Sort to find the latest subscription
-        subscriptions.sort(key=lambda x: x["current_period_end"], reverse=True)
+        def get_current_period(sub: Dict) -> datetime:
+            return cast(datetime, sub["current_period_end"])
+
+        subscriptions.sort(key=get_current_period, reverse=True)
         latest = subscriptions[0]
         data = latest.copy()
         if len(subscriptions) == 1:
@@ -767,5 +770,8 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
         )
         products.append(ProductBaseSchema(**data))
 
-    products.sort(key=lambda x: x.product_id)
+    def get_product_id(prod: ProductBaseSchema) -> str:
+        return prod.product_id or ""
+
+    products.sort(key=get_product_id)
     return products
