@@ -10,7 +10,7 @@ from ctms.background_metrics import BackgroundMetricService
 from ctms.database import get_db_engine
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
-from ctms.sync import CTMSToAcousticSync
+from ctms.sync import CTMSToAcousticSync, update_healthcheck
 
 
 def main(db, settings):
@@ -23,6 +23,8 @@ def main(db, settings):
     metric_service = BackgroundMetricService(
         registry=metrics_registry, pushgateway_url=settings.prometheus_pushgateway_url
     )
+    healthcheck_path = settings.background_healthcheck_path
+    update_healthcheck(healthcheck_path)
 
     sync_service = CTMSToAcousticSync(
         client_id=settings.acoustic_client_id,
@@ -42,6 +44,7 @@ def main(db, settings):
         context = sync_service.sync_records(db)
         metric_service.inc_acoustic_sync_loop()
         metric_service.push_to_gateway()
+        update_healthcheck(healthcheck_path)
 
         duration_s = monotonic() - prev
         if context["count_total"] == context["batch_limit"]:

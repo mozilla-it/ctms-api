@@ -148,3 +148,37 @@ class CTMSToAcousticSync:
             self.metric_service.gauge_acoustic_record_age(age_s)
 
         return context
+
+
+def update_healthcheck(healthcheck_path):
+    """Update the healthcheck file with the current time, if set."""
+    if not healthcheck_path:
+        return
+    with open(healthcheck_path, "w", encoding="utf8") as health_file:
+        health_file.write(datetime.now(tz=timezone.utc).isoformat())
+
+
+def check_healthcheck(healthcheck_path, age_s):
+    """
+    Check that the healthcheck file is not too old.
+
+    Raises exceptions for errors:
+    * Environment variables unset
+    * Healthcheck file doesn't exist
+    * Contents are not in Python's ISO 8601 format
+    * Age is too old
+
+    Return the current age.
+    """
+    if not healthcheck_path:
+        raise Exception("BACKGROUND_HEALTHCHECK_PATH not set")
+    if age_s is None:
+        raise Exception("BACKGROUND_HEALTHCHECK_AGE_S not set")
+    with open(healthcheck_path, "r", encoding="utf8") as health_file:
+        content = health_file.read().strip()
+        written_at = datetime.fromisoformat(content)
+        health_age_raw = (datetime.now(tz=timezone.utc) - written_at).total_seconds()
+        health_age = round(health_age_raw, 3)
+        if health_age > age_s:
+            raise Exception(f"Age {health_age}s > {age_s}s, written at {content}")
+    return health_age
