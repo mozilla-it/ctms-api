@@ -15,8 +15,6 @@ OpenApiSpec(OAS) formatted in JSON can be found at the following path: /openapi.
 Please ensure following the [Developer Setup](docs/developer_setup.md) before developing \
 for this project to ensure correct environment setup.
 
-Then please view the [First Steps](docs/first_steps.md) for some basics.
-
 ---
 ## Project Structure
 

@@ -13,7 +13,7 @@ Technologies and tools in use:
 ## Poetry
 
 ## Installation
-Install Poetry for osx/linux (please confirm via the (docs)[https://python-poetry.org/docs/#installation]):
+Install Poetry for osx/linux (please confirm via the [docs](https://python-poetry.org/docs/#installation)):
 
 ```sh
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
