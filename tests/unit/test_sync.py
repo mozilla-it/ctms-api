@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from ctms.crud import schedule_acoustic_record
-from ctms.sync import CTMSToAcousticSync
+from ctms.sync import CTMSToAcousticSync, check_healthcheck, update_healthcheck
 from tests.unit.test_crud import StatementWatcher
 
 
@@ -156,3 +156,52 @@ def test_sync_acoustic_record_delete_path(
     assert registry.get_sample_value(f"{prefix}_retries", labels) == 0
     assert registry.get_sample_value(f"{prefix}_backlog", labels) == 1
     assert 0.0 <= registry.get_sample_value(f"{prefix}_age_s", labels) <= 0.2
+
+
+def test_update_healthcheck_no_path():
+    """update_healthcheck does nothing with a null path"""
+    update_healthcheck(None)
+
+
+def test_update_healthcheck_path(tmp_path):
+    """update_healthcheck writes a timestamp with a path"""
+    health_path = tmp_path / "healthcheck"
+    update_healthcheck(health_path)
+    age = check_healthcheck(health_path, 5)
+    assert age < 1
+
+
+def test_check_healthcheck_no_path():
+    """check_healthcheck raises if path is null."""
+    with pytest.raises(Exception) as exc_info:
+        check_healthcheck(None, 2)
+    assert str(exc_info.value) == "BACKGROUND_HEALTHCHECK_PATH not set"
+
+
+def test_check_healthcheck_no_age(tmp_path):
+    """check_healthcheck raises if the age is null."""
+    health_path = tmp_path / "healthcheck"
+    with pytest.raises(Exception) as exc_info:
+        check_healthcheck(health_path, None)
+    assert str(exc_info.value) == "BACKGROUND_HEALTHCHECK_AGE_S not set"
+
+
+def test_check_healthcheck_no_file(tmp_path):
+    """check_healthcheck raises if file doesn't exist."""
+    health_path = tmp_path / "healthcheck"
+    with pytest.raises(OSError) as exc_info:
+        check_healthcheck(health_path, 60)
+    assert (exc_info.value.filename) == str(health_path)
+
+
+def test_check_healthcheck_old_age(tmp_path):
+    """check_healthcheck raises if the age is too old."""
+    health_path = tmp_path / "healthcheck"
+    old_date = datetime.now(tz=timezone.utc) - timedelta(seconds=120)
+    old_date_iso = old_date.isoformat()
+    with open(health_path, "w", encoding="utf8") as health_file:
+        health_file.write(old_date_iso)
+    with pytest.raises(Exception) as exc_info:
+        check_healthcheck(health_path, 60)
+    assert str(exc_info.value).startswith("Age 120.")
+    assert str(exc_info.value).endswith(f"s > 60s, written at {old_date_iso}")

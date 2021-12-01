@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     acoustic_newsletter_table_id: Optional[int] = None
     acoustic_product_subscriptions_id: Optional[int] = None
     prometheus_pushgateway_url: Optional[str] = None
+    background_healthcheck_path: Optional[str] = None
+    background_healthcheck_age_s: Optional[int] = None
 
     class Config:
         env_prefix = "ctms_"
