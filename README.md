@@ -26,7 +26,7 @@ The project is structured with the following in mind:
     - [bin/*](ctms/bin/)
         - Scripts intended for background machinery
     - [schemas/*](ctms/schemas/)
-        - Pydantic Models for Data Modeling and Contract Validation, Pydantic
+        - Pydantic Models for Data Modeling and Contract Validation
 - [migrations/*](migrations/)
     - Alembic migrations that act as a changelog or version control system for implementing DB changes in an ordered fashion
 - [scripts/*](scripts/)

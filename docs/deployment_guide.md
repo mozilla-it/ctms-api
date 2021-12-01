@@ -1,7 +1,7 @@
 # Deployment Guide
 
 - Github Actions: Build Pipeline
-- Kubernetes: Manifests for Deployment
+- Kubernetes/Helm: Manifests for Deployment
 - Docker: Container Management
 - AWS: Cloud Infra
 
