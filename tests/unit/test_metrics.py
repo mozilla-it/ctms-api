@@ -215,6 +215,16 @@ def assert_api_request_metric_inc(
     assert metrics_registry.get_sample_value("ctms_api_requests_total", labels) == count
 
 
+def assert_pending_acoustic_sync_inc(
+    metrics_registry: CollectorRegistry,
+    count: int = 1,
+):
+    """Assert ctms_pending_acoustic_sync_total was incremented"""
+    assert (
+        metrics_registry.get_sample_value("ctms_pending_acoustic_sync_total") == count
+    )
+
+
 def test_homepage_request(anon_client, registry):
     """A homepage request emits metrics for / and /docs"""
     anon_client.get("/")
@@ -232,6 +242,19 @@ def test_api_request(client, minimal_contact, registry):
     assert_request_metric_inc(registry, "GET", path, 200)
     assert_duration_metric_obs(registry, "GET", path, "2xx")
     assert_api_request_metric_inc(registry, "GET", path, "test_client", "2xx")
+
+
+def test_pending_sync(client, minimal_contact, registry):
+    """An API requests that schedules an Acoustic contact sync emits a metric."""
+    data = {"email": {"first_name": "CTMS", "last_name": "User"}}
+    email_id = minimal_contact.email.email_id
+    response = client.patch(f"/ctms/{email_id}", json=data)
+    assert response.status_code == 200
+    path = "/ctms/{email_id}"
+    assert_request_metric_inc(registry, "PATCH", path, 200)
+    assert_duration_metric_obs(registry, "PATCH", path, "2xx", limit=0.5)
+    assert_api_request_metric_inc(registry, "PATCH", path, "test_client", "2xx")
+    assert_pending_acoustic_sync_inc(registry)
 
 
 @pytest.mark.parametrize(
@@ -263,13 +286,22 @@ def test_crash_request(client, dbsession, registry):
 
 
 def test_unknown_path(anon_client, dbsession, registry):
-    """A unknown path does not emit metrics."""
+    """A unknown path does not emit metrics with labels."""
     path = "/unknown"
     resp = anon_client.get(path)
     assert resp.status_code == 404
     metrics_text = generate_latest(registry).decode()
     for family in text_string_to_metric_families(metrics_text):
-        assert len(family.samples) == 0
+        if len(family.samples) == 1:
+            # This metric is emitted, maybe because there are no labels
+            sample = family.samples[0]
+            assert sample.name in (
+                "ctms_pending_acoustic_sync_total",
+                "ctms_pending_acoustic_sync_created",
+            )
+            assert sample.labels == {}
+        else:
+            assert len(family.samples) == 0
 
 
 def test_get_metrics(anon_client, setup_metrics):

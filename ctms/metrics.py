@@ -51,6 +51,13 @@ METRICS_PARAMS = {
             ],
         },
     ),
+    "pending_acoustic_sync": (
+        Counter,
+        {
+            "name": "ctms_pending_acoustic_sync_total",
+            "documentation": "Total count of contacts added to Acoustic sync backlog",
+        },
+    ),
 }
 
 

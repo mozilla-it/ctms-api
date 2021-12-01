@@ -40,9 +40,17 @@ def main(db, settings):
     prev = monotonic()
     while settings.acoustic_sync_feature_flag:
         context = sync_service.sync_records(db)
+        metric_service.inc_acoustic_sync_loop()
         metric_service.push_to_gateway()
+
         duration_s = monotonic() - prev
-        to_sleep = settings.acoustic_loop_min_secs - duration_s
+        if context["count_total"] == context["batch_limit"]:
+            to_sleep = 0
+        else:
+            to_sleep = settings.acoustic_loop_min_secs - duration_s
+
+        if context["count_total"] == 0:
+            context["trivial"] = True
         logger.info(
             "sync_service cycle complete",
             loop_duration_s=round(duration_s, 3),

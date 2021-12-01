@@ -129,13 +129,22 @@ class CTMSToAcousticSync:
         # For each record, attempt downstream sync
         total = 0
         states: Dict[str, int] = defaultdict(int)
+        record_created = None
         for acoustic_record in all_acoustic_records_before_now:
             state = self._sync_pending_record(db, acoustic_record)
             total += 1
             states[state] += 1
+            if state == "synced" and acoustic_record.retry == 0:
+                record_created = acoustic_record.create_timestamp
+        # Commit changes to db after ALL records are batch-processed
+        db.commit()
+
         context["count_total"] = total
         for state, count in states.items():
             context[f"count_{state}"] = count
-        # Commit changes to db after ALL records are batch-processed
-        db.commit()
+        if self.metric_service and record_created:
+            age_td = datetime.now(tz=timezone.utc) - record_created
+            age_s = round(age_td.total_seconds(), 3)
+            self.metric_service.gauge_acoustic_record_age(age_s)
+
         return context

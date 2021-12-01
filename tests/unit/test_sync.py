@@ -155,3 +155,4 @@ def test_sync_acoustic_record_delete_path(
     assert registry.get_sample_value(f"{prefix}_total", labels) == 1
     assert registry.get_sample_value(f"{prefix}_retries", labels) == 0
     assert registry.get_sample_value(f"{prefix}_backlog", labels) == 1
+    assert 0.0 <= registry.get_sample_value(f"{prefix}_age_s", labels) <= 0.2

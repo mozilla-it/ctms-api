@@ -78,6 +78,29 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             ],
             documentation="Gauge of the number of contacts in the sync backlog. Not counting over-retried records.",
         )
+
+        self.loop = Counter(
+            registry=registry,
+            name=metric_prefix + "acoustic_sync_loops",
+            labelnames=[
+                "app_kubernetes_io_component",
+                "app_kubernetes_io_instance",
+                "app_kubernetes_io_name",
+            ],
+            documentation="Total count of loops of the background process.",
+        )
+
+        self.age_gauge = Gauge(
+            registry=registry,
+            name=metric_prefix + "acoustic_sync_age_s",
+            labelnames=[
+                "app_kubernetes_io_component",
+                "app_kubernetes_io_instance",
+                "app_kubernetes_io_name",
+            ],
+            documentation="Age of the most recent synced, non-retry record in seconds.",
+        )
+
         self.pushgateway_url = pushgateway_url
         self.job_name = "prometheus-pushgateway"
 
@@ -121,6 +144,20 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).set(value)
+
+    def inc_acoustic_sync_loop(self):
+        self.loop.labels(
+            app_kubernetes_io_component=self.app_kubernetes_io_component,
+            app_kubernetes_io_instance=self.app_kubernetes_io_instance,
+            app_kubernetes_io_name=self.app_kubernetes_io_name,
+        ).inc()
+
+    def gauge_acoustic_record_age(self, age_s):
+        self.age_gauge.labels(
+            app_kubernetes_io_component=self.app_kubernetes_io_component,
+            app_kubernetes_io_instance=self.app_kubernetes_io_instance,
+            app_kubernetes_io_name=self.app_kubernetes_io_name,
+        ).set(age_s)
 
     def push_to_gateway(self):
         push_to_gateway(self.pushgateway_url, job=self.job_name, registry=self.registry)
