@@ -92,13 +92,13 @@ RUN mypy ctms
 RUN black --config ./pyproject.toml --check ctms tests
 RUN isort --recursive --settings-path ./pyproject.toml --check-only ctms
 RUN pylint ctms tests/unit
-CMD ./scripts/lint.sh
+CMD ./docker/lint.sh
 
 
 # 'test' stage runs our unit tests with pytest and
 # coverage.  Build will fail if test coverage is under 80%
 FROM development AS test
-CMD ./scripts/test.sh
+CMD ./docker/test.sh
 
 
 # 'production' stage uses the clean 'python-base' stage and copyies
