@@ -31,12 +31,14 @@ class CTMSToAcousticSync:
         batch_limit=20,
         is_acoustic_enabled=True,
         metric_service: BackgroundMetricService = None,
+        acoustic_timeout=5.0,
     ):
         acoustic_client = Acoustic(
             client_id=client_id,
             client_secret=client_secret,
             refresh_token=refresh_token,
             server_number=server_number,
+            timeout=acoustic_timeout,
         )
         self.ctms_to_acoustic = CTMSToAcousticService(
             acoustic_client=acoustic_client,

@@ -7,6 +7,7 @@ from uuid import UUID
 import dateutil
 import structlog
 from lxml import etree
+from requests.exceptions import Timeout
 from silverpop.api import Silverpop, SilverpopResponseException
 
 from ctms.background_metrics import BackgroundMetricService
@@ -137,6 +138,10 @@ class Acoustic(Silverpop):
     :param server_number
     """
 
+    def __init__(self, timeout, *args, **kwargs):
+        self.timeout = timeout
+        super().__init__(*args, **kwargs)
+
     @staticmethod
     def _process_response(resp):
         # pylint: disable=c-extension-no-member
@@ -163,7 +168,9 @@ class Acoustic(Silverpop):
     def _call(self, xml):
         # Following basket's suggested pattern,
         # adding force_bytes to deal with some Acoustic rejections
-        response = self.session.post(self.api_endpoint, data={"xml": force_bytes(xml)})
+        response = self.session.post(
+            self.api_endpoint, data={"xml": force_bytes(xml)}, timeout=self.timeout
+        )
         return self._process_response(response)
 
 
@@ -479,7 +486,7 @@ class CTMSToAcousticService:
                 **self.context,
             )
             return True
-        except SilverpopResponseException:
+        except (SilverpopResponseException, Timeout):
             # failure
             self.logger.exception(
                 "Failure for contact in sync to acoustic...",
