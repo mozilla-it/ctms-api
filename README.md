@@ -23,6 +23,7 @@ The project is structured with the following in mind:
 - [docs/*](docs/)
     - Documentation to guide others around the project interactions
 - [ctms/*](ctms/)
+    - Application logic lives within this directory
     - [bin/*](ctms/bin/)
         - Scripts intended for background machinery
     - [schemas/*](ctms/schemas/)
@@ -31,7 +32,7 @@ The project is structured with the following in mind:
     - Alembic migrations that act as a changelog or version control system for implementing DB changes in an ordered fashion
 - [scripts/*](scripts/)
     - Some scripts that have proven useful within the CTMS ecosystem
-- [tests/unit/*](test/unit)
+- [tests/unit/*](test/unit/)
     - Test suite using pytest
 
 ---

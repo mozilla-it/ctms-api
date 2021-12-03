@@ -13,7 +13,7 @@ Technologies and tools in use:
 ## Poetry
 
 ## Installation
-Install Poetry for osx/linux (please confirm via the [docs](https://python-poetry.org/docs/#installation)):
+Install Poetry for osx/linux (please confirm via the [poetry docs](https://python-poetry.org/docs/#installation)):
 
 ```sh
 curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
@@ -260,7 +260,7 @@ See [Configuration](configuration.md) for local and production configuration set
 ---
 ## Approaching this repo
 
-After you've done the necessary developer setup, look through here for some quick first steps.
+After you've done the necessary developer setup, try 'make' for some quick first steps.
 
 > Use `make help` to see additional make commands that help with setup, starting, and testing.
 
