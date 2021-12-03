@@ -24,6 +24,7 @@ def acoustic_client():
             client_secret=ctms_acoustic_client_secret,
             refresh_token=ctms_acoustic_refresh_token,
             server_number=6,
+            timeout=1.0,
         )
 
 

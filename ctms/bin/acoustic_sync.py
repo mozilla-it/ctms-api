@@ -38,6 +38,7 @@ def main(db, settings):
         batch_limit=settings.acoustic_batch_limit,
         is_acoustic_enabled=settings.acoustic_integration_feature_flag,
         metric_service=metric_service,
+        acoustic_timeout=settings.acoustic_timeout_s,
     )
     prev = monotonic()
     while settings.acoustic_sync_feature_flag:

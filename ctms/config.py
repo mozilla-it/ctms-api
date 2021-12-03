@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     prometheus_pushgateway_url: Optional[str] = None
     background_healthcheck_path: Optional[str] = None
     background_healthcheck_age_s: Optional[int] = None
+    acoustic_timeout_s: float = 5.0
 
     class Config:
         env_prefix = "ctms_"
