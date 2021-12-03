@@ -1,50 +1,51 @@
-# CTMS API
-
-This is a work-in-progress for the Contact Management System (CTMS) API.
+# ConTact Management System (CTMS)
 
 While the app is running, interactive API documentation can found at the following relative paths: /docs, /redoc.
 
-OpenApiSpec(OAS) spec can be found at the following path: /openapi.json
+OpenApiSpec(OAS) formatted in JSON can be found at the following path: /openapi.json
 
 ---
-## Template Docs
 
-[View All Docs](./guides/)
-- [Developer Setup](guides/developer_setup.md)
-- [First Steps](guides/first_steps.md)
-- [Deployment Guide](guides/deployment_guide.md)
-- [Configuration](guides/configuration.md)
-- [Testing Strategy](guides/testing_strategy.md)
-- [Auto Documentation Setup](guides/auto_documentation.md)
+[View All Docs](docs/README.md)
 
 ---
+
 ## Prerequisites
 
-Please ensure following the [Developer Setup](guides/developer_setup.md) before developing \
+Please read the [Developer Setup documentation](docs/developer_setup.md) before developing \
 for this project to ensure correct environment setup.
-
-Then please view the [First Steps](guides/first_steps.md) for some basics.
-
-[Others docs here as well](./guides/).
 
 ---
 ## Project Structure
 
 The project is structured with the following in mind:
 
-- docs/*
-    - Auto-generated Sphinx docs live here.
-- guides/*
+- [docs/*](docs/)
     - Documentation to guide others around the project interactions
-- ctms/*
-    - Operational source code exists here
-    - app.py
-        - FastAPI Handling of HTTP Requests and routing to services
-    - bin/*
+- [ctms/*](ctms/)
+    - Application logic lives within this directory
+    - [bin/*](ctms/bin/)
         - Scripts intended for background machinery
-    - models.py
-        - SQLAlchemy models for ORM tool, SqlAlchemy
-    - schemas/*
-        - Pydantic Models for Data Modeling and Contract Validation, Pydantic
-- tests/unit/*
+    - [schemas/*](ctms/schemas/)
+        - Pydantic Models for Data Modeling and Contract Validation
+- [migrations/*](migrations/)
+    - Alembic migrations that act as a changelog or version control system for implementing DB changes in an ordered fashion
+- [scripts/*](scripts/)
+    - Some scripts that have proven useful within the CTMS ecosystem
+- [tests/unit/*](test/unit/)
     - Test suite using pytest
+
+---
+## Important Files
+
+Below are some files that are worth making note of:
+- [MAKEFILE](Makefile)
+    - Enabling commands such as: make {build | lint | setup | start | test | shell | test-shell | db-only}
+- [ctms/app.py](ctms/app.py)
+    - FastAPI handling of HTTP Requests and routing to services
+- [ctms/bin/acoustic_sync.py](ctms/bin/acoustic_sync.py)
+    - Background job for synchronizing pending records to Acoustic
+- [ctms/config.py](ctms/config.py)
+    - Environment variables are initialized here
+- [ctms/models.py](ctms/models.py)
+    - SQLAlchemy models for ORM tool
