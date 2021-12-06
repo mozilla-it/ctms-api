@@ -760,6 +760,7 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
             segment = "canceled"
             changed = latest["ended_at"]
         else:
+            segment_prefix = ""
             segment = "other"
             changed = latest["created"]
 
