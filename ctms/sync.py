@@ -116,7 +116,7 @@ class CTMSToAcousticSync:
             context["sync_backlog"] = all_acoustic_records_count
             self.metric_service.gauge_acoustic_sync_backlog(all_acoustic_records_count)
             all_retry_records_count: int = get_all_acoustic_retries_count(db=db)
-            context["retry_backlog"] = all_acoustic_records_count
+            context["retry_backlog"] = all_retry_records_count
             self.metric_service.gauge_acoustic_retry_backlog(all_retry_records_count)
         # Get all Records before current time
         all_acoustic_records_before_now: List[
