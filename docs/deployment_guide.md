@@ -5,6 +5,19 @@
 - Docker: Container Management
 - AWS: Cloud Infra
 
+## Overview
+
+There are two deployed instances of CTMS:
+
+* https://ctms.prod.mozilla-ess.mozit.cloud/ - The production instance
+* https://ctms.stage.mozilla-ess.mozit.cloud/ - The staging instance
+
+There are some useful endpoints for deployers:
+
+* ``/__version__`` - reports the source code version used to build the images
+* ``/__lbheartbeat__`` - returns a 200 response when the service is running
+* ``/__heartbeat__`` - returns a 200 response when the backing services, such
+  as the database, are running, as well as some additional info.
 
 ## Deployment
 
@@ -202,6 +215,102 @@ at ``ERROR`` level (Severity 3) on exceptions, with type
 * ``success``: ``true`` if successfully synced, ``false`` if not
 * ``trace``: The email, if the contact email has the ``+trace_me_mozilla_``
   pattern.
+
+## Metrics
+
+[Prometheus](https://prometheus.io/) is used for publishing metrics for the API
+and the backend service. These are exported to [InfluxDB](https://www.influxdata.com/)
+for further processing and display on dashboards.
+
+The API metrics are fetched from ``/metrics``, and each API instance publishes
+and keeps track of its own metrics. This means the same counter should be "summed"
+across instances to get a deployment-wide counter. It also means that counters
+reset when instances reset, such as during a deployment.
+
+The Acoustic Sync service pushes its metrics to a gateway service, once per
+batch cycle. There is a single instance of the sync service, so summing is not
+needed, but the counts do reset when the service is restarted or deployed.
+
+### API metrics
+
+The API metrics are:
+
+* ``ctms_requests_duration_seconds_*`` - A
+  [histogram](https://prometheus.io/docs/practices/histograms/) of request
+  timings, with the labels ``method``, ``path_template``, and
+  ``status_code_family``. The histogram parts are:
+  - ``ctms_requests_duration_seconds_sum`` - the running total of durations.
+  - ``ctms_requests_duration_seconds_bucket`` - the histogram buckets, adding
+    the tag ``le``.
+  - ``ctms_requests_duration_seconds_count`` - the count of requests.
+* ``ctms_api_requests_total`` - A counter of API endpoint requests, with the
+  labels ``client_id``, ``method``, ``path_template``, and
+  ``status_code_family``.
+* ``ctms_requests_total`` - A counter of requests, with the labels ``method``,
+  ``path_template``, ``status_code``, and ``status_code_family``.
+
+The API metrics labels are:
+
+* ``client_id``: The client_id of the API key used to make the request.
+* ``le``: For histograms, the "less than or equal to" value of the bucket,
+  such as `"5.0"` for the count of requests less than 5 seconds.
+* ``method``: The HTTP method, uppercase, like ``GET`` and ``POST``.
+* ``path_template``: The path, such as ``/__version__`` or A standardized path,
+  such as ``/ctms/{email_id}``.
+* ``status_code_family``: A string like `2xx` and `4xx`, representing the first
+  digit of the HTTP status code.
+* ``status_code``: The HTTP status code.
+
+### Acoustic Sync Service Metrics
+
+The Acoustic Sync service metrics are:
+
+* ``ctms_background_acoustic_requests_duration_*`` - A
+  [histogram](https://prometheus.io/docs/practices/histograms/) of Acoustic
+  request timing, with labels ``method``, ``status``, ``table``.
+  The histogram parts are:
+  - ``ctms_background_acoustic_requests_duration_sum`` - The running total of durations.
+  - ``ctms_background_acoustic_requests_duration_bucket`` - The histogram buckets, adding
+    the tag ``le``.
+  - ``ctms_background_acoustic_requests_duration_count`` - The count of requests.
+* ``ctms_background_acoustic_request_total`` - A counter of Acoustic requests,
+  with labels ``method``, ``status``, ``table``.
+* ``ctms_background_acoustic_sync_total`` - A counter of contacts synced to Acoustic.
+* ``ctms_background_acoustic_sync_retries`` - A gauge of pending records that have
+  been tried once already. Some have reached maximum retries, so the gauge will
+  remain high.
+* ``ctms_background_acoustic_sync_backlog`` - A gauge of pending records to sync,
+  excluding those that have reached maximum retries.
+* ``ctms_background_acoustic_sync_loops`` - A counter that increments with each batch,
+  including empty batches.
+* ``ctms_background_acoustic_sync_age_s`` - A gauge of the age of the most recently
+  synced contact, in seconds rounded to milliseconds. This measures the time from
+  requesting a contact sync until it is synced.
+
+The sync service labels are:
+
+* ``method`` - The Acoustic method called, such as ``"add_recipient"`` for the
+  main contact table, or TKTK
+* ``status`` - The Acoustic request result, ``"success"`` or ``"failure"``.
+* ``table`` - The Acoustic database table updated, ``"main"``,
+  ``"newsletter"``, or ``"product"``.
+* ``le`` - The histogram bucket, such as ``"1.0"`` for requests taking a second
+  or less.
+
+There are additional shared labels for all sync service metrics:
+
+* ``app_kubernetes_io_component`` - set to ``"background"``
+* ``app_kubernetes_io_instance`` - set to ``"ctms"``
+* ``app_kubernetes_io_name`` - set to ``"ctms"``
+
+## Dashboards
+
+CTMS metrics are presented on two dashboards:
+
+* [CTMS - dashboard](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
+  Operational metrics for production and staging.
+* [CTMS Alerts](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
+  Operational metrics with triggers to alert on-call staff.
 
 ## Docker
 See the [developer_setup_guide](developer_setup.md#docker) for more information about Docker.
