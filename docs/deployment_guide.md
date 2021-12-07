@@ -8,22 +8,39 @@
 
 ## Deployment
 
-We use a variety of technologies to get this code into production.  Starting from this repo and going outwards:
+We use a variety of technologies to get this code into production.  Starting
+from this repo and going outwards:
 
-1. github actions builds and deploys a docker container to ecr
-    1. prs and pushes to this repo will build and push a 'short-sha' container to AWS' ECR. The build details are written to ``/app/version.json``.
-    1. Code merged to main will trigger a build that prefixes the short sha with literal 'stg-'
-    1. Code pushed to a tag with the form v{semver} (for example, v0.0.1) will get published with that tag to ecr
-    1. Code released with a good version tag should get released to prod (this is to be determined, does not work, but is plan of record)
-1. A helm release is configured in ctms-infra
-    1. https://github.com/mozilla-it/ctms-infra/tree/main/k8s
-    1. We can trigger a release by updating the correct files there (For helm chart or helm chart value changes)
-    1. by default we will also configure new images in the ECR to trigger a build
-      1. the images tagged with stg- are configured to deploy to the staging cluster
-      1. the images with v{semver} will automatically be deployed to prod
-1. The eks clusters in the ess account are configured with fluxcd/helm operator to watch those helm release files
-1. terraform defines the eks clusters, and any databases we may require (https://github.com/mozilla-it/ctms-infra/tree/main/terraform)
+1. [GitHub Actions](https://github.com/mozilla-it/ctms-api/actions) builds and
+   deploys a docker image to [AWS's Elastic Container Registry](https://aws.amazon.com/ecr/) (ECR)
+    1. Pull requests and pushes to this repo will build and push a "short-sha"
+       image to AWS' ECR. The build details are written to
+       ``/app/version.json``.
+    1. Code merged to main will trigger a build that prefixes the "short sha"
+       with literal ``stg-``.
+    1. Code pushed to a tag with the form ``v{semver}`` (for example,
+       ``v0.0.1``) will get published with that tag to ECR.
+1. The helm configuration, which describes the CTMS cluster, is in the repo
+   [mozilla-it/helm-charts](https://github.com/mozilla-it/helm-charts/tree/main/charts/ctms).
+1. A helm release is configured in
+   [mozilla-it/ctms-infra](https://github.com/mozilla-it/ctms-infra/tree/main/k8s) (*private*).
+   We can trigger a release by updating the correct files there (for helm chart
+   or helm chart value changes).
+1. The [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS)
+   clusters are configured with a
+   [fluxcd](https://www.weave.works/oss/flux/)/helm operator to deploy on releases.
+   1. CTMS-API images tagged with ``stg-`` automatically deploy to the
+      staging cluster.
+   1. CTMS-API images tagged with ``v{semver}`` automatically deploy to prod
+   1. Helm chart tags are deployed to both
+   1. Flux-triggered releases appear as commits in ``mozilla-it/ctms-infra``.
+1. [Terraform](https://www.terraform.io/) defines the EKS clusters, and any
+   databases we may require. The
+   [Terraform files](https://github.com/mozilla-it/ctms-infra/tree/main/terraform)
+   are in the `mozilla-it/ctms-infra` private repo as well.
 
+More information about CTMS operations is available on the
+[ESS-CTMS Mana page](https://mana.mozilla.org/wiki/x/KIyXC) (*private*).
 
 ## Logging
 
