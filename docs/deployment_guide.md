@@ -309,7 +309,7 @@ CTMS metrics are presented on two dashboards:
 
 * [CTMS - dashboard](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
   Operational metrics for production and staging.
-* [CTMS Alerts](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
+* [CTMS Alerts](https://earthangel-b40313e5.influxcloud.net/d/UqluYyc7k/ctms-alerts?orgId=1):
   Operational metrics with triggers to alert on-call staff.
 
 ## Docker
