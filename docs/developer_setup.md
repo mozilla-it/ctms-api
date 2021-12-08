@@ -66,6 +66,35 @@ Add new dependencies in pyproject.toml through poetry:
 poetry add {pypi-package}
 ```
 
+### Updating Dependencies
+To update a dependency to the latest version:
+
+```sh
+poetry add {pypi-package}@latest
+```
+
+This can also be used to update via constraint:
+
+```sh
+poetry add {pypi-package}@^2.1.0
+poetry add {pypi-package}>=2.0.0,<3.0.0
+```
+
+Using ``poetry add`` will also update ``pyproject.toml``, which is easier for a
+human to parse than ``poetry.lock``.
+
+To update all dependencies in ``poetry.lock``, but not ``pyproject.toml``:
+
+```sh
+poetry update
+```
+
+To update a single dependency in ``poetry.lock``:
+
+```sh
+poetry update {pypi-package}
+```
+
 ### Exiting Poetry Shell
 
 Run the following command to exit `poetry shell` while in a shell.

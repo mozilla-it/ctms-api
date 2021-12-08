@@ -92,7 +92,7 @@ def test_sync_acoustic_record_retry_path(dbsession, sync_obj, maximal_contact):
 
     # Metrics adds two DB queries (total records and retries)
     assert watcher.count == 6
-    expected_context["retry_backlog"] = 1
+    expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
 
@@ -141,7 +141,7 @@ def test_sync_acoustic_record_delete_path(
 
     # Metrics adds two DB queries (total records and retries)
     assert watcher.count == 6
-    expected_context["retry_backlog"] = 1
+    expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
 
