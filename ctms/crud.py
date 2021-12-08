@@ -674,13 +674,22 @@ create_stripe_subscription_item = partial(
 
 
 def _get_stripe(
-    model: Type[StripeModel], db_session: Session, stripe_id: str
+    model: Type[StripeModel],
+    db_session: Session,
+    stripe_id: str,
+    for_update: bool = False,
 ) -> Optional[StripeModel]:
-    """Get a Stripe object by its ID, or None if not found."""
-    return cast(
-        Optional[StripeModel],
-        db_session.query(model).get(stripe_id),
-    )
+    """
+    Get a Stripe object by its ID, or None if not found.
+
+    If for_update is True (default False), the row will be locked for update and
+    the identity_map will be refreshed.
+    """
+    query = db_session.query(model)
+    if for_update:
+        query = query.populate_existing().with_for_update()
+
+    return cast(Optional[StripeModel], query.get(stripe_id))
 
 
 get_stripe_customer_by_stripe_id = partial(_get_stripe, StripeCustomer)

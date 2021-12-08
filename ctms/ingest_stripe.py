@@ -82,7 +82,9 @@ def ingest_stripe_customer(
     customer_id = data["id"]
     is_deleted = data.get("deleted", False)
 
-    customer = get_stripe_customer_by_stripe_id(db_session, customer_id)
+    customer = get_stripe_customer_by_stripe_id(
+        db_session, customer_id, for_update=True
+    )
     if customer:
         if is_deleted:
             # Mark customer as deleted. Downstream consumers may need to
@@ -127,7 +129,9 @@ def ingest_stripe_subscription(
     assert data["object"] == "subscription", data.get("object", "[MISSING]")
     subscription_id = data["id"]
 
-    subscription = get_stripe_subscription_by_stripe_id(db_session, subscription_id)
+    subscription = get_stripe_subscription_by_stripe_id(
+        db_session, subscription_id, for_update=True
+    )
     if subscription:
         subscription.stripe_created = from_ts(data["created"])
         subscription.stripe_customer_id = data["customer"]
@@ -141,7 +145,16 @@ def ingest_stripe_subscription(
         subscription.start_date = from_ts(data["start_date"])
         subscription.status = data["status"]
         sub_items_to_delete = {
-            sub_item.stripe_id for sub_item in subscription.subscription_items
+            sub_item_id
+            for sub_item_id, in (
+                db_session.query(StripeSubscriptionItem.stripe_id)
+                .with_for_update()
+                .filter(
+                    StripeSubscriptionItem.stripe_subscription_id
+                    == subscription.stripe_id
+                )
+                .all()
+            )
         }
     else:
         schema = StripeSubscriptionCreateSchema(
@@ -187,7 +200,7 @@ def ingest_stripe_subscription_item(
 
     subscription_item_id = data["id"]
     subscription_item = get_stripe_subscription_item_by_stripe_id(
-        db_session, subscription_item_id
+        db_session, subscription_item_id, for_update=True
     )
     if subscription_item:
         subscription_item.stripe_created = from_ts(data["created"])
@@ -214,7 +227,7 @@ def ingest_stripe_price(db_session: Session, data: Dict[str, Any]) -> StripePric
     assert data["object"] == "price", data.get("object", "[MISSING]")
     price_id = data["id"]
     recurring = data.get("recurring", {})
-    price = get_stripe_price_by_stripe_id(db_session, price_id)
+    price = get_stripe_price_by_stripe_id(db_session, price_id, for_update=True)
     if price:
         price.stripe_created = from_ts(data["created"])
         price.stripe_product_id = data["product"]
@@ -249,7 +262,7 @@ def ingest_stripe_invoice(db_session: Session, data: Dict[str, Any]) -> StripeIn
     """
     assert data["object"] == "invoice", data.get("object", "[MISSING]")
     invoice_id = data["id"]
-    invoice = get_stripe_invoice_by_stripe_id(db_session, invoice_id)
+    invoice = get_stripe_invoice_by_stripe_id(db_session, invoice_id, for_update=True)
     if invoice:
         invoice.stripe_created = from_ts(data["created"])
         invoice.stripe_customer_id = data["customer"]
@@ -258,7 +271,15 @@ def ingest_stripe_invoice(db_session: Session, data: Dict[str, Any]) -> StripeIn
         invoice.status = data["status"]
         invoice.default_payment_method_id = data["default_payment_method"]
         invoice.default_source = data["default_source"]
-        lines_to_delete = {line.stripe_id for line in invoice.line_items}
+        lines_to_delete = {
+            line_id
+            for line_id, in (
+                db_session.query(StripeInvoiceLineItem.stripe_id)
+                .with_for_update()
+                .filter(StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id)
+                .all()
+            )
+        }
     else:
         schema = StripeInvoiceCreateSchema(
             stripe_id=invoice_id,
@@ -299,7 +320,7 @@ def ingest_stripe_invoice_line_item(
 
     invoice_line_item_id = data["id"]
     invoice_line_item = get_stripe_invoice_line_item_by_stripe_id(
-        db_session, invoice_line_item_id
+        db_session, invoice_line_item_id, for_update=True
     )
     if invoice_line_item:
         invoice_line_item.stripe_type = data["type"]
