@@ -412,15 +412,11 @@ async def log_request_middleware(request: Request, call_next):
     """Add timing and per-request logging context."""
     start_time = time.monotonic()
     request.state.log_context = context_from_request(request)
-    has_error = False
-
+    response = None
     try:
         response = await call_next(request)
-    except Exception as e:
-        has_error = True
-        raise e from None
     finally:
-        if has_error:
+        if response is None:
             status_code = 500
         else:
             status_code = response.status_code
@@ -441,7 +437,7 @@ async def log_request_middleware(request: Request, call_next):
 
         emit_response_metrics(context, get_metrics())
         logger = structlog.get_logger("ctms.web")
-        if has_error:
+        if response is None:
             logger.error(log_line, **context)
         else:
             logger.info(log_line, **context)
