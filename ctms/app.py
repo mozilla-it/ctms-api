@@ -19,7 +19,7 @@ from google.auth.exceptions import GoogleAuthError
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -917,8 +917,20 @@ def _process_stripe_object(
     - Other errors (ValueError, KeyError) if the Stripe object has unexpected
       data for keys that CTMS examines. Extra data is ignored.
     """
-    obj = ingest_stripe_object(db_session, data)
-    db_session.commit()
+    try:
+        obj = ingest_stripe_object(db_session, data)
+        db_session.commit()
+    except IntegrityError as e:
+        db_session.rollback()
+        structlog.get_logger("ctms.web").exception("IntegrityError converted to 409")
+        raise HTTPException(status_code=409, detail="Write conflict, try again") from e
+    except OperationalError as e:
+        db_session.rollback()
+        structlog.get_logger("ctms.web").exception("OperationalError converted to 409")
+        raise HTTPException(
+            status_code=409, detail="Deadlock or other issue, try again"
+        ) from e
+
     email_id = obj.get_email_id()
     if data["object"] == "customer" and re_trace_email.match(data.get("email", "")):
         trace_email = data["email"]
