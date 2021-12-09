@@ -3,8 +3,10 @@
 import json
 from base64 import b64encode
 from datetime import datetime, timezone
+from unittest import mock
 
 import pytest
+from sqlalchemy.exc import IntegrityError, OperationalError
 from structlog.testing import capture_logs
 
 from ctms.app import app, get_pubsub_claim
@@ -219,3 +221,43 @@ def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
     assert len(caplog) == 1
     assert caplog[0]["trace"] == email
     assert caplog[0]["trace_json"] == data
+
+
+def test_api_post_pubsub_integrity_error_is_409(dbsession, pubsub_client):
+    """An integrity error is turned into a 409 Conflict"""
+    data = stripe_customer_data()
+    err = IntegrityError(
+        "INSERT INTO...", {"stripe_id": data["id"]}, "Duplicate key value"
+    )
+    with capture_logs() as caplog, mock.patch(
+        "ctms.ingest_stripe.create_stripe_customer", side_effect=err
+    ):
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 409
+    assert resp.json() == {"detail": "Write conflict, try again"}
+    assert len(caplog) == 2
+    assert caplog[0] == {
+        "exc_info": True,
+        "event": "IntegrityError converted to 409",
+        "log_level": "error",
+    }
+    assert caplog[1]["status_code"] == 409
+
+
+def test_api_post_pubsub_deadlock_is_409(dbsession, pubsub_client):
+    """A deadlock is turned into a 409 Conflict"""
+    data = stripe_customer_data()
+    err = OperationalError("INSERT INTO...", {"stripe_id": data["id"]}, "Deadlock")
+    with capture_logs() as caplog, mock.patch(
+        "ctms.ingest_stripe.create_stripe_customer", side_effect=err
+    ):
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 409
+    assert resp.json() == {"detail": "Deadlock or other issue, try again"}
+    assert len(caplog) == 2
+    assert caplog[0] == {
+        "exc_info": True,
+        "event": "OperationalError converted to 409",
+        "log_level": "error",
+    }
+    assert caplog[1]["status_code"] == 409
