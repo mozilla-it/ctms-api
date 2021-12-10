@@ -315,5 +315,8 @@ CTMS metrics are presented on two dashboards:
 ## Docker
 See the [developer_setup_guide](developer_setup.md#docker) for more information about Docker.
 
+## SRE Related Doc
+See the [SRE mana page](https://mana.mozilla.org/wiki/pages/viewpage.action?spaceKey=SRE&title=ESS+-+CTMS) for more information and additional technical diagrams for deployment.
+
 ---
 [View All Docs](./)
