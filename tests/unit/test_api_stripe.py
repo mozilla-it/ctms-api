@@ -112,8 +112,10 @@ def test_api_post_stripe_trace_customer(client, dbsession, example_contact):
     par = dbsession.query(PendingAcousticRecord).one_or_none()
     assert par.email.stripe_customer.stripe_id == data["id"]
     assert len(caplog) == 1
-    assert caplog[0]["trace"] == email
-    assert caplog[0]["trace_json"] == data
+    log = caplog[0]
+    assert log["trace"] == email
+    assert log["trace_json"] == data
+    assert log["ingest_actions"] == {"created": [f"customer:{data['id']}"]}
 
 
 def test_api_post_stripe_from_pubsub_customer(
@@ -207,7 +209,7 @@ def test_api_post_pubsub_unknown_stripe_object(dbsession, pubsub_client):
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 0}
     assert len(cap_logs) == 1
-    assert cap_logs[0]["stripe_unknown_objects"] == ["payment_method"]
+    assert cap_logs[0]["ingest_actions"] == {"skipped": ["payment_method:pm_ABC123"]}
 
 
 def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
@@ -221,6 +223,7 @@ def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
     assert len(caplog) == 1
     assert caplog[0]["trace"] == email
     assert caplog[0]["trace_json"] == data
+    assert caplog[0]["ingest_actions"] == {"created": [f"customer:{data['id']}"]}
 
 
 def test_api_post_pubsub_integrity_error_is_409(dbsession, pubsub_client):

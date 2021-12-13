@@ -230,7 +230,7 @@ def test_ingest_existing_contact(dbsession, example_contact):
     data["email"] = example_contact.fxa.primary_email
 
     with StatementWatcher(dbsession.connection()) as watcher:
-        customer = ingest_stripe_customer(dbsession, data)
+        customer, actions = ingest_stripe_customer(dbsession, data)
         dbsession.commit()
     assert watcher.count == 3
     stmt1 = watcher.statements[0][0]
@@ -251,15 +251,25 @@ def test_ingest_existing_contact(dbsession, example_contact):
     )
     assert customer.fxa_id == example_contact.fxa.fxa_id
     assert customer.get_email_id() == example_contact.email.email_id
+    assert actions == {
+        "created": {
+            f"customer:{customer.stripe_id}",
+        }
+    }
 
 
 def test_ingest_without_contact(dbsession):
     """A Stripe Customer can be ingested without a contact."""
     data = stripe_customer_data()
-    customer = ingest_stripe_customer(dbsession, data)
+    customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
     dbsession.refresh(customer)
     assert customer.email is None
+    assert actions == {
+        "created": {
+            f"customer:{data['id']}",
+        }
+    }
 
 
 def test_ingest_deleted_customer(dbsession):
@@ -269,8 +279,13 @@ def test_ingest_deleted_customer(dbsession):
         "id": FAKE_STRIPE_ID["Customer"],
         "object": "customer",
     }
-    customer = ingest_stripe_customer(dbsession, data)
+    customer, actions = ingest_stripe_customer(dbsession, data)
     assert customer is None
+    assert actions == {
+        "skipped": {
+            f"customer:{data['id']}",
+        }
+    }
 
 
 def test_ingest_update_customer(dbsession, stripe_customer):
@@ -282,7 +297,7 @@ def test_ingest_update_customer(dbsession, stripe_customer):
     data["invoice_settings"]["default_payment_method"] = None
 
     with StatementWatcher(dbsession.connection()) as watcher:
-        customer = ingest_stripe_customer(dbsession, data)
+        customer, actions = ingest_stripe_customer(dbsession, data)
         dbsession.commit()
     assert watcher.count == 2
     stmt1 = watcher.statements[0][0]
@@ -293,6 +308,11 @@ def test_ingest_update_customer(dbsession, stripe_customer):
 
     assert customer.default_source_id == new_source_id
     assert customer.invoice_settings_default_payment_method_id is None
+    assert actions == {
+        "updated": {
+            f"customer:{data['id']}",
+        }
+    }
 
 
 def test_ingest_existing_but_deleted_customer(
@@ -306,7 +326,7 @@ def test_ingest_existing_but_deleted_customer(
         "id": stripe_customer.stripe_id,
         "object": "customer",
     }
-    customer = ingest_stripe_customer(dbsession, data)
+    customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
     dbsession.refresh(customer)
     assert customer.deleted
@@ -316,6 +336,11 @@ def test_ingest_existing_but_deleted_customer(
         == stripe_customer.invoice_settings_default_payment_method_id
     )
     assert customer.get_email_id() == example_contact.email.email_id
+    assert actions == {
+        "updated": {
+            f"customer:{data['id']}",
+        }
+    }
 
 
 def test_ingest_new_customer_duplicate_fxa_id(
@@ -363,7 +388,7 @@ def test_ingest_new_subscription(dbsession):
     data = stripe_subscription_data()
 
     with StatementWatcher(dbsession.connection()) as watcher:
-        subscription = ingest_stripe_subscription(dbsession, data)
+        subscription, actions = ingest_stripe_subscription(dbsession, data)
         dbsession.commit()
     assert watcher.count == 6
     stmt1, stmt2, stmt3, stmt4, stmt5, stmt6 = [pair[0] for pair in watcher.statements]
@@ -415,6 +440,14 @@ def test_ingest_new_subscription(dbsession):
     assert price.unit_amount == 999
     assert price.get_email_id() is None
 
+    assert actions == {
+        "created": {
+            f"subscription:{FAKE_STRIPE_ID['Subscription']}",
+            f"subscription_item:{FAKE_STRIPE_ID['Subscription Item']}",
+            f"price:{FAKE_STRIPE_ID['Price']}",
+        }
+    }
+
 
 def test_ingest_update_subscription(dbsession, stripe_subscription):
     """An existing subscription is updated."""
@@ -423,13 +456,16 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
     current_period_end = stripe_subscription.current_period_end + timedelta(days=365)
     si_created = stripe_subscription.current_period_start + timedelta(days=15)
     data["current_period_end"] = unix_timestamp(current_period_end)
+    old_sub_item_id = data["items"]["data"][0]["id"]
+    new_sub_item_id = fake_stripe_id("si", "new subscription item id")
+    new_price_id = fake_stripe_id("price", "yearly price")
     data["items"]["data"][0] = {
-        "id": fake_stripe_id("si", "new subscription id"),
+        "id": new_sub_item_id,
         "object": "subscription_item",
         "created": unix_timestamp(current_period_end),
         "subscription": data["id"],
         "price": {
-            "id": fake_stripe_id("price", "yearly price"),
+            "id": new_price_id,
             "object": "price",
             "created": unix_timestamp(si_created),
             "product": FAKE_STRIPE_ID["Product"],
@@ -445,7 +481,7 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
     data["default_payment_method"] = fake_stripe_id("pm", "my new credit card")
 
     with StatementWatcher(dbsession.connection()) as watcher:
-        subscription = ingest_stripe_subscription(dbsession, data)
+        subscription, actions = ingest_stripe_subscription(dbsession, data)
         dbsession.commit()
     assert watcher.count == 8
     stmt1, stmt2, stmt3, stmt4, stmt5, stmt6, stmt7, stmt8 = [
@@ -476,9 +512,21 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
 
     assert len(subscription.subscription_items) == 1
     s_item = subscription.subscription_items[0]
-    si_data = data["items"]["data"][0]
-    assert s_item.stripe_id == si_data["id"]
-    assert s_item.price.stripe_id == si_data["price"]["id"]
+    assert s_item.stripe_id == new_sub_item_id
+    assert s_item.price.stripe_id == new_price_id
+
+    assert actions == {
+        "created": {
+            f"subscription_item:{new_sub_item_id}",
+            f"price:{new_price_id}",
+        },
+        "updated": {
+            f"subscription:{data['id']}",
+        },
+        "deleted": {
+            f"subscription_item:{old_sub_item_id}",
+        },
+    }
 
 
 def test_ingest_cancelled_subscription(dbsession, stripe_subscription):
@@ -492,10 +540,17 @@ def test_ingest_cancelled_subscription(dbsession, stripe_subscription):
     data["ended_at"] = unix_timestamp(datetime(2021, 10, 29))
     data["start_date"] = unix_timestamp(datetime(2021, 9, 15))
     data["status"] = "canceled"
-    subscription = ingest_stripe_subscription(dbsession, data)
+    subscription, actions = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
     assert subscription.stripe_id == stripe_subscription.stripe_id
     assert subscription.status == "canceled"
+    assert actions == {
+        "updated": {
+            f"subscription:{data['id']}",
+            f"subscription_item:{data['items']['data'][0]['id']}",
+            f"price:{data['items']['data'][0]['price']['id']}",
+        }
+    }
 
 
 def test_ingest_update_price_via_subscription(dbsession, stripe_subscription):
@@ -504,13 +559,20 @@ def test_ingest_update_price_via_subscription(dbsession, stripe_subscription):
 
     data = stripe_subscription_data()
     data["items"]["data"][0]["price"]["active"] = False
-    subscription = ingest_stripe_subscription(dbsession, data)
+    subscription, actions = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
     dbsession.refresh(subscription)
 
     assert len(subscription.subscription_items) == 1
     s_item = subscription.subscription_items[0]
     assert not s_item.price.active
+    assert actions == {
+        "updated": {
+            f"subscription:{data['id']}",
+            f"subscription_item:{data['items']['data'][0]['id']}",
+            f"price:{data['items']['data'][0]['price']['id']}",
+        }
+    }
 
 
 def test_ingest_update_subscription_item(dbsession, stripe_subscription):
@@ -530,13 +592,22 @@ def test_ingest_update_subscription_item(dbsession, stripe_subscription):
         },
         "unit_amount": 499,
     }
-    subscription = ingest_stripe_subscription(dbsession, data)
+    subscription, actions = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
     dbsession.refresh(subscription)
 
     assert len(subscription.subscription_items) == 1
     s_item = subscription.subscription_items[0]
     assert s_item.price.stripe_id == new_price_id
+    assert actions == {
+        "updated": {
+            f"subscription:{data['id']}",
+            f"subscription_item:{data['items']['data'][0]['id']}",
+        },
+        "created": {
+            f"price:{data['items']['data'][0]['price']['id']}",
+        },
+    }
 
 
 def test_ingest_non_recurring_price(dbsession):
@@ -550,11 +621,16 @@ def test_ingest_non_recurring_price(dbsession):
         "type": "one_time",
         "currency": "usd",
     }
-    price = ingest_stripe_price(dbsession, data)
+    price, actions = ingest_stripe_price(dbsession, data)
     assert price.recurring_interval is None
     assert price.recurring_interval_count is None
     assert price.unit_amount is None
     assert price.get_email_id() is None
+    assert actions == {
+        "created": {
+            f"price:{data['id']}",
+        }
+    }
 
 
 def test_ingest_new_invoice(dbsession):
@@ -562,7 +638,7 @@ def test_ingest_new_invoice(dbsession):
     data = stripe_invoice_data()
 
     with StatementWatcher(dbsession.connection()) as watcher:
-        invoice = ingest_stripe_invoice(dbsession, data)
+        invoice, actions = ingest_stripe_invoice(dbsession, data)
         dbsession.commit()
     assert watcher.count == 6
     stmt1, stmt2, stmt3, stmt4, stmt5, stmt6 = [pair[0] for pair in watcher.statements]
@@ -612,6 +688,14 @@ def test_ingest_new_invoice(dbsession):
     assert price.unit_amount == 999
     assert price.get_email_id() is None
 
+    assert actions == {
+        "created": {
+            f"invoice:{data['id']}",
+            f"line_item:{item.stripe_id}",
+            f"price:{price.stripe_id}",
+        },
+    }
+
 
 def test_ingest_updated_invoice(dbsession, stripe_invoice):
     """An existing Stripe Invoice is updated."""
@@ -619,7 +703,7 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     data = stripe_invoice_data()
     data["status"] = "void"
     with StatementWatcher(dbsession.connection()) as watcher:
-        invoice = ingest_stripe_invoice(dbsession, data)
+        invoice, actions = ingest_stripe_invoice(dbsession, data)
         dbsession.commit()
     assert watcher.count == 6
     stmt1, stmt2, stmt3, stmt4, stmt5, stmt6 = [pair[0] for pair in watcher.statements]
@@ -641,10 +725,19 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     assert invoice.status == "void"
     assert len(invoice.line_items) == 1
 
+    assert actions == {
+        "updated": {
+            f"invoice:{data['id']}",
+            f"line_item:{data['lines']['data'][0]['id']}",
+            f"price:{data['lines']['data'][0]['price']['id']}",
+        },
+    }
+
 
 def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
     """The Stripe Invoice lines are synced on update."""
     data = stripe_invoice_data()
+    old_line_item_id = data["lines"]["data"][0]["id"]
     new_line_item_id = fake_stripe_id("il", "new line item")
     data["lines"]["data"][0] = {
         "id": new_line_item_id,
@@ -657,17 +750,30 @@ def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
         "amount": 500,
         "currency": "usd",
     }
-    invoice = ingest_stripe_invoice(dbsession, data)
+    invoice, actions = ingest_stripe_invoice(dbsession, data)
     dbsession.commit()
     assert len(invoice.line_items) == 1
     assert invoice.line_items[0].stripe_id == new_line_item_id
+    assert actions == {
+        "created": {
+            f"line_item:{new_line_item_id}",
+        },
+        "updated": {
+            f"invoice:{data['id']}",
+            f"price:{data['lines']['data'][0]['price']['id']}",
+        },
+        "deleted": {
+            f"line_item:{old_line_item_id}",
+        },
+    }
 
 
 def test_ingest_sample_data(dbsession, stripe_test_json):
     """Stripe sample JSON can be ingested."""
-    obj = ingest_stripe_object(dbsession, stripe_test_json)
+    obj, actions = ingest_stripe_object(dbsession, stripe_test_json)
     assert obj is not None
     assert type(obj.get_email_id()) in (type(None), UUID)
+    assert actions
 
 
 def test_get_email_id_customer(dbsession, contact_with_stripe_customer):
@@ -697,8 +803,9 @@ def test_get_email_id_subscription(dbsession, contact_with_stripe_subscription):
 
 def test_get_email_id_invoice(dbsession, contact_with_stripe_customer):
     """A Stripe Invoice and related objects can return the related email_id."""
-    invoice = ingest_stripe_invoice(dbsession, stripe_invoice_data())
+    invoice, actions = ingest_stripe_invoice(dbsession, stripe_invoice_data())
     dbsession.commit()
+    assert actions
     customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
     invoice = get_stripe_invoice_by_stripe_id(dbsession, FAKE_STRIPE_ID["Invoice"])
     line_item = get_stripe_invoice_line_item_by_stripe_id(
@@ -716,15 +823,13 @@ def test_get_email_id_invoice(dbsession, contact_with_stripe_customer):
 
 def test_ingest_unknown_stripe_object_raises(dbsession):
     """Ingesting an unknown type of Stripe object raises an exception."""
-    data = {
-        "id": fake_stripe_id("re", "refund"),
-        "object": "refund",
-    }
+    re_id = fake_stripe_id("re", "refund")
+    data = {"id": re_id, "object": "refund"}
     with pytest.raises(StripeIngestUnknownObjectError) as excinfo:
         ingest_stripe_object(dbsession, data)
     exception = excinfo.value
-    assert str(exception) == "Unknown Stripe object 'refund'."
-    assert repr(exception) == "StripeIngestUnknownObjectError('refund')"
+    assert str(exception) == f"Unknown Stripe object 'refund' with ID {re_id!r}."
+    assert repr(exception) == f"StripeIngestUnknownObjectError('refund', {re_id!r})"
 
 
 @pytest.mark.parametrize(
