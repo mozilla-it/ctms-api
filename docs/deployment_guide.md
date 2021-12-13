@@ -129,7 +129,14 @@ traceback) are logged at ``ERROR`` level (Severity 3). Some of the fields are:
 * ``client_id``: Name of the API client, such as ``"id_test"``
 * ``duration_s``: How long the request took in seconds, rounded to the
   millisecond
+* ``fxa_id_conflict``: If a Stripe API ingested a Customer whose Firefox
+  Account ID conflicted with an existing Customer, this is the conflicting
+  FxA ID (or list of comma-separated IDs). The existing customer will be
+  deleted, and will appears in ``ingest_actions``.
 * ``headers`` - Dictionary of header names (lower-cased) to header values
+* ``ingest_actions`` - For Stripe APIs, a dictionary of actions (`"created"`,
+  `"updated"`, `"deleted"`, `"skipped"`, `"no_change"`) to a list of objects
+  (formatted as `"object_type:ID"`, like `"customer:cust_abc123"`).
 * ``method`` - HTTP method, such as `"GET"`, `"POST"`, or `"PATCH"`.
 * ``msg`` - A summary line for the request, modelled after the uvicorn log
   message format.
