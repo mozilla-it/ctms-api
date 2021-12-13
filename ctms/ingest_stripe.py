@@ -26,6 +26,7 @@ from ctms.crud import (
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
+    get_stripe_customer_by_fxa_id,
     get_stripe_customer_by_stripe_id,
     get_stripe_invoice_by_stripe_id,
     get_stripe_invoice_line_item_by_stripe_id,
@@ -62,29 +63,58 @@ def from_ts(timestamp: Optional[int]) -> datetime:
     return datetime.utcfromtimestamp(timestamp)
 
 
+class StripeIngestError(Exception):
+    """Base class for errors when ingesting a Stripe object."""
+
+
+class StripeIngestFxAIdConflict(StripeIngestError):
+    """
+    An existing StripeCustomer has the same FxA ID.
+
+    Duplicate FxA IDs have been seen in the staging instance, due to bugs or
+    direct interaction with Stripe.
+    """
+
+    def __init__(self, stripe_id, fxa_id, *args, **kwargs):
+        self.stripe_id = stripe_id
+        self.fxa_id = fxa_id
+        super().__init__(*args, **kwargs)
+
+    def __str__(self):
+        return f"Existing StripeCustomer {self.stripe_id!r} has FxA ID {self.fxa_id!r}."
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.stripe_id!r}, {self.fxa_id!r})"
+
+
 def ingest_stripe_customer(
     db_session: Session, data: Dict[str, Any]
 ) -> Optional[StripeCustomer]:
     """
     Ingest a Stripe Customer object.
 
-    If there is a match by customer ID, then the fields are updated (but no
-    further contact fields)
-
-    If there is no existing Customer with that ID, then a new customer record
-    is created, and associated with an existing contact (if matched by FxA ID,
-    or falling back to email), or a new contact.
+    Raises StripeIngestFxAIdConflict if an existing StripeCustomer has the same
+    FxA ID.
 
     TODO: Handle expanded default_source
     TODO: Handle expanded invoice_settings.default_payment_method
     """
     assert data["object"] == "customer", data.get("object", "[MISSING]")
     customer_id = data["id"]
+    fxa_id = data.get("description")
     is_deleted = data.get("deleted", False)
 
     customer = get_stripe_customer_by_stripe_id(
         db_session, customer_id, for_update=True
     )
+
+    # Detect duplicate FxA ID
+    fxa_check = fxa_id and ((customer is None) or (customer.fxa_id != fxa_id))
+    if fxa_check:
+        by_fxa = get_stripe_customer_by_fxa_id(db_session, fxa_id, for_update=True)
+        if by_fxa is not None:
+            raise StripeIngestFxAIdConflict(by_fxa.stripe_id, fxa_id)
+
     if customer:
         if is_deleted:
             # Mark customer as deleted. Downstream consumers may need to
@@ -93,7 +123,7 @@ def ingest_stripe_customer(
         else:
             # Update existing customer
             customer.created = from_ts(data["created"])
-            customer.fxa_id = data["description"]
+            customer.fxa_id = fxa_id
             customer.default_source_id = data["default_source"]
             _dpm = data["invoice_settings"]["default_payment_method"]
             customer.invoice_settings_default_payment_method_id = _dpm
@@ -107,7 +137,7 @@ def ingest_stripe_customer(
     schema = StripeCustomerCreateSchema(
         stripe_id=customer_id,
         stripe_created=data["created"],
-        fxa_id=data["description"],
+        fxa_id=fxa_id,
         deleted=data.get("deleted", False),
         default_source_id=data["default_source"],
         invoice_settings_default_payment_method_id=_dpm,
@@ -354,10 +384,6 @@ INGESTERS: Dict[str, Callable[[Session, Dict[str, Any]], StripeBase]] = {
     "subscription_item": ingest_stripe_subscription_item,
     "price": ingest_stripe_price,
 }
-
-
-class StripeIngestError(Exception):
-    """Base class for errors when ingesting a Stripe object."""
 
 
 class StripeIngestBadObjectError(StripeIngestError):

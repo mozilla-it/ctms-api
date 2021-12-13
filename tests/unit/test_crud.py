@@ -27,6 +27,7 @@ from ctms.crud import (
     get_contacts_by_any_id,
     get_email,
     get_emails_by_any_id,
+    get_stripe_customer_by_fxa_id,
     get_stripe_subscription_by_stripe_id,
     retry_acoustic_record,
     schedule_acoustic_record,
@@ -837,6 +838,33 @@ def test_get_multiple_contacts_by_any_id(
     for contact in contacts:
         newsletter_names = [nl.name for nl in contact["newsletters"]]
         assert sorted(newsletter_names) == newsletter_names
+
+
+@pytest.mark.parametrize("with_lock", ("for_update", "no_lock"))
+@pytest.mark.parametrize("fxa_id_source", ("existing", "new"))
+def test_get_stripe_customer_by_fxa_id(
+    dbsession, contact_with_stripe_customer, fxa_id_source, with_lock
+):
+    """A StripeCustomer can be fetched by fxa_id."""
+    if fxa_id_source == "existing":
+        fxa_id = contact_with_stripe_customer.fxa.fxa_id
+    else:
+        fxa_id = str(uuid4())
+    with StatementWatcher(dbsession.connection()) as watcher:
+        customer = get_stripe_customer_by_fxa_id(
+            dbsession, fxa_id, for_update=(with_lock == "for_update")
+        )
+    if fxa_id_source == "existing":
+        assert customer.fxa_id == fxa_id
+    else:
+        assert customer is None
+
+    assert watcher.count == 1
+    stmt = watcher.statements[0][0]
+    if with_lock == "for_update":
+        assert stmt.endswith("FOR UPDATE")
+    else:
+        assert not stmt.endswith("FOR UPDATE")
 
 
 @pytest.fixture()

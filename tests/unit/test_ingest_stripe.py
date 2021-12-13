@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from time import mktime
 from typing import Dict, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -25,6 +25,7 @@ from ctms.crud import (
 )
 from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
+    StripeIngestFxAIdConflict,
     StripeIngestUnknownObjectError,
     ingest_stripe_customer,
     ingest_stripe_invoice,
@@ -231,12 +232,15 @@ def test_ingest_existing_contact(dbsession, example_contact):
     with StatementWatcher(dbsession.connection()) as watcher:
         customer = ingest_stripe_customer(dbsession, data)
         dbsession.commit()
-    assert watcher.count == 2
+    assert watcher.count == 3
     stmt1 = watcher.statements[0][0]
     assert stmt1.startswith("SELECT stripe_customer."), stmt1
     assert stmt1.endswith(" FOR UPDATE"), stmt1
     stmt2 = watcher.statements[1][0]
-    assert stmt2.startswith("INSERT INTO stripe_customer "), stmt2
+    assert stmt2.startswith("SELECT stripe_customer."), stmt2
+    assert stmt2.endswith(" FOR UPDATE"), stmt2
+    stmt3 = watcher.statements[2][0]
+    assert stmt3.startswith("INSERT INTO stripe_customer "), stmt3
 
     assert customer.stripe_id == FAKE_STRIPE_ID["Customer"]
     assert not customer.deleted
@@ -312,6 +316,46 @@ def test_ingest_existing_but_deleted_customer(
         == stripe_customer.invoice_settings_default_payment_method_id
     )
     assert customer.get_email_id() == example_contact.email.email_id
+
+
+def test_ingest_new_customer_duplicate_fxa_id(
+    dbsession, stripe_customer, example_contact
+):
+    """StripeIngestFxAIdConflict is raised when an existing customer has the same FxA ID."""
+    data = stripe_customer_data()
+    existing_id = data["id"]
+    fxa_id = data["description"]
+    data["id"] = fake_stripe_id("cust", "duplicate_fxa_id")
+    with pytest.raises(StripeIngestFxAIdConflict) as excinfo:
+        ingest_stripe_customer(dbsession, data)
+    exception = excinfo.value
+    assert (
+        str(exception)
+        == f"Existing StripeCustomer '{existing_id}' has FxA ID '{fxa_id}'."
+    )
+    assert repr(exception) == f"StripeIngestFxAIdConflict('{existing_id}', '{fxa_id}')"
+
+
+def test_ingest_update_customer_duplicate_fxa_id(dbsession, stripe_customer):
+    """StripeIngestFxAIdConflict is raised when updating to a different customer's FxA ID."""
+    existing_customer_data = SAMPLE_STRIPE_DATA["Customer"].copy()
+    existing_id = fake_stripe_id("cust", "duplicate_fxa_id")
+    fxa_id = str(uuid4())
+    existing_customer_data.update({"stripe_id": existing_id, "fxa_id": fxa_id})
+    create_stripe_customer(
+        dbsession, StripeCustomerCreateSchema(**existing_customer_data)
+    )
+    dbsession.commit()
+
+    data = stripe_customer_data()
+    data["description"] = fxa_id
+
+    with pytest.raises(StripeIngestFxAIdConflict) as excinfo:
+        ingest_stripe_customer(dbsession, data)
+
+    exception = excinfo.value
+    assert exception.stripe_id == existing_id
+    assert exception.fxa_id == fxa_id
 
 
 def test_ingest_new_subscription(dbsession):
