@@ -16,7 +16,7 @@ an expanded object, so that it is flexible for FxA request changes.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, cast
 
 from ctms.crud import (
@@ -64,7 +64,7 @@ def from_ts(timestamp: Optional[int]) -> datetime:
     """Convert from a (possibly None) timestamp to a UTC datetime."""
     if not timestamp:
         return None
-    return datetime.utcfromtimestamp(timestamp)
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc)
 
 
 class StripeIngestError(Exception):
@@ -120,6 +120,7 @@ def ingest_stripe_customer(
             raise StripeIngestFxAIdConflict(by_fxa.stripe_id, fxa_id)
 
     if customer:
+        orig_dict = customer.__dict__.copy()
         if is_deleted:
             # Mark customer as deleted. Downstream consumers may need to
             # be updated before the data is cleaned up.
@@ -131,8 +132,9 @@ def ingest_stripe_customer(
             customer.default_source_id = data["default_source"]
             _dpm = data["invoice_settings"]["default_payment_method"]
             customer.invoice_settings_default_payment_method_id = _dpm
+        action = "no_change" if customer.__dict__ == orig_dict else "updated"
         return customer, {
-            "updated": {
+            action: {
                 f"{data['object']}:{customer_id}",
             }
         }
@@ -179,7 +181,7 @@ def ingest_stripe_subscription(
         db_session, subscription_id, for_update=True
     )
     if subscription:
-        action = "updated"
+        orig_dict = subscription.__dict__.copy()
         subscription.stripe_created = from_ts(data["created"])
         subscription.stripe_customer_id = data["customer"]
         subscription.default_payment_method_id = data["default_payment_method"]
@@ -203,6 +205,7 @@ def ingest_stripe_subscription(
                 .all()
             )
         }
+        action = "no_change" if subscription.__dict__ == orig_dict else "updated"
     else:
         action = "created"
         schema = StripeSubscriptionCreateSchema(
@@ -261,10 +264,11 @@ def ingest_stripe_subscription_item(
         db_session, subscription_item_id, for_update=True
     )
     if subscription_item:
-        action = "updated"
+        orig_dict = subscription_item.__dict__.copy()
         subscription_item.stripe_created = from_ts(data["created"])
         subscription_item.stripe_price_id = price.stripe_id
         subscription_item.stripe_subscription_id = data["subscription"]
+        action = "no_change" if subscription_item.__dict__ == orig_dict else "updated"
     else:
         action = "created"
         schema = StripeSubscriptionItemCreateSchema(
@@ -292,7 +296,7 @@ def ingest_stripe_price(
     recurring = data.get("recurring", {})
     price = get_stripe_price_by_stripe_id(db_session, price_id, for_update=True)
     if price:
-        action = "updated"
+        orig_dict = price.__dict__.copy()
         price.stripe_created = from_ts(data["created"])
         price.stripe_product_id = data["product"]
         price.active = data["active"]
@@ -300,6 +304,7 @@ def ingest_stripe_price(
         price.recurring_interval = recurring.get("interval")
         price.recurring_interval_count = recurring.get("interval_count")
         price.unit_amount = data.get("unit_amount")
+        action = "no_change" if price.__dict__ == orig_dict else "updated"
     else:
         action = "created"
         schema = StripePriceCreateSchema(
@@ -335,14 +340,14 @@ def ingest_stripe_invoice(
     invoice_id = data["id"]
     invoice = get_stripe_invoice_by_stripe_id(db_session, invoice_id, for_update=True)
     if invoice:
-        action = "updated"
+        orig_dict = invoice.__dict__.copy()
         invoice.stripe_created = from_ts(data["created"])
         invoice.stripe_customer_id = data["customer"]
         invoice.currency = data["currency"]
         invoice.total = data["total"]
         invoice.status = data["status"]
         invoice.default_payment_method_id = data["default_payment_method"]
-        invoice.default_source = data["default_source"]
+        invoice.default_source_id = data["default_source"]
         lines_to_delete = {
             line_id
             for line_id, in (
@@ -352,6 +357,7 @@ def ingest_stripe_invoice(
                 .all()
             )
         }
+        action = "no_change" if invoice.__dict__ == orig_dict else "updated"
     else:
         action = "created"
         schema = StripeInvoiceCreateSchema(
@@ -408,14 +414,15 @@ def ingest_stripe_invoice_line_item(
         db_session, invoice_line_item_id, for_update=True
     )
     if invoice_line_item:
-        action = "updated"
+        orig_dict = invoice_line_item.__dict__.copy()
         invoice_line_item.stripe_type = data["type"]
         invoice_line_item.stripe_price_id = price.stripe_id
         invoice_line_item.stripe_invoice_item_id = data.get("invoice_item")
         invoice_line_item.stripe_subscription_id = data.get("subscription")
-        invoice_line_item.stripe_subscription_item = data.get("subscription_item")
+        invoice_line_item.stripe_subscription_item_id = data.get("subscription_item")
         invoice_line_item.amount = data["amount"]
         invoice_line_item.currency = data["currency"]
+        action = "no_change" if invoice_line_item.__dict__ == orig_dict else "updated"
     else:
         action = "created"
         schema = StripeInvoiceLineItemCreateSchema(

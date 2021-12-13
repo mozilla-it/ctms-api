@@ -545,11 +545,13 @@ def test_ingest_cancelled_subscription(dbsession, stripe_subscription):
     assert subscription.stripe_id == stripe_subscription.stripe_id
     assert subscription.status == "canceled"
     assert actions == {
+        "no_change": {
+            f"price:{data['items']['data'][0]['price']['id']}",
+            f"subscription_item:{data['items']['data'][0]['id']}",
+        },
         "updated": {
             f"subscription:{data['id']}",
-            f"subscription_item:{data['items']['data'][0]['id']}",
-            f"price:{data['items']['data'][0]['price']['id']}",
-        }
+        },
     }
 
 
@@ -568,10 +570,12 @@ def test_ingest_update_price_via_subscription(dbsession, stripe_subscription):
     assert not s_item.price.active
     assert actions == {
         "updated": {
+            f"price:{data['items']['data'][0]['price']['id']}",
+        },
+        "no_change": {
             f"subscription:{data['id']}",
             f"subscription_item:{data['items']['data'][0]['id']}",
-            f"price:{data['items']['data'][0]['price']['id']}",
-        }
+        },
     }
 
 
@@ -601,11 +605,13 @@ def test_ingest_update_subscription_item(dbsession, stripe_subscription):
     assert s_item.price.stripe_id == new_price_id
     assert actions == {
         "updated": {
-            f"subscription:{data['id']}",
             f"subscription_item:{data['items']['data'][0]['id']}",
         },
         "created": {
             f"price:{data['items']['data'][0]['price']['id']}",
+        },
+        "no_change": {
+            f"subscription:{data['id']}",
         },
     }
 
@@ -705,8 +711,8 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     with StatementWatcher(dbsession.connection()) as watcher:
         invoice, actions = ingest_stripe_invoice(dbsession, data)
         dbsession.commit()
-    assert watcher.count == 6
-    stmt1, stmt2, stmt3, stmt4, stmt5, stmt6 = [pair[0] for pair in watcher.statements]
+    assert watcher.count == 5
+    stmt1, stmt2, stmt3, stmt4, stmt5 = [pair[0] for pair in watcher.statements]
     assert stmt1.startswith("SELECT stripe_invoice."), stmt1
     assert stmt1.endswith(" FOR UPDATE"), stmt1
     # Get all IDs
@@ -718,9 +724,8 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     assert stmt3.endswith(" FOR UPDATE"), stmt3
     assert stmt4.startswith("SELECT stripe_invoice_line_item."), stmt4
     assert stmt4.endswith(" FOR UPDATE"), stmt4
-    # Updates price, invoice, in unknown order
-    assert stmt5.startswith("UPDATE stripe_"), stmt5
-    assert stmt6.startswith("UPDATE stripe_"), stmt6
+    # Updates invoice
+    assert stmt5.startswith("UPDATE stripe_invoice "), stmt5
 
     assert invoice.status == "void"
     assert len(invoice.line_items) == 1
@@ -728,6 +733,8 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     assert actions == {
         "updated": {
             f"invoice:{data['id']}",
+        },
+        "no_change": {
             f"line_item:{data['lines']['data'][0]['id']}",
             f"price:{data['lines']['data'][0]['price']['id']}",
         },
@@ -758,7 +765,7 @@ def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
         "created": {
             f"line_item:{new_line_item_id}",
         },
-        "updated": {
+        "no_change": {
             f"invoice:{data['id']}",
             f"price:{data['lines']['data'][0]['price']['id']}",
         },
