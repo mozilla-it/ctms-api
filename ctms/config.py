@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     acoustic_timeout_s: float = 5.0
 
     class Config:
+        # The attributes of this class extract from the Env Var's that are `(prefix)(attr_name)` within the environment
         env_prefix = "ctms_"
 
         fields = {
