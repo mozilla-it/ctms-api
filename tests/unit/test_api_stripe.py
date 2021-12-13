@@ -232,8 +232,8 @@ def test_api_post_pubsub_integrity_error_is_409(dbsession, pubsub_client):
     err = IntegrityError(
         "INSERT INTO...", {"stripe_id": data["id"]}, "Duplicate key value"
     )
-    with capture_logs() as caplog, mock.patch(
-        "ctms.ingest_stripe.create_stripe_customer", side_effect=err
+    with capture_logs() as caplog, mock.patch.object(
+        dbsession, "commit", side_effect=err
     ):
         resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 409
@@ -251,8 +251,8 @@ def test_api_post_pubsub_deadlock_is_409(dbsession, pubsub_client):
     """A deadlock is turned into a 409 Conflict"""
     data = stripe_customer_data()
     err = OperationalError("INSERT INTO...", {"stripe_id": data["id"]}, "Deadlock")
-    with capture_logs() as caplog, mock.patch(
-        "ctms.ingest_stripe.create_stripe_customer", side_effect=err
+    with capture_logs() as caplog, mock.patch.object(
+        dbsession, "commit", side_effect=err
     ):
         resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 409

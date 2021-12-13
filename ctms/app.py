@@ -921,8 +921,8 @@ def _process_stripe_object(
     - Other errors (ValueError, KeyError) if the Stripe object has unexpected
       data for keys that CTMS examines. Extra data is ignored.
     """
+    obj, actions = ingest_stripe_object(db_session, data)
     try:
-        obj, actions = ingest_stripe_object(db_session, data)
         db_session.commit()
     except IntegrityError as e:
         db_session.rollback()
