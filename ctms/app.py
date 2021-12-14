@@ -19,6 +19,7 @@ from google.auth.exceptions import GoogleAuthError
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest
 from pydantic import ValidationError
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette import status
@@ -46,7 +47,12 @@ from .crud import (
 )
 from .database import get_db_engine
 from .exception_capture import init_sentry
-from .ingest_stripe import StripeIngestUnknownObjectError, ingest_stripe_object
+from .ingest_stripe import (
+    StripeIngestActions,
+    StripeIngestFxAIdConflict,
+    StripeIngestUnknownObjectError,
+    ingest_stripe_object,
+)
 from .log import configure_logging, context_from_request, get_log_line
 from .metrics import (
     emit_response_metrics,
@@ -54,7 +60,7 @@ from .metrics import (
     init_metrics,
     init_metrics_labels,
 )
-from .models import Email
+from .models import Email, StripeCustomer
 from .monitor import check_database, get_version
 from .schemas import (
     AddOnsSchema,
@@ -903,13 +909,21 @@ def metrics(request: Request):
 
 def _process_stripe_object(
     db_session: Session, data: Dict
-) -> Tuple[Optional[UUID], Optional[str]]:
+) -> Tuple[Optional[UUID], Optional[str], Optional[str], StripeIngestActions]:
     """
     Ingest a Stripe Object and extract related data.
+
+    If a Stripe customer has an FxA ID that matches a current (but different)
+    customer, then the existing customer is deleted. This matches the FxA
+    Firestore cache of Stripe customers, which index by FxA ID. This has
+    occured occasionally in stage, due to bugs or manual interaction with the
+    Stripe API.
 
     Return is a tuple:
     - email_id - The related Contact email_id, or None if no contact.
     - trace_email - The email to trace, or None if not Customer or doesn't match
+    - fxa_conflict - The FxA ID if there was a collision, otherwise None
+    - actions - The actions taken by the Stripe ingesters
 
     Raises:
     - StripeIngestBadObjectError if the data isn't a Stripe object
@@ -917,8 +931,24 @@ def _process_stripe_object(
     - Other errors (ValueError, KeyError) if the Stripe object has unexpected
       data for keys that CTMS examines. Extra data is ignored.
     """
+    fxa_conflict = None
     try:
-        obj = ingest_stripe_object(db_session, data)
+        obj, actions = ingest_stripe_object(db_session, data)
+    except StripeIngestFxAIdConflict as e:
+        # Delete the existing Stripe customer with that FxA ID
+        stripe_id = e.stripe_id
+        fxa_conflict = e.fxa_id
+        stmt = (
+            delete(StripeCustomer)
+            .where(StripeCustomer.stripe_id == stripe_id)
+            .execution_options(synchronize_session="evaluate")
+        )
+        db_session.execute(stmt)
+
+        obj, actions = ingest_stripe_object(db_session, data)
+        actions.setdefault("deleted", set()).add(f"customer:{stripe_id}")
+
+    try:
         db_session.commit()
     except IntegrityError as e:
         db_session.rollback()
@@ -936,7 +966,7 @@ def _process_stripe_object(
         trace_email = data["email"]
     else:
         trace_email = None
-    return email_id, trace_email
+    return email_id, trace_email, fxa_conflict, actions
 
 
 @app.post(
@@ -953,7 +983,9 @@ def stripe(
     if not ("object" in data and "id" in data):
         raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
     try:
-        email_id, trace_email = _process_stripe_object(db_session, data)
+        email_id, trace_email, fxa_conflict, actions = _process_stripe_object(
+            db_session, data
+        )
     except (KeyError, ValueError, TypeError) as exception:
         raise HTTPException(
             400, detail="Unable to process Stripe object."
@@ -964,6 +996,13 @@ def stripe(
     if trace_email:
         request.state.log_context["trace"] = trace_email
         request.state.log_context["trace_json"] = data
+    if fxa_conflict:
+        request.state.log_context["fxa_id_conflict"] = fxa_conflict
+    if actions:
+        ingest_actions = {}
+        for key in sorted(actions.keys()):
+            ingest_actions[key] = sorted(actions[key])
+        request.state.log_context["ingest_actions"] = ingest_actions
 
     return {"status": "OK"}
 
@@ -1001,15 +1040,19 @@ def stripe_pubsub(
         return JSONResponse(content=content, status_code=202)
 
     email_ids = set()
+    fxa_conflicts = set()
     trace = None
     has_error = False
     count = 0
+    actions: StripeIngestActions = {}
     for item in items:
         try:
-            email_id, trace_email = _process_stripe_object(db_session, item)
+            email_id, trace_email, fxa_conflict, item_actions = _process_stripe_object(
+                db_session, item
+            )
         except StripeIngestUnknownObjectError as exception:
-            request.state.log_context.setdefault("stripe_unknown_objects", []).append(
-                exception.object_value
+            actions.setdefault("skipped", set()).add(
+                f"{exception.object_value}:{exception.object_id}"
             )
         except (KeyError, ValueError, TypeError) as exception:
             sentry_sdk.capture_exception(exception)
@@ -1020,6 +1063,10 @@ def stripe_pubsub(
                 email_ids.add(email_id)
             if trace_email:
                 trace = trace_email
+            if fxa_conflict:
+                fxa_conflicts.add(fxa_conflict)
+            for key, values in item_actions.items():
+                actions.setdefault(key, set()).update(values)
 
     if email_ids:
         for email_id in email_ids:
@@ -1028,6 +1075,13 @@ def stripe_pubsub(
     if trace:
         request.state.log_context["trace"] = trace
         request.state.log_context["trace_json"] = payload
+    if fxa_conflicts:
+        request.state.log_context["fxa_id_conflict"] = ",".join(sorted(fxa_conflicts))
+    if actions:
+        ingest_actions = {}
+        for key in sorted(actions.keys()):
+            ingest_actions[key] = sorted(actions[key])
+        request.state.log_context["ingest_actions"] = ingest_actions
 
     if has_error:
         content = {

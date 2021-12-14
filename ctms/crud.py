@@ -700,6 +700,23 @@ get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
 get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)
 
 
+def get_stripe_customer_by_fxa_id(
+    db_session: Session,
+    fxa_id: str,
+    for_update: bool = False,
+) -> Optional[StripeCustomer]:
+    """
+    Get a StripeCustomer by FxA ID, or None if not found.
+
+    If for_update is True (default False), the row will be locked for update.
+    """
+    query = db_session.query(StripeCustomer)
+    if for_update:
+        query = query.with_for_update()
+    obj = query.filter(StripeCustomer.fxa_id == fxa_id).one_or_none()
+    return cast(Optional[StripeCustomer], obj)
+
+
 def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
     """Return a list of Stripe products for the contact, if any."""
     if not email.stripe_customer:

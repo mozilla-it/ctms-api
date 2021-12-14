@@ -112,8 +112,29 @@ def test_api_post_stripe_trace_customer(client, dbsession, example_contact):
     par = dbsession.query(PendingAcousticRecord).one_or_none()
     assert par.email.stripe_customer.stripe_id == data["id"]
     assert len(caplog) == 1
-    assert caplog[0]["trace"] == email
-    assert caplog[0]["trace_json"] == data
+    log = caplog[0]
+    assert log["trace"] == email
+    assert log["trace_json"] == data
+    assert log["ingest_actions"] == {"created": [f"customer:{data['id']}"]}
+
+
+def test_api_post_conflicting_fxa_id(dbsession, client, contact_with_stripe_customer):
+    """An existing customer with an FxA ID conflict is deleted."""
+    data = stripe_customer_data()
+    old_id = data["id"]
+    new_id = old_id + "_new"
+    data["id"] = new_id
+    with capture_logs() as caplog:
+        resp = client.post("/stripe", json=data)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK"}
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert log["ingest_actions"] == {
+        "created": [f"customer:{new_id}"],
+        "deleted": [f"customer:{old_id}"],
+    }
+    assert log["fxa_id_conflict"] == data["description"]
 
 
 def test_api_post_stripe_from_pubsub_customer(
@@ -207,7 +228,7 @@ def test_api_post_pubsub_unknown_stripe_object(dbsession, pubsub_client):
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 0}
     assert len(cap_logs) == 1
-    assert cap_logs[0]["stripe_unknown_objects"] == ["payment_method"]
+    assert cap_logs[0]["ingest_actions"] == {"skipped": ["payment_method:pm_ABC123"]}
 
 
 def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
@@ -221,6 +242,7 @@ def test_api_post_pubsub_trace_customer(dbsession, pubsub_client):
     assert len(caplog) == 1
     assert caplog[0]["trace"] == email
     assert caplog[0]["trace_json"] == data
+    assert caplog[0]["ingest_actions"] == {"created": [f"customer:{data['id']}"]}
 
 
 def test_api_post_pubsub_integrity_error_is_409(dbsession, pubsub_client):
@@ -229,8 +251,8 @@ def test_api_post_pubsub_integrity_error_is_409(dbsession, pubsub_client):
     err = IntegrityError(
         "INSERT INTO...", {"stripe_id": data["id"]}, "Duplicate key value"
     )
-    with capture_logs() as caplog, mock.patch(
-        "ctms.ingest_stripe.create_stripe_customer", side_effect=err
+    with capture_logs() as caplog, mock.patch.object(
+        dbsession, "commit", side_effect=err
     ):
         resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 409
@@ -248,8 +270,8 @@ def test_api_post_pubsub_deadlock_is_409(dbsession, pubsub_client):
     """A deadlock is turned into a 409 Conflict"""
     data = stripe_customer_data()
     err = OperationalError("INSERT INTO...", {"stripe_id": data["id"]}, "Deadlock")
-    with capture_logs() as caplog, mock.patch(
-        "ctms.ingest_stripe.create_stripe_customer", side_effect=err
+    with capture_logs() as caplog, mock.patch.object(
+        dbsession, "commit", side_effect=err
     ):
         resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 409
@@ -261,3 +283,24 @@ def test_api_post_pubsub_deadlock_is_409(dbsession, pubsub_client):
         "log_level": "error",
     }
     assert caplog[1]["status_code"] == 409
+
+
+def test_api_post_pubsub_conflicting_fxa_id(
+    dbsession, pubsub_client, contact_with_stripe_customer
+):
+    """An existing customer with an FxA ID conflict is deleted."""
+    data = stripe_customer_data()
+    old_id = data["id"]
+    new_id = old_id + "_new"
+    data["id"] = new_id
+    with capture_logs() as caplog:
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 1}
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert log["ingest_actions"] == {
+        "created": [f"customer:{new_id}"],
+        "deleted": [f"customer:{old_id}"],
+    }
+    assert log["fxa_id_conflict"] == data["description"]
