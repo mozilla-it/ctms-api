@@ -11,6 +11,7 @@ from structlog.testing import capture_logs
 
 from ctms.app import app, get_pubsub_claim
 from ctms.models import PendingAcousticRecord
+from tests.unit.sample_data import fake_stripe_id
 from tests.unit.test_ingest_stripe import (
     stripe_customer_data,
     stripe_invoice_data,
@@ -135,6 +136,21 @@ def test_api_post_conflicting_fxa_id(dbsession, client, contact_with_stripe_cust
         "deleted": [f"customer:{old_id}"],
     }
     assert log["fxa_id_conflict"] == data["description"]
+
+
+def test_api_post_deleted_new_customer(dbsession, client):
+    """A new customer who starts out deleted is skipped."""
+    stripe_id = fake_stripe_id("cus", "new_but_deleted")
+    data = {"deleted": True, "id": stripe_id, "object": "customer"}
+    with capture_logs() as caplog:
+        resp = client.post("/stripe", json=data)
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK"}
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert log["ingest_actions"] == {
+        "skipped": [f"customer:{stripe_id}"],
+    }
 
 
 def test_api_post_stripe_from_pubsub_customer(
@@ -304,3 +320,18 @@ def test_api_post_pubsub_conflicting_fxa_id(
         "deleted": [f"customer:{old_id}"],
     }
     assert log["fxa_id_conflict"] == data["description"]
+
+
+def test_api_post_stripe_from_pubsub_deleted_new_customer(dbsession, pubsub_client):
+    """A new customer who starts out deleted is skipped."""
+    stripe_id = fake_stripe_id("cus", "new_but_deleted")
+    data = {"deleted": True, "id": stripe_id, "object": "customer"}
+    with capture_logs() as caplog:
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 1}
+    assert len(caplog) == 1
+    log = caplog[0]
+    assert log["ingest_actions"] == {
+        "skipped": [f"customer:{stripe_id}"],
+    }

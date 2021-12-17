@@ -87,7 +87,7 @@ from .schemas import (
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="1.1.2",
+    version="1.1.3",
 )
 SessionLocal = None
 METRICS_REGISTRY = CollectorRegistry()
@@ -961,7 +961,7 @@ def _process_stripe_object(
             status_code=409, detail="Deadlock or other issue, try again"
         ) from e
 
-    email_id = obj.get_email_id()
+    email_id = obj.get_email_id() if obj else None
     if data["object"] == "customer" and re_trace_email.match(data.get("email", "")):
         trace_email = data["email"]
     else:
