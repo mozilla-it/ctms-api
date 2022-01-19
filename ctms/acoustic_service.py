@@ -78,6 +78,7 @@ class AcousticResources:
         "email_lang",
         "vpn_waitlist_geo",
         "vpn_waitlist_platform",
+        "relay_waitlist_geo",
         "fxa_id",
         "fxa_account_deleted",
         "fxa_lang",
@@ -211,7 +212,7 @@ class CTMSToAcousticService:
             v: "0"
             for v in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS.values()
         }
-        acceptable_subdicts = ["email", "amo", "fxa", "vpn_waitlist"]
+        acceptable_subdicts = ["email", "amo", "fxa", "vpn_waitlist", "relay_waitlist"]
         special_cases = {
             ("fxa", "fxa_id"): "fxa_id",
             ("email", "primary_email"): "email",

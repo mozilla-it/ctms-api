@@ -21,6 +21,7 @@ from .models import (
     MozillaFoundationContact,
     Newsletter,
     PendingAcousticRecord,
+    RelayWaitlist,
     StripeBase,
     StripeCustomer,
     StripeInvoice,
@@ -42,6 +43,7 @@ from .schemas import (
     MozillaFoundationInSchema,
     NewsletterInSchema,
     ProductBaseSchema,
+    RelayWaitlistInSchema,
     StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
@@ -52,6 +54,7 @@ from .schemas import (
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
     UpdatedNewsletterInSchema,
+    UpdatedRelayWaitlistInSchema,
     UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,
 )
@@ -94,6 +97,7 @@ def _contact_base_query(db):
         .options(joinedload(Email.fxa))
         .options(joinedload(Email.mofo))
         .options(joinedload(Email.vpn_waitlist))
+        .options(joinedload(Email.relay_waitlist))
         .options(selectinload("newsletters"))
         .options(joinedload(Email.stripe_customer))
         .options(selectinload("stripe_customer.subscriptions"))
@@ -157,6 +161,7 @@ def get_bulk_contacts(
                 "mofo": email.mofo,
                 "newsletters": email.newsletters,
                 "vpn_waitlist": email.vpn_waitlist,
+                "relay_waitlist": email.relay_waitlist,
             }
         )
         for email in bulk_contacts
@@ -185,6 +190,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
         "mofo": email.mofo,
         "newsletters": email.newsletters,
         "vpn_waitlist": email.vpn_waitlist,
+        "relay_waitlist": email.relay_waitlist,
         "products": products,
     }
 
@@ -290,6 +296,7 @@ def get_contacts_by_any_id(
                 "mofo": email.mofo,
                 "newsletters": email.newsletters,
                 "vpn_waitlist": email.vpn_waitlist,
+                "relay_waitlist": email.relay_waitlist,
             }
         )
     return data
@@ -503,6 +510,33 @@ def create_or_update_vpn_waitlist(
     db.execute(stmt)
 
 
+def create_relay_waitlist(
+    db: Session, email_id: UUID4, relay_waitlist: RelayWaitlistInSchema
+) -> Optional[RelayWaitlist]:
+    if relay_waitlist.is_default():
+        return None
+    db_relay_waitlist = RelayWaitlist(email_id=email_id, **relay_waitlist.dict())
+    db.add(db_relay_waitlist)
+    return db_relay_waitlist
+
+
+def create_or_update_relay_waitlist(
+    db: Session, email_id: UUID4, relay_waitlist: Optional[RelayWaitlistInSchema]
+):
+    if not relay_waitlist or relay_waitlist.is_default():
+        db.query(RelayWaitlist).filter(RelayWaitlist.email_id == email_id).delete()
+        return
+
+    # Providing update timestamp
+    updated_relay = UpdatedRelayWaitlistInSchema(**relay_waitlist.dict())
+
+    stmt = insert(RelayWaitlist).values(email_id=email_id, **updated_relay.dict())
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[RelayWaitlist.email_id], set_=updated_relay.dict()
+    )
+    db.execute(stmt)
+
+
 def create_newsletter(
     db: Session, email_id: UUID4, newsletter: NewsletterInSchema
 ) -> Optional[Newsletter]:
@@ -547,6 +581,8 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
         create_mofo(db, email_id, contact.mofo)
     if contact.vpn_waitlist:
         create_vpn_waitlist(db, email_id, contact.vpn_waitlist)
+    if contact.relay_waitlist:
+        create_relay_waitlist(db, email_id, contact.relay_waitlist)
     for newsletter in contact.newsletters:
         create_newsletter(db, email_id, newsletter)
 
@@ -557,6 +593,7 @@ def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSc
     create_or_update_fxa(db, email_id, contact.fxa)
     create_or_update_mofo(db, email_id, contact.mofo)
     create_or_update_vpn_waitlist(db, email_id, contact.vpn_waitlist)
+    create_or_update_relay_waitlist(db, email_id, contact.relay_waitlist)
     create_or_update_newsletters(db, email_id, contact.newsletters)
 
 
@@ -579,6 +616,7 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
         "fxa": (create_fxa, FirefoxAccountsInSchema),
         "mofo": (create_mofo, MozillaFoundationInSchema),
         "vpn_waitlist": (create_vpn_waitlist, VpnWaitlistInSchema),
+        "relay_waitlist": (create_relay_waitlist, RelayWaitlistInSchema),
     }
     for group_name, (creator, schema) in simple_groups.items():
         if group_name in update_data:

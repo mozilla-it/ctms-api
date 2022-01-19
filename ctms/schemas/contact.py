@@ -17,6 +17,7 @@ from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .product import ProductBaseSchema
+from .relay import RelayWaitlistInSchema, RelayWaitlistSchema
 from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
 
 
@@ -29,6 +30,7 @@ class ContactSchema(ComparableBase):
     mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterSchema] = []
     vpn_waitlist: Optional[VpnWaitlistSchema] = None
+    relay_waitlist: Optional[RelayWaitlistSchema] = None
     products: List[ProductBaseSchema] = []
 
     class Config:
@@ -66,6 +68,12 @@ class ContactSchema(ComparableBase):
             and self.vpn_waitlist.is_default()
         ):
             default_fields.add("vpn_waitlist")
+        if (
+            hasattr(self, "relay_waitlist")
+            and self.relay_waitlist
+            and self.relay_waitlist.is_default()
+        ):
+            default_fields.add("relay_waitlist")
         if hasattr(self, "mofo") and self.mofo and self.mofo.is_default():
             default_fields.add("mofo")
         if all(n.is_default() for n in self.newsletters):
@@ -82,6 +90,7 @@ class ContactInBase(ComparableBase):
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = []
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
+    relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
     class Config:
         fields = {
@@ -103,6 +112,7 @@ class ContactInBase(ComparableBase):
             and _noneify(self.fxa) == _noneify(other.fxa)
             and _noneify(self.mofo) == _noneify(other.mofo)
             and _noneify(self.vpn_waitlist) == _noneify(other.vpn_waitlist)
+            and _noneify(self.relay_waitlist) == _noneify(other.relay_waitlist)
             and sorted(self.newsletters) == sorted(other.newsletters)
         )
 
@@ -133,6 +143,7 @@ class ContactPatchSchema(ComparableBase):
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
+    relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
 
     class Config:
         fields = {
@@ -153,6 +164,9 @@ class ContactPatchSchema(ComparableBase):
             "vpn_waitlist": {
                 "description": 'VPN Waitlist data to update, or "DELETE" to reset.'
             },
+            "relay_waitlist": {
+                "description": 'Relay Waitlist data to update, or "DELETE" to reset.'
+            },
         }
 
 
@@ -169,6 +183,7 @@ class CTMSResponse(BaseModel):
     mofo: MozillaFoundationSchema
     newsletters: List[NewsletterSchema]
     vpn_waitlist: VpnWaitlistSchema
+    relay_waitlist: RelayWaitlistSchema
 
 
 class CTMSSingleResponse(CTMSResponse):

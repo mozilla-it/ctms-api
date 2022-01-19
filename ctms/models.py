@@ -60,6 +60,9 @@ class Email(Base):
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
     vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
+    relay_waitlist = relationship(
+        "RelayWaitlist", back_populates="email", uselist=False
+    )
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
@@ -202,6 +205,25 @@ class VpnWaitlist(Base):
     )
 
     email = relationship("Email", back_populates="vpn_waitlist", uselist=False)
+
+
+class RelayWaitlist(Base):
+    __tablename__ = "relay_waitlist"
+
+    id = Column(Integer, primary_key=True)
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
+    geo = Column(String(100))
+
+    create_timestamp = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    update_timestamp = Column(
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
+    )
+
+    email = relationship("Email", back_populates="relay_waitlist", uselist=False)
 
 
 class ApiClient(Base):
