@@ -194,6 +194,24 @@ def test_api_post_stripe_from_pubsub_item_dict(
     assert par.email.stripe_customer.stripe_id == customer_data["id"]
 
 
+def test_api_post_stripe_from_pubsub_none_without_exceptions(
+    dbsession, pubsub_client, example_contact
+):
+    """A PubSub push of multiple items, keyed by table:id with no value associated."""
+    try:
+        item_dict = {
+            "from_customer_table:stripe_id": None,
+            "from_subscription_table:subscription_id": None,
+            "from_invoice_table:invoice_id": None,
+        }
+        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(item_dict))
+    except Exception as e:  # pylint: disable=broad-except
+        assert False, e
+
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "OK", "count": 0}
+
+
 def test_api_post_stripe_from_pubsub_customer_missing_data(dbsession, pubsub_client):
     """Missing data from PubSub push is a 202, so it doesn't resend."""
     data = stripe_customer_data()
