@@ -79,6 +79,7 @@ from .schemas import (
     IdentityResponse,
     MozillaFoundationSchema,
     NotFoundResponse,
+    RelayWaitlistSchema,
     TokenResponse,
     UnauthorizedResponse,
     VpnWaitlistSchema,
@@ -164,6 +165,7 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
         mofo=email.mofo,
         newsletters=email.newsletters,
         vpn_waitlist=email.vpn_waitlist,
+        relay_waitlist=email.relay_waitlist,
     )
 
 
@@ -229,6 +231,7 @@ def get_contacts_by_ids(
             mofo=email.mofo,
             newsletters=email.newsletters,
             vpn_waitlist=email.vpn_waitlist,
+            relay_waitlist=email.relay_waitlist,
         )
         for email in rows
     ]
@@ -270,6 +273,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
                 mofo=contact.mofo or MozillaFoundationSchema(),
                 newsletters=contact.newsletters or [],
                 vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+                relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
             )
             for contact in results
         ]
@@ -500,6 +504,7 @@ def read_ctms_by_any_id(
             mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
             vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+            relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
         )
         for contact in contacts
     ]
@@ -537,6 +542,7 @@ def get_ctms_response_or_404(db, email_id):
         mofo=contact.mofo or MozillaFoundationSchema(),
         newsletters=contact.newsletters or [],
         vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+        relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
         status="ok",
     )
 
