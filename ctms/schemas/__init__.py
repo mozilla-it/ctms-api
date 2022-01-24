@@ -38,6 +38,12 @@ from .newsletter import (
     UpdatedNewsletterInSchema,
 )
 from .product import ProductBaseSchema
+from .relay import (
+    RelayWaitlistInSchema,
+    RelayWaitlistSchema,
+    RelayWaitlistTableSchema,
+    UpdatedRelayWaitlistInSchema,
+)
 from .stripe_customer import (
     StripeCustomerCreateSchema,
     StripeCustomerModelSchema,

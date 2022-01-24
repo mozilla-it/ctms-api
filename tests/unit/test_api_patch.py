@@ -16,6 +16,7 @@ from ctms.schemas import (
     FirefoxAccountsSchema,
     MozillaFoundationInSchema,
     MozillaFoundationSchema,
+    RelayWaitlistSchema,
     VpnWaitlistSchema,
 )
 
@@ -61,6 +62,7 @@ def swap_bool(existing):
         ("mofo", "mofo_relevant", swap_bool),
         ("vpn_waitlist", "geo", "uk"),
         ("vpn_waitlist", "platform", "linux"),
+        ("relay_waitlist", "geo", "uk"),
     ),
 )
 def test_patch_one_new_value(
@@ -78,6 +80,7 @@ def test_patch_one_new_value(
             mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
             vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
+            relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
         ).json()
     )
     existing_value = expected[group_name][key]
@@ -142,6 +145,7 @@ def test_patch_one_new_value(
         ("mofo", "mofo_relevant"),
         ("vpn_waitlist", "geo"),
         ("vpn_waitlist", "platform"),
+        ("relay_waitlist", "geo"),
     ),
 )
 def test_patch_to_default(client, maximal_contact, group_name, key):
@@ -157,6 +161,7 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
             mofo=maximal_contact.mofo or MozillaFoundationSchema(),
             newsletters=maximal_contact.newsletters or [],
             vpn_waitlist=maximal_contact.vpn_waitlist or VpnWaitlistSchema(),
+            relay_waitlist=maximal_contact.relay_waitlist or RelayWaitlistSchema(),
         ).json()
     )
     existing_value = expected[group_name][key]
@@ -170,6 +175,7 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
         "vpn_waitlist": VpnWaitlistSchema(),
+        "relay_waitlist": RelayWaitlistSchema(),
     }[group_name].__fields__[key]
     assert not field.required
     default_value = field.get_default()
@@ -192,15 +198,21 @@ def test_patch_to_group_default(client, dbsession, maximal_contact):
     email_id = maximal_contact.email.email_id
     email = get_email(dbsession, email_id)
     assert email.vpn_waitlist
+    assert email.relay_waitlist
 
-    patch_data = {"vpn_waitlist": {"geo": None, "platform": None}}
+    patch_data = {
+        "vpn_waitlist": {"geo": None, "platform": None},
+        "relay_waitlist": {"geo": None},
+    }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert actual["vpn_waitlist"] == {"geo": None, "platform": None}
+    assert actual["relay_waitlist"] == {"geo": None}
 
     email = get_email(dbsession, email_id)
     assert not email.vpn_waitlist
+    assert not email.relay_waitlist
 
 
 def test_patch_cannot_set_timestamps(client, maximal_contact):
@@ -307,6 +319,7 @@ def test_patch_error_on_id_conflict(
     patch_data = {group_name: {key: str(conflicting_value)}}
     patch_data.setdefault("email", {})["first_name"] = "PATCHED"
     patch_data["vpn_waitlist"] = {"geo": "XX"}
+    patch_data["relay_waitlist"] = {"geo": "XX"}
 
     email_id = maximal_contact.email.email_id
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -432,7 +445,9 @@ def test_patch_unsubscribe_all(client, maximal_contact):
     assert all(not nl["subscribed"] for nl in actual["newsletters"])
 
 
-@pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo", "vpn_waitlist"))
+@pytest.mark.parametrize(
+    "group_name", ("amo", "fxa", "mofo", "vpn_waitlist", "relay_waitlist")
+)
 def test_patch_to_delete_group(client, maximal_contact, group_name):
     """PATCH with a group set to "DELETE" resets the group to defaults."""
     email_id = maximal_contact.email.email_id
@@ -445,6 +460,7 @@ def test_patch_to_delete_group(client, maximal_contact, group_name):
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
         "vpn_waitlist": VpnWaitlistSchema(),
+        "relay_waitlist": RelayWaitlistSchema(),
     }[group_name].dict()
     assert actual[group_name] == defaults
 
