@@ -1,5 +1,6 @@
 """The CTMS application, including middleware and routes."""
 # pylint:disable = too-many-lines
+# pylint:disable = too-many-statements
 import json
 import sys
 import time
@@ -1027,9 +1028,16 @@ def stripe_pubsub(
 
     payload = json.loads(b64decode(wrapped_data["message"]["data"]).decode())
     if hasattr(payload, "keys"):
-        if all(key.count(":") == 1 and "object" in val for key, val in payload.items()):
+        if all(key.count(":") == 1 for key in payload.keys()):
             # Item dictionary, "firebase_table:id" -> Stripe object
-            items = payload.values()
+            items = []
+            for key, value in payload.items():
+                if value:
+                    items.append(value)
+                else:
+                    structlog.get_logger("ctms.web").warning(
+                        f"PubSub key {key} had empty value {value}"
+                    )
         else:
             items = [payload]  # One Stripe object, or maybe unknown dictionary
     else:
