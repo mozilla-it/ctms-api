@@ -59,9 +59,9 @@ def test_ctms_to_acoustic(
     base_ctms_acoustic_service, example_contact, maximal_contact, minimal_contact
 ):
     contact_list = [example_contact, maximal_contact, minimal_contact]
-    example_contact_expected = [49, len(example_contact.newsletters) - 2]
-    maximal_contact_expected = [49, len(maximal_contact.newsletters) - 2]
-    minimal_contact_expected = [31, len(minimal_contact.newsletters) - 2]
+    example_contact_expected = [50, len(example_contact.newsletters) - 2]
+    maximal_contact_expected = [50, len(maximal_contact.newsletters) - 2]
+    minimal_contact_expected = [32, len(minimal_contact.newsletters) - 2]
     expected_results = {
         example_contact.email.email_id: example_contact_expected,
         maximal_contact.email.email_id: maximal_contact_expected,
