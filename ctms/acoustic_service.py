@@ -118,7 +118,7 @@ class AcousticResources:
         "about-mozilla": "sub_about_mozilla",
         "app-dev": "sub_apps_and_hacks",
         "mozilla-rally": "sub_rally",
-        "sub_firefox_sweepstakes": "sub_firefox_sweepstakes",
+        "firefox_sweepstakes": "sub_firefox_sweepstakes",
     }
 
     SKIP_FIELDS = set(
