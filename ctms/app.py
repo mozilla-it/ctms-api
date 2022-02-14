@@ -88,7 +88,7 @@ from .schemas import (
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="1.2.0",
+    version="1.3.0",
 )
 SessionLocal = None
 METRICS_REGISTRY = CollectorRegistry()
