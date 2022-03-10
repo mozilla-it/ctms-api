@@ -6,29 +6,29 @@
 sequenceDiagram
     autonumber
     actor Visitor
-    Visitor->>+mozilla.org: Visits landing page
-    activate mozilla.org
-    mozilla.org-->>-Visitor: Renders form [token]
-    deactivate mozilla.org
+    Visitor->>+Bedrock: Visits mozila.org
+    activate Bedrock
+    Bedrock-->>-Visitor: Renders form [token]
+    deactivate Bedrock
 
-    Visitor->>mozilla.org: Submit form [email, token]
+    Visitor->>Bedrock: Submit form [email, newsletter, token]
 
-    mozilla.org->>+Basket: get_user(token, api_key)
+    Bedrock->>+Basket: get_user(token, api_key)
     activate Basket
-    Basket-->>-mozilla.org: [lang, format, newsletters]
+    Basket-->>-Bedrock: [lang, format, newsletters]
     deactivate Basket
 
-    mozilla.org->>mozilla.org: Guess country
+    Bedrock->>Bedrock: Guess country
     %% https://github.com/mozilla/bedrock/pull/10608
 
-    mozilla.org->>Basket: update_user(lang, format, country, newsletters, api_key)
+    Bedrock->>Basket: update_user(lang, format, country, newsletters, api_key)
     %% https://github.com/mozilla/bedrock/blob/857129a9089bc2927e797a776880ab3b9f6d9f9a/bedrock/newsletter/views.py#L433
 
     Basket->>Basket Task: Spawn task
     %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/views.py#L681
 
-    Basket-->>mozilla.org: [status]
-    mozilla.org-->>Visitor: .
+    Basket-->>Bedrock: [status]
+    Bedrock-->>Visitor: .
 
     rect rgb(240,240,240)
     Basket Task->>Basket Task: Process data
