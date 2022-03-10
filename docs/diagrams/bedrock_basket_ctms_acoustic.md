@@ -77,7 +77,7 @@ Bedrock POST form data:
 }
 ```
 
-Basket [POST subscribe](https://github.com/mozmeao/basket/blob/ba2abdecbddd0a186a716398b33b4dff0a775d73/docs/newsletter_api.rst#newssubscribe) (`update_user()`):
+Basket update user ([`POST /news/subscribe`](https://github.com/mozmeao/basket/blob/ba2abdecbddd0a186a716398b33b4dff0a775d73/docs/newsletter_api.rst#newssubscribe)):
 
 ```
 {
@@ -92,7 +92,7 @@ Basket [POST subscribe](https://github.com/mozmeao/basket/blob/ba2abdecbddd0a186
 }
 ```
 
-CTMS POST update:
+CTMS create contact ([`POST /ctms`](https://github.com/mozilla-it/ctms-api/blob/6f903aeb90b65c170f34485e1cc4b3755839daaf/ctms/app.py#L545-L552)):
 
 ```
 {
