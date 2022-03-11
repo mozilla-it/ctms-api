@@ -6,7 +6,7 @@
 sequenceDiagram
     autonumber
     actor Visitor
-    Visitor->>+Bedrock: Visits mozila.org
+    Visitor->>+Bedrock: Visits mozilla.org
     activate Bedrock
     Bedrock-->>-Visitor: Renders form [token]
     deactivate Bedrock
