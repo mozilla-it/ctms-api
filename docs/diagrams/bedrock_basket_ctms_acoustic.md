@@ -8,21 +8,15 @@ sequenceDiagram
     actor Visitor
     Visitor->>+Bedrock: Visits mozilla.org
     activate Bedrock
-    Bedrock-->>-Visitor: Renders form [token]
+    Bedrock-->>-Visitor: Renders `VPNWaitlistForm` [token]
     deactivate Bedrock
 
-    Visitor->>Bedrock: Submit form [email, newsletter, token]
+    Visitor->>Bedrock: Submit form [newsletter=guardian-vpn-waitlist,<br> email, platform, country, token]
+    %% https://github.com/mozilla/bedrock/blob/ecba76406ed35c04d35532c3ed7562b09d65fabe/bedrock/products/forms.py#L10
+    %% https://github.com/mozilla/bedrock/blob/ef4d73603bdd914e327232f2c66e3e93be32f2a4/bedrock/products/templates/products/vpn/invite.html#L31
 
-    Bedrock->>+Basket: get_user(token, api_key)
-    activate Basket
-    Basket-->>-Bedrock: [lang, format, newsletters]
-    deactivate Basket
-
-    Bedrock->>Bedrock: Guess country
-    %% https://github.com/mozilla/bedrock/pull/10608
-
-    Bedrock->>Basket: update_user(lang, format, country, newsletters, api_key)
-    %% https://github.com/mozilla/bedrock/blob/857129a9089bc2927e797a776880ab3b9f6d9f9a/bedrock/newsletter/views.py#L433
+    Bedrock->>Basket: subscribe(email, lang, newsletter, fpn_platform, <br> fpn_country, source_url, api_key, token)
+    %% https://github.com/mozilla/bedrock/blob/ecba76406ed35c04d35532c3ed7562b09d65fabe/bedrock/products/views.py#L68-L87
 
     Basket->>Basket Task: Spawn task
     %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/views.py#L681
@@ -34,9 +28,8 @@ sequenceDiagram
     Basket Task->>Basket Task: Process data
     %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/backends/ctms.py#L199
 
-    Basket Task->>CTMS: update(token, email_id, newsletters)
+    Basket Task->>CTMS: update(token, email_id, newsletters, fpn_platform, fpn_country)
     %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/tasks.py#L654
-
     %% https://github.com/mozilla-it/ctms-api/blob/6f903aeb90b65c170f34485e1cc4b3755839daaf/ctms/crud.py#L563
 
     CTMS-->>Basket Task: .
