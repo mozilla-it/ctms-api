@@ -9,6 +9,12 @@ production, they are set as part of the runtime environment.
 * ``CTMS_DB_URL`` - The database connection parameters, formatted as a URL.
   In the development environment, this defaults to talk to the ``postgres``
   container. In production, it is set to talk to the provisioned database.
+* ``CTMS_DB_POOL_SIZE`` - The database connection parameter ``pool_size`` (default: 10).
+  [...view more on sqlalchemy.](https://docs.sqlalchemy.org/en/14/core/engines.html#sqlalchemy.create_engine.params.pool_size)
+* ``CTMS_DB_MAX_OVERFLOW`` - The database connection parameter ``max_overflow`` (default: 20).
+  [...view more on sqlalchemy.](https://docs.sqlalchemy.org/en/14/core/engines.html#sqlalchemy.create_engine.params.max_overflow)
+* ``CTMS_DB_POOL_TIMEOUT_IN_SECONDS`` - The database connection parameter ``pool_timeout``(default: 45s).
+  [...view more on sqlalchemy.](https://docs.sqlalchemy.org/en/14/core/engines.html#sqlalchemy.create_engine.params.pool_timeout)
 * ``CTMS_SECRET_KEY`` - An encryption key, used for OAuth2 and other hashes.
   Set to a long but non-secret value for development, and set to a randomized
   string for each production deployment.
