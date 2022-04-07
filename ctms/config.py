@@ -19,6 +19,9 @@ class LogLevel(str, Enum):
 
 class Settings(BaseSettings):
     db_url: PostgresDsn
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
+    db_pool_timeout_in_seconds: int = 45
     secret_key: str
     token_expiration: timedelta = timedelta(minutes=60)
     server_prefix: str = "http://localhost:8000"
