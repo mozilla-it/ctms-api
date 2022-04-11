@@ -20,9 +20,10 @@ documentation = "https://github.com/mozilla-it/ctms-api"
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
 python = ">=3.7, <3.11"
-fastapi = "^0.70.0"
+fastapi = "^0.74.1"
+starlette = "^0.17.1"
 requests = "^2.24.0"
-uvicorn = {extras = ["standard"], version = "^0.15.0"}
+uvicorn = {extras = ["standard"], version = "^0.17.5"}
 gunicorn = "^20.0.4"
 pydantic = {extras = ["email"], version = "^1.7.3"}
 SQLAlchemy = ">1.3.23, <1.4"  # 1.4 is big update, requires SQLAlchemy-Utils support
