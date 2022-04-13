@@ -724,7 +724,7 @@ def _get_stripe(
     """
     query = db_session.query(model)
     if for_update:
-        query = query.with_for_update(of=StripeBase)
+        query = query.with_for_update()
     return cast(
         Optional[StripeModel], query.filter(model.stripe_id == stripe_id).one_or_none()
     )
