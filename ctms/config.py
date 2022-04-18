@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     db_pool_size: int = 5  # Default value from sqlalchemy
     db_max_overflow: int = 10  # Default value from sqlalchemy
     db_pool_timeout_in_seconds: int = 30  # Default value from sqlalchemy
+    db_pool_recycle_in_seconds: int = 300  # 5 minutes
     secret_key: str
     token_expiration: timedelta = timedelta(minutes=60)
     server_prefix: str = "http://localhost:8000"
