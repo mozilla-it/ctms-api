@@ -294,7 +294,7 @@ def ingest_stripe_price(
     assert data["object"] == "price", data.get("object", "[MISSING]")
     price_id = data["id"]
     recurring = data.get("recurring", {})
-    price = get_stripe_price_by_stripe_id(db_session, price_id, for_update=True)
+    price = get_stripe_price_by_stripe_id(db_session, price_id, for_update=False)
     if price:
         orig_dict = price.__dict__.copy()
         price.stripe_created = from_ts(data["created"])

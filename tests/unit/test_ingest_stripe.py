@@ -397,7 +397,6 @@ def test_ingest_new_subscription(dbsession):
     assert stmt1.endswith(" FOR UPDATE"), stmt1
     model2 = "stripe_price"
     assert stmt2.startswith(f"SELECT {model2}."), stmt2
-    assert stmt2.endswith(" FOR UPDATE"), stmt2
     model3 = "stripe_subscription_item"
     assert stmt3.startswith(f"SELECT {model3}."), stmt3
     assert stmt3.endswith(" FOR UPDATE"), stmt3
@@ -498,7 +497,6 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
     # Load item 1
     # Can't eager load items with FOR UPDATE, need to query twice
     assert stmt3.startswith("SELECT stripe_price."), stmt3
-    assert stmt3.endswith(" FOR UPDATE"), stmt3
     assert stmt4.startswith("SELECT stripe_subscription_item."), stmt4
     assert stmt4.endswith(" FOR UPDATE"), stmt4
     # Delete old item
@@ -654,7 +652,6 @@ def test_ingest_new_invoice(dbsession):
     assert stmt1.startswith("SELECT stripe_invoice."), stmt1
     assert stmt1.endswith(" FOR UPDATE"), stmt1
     assert stmt2.startswith("SELECT stripe_price."), stmt2
-    assert stmt2.endswith(" FOR UPDATE"), stmt2
     assert stmt3.startswith("SELECT stripe_invoice_line_item."), stmt3
     assert stmt3.endswith(" FOR UPDATE"), stmt3
     # Insert order could be swapped
@@ -724,7 +721,6 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     # Load line item 1
     # Can't eager load items with FOR UPDATE, need to query twice
     assert stmt3.startswith("SELECT stripe_price."), stmt3
-    assert stmt3.endswith(" FOR UPDATE"), stmt3
     assert stmt4.startswith("SELECT stripe_invoice_line_item."), stmt4
     assert stmt4.endswith(" FOR UPDATE"), stmt4
     # Updates invoice
