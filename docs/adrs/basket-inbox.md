@@ -54,7 +54,7 @@ Clear: Basket manages its schemas, and prepares data before posting it to CTMS.
 
 ### Option 1 - Move mapping code from Basket to CTMS
 
-This option consists in moving the mapping transformation to CTMS.
+This option consists in moving the [Basket mapping transformation](https://github.com/mozmeao/basket/blob/341facbb2b199bfe2f26488942d0fa251010c1c8/basket/news/backends/ctms.py) into CTMS.
 
 With this option, Basket will send its raw data to a new endpoint in CTMS (eg. `POST /inbox/basket`). CTMS will be in charge of transforming the incoming data into its internal format.
 
@@ -75,8 +75,8 @@ When onboarding a new waiting list, Basket does not have to be changed anymore.
 
 **Separation of Concerns**: Fuzzy
 
-CTMS has a clear contact management API, and consumers must comply.
+CTMS currently has a clear contact management API, and consumers must comply.
 
-By adding new specific endpoints dedicated to external systems in CTMS, we move the responsibility. CTMS is now in charge of transforming raw data to comply with its internal schema.
+By adding new specific endpoints dedicated to external systems in CTMS, we move the responsibility. CTMS is now in charge of transforming raw data from external systems in order to comply with its internal schema.
 
-This is the tradeoff that we are willing to accept in this context, where the goal is to reduce the amount of efforts for onboarding.
+This is the tradeoff that we are willing to accept in this context, where the goal is to reduce the amount of efforts for onboarding. Plus, it could be limited to Basket data for now.
