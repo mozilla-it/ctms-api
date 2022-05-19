@@ -42,7 +42,7 @@ def parse_stripe_object(db_session, obj):
     except StripeIngestUnknownObjectError:
         logger.info("Skipping %s %s", obj["object"], obj["id"])
     else:
-        logger.info("Ingested %s %s", obj["object"], obj["id"])
+        logger.info("Queued %s %s", obj["object"], obj["id"])
         db_session.commit()
 
 

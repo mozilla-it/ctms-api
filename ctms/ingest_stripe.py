@@ -482,6 +482,19 @@ class StripeIngestUnknownObjectError(StripeIngestError):
         return f"{self.__class__.__name__}({self.object_value!r}, {self.object_id!r})"
 
 
+class StripeToAcousticParseError(StripeIngestError):
+    def __init__(self, object_value, object_id, *args, **kwargs):
+        self.object_value = object_value
+        self.object_id = object_id
+        StripeIngestError.__init__(self, *args, **kwargs)
+
+    def __str__(self):
+        return f"Following was not added to Acoustic queue: Stripe object {self.object_value!r} with ID {self.object_id!r}."
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.object_value!r}, {self.object_id!r})"
+
+
 def ingest_stripe_object(
     db_session: Session, data: Dict[str, Any]
 ) -> Tuple[Optional[StripeBase], StripeIngestActions]:
@@ -521,6 +534,8 @@ def add_stripe_object_to_acoustic_queue(db_session: Session, data: Dict[str, Any
 
     except KeyError as exception:
         raise StripeIngestUnknownObjectError(object_type, data["id"]) from exception
-
-    stripe_object: StripeBase = collector(db_session, stripe_id)
-    schedule_acoustic_record(db=db_session, email_id=stripe_object.get_email_id())
+    try:
+        stripe_object: StripeBase = collector(db_session, stripe_id)
+        schedule_acoustic_record(db=db_session, email_id=stripe_object.get_email_id())
+    except TypeError as exception:
+        raise StripeToAcousticParseError(object_type, data["id"]) from exception
