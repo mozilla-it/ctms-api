@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, cast
 
 from ctms.crud import (
+    StripeModel,
     create_stripe_customer,
     create_stripe_invoice,
     create_stripe_invoice_line_item,
@@ -33,6 +34,7 @@ from ctms.crud import (
     get_stripe_price_by_stripe_id,
     get_stripe_subscription_by_stripe_id,
     get_stripe_subscription_item_by_stripe_id,
+    schedule_acoustic_record,
 )
 from ctms.models import (  # TODO: Move into TYPE_CHECKING after pylint update
     StripeBase,
@@ -480,6 +482,19 @@ class StripeIngestUnknownObjectError(StripeIngestError):
         return f"{self.__class__.__name__}({self.object_value!r}, {self.object_id!r})"
 
 
+class StripeToAcousticParseError(StripeIngestError):
+    def __init__(self, object_value, object_id, *args, **kwargs):
+        self.object_value = object_value
+        self.object_id = object_id
+        StripeIngestError.__init__(self, *args, **kwargs)
+
+    def __str__(self):
+        return f"Following was not added to Acoustic queue: Stripe object {self.object_value!r} with ID {self.object_id!r}."
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.object_value!r}, {self.object_id!r})"
+
+
 def ingest_stripe_object(
     db_session: Session, data: Dict[str, Any]
 ) -> Tuple[Optional[StripeBase], StripeIngestActions]:
@@ -495,3 +510,32 @@ def ingest_stripe_object(
         raise StripeIngestUnknownObjectError(object_type, data["id"]) from exception
 
     return ingester(db_session, data)
+
+
+COLLECTORS: Dict[str, Callable[[Session, Dict[str, Any]], Optional[StripeModel]]] = {
+    "customer": get_stripe_customer_by_stripe_id,
+    "invoice": get_stripe_invoice_by_stripe_id,
+    "subscription": get_stripe_subscription_by_stripe_id,
+    "subscription_item": get_stripe_subscription_item_by_stripe_id,
+    "price": get_stripe_price_by_stripe_id,
+}
+
+
+def add_stripe_object_to_acoustic_queue(db_session: Session, data: Dict[str, Any]):
+
+    try:
+        object_type = data["object"]
+        stripe_id = data["id"]
+    except (TypeError, KeyError) as exception:
+        raise StripeIngestBadObjectError(data) from exception
+
+    try:
+        collector = COLLECTORS[object_type]
+
+    except KeyError as exception:
+        raise StripeIngestUnknownObjectError(object_type, data["id"]) from exception
+    try:
+        stripe_object: StripeBase = collector(db_session, stripe_id)
+        schedule_acoustic_record(db=db_session, email_id=stripe_object.get_email_id())
+    except TypeError as exception:
+        raise StripeToAcousticParseError(object_type, data["id"]) from exception
