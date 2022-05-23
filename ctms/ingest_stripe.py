@@ -536,6 +536,10 @@ def add_stripe_object_to_acoustic_queue(db_session: Session, data: Dict[str, Any
         raise StripeIngestUnknownObjectError(object_type, data["id"]) from exception
     try:
         stripe_object: StripeBase = collector(db_session, stripe_id)
-        schedule_acoustic_record(db=db_session, email_id=stripe_object.get_email_id())
+        email_id = stripe_object.get_email_id()
+        if email_id:
+            schedule_acoustic_record(db=db_session, email_id=email_id)
+        else:
+            raise StripeToAcousticParseError(object_type, data["id"])
     except TypeError as exception:
         raise StripeToAcousticParseError(object_type, data["id"]) from exception
