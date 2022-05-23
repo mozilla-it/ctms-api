@@ -12,6 +12,7 @@ from ctms import config
 from ctms.database import get_db_engine
 from ctms.ingest_stripe import (
     StripeIngestUnknownObjectError,
+    StripeToAcousticParseError,
     add_stripe_object_to_acoustic_queue,
 )
 
@@ -39,7 +40,7 @@ def parse_stripe_object(db_session, obj):
 
     try:
         add_stripe_object_to_acoustic_queue(db_session, obj)
-    except StripeIngestUnknownObjectError:
+    except (StripeIngestUnknownObjectError, StripeToAcousticParseError):
         logger.info("Skipping %s %s", obj["object"], obj["id"])
     else:
         logger.info("Queued %s %s", obj["object"], obj["id"])
