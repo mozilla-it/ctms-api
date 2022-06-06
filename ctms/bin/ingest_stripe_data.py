@@ -4,13 +4,18 @@
 import argparse
 import json
 import logging
-from typing import List
+from typing import List, Tuple
 
 from sqlalchemy.orm import Session
 
 from ctms import config
 from ctms.database import get_db_engine
-from ctms.ingest_stripe import StripeIngestUnknownObjectError, ingest_stripe_object
+from ctms.ingest_stripe import (
+    StripeIngestActions,
+    StripeIngestUnknownObjectError,
+    ingest_stripe_object,
+)
+from ctms.models import StripeBase
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +40,10 @@ def ingest_object(db_session, obj):
     """Ingest a Stripe object."""
 
     try:
-        ingest_stripe_object(db_session, obj)
+        ingestion_data: Tuple[StripeBase, StripeIngestActions] = ingest_stripe_object(
+            db_session, obj
+        )
+        logger.info("Object and Actions: %s %s", ingestion_data[0], ingestion_data[1])
     except StripeIngestUnknownObjectError:
         logger.info("Skipping %s %s", obj["object"], obj["id"])
     else:
