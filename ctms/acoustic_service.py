@@ -118,6 +118,7 @@ class AcousticResources:
         "mozilla-rally": "sub_rally",
         "mozilla-technology": "sub_mozilla_technology",
         "mozillians-nda": "sub_mozillians_nda",
+        "security-privacy-news": "sub_security_privacy_news",
         "take-action-for-the-internet": "sub_take_action_for_the_internet",
         "test-pilot": "sub_test_pilot",
     }
