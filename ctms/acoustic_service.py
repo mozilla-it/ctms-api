@@ -100,26 +100,26 @@ class AcousticResources:
 
     MAIN_TABLE_SUBSCR_FLAGS = {
         # maps the Basket/CTMS newsletter name to the Acoustic name
+        "about-mozilla": "sub_about_mozilla",
+        "app-dev": "sub_apps_and_hacks",
         "common-voice": "sub_common_voice",
-        "mozilla-fellowship-awardee-alumni": "sub_mozilla_fellowship_awardee_alumni",
         "firefox-accounts-journey": "sub_firefox_accounts_journey",
         "firefox-news": "sub_firefox_news",
-        "mozilla-and-you": "sub_firefox_news",
+        "firefox-sweepstakes": "sub_firefox_sweepstakes",
         "hubs": "sub_hubs",
         "internet-health-report": "sub_internet_health_report",
         "knowledge-is-power": "sub_knowledge_is_power",
         "miti": "sub_miti",
         "mixed-reality": "sub_mixed_reality",
+        "mozilla-and-you": "sub_firefox_news",
+        "mozilla-fellowship-awardee-alumni": "sub_mozilla_fellowship_awardee_alumni",
         "mozilla-festival": "sub_mozilla_festival",
         "mozilla-foundation": "sub_mozilla_foundation",
+        "mozilla-rally": "sub_rally",
         "mozilla-technology": "sub_mozilla_technology",
         "mozillians-nda": "sub_mozillians_nda",
         "take-action-for-the-internet": "sub_take_action_for_the_internet",
         "test-pilot": "sub_test_pilot",
-        "about-mozilla": "sub_about_mozilla",
-        "app-dev": "sub_apps_and_hacks",
-        "mozilla-rally": "sub_rally",
-        "firefox-sweepstakes": "sub_firefox_sweepstakes",
     }
 
     SKIP_FIELDS = set(
