@@ -2,7 +2,7 @@
 
 import logging
 import logging.config
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import structlog
 import uvicorn
@@ -133,9 +133,12 @@ def configure_logging(
 
 def context_from_request(request: Request) -> Dict:
     """Extract data from a log request."""
-    context = {
+    host = None
+    if request.client:
+        host = request.client.host
+    context: Dict[str, Any] = {
         "trivial": False,  # For filtering in papertrail, place early in log
-        "client_host": request.client.host,
+        "client_host": host,
         "method": request.method,
         "path": request.url.path,
     }
@@ -192,8 +195,8 @@ def get_log_line(
         f"{request.method} {request.url.path}" f" HTTP/{request.scope['http_version']}"
     )
     user = user_id or "-"
-    message = (
-        f"{request.client.host}:{request.client.port} {user} {request_line!r}"
-        f" {status_code}"
-    )
+    host, port = None, None
+    if request.client:
+        host, port = request.client
+    message = f"{host}:{port} {user} {request_line!r}" f" {status_code}"
     return message
