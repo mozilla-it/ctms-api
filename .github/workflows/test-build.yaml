@@ -25,6 +25,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
+      - name: Verify production image builds
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: false
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}-test-build
 
       - name: Build test image
         uses: docker/build-push-action@v2
