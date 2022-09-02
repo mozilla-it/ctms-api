@@ -16,7 +16,7 @@ Technologies and tools in use:
 Install Poetry for osx/linux (please confirm via the [poetry docs](https://python-poetry.org/docs/#installation)):
 
 ```sh
-curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 ## Setup Dependencies
