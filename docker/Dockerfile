@@ -42,14 +42,14 @@ RUN apt-get update && \
 # builder-base is used to build dependencies
 FROM python-base as builder-base
 RUN apt-get install --no-install-recommends -y \
-      curl \
       build-essential \
       libpq-dev
 
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
 USER app
-ENV POETRY_VERSION=1.1.5
-RUN curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+RUN python3 -m venv $POETRY_HOME && \
+$POETRY_HOME/bin/pip install poetry==1.2.0 && \
+$POETRY_HOME/bin/poetry --version
 
 # We copy our Python requirements here to cache them
 # and install only runtime deps using poetry
