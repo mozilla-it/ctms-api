@@ -45,10 +45,10 @@ psycopg2 = "^2.8.6"
 
 [tool.poetry.dev-dependencies]
 pre-commit = "^2.7.1"
-sphinx = "^3.2.1"
+sphinx = "^5.1.1"
 pytest = "^6.1.2"
 isort = {extras = ["pyproject"], version = "^4.3.21"}
-black = "^22.3.0"
+black = "^22.8.0"
 coverage = {extras = ["toml"], version = "^5.3"}
 mypy = "^0.910"
 types-python-dateutil = "^2.8.19"
