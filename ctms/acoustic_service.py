@@ -106,6 +106,7 @@ class AcousticResources:
         "firefox-accounts-journey": "sub_firefox_accounts_journey",
         "firefox-news": "sub_firefox_news",
         "firefox-sweepstakes": "sub_firefox_sweepstakes",
+        "graceland": "sub_graceland",
         "hubs": "sub_hubs",
         "internet-health-report": "sub_internet_health_report",
         "knowledge-is-power": "sub_knowledge_is_power",
