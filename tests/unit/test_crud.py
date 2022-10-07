@@ -860,7 +860,7 @@ def test_get_stripe_customer_by_fxa_id(
         assert customer is None
 
     assert watcher.count == 1
-    stmt = watcher.statements[0][0]
+    # stmt = watcher.statements[0][0]
     # if with_lock == "for_update":
     # assert stmt.endswith("FOR UPDATE")
     # else:
