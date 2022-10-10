@@ -723,8 +723,8 @@ def _get_stripe(
     If for_update is True (default False), the row will be locked for update.
     """
     query = db_session.query(model)
-    if for_update:
-        query = query.with_for_update()
+    # if for_update:
+    #     query = query.with_for_update()
     return cast(
         Optional[StripeModel], query.filter(model.stripe_id == stripe_id).one_or_none()
     )
@@ -749,8 +749,8 @@ def get_stripe_customer_by_fxa_id(
     If for_update is True (default False), the row will be locked for update.
     """
     query = db_session.query(StripeCustomer)
-    if for_update:
-        query = query.with_for_update()
+    # if for_update:
+    #     query = query.with_for_update()
     obj = query.filter(StripeCustomer.fxa_id == fxa_id).one_or_none()
     return cast(Optional[StripeCustomer], obj)
 

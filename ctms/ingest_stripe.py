@@ -199,12 +199,11 @@ def ingest_stripe_subscription(
             sub_item_id
             for sub_item_id, in (
                 db_session.query(StripeSubscriptionItem.stripe_id)
-                .with_for_update()
+                # .with_for_update()
                 .filter(
                     StripeSubscriptionItem.stripe_subscription_id
                     == subscription.stripe_id
-                )
-                .all()
+                ).all()
             )
         }
         action = "no_change" if subscription.__dict__ == orig_dict else "updated"
@@ -354,9 +353,10 @@ def ingest_stripe_invoice(
             line_id
             for line_id, in (
                 db_session.query(StripeInvoiceLineItem.stripe_id)
-                .with_for_update()
-                .filter(StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id)
-                .all()
+                # .with_for_update()
+                .filter(
+                    StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id
+                ).all()
             )
         }
         action = "no_change" if invoice.__dict__ == orig_dict else "updated"
