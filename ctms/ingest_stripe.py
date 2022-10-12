@@ -111,13 +111,13 @@ def ingest_stripe_customer(
     is_deleted = data.get("deleted", False)
 
     customer = get_stripe_customer_by_stripe_id(
-        db_session, customer_id, for_update=False
+        db_session, customer_id, for_update=True
     )
 
     # Detect duplicate FxA ID
     fxa_check = fxa_id and ((customer is None) or (customer.fxa_id != fxa_id))
     if fxa_check:
-        by_fxa = get_stripe_customer_by_fxa_id(db_session, fxa_id, for_update=False)
+        by_fxa = get_stripe_customer_by_fxa_id(db_session, fxa_id, for_update=True)
         if by_fxa is not None:
             raise StripeIngestFxAIdConflict(by_fxa.stripe_id, fxa_id)
 
@@ -180,7 +180,7 @@ def ingest_stripe_subscription(
     subscription_id = data["id"]
 
     subscription = get_stripe_subscription_by_stripe_id(
-        db_session, subscription_id, for_update=False
+        db_session, subscription_id, for_update=True
     )
     if subscription:
         orig_dict = subscription.__dict__.copy()
@@ -199,11 +199,12 @@ def ingest_stripe_subscription(
             sub_item_id
             for sub_item_id, in (
                 db_session.query(StripeSubscriptionItem.stripe_id)
-                # .with_for_update()
+                .with_for_update()
                 .filter(
                     StripeSubscriptionItem.stripe_subscription_id
                     == subscription.stripe_id
-                ).all()
+                )
+                .all()
             )
         }
         action = "no_change" if subscription.__dict__ == orig_dict else "updated"
@@ -262,7 +263,7 @@ def ingest_stripe_subscription_item(
 
     subscription_item_id = data["id"]
     subscription_item = get_stripe_subscription_item_by_stripe_id(
-        db_session, subscription_item_id, for_update=False
+        db_session, subscription_item_id, for_update=True
     )
     if subscription_item:
         orig_dict = subscription_item.__dict__.copy()
@@ -339,7 +340,7 @@ def ingest_stripe_invoice(
     """
     assert data["object"] == "invoice", data.get("object", "[MISSING]")
     invoice_id = data["id"]
-    invoice = get_stripe_invoice_by_stripe_id(db_session, invoice_id, for_update=False)
+    invoice = get_stripe_invoice_by_stripe_id(db_session, invoice_id, for_update=True)
     if invoice:
         orig_dict = invoice.__dict__.copy()
         invoice.stripe_created = from_ts(data["created"])
@@ -353,10 +354,9 @@ def ingest_stripe_invoice(
             line_id
             for line_id, in (
                 db_session.query(StripeInvoiceLineItem.stripe_id)
-                # .with_for_update()
-                .filter(
-                    StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id
-                ).all()
+                .with_for_update()
+                .filter(StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id)
+                .all()
             )
         }
         action = "no_change" if invoice.__dict__ == orig_dict else "updated"
@@ -413,7 +413,7 @@ def ingest_stripe_invoice_line_item(
 
     invoice_line_item_id = data["id"]
     invoice_line_item = get_stripe_invoice_line_item_by_stripe_id(
-        db_session, invoice_line_item_id, for_update=False
+        db_session, invoice_line_item_id, for_update=True
     )
     if invoice_line_item:
         orig_dict = invoice_line_item.__dict__.copy()
