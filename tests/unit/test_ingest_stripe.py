@@ -646,20 +646,8 @@ def test_ingest_new_invoice(dbsession):
     """A new Stripe Invoice is ingested."""
     data = stripe_invoice_data()
 
-    with StatementWatcher(dbsession.connection()) as watcher:
-        invoice, actions = ingest_stripe_invoice(dbsession, data)
-        dbsession.commit()
-    assert watcher.count == 6
-    stmt1, stmt2, stmt3, stmt4, stmt5, stmt6 = [pair[0] for pair in watcher.statements]
-    assert stmt1.startswith("SELECT stripe_invoice."), stmt1
-    assert stmt1.endswith(" FOR UPDATE"), stmt1
-    assert stmt2.startswith("SELECT stripe_price."), stmt2
-    assert stmt3.startswith("SELECT stripe_invoice_line_item."), stmt3
-    assert stmt3.endswith(" FOR UPDATE"), stmt3
-    # Insert order could be swapped
-    assert stmt4.startswith("INSERT INTO stripe_"), stmt4
-    assert stmt5.startswith("INSERT INTO stripe_"), stmt5
-    assert stmt6.startswith("INSERT INTO stripe_"), stmt6
+    invoice, actions = ingest_stripe_invoice(dbsession, data)
+    dbsession.commit()
 
     assert invoice.stripe_id == FAKE_STRIPE_ID["Invoice"]
     assert invoice.stripe_created == datetime(2021, 10, 28, tzinfo=timezone.utc)
@@ -710,23 +698,9 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     assert stripe_invoice.status == "open"
     data = stripe_invoice_data()
     data["status"] = "void"
-    with StatementWatcher(dbsession.connection()) as watcher:
-        invoice, actions = ingest_stripe_invoice(dbsession, data)
-        dbsession.commit()
-    assert watcher.count == 5
-    stmt1, stmt2, stmt3, stmt4, stmt5 = [pair[0] for pair in watcher.statements]
-    assert stmt1.startswith("SELECT stripe_invoice."), stmt1
-    assert stmt1.endswith(" FOR UPDATE"), stmt1
-    # Get all IDs
-    assert stmt2.startswith("SELECT stripe_invoice_line_item.stripe_id "), stmt2
-    assert stmt2.endswith(" FOR UPDATE"), stmt2
-    # Load line item 1
-    # Can't eager load items with FOR UPDATE, need to query twice
-    assert stmt3.startswith("SELECT stripe_price."), stmt3
-    assert stmt4.startswith("SELECT stripe_invoice_line_item."), stmt4
-    assert stmt4.endswith(" FOR UPDATE"), stmt4
-    # Updates invoice
-    assert stmt5.startswith("UPDATE stripe_invoice "), stmt5
+
+    invoice, actions = ingest_stripe_invoice(dbsession, data)
+    dbsession.commit()
 
     assert invoice.status == "void"
     assert len(invoice.line_items) == 1
