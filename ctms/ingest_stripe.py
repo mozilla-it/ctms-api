@@ -19,6 +19,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, cast
 
+from sqlalchemy import delete
+
 from ctms.crud import (
     StripeModel,
     create_stripe_customer,
@@ -327,6 +329,25 @@ def ingest_stripe_price(
     }
 
 
+def _delete_orphaned_line_items(
+    db_session: Session, invoice: StripeInvoice, line_item_data_ids: Set[str]
+) -> Set[str]:
+    """Remove any orphaned invoice items, returning IDs of the deleted items
+
+    Orphaned line items are line items that exist on the invoice that don't
+    exist in the incoming line item data.
+    """
+    stmt = (
+        delete(StripeInvoiceLineItem)
+        .where(StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id)
+        .where(StripeInvoiceLineItem.stripe_id.notin_(line_item_data_ids))
+        .execution_options(synchronize_session=False)
+        .returning(StripeInvoiceLineItem.stripe_id)
+    )
+    orphaned_item_ids = db_session.execute(stmt).fetchall()
+    return {line_item_id for line_item_id, in orphaned_item_ids}
+
+
 def ingest_stripe_invoice(
     db_session: Session, data: Dict[str, Any]
 ) -> Tuple[StripeInvoice, StripeIngestActions]:
@@ -350,15 +371,6 @@ def ingest_stripe_invoice(
         invoice.status = data["status"]
         invoice.default_payment_method_id = data["default_payment_method"]
         invoice.default_source_id = data["default_source"]
-        lines_to_delete = {
-            line_id
-            for line_id, in (
-                db_session.query(StripeInvoiceLineItem.stripe_id)
-                .with_for_update()
-                .filter(StripeInvoiceLineItem.stripe_invoice_id == invoice.stripe_id)
-                .all()
-            )
-        }
         action = "no_change" if invoice.__dict__ == orig_dict else "updated"
     else:
         action = "created"
@@ -373,7 +385,6 @@ def ingest_stripe_invoice(
             default_source=data["default_source"],
         )
         invoice = create_stripe_invoice(db_session, schema)
-        lines_to_delete = set()
     actions = {
         action: {
             f"{data['object']}:{data['id']}",
@@ -381,7 +392,6 @@ def ingest_stripe_invoice(
     }
 
     for line_data in data["lines"]["data"]:
-        lines_to_delete.discard(line_data["id"])
         _, items_actions = ingest_stripe_invoice_line_item(
             db_session, invoice_id, line_data
         )
@@ -389,14 +399,12 @@ def ingest_stripe_invoice(
             actions.setdefault(key, set()).update(values)
 
     # Remove any orphaned invoice items
-    if lines_to_delete:
-        (
-            db_session.query(StripeInvoiceLineItem)
-            .filter(StripeInvoiceLineItem.stripe_id.in_(lines_to_delete))
-            .delete(synchronize_session=False)
-        )
+    deleted_lines = _delete_orphaned_line_items(
+        db_session, invoice, {line_item["id"] for line_item in data["lines"]["data"]}
+    )
+    if deleted_lines:
         actions.setdefault("deleted", set()).update(
-            {f"line_item:{item_id}" for item_id in lines_to_delete}
+            {f"line_item:{item_id}" for item_id in deleted_lines}
         )
 
     return invoice, actions
