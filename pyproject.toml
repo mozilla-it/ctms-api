@@ -4,17 +4,9 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "ctms"
-version = "1.8.1"
+version = "0"
 description = "Contact Management System API"
-authors = [
-    "Brian Stack <bstack@mozilla.com>",
-    "Bryan Sieber <bsieber@mozilla.com>",
-    "John Whitlock <jwhitlock@mozilla.com>",
-]
-readme = "README.md"
-homepage = "https://github.com/mozilla-it/ctms-api"
-repository = "https://github.com/mozilla-it/ctms-api"
-documentation = "https://github.com/mozilla-it/ctms-api"
+authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 
 
 [tool.poetry.dependencies]

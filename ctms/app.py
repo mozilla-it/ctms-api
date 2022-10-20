@@ -86,10 +86,12 @@ from .schemas import (
     VpnWaitlistSchema,
 )
 
+version_info = get_version()
+
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version="1.8.1",
+    version=version_info["version"],
 )
 SessionLocal = None
 METRICS_REGISTRY = CollectorRegistry()
@@ -830,7 +832,7 @@ def login(
 @app.get("/__version__", tags=["Platform"])
 def version():
     """Return version.json, as required by Dockerflow."""
-    return get_version()
+    return version_info
 
 
 def heartbeat(request: Request, db: Session, settings: config.Settings):
