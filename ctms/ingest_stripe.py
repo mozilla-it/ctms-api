@@ -167,6 +167,27 @@ def ingest_stripe_customer(
     }
 
 
+def _delete_orphaned_subscription_items(
+    db_session: Session,
+    subscription: StripeSubscription,
+    subscription_item_data_ids: Set[str],
+) -> Set[str]:
+    """Remove any orphaned subscription items, returning IDs of the deleted items
+
+    Orphaned subscription items are subscription items that exist on the subscription
+    that don't exist in the incoming subscription item data.
+    """
+    stmt = (
+        delete(StripeSubscriptionItem)
+        .where(StripeSubscriptionItem.stripe_subscription_id == subscription.stripe_id)
+        .where(StripeSubscriptionItem.stripe_id.notin_(subscription_item_data_ids))
+        .execution_options(synchronize_session=False)
+        .returning(StripeSubscriptionItem.stripe_id)
+    )
+    orphaned_sub_item_ids = db_session.execute(stmt).fetchall()
+    return {line_item_id for line_item_id, in orphaned_sub_item_ids}
+
+
 def ingest_stripe_subscription(
     db_session: Session, data: Dict[str, Any]
 ) -> Tuple[StripeSubscription, StripeIngestActions]:
@@ -197,18 +218,6 @@ def ingest_stripe_subscription(
         subscription.ended_at = from_ts(data["ended_at"])
         subscription.start_date = from_ts(data["start_date"])
         subscription.status = data["status"]
-        sub_items_to_delete = {
-            sub_item_id
-            for sub_item_id, in (
-                db_session.query(StripeSubscriptionItem.stripe_id)
-                .with_for_update()
-                .filter(
-                    StripeSubscriptionItem.stripe_subscription_id
-                    == subscription.stripe_id
-                )
-                .all()
-            )
-        }
         action = "no_change" if subscription.__dict__ == orig_dict else "updated"
     else:
         action = "created"
@@ -227,7 +236,6 @@ def ingest_stripe_subscription(
             status=data["status"],
         )
         subscription = create_stripe_subscription(db_session, schema)
-        sub_items_to_delete = set()
     actions = {
         action: {
             f"{data['object']}:{data['id']}",
@@ -235,20 +243,19 @@ def ingest_stripe_subscription(
     }
 
     for item_data in data["items"]["data"]:
-        sub_items_to_delete.discard(item_data["id"])
         _, item_actions = ingest_stripe_subscription_item(db_session, item_data)
         for key, values in item_actions.items():
             actions.setdefault(key, set()).update(cast(set, values))
 
     # Remove any orphaned subscription items
-    if sub_items_to_delete:
-        (
-            db_session.query(StripeSubscriptionItem)
-            .filter(StripeSubscriptionItem.stripe_id.in_(sub_items_to_delete))
-            .delete(synchronize_session=False)
-        )
+    deleted_sub_item_ids = _delete_orphaned_subscription_items(
+        db_session,
+        subscription,
+        {sub_item["id"] for sub_item in data["items"]["data"]},
+    )
+    if deleted_sub_item_ids:
         actions.setdefault("deleted", set()).update(
-            {f"subscription_item:{item_id}" for item_id in sub_items_to_delete}
+            {f"subscription_item:{item_id}" for item_id in deleted_sub_item_ids}
         )
 
     return subscription, actions
