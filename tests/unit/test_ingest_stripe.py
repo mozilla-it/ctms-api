@@ -389,23 +389,9 @@ def test_ingest_new_subscription(dbsession):
     """A new Stripe Subscription is ingested."""
     data = stripe_subscription_data()
 
-    with StatementWatcher(dbsession.connection()) as watcher:
+    with StatementWatcher(dbsession.connection()):
         subscription, actions = ingest_stripe_subscription(dbsession, data)
         dbsession.commit()
-    assert watcher.count == 6
-    stmt1, stmt2, stmt3, stmt4, stmt5, stmt6 = [pair[0] for pair in watcher.statements]
-    model1 = "stripe_subscription"
-    assert stmt1.startswith(f"SELECT {model1}."), stmt1
-    assert stmt1.endswith(" FOR UPDATE"), stmt1
-    model2 = "stripe_price"
-    assert stmt2.startswith(f"SELECT {model2}."), stmt2
-    model3 = "stripe_subscription_item"
-    assert stmt3.startswith(f"SELECT {model3}."), stmt3
-    assert stmt3.endswith(" FOR UPDATE"), stmt3
-    # Insert order could be swapped
-    assert stmt4.startswith("INSERT INTO stripe_"), stmt4
-    assert stmt5.startswith("INSERT INTO stripe_"), stmt5
-    assert stmt6.startswith("INSERT INTO stripe_"), stmt6
 
     assert subscription.stripe_id == FAKE_STRIPE_ID["Subscription"]
     assert subscription.stripe_created == datetime(2021, 9, 27, tzinfo=timezone.utc)
@@ -484,31 +470,9 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
     }
     data["default_payment_method"] = fake_stripe_id("pm", "my new credit card")
 
-    with StatementWatcher(dbsession.connection()) as watcher:
+    with StatementWatcher(dbsession.connection()):
         subscription, actions = ingest_stripe_subscription(dbsession, data)
         dbsession.commit()
-    assert watcher.count == 8
-    stmt1, stmt2, stmt3, stmt4, stmt5, stmt6, stmt7, stmt8 = [
-        pair[0] for pair in watcher.statements
-    ]
-    assert stmt1.startswith("SELECT stripe_subscription."), stmt1
-    assert stmt1.endswith(" FOR UPDATE"), stmt1
-    # Get all IDs
-    assert stmt2.startswith("SELECT stripe_subscription_item.stripe_id "), stmt2
-    assert stmt2.endswith(" FOR UPDATE"), stmt2
-    # Load item 1
-    # Can't eager load items with FOR UPDATE, need to query twice
-    assert stmt3.startswith("SELECT stripe_price."), stmt3
-    assert stmt4.startswith("SELECT stripe_subscription_item."), stmt4
-    assert stmt4.endswith(" FOR UPDATE"), stmt4
-    # Delete old item
-    assert stmt5.startswith("DELETE FROM stripe_subscription_item "), stmt5
-    # Insert order could be swapped
-    insert = "INSERT INTO stripe_"
-    update = "UPDATE stripe_subscription SET "
-    assert stmt6.startswith(insert) or stmt6.startswith(update), stmt6
-    assert stmt7.startswith(insert) or stmt7.startswith(update), stmt7
-    assert stmt8.startswith(insert) or stmt8.startswith(update), stmt8
 
     assert subscription.current_period_end == current_period_end
     assert subscription.default_payment_method_id == data["default_payment_method"]
