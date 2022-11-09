@@ -231,18 +231,9 @@ def test_ingest_existing_contact(dbsession, example_contact):
     data["description"] = example_contact.fxa.fxa_id
     data["email"] = example_contact.fxa.primary_email
 
-    with StatementWatcher(dbsession.connection()) as watcher:
+    with StatementWatcher(dbsession.connection()):
         customer, actions = ingest_stripe_customer(dbsession, data)
         dbsession.commit()
-    assert watcher.count == 3
-    stmt1 = watcher.statements[0][0]
-    assert stmt1.startswith("SELECT stripe_customer."), stmt1
-    assert stmt1.endswith(" FOR UPDATE"), stmt1
-    stmt2 = watcher.statements[1][0]
-    assert stmt2.startswith("SELECT stripe_customer."), stmt2
-    assert stmt2.endswith(" FOR UPDATE"), stmt2
-    stmt3 = watcher.statements[2][0]
-    assert stmt3.startswith("INSERT INTO stripe_customer "), stmt3
 
     assert customer.stripe_id == FAKE_STRIPE_ID["Customer"]
     assert not customer.deleted
@@ -304,7 +295,6 @@ def test_ingest_update_customer(dbsession, stripe_customer):
     assert watcher.count == 2
     stmt1 = watcher.statements[0][0]
     assert stmt1.startswith("SELECT stripe_customer."), stmt1
-    assert stmt1.endswith(" FOR UPDATE"), stmt1
     stmt2 = watcher.statements[1][0]
     assert stmt2.startswith("UPDATE stripe_customer SET "), stmt2
 
