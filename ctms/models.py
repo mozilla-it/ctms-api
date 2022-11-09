@@ -429,12 +429,14 @@ class StripeInvoiceLineItem(StripeBase):
         String(255),
         ForeignKey("stripe_invoice.stripe_id"),
         nullable=False,
+        index=True,
     )
     stripe_type = Column(String(14), nullable=False)
     stripe_price_id = Column(
         String(255),
         ForeignKey(StripePrice.stripe_id),
         nullable=False,
+        index=True,
     )
     stripe_invoice_item_id = Column(String(255), nullable=True)
     stripe_subscription_id = Column(String(255), nullable=True)
