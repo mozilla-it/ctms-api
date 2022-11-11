@@ -13,7 +13,7 @@ from ctms.crud import (
     get_all_acoustic_retries_count,
     retry_acoustic_record,
 )
-from ctms.models import PendingAcousticRecord
+from ctms.models import AcousticField, PendingAcousticRecord
 from ctms.schemas import ContactSchema
 
 
@@ -53,7 +53,7 @@ class CTMSToAcousticSync:
         self.is_acoustic_enabled = is_acoustic_enabled
         self.metric_service = metric_service
 
-    def sync_contact_with_acoustic(self, contact: ContactSchema):
+    def sync_contact_with_acoustic(self, contact: ContactSchema, main_fields: set[str]):
         """
 
         :param contact:
@@ -61,19 +61,23 @@ class CTMSToAcousticSync:
         """
         try:
             # Convert ContactSchema to Acoustic Readable, attempt API call
-            return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(contact)
+            return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
+                contact, main_fields
+            )
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Error executing sync.sync_contact_with_acoustic")
             return False
 
-    def _sync_pending_record(self, db, pending_record: PendingAcousticRecord) -> str:
+    def _sync_pending_record(
+        self, db, pending_record: PendingAcousticRecord, main_fields: set[str]
+    ) -> str:
         state = "unknown"
         try:
             if self.is_acoustic_enabled:
                 contact: ContactSchema = get_acoustic_record_as_contact(
                     db, pending_record
                 )
-                is_success = self.sync_contact_with_acoustic(contact)
+                is_success = self.sync_contact_with_acoustic(contact, main_fields)
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
@@ -118,6 +122,13 @@ class CTMSToAcousticSync:
             all_retry_records_count: int = get_all_acoustic_retries_count(db=db)
             context["retry_backlog"] = all_retry_records_count
             self.metric_service.gauge_acoustic_retry_backlog(all_retry_records_count)
+
+        # Obtain list of contact fields to sync from DB.
+        main_acoustic_fields: List[AcousticField] = (
+            db.query(AcousticField).filter(AcousticField.tablename == "main").all()
+        )
+        main_fields = {entry.field for entry in main_acoustic_fields}
+
         # Get all Records before current time
         all_acoustic_records_before_now: List[
             PendingAcousticRecord
@@ -133,8 +144,9 @@ class CTMSToAcousticSync:
         states: Dict[str, int] = defaultdict(int)
         record_created = None
         for acoustic_record in all_acoustic_records_before_now:
-            state = self._sync_pending_record(db, acoustic_record)
+            state = self._sync_pending_record(db, acoustic_record, main_fields)
             total += 1
+
             states[state] += 1
             if state == "synced" and acoustic_record.retry == 0:
                 record_created = acoustic_record.create_timestamp

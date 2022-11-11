@@ -33,7 +33,7 @@ from ctms.crud import (
     get_stripe_products,
     get_vpn_by_email_id,
 )
-from ctms.models import Base
+from ctms.models import AcousticField, Base
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
@@ -151,6 +151,22 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
         "maximal": (maximal_contact.email.email_id, maximal_contact),
         "example": (example_contact.email.email_id, example_contact),
     }
+
+
+@pytest.fixture
+def main_acoustic_fields(dbsession):
+    fields = {
+        "first_name",
+        "last_name",
+        "email",
+        "email_id",
+        "fxa_id",
+        "fxa_created_date",
+    }
+    for field in fields:
+        dbsession.merge(AcousticField(field=field))
+    dbsession.commit()
+    return fields
 
 
 @pytest.fixture

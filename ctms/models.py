@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    PrimaryKeyConstraint,
     String,
     Text,
     UniqueConstraint,
@@ -185,6 +186,17 @@ class AmoAccount(Base):
     )
 
     email = relationship("Email", back_populates="amo", uselist=False)
+
+
+class AcousticField(Base):
+    __tablename__ = "acoustic_field"
+
+    tablename = Column(String, default="main")
+    field = Column(String)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("tablename", "field", name="pk_tablename_field"),
+    )
 
 
 class VpnWaitlist(Base):
