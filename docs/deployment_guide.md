@@ -55,6 +55,19 @@ from this repo and going outwards:
 More information about CTMS operations is available on the
 [ESS-CTMS Mana page](https://mana.mozilla.org/wiki/x/KIyXC) (*private*).
 
+
+## Synchronized Acoustic Fields
+
+The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
+in the database.
+
+In order to add or remove certain fields, use the `acoustic_fields.py` script:
+
+```
+python ctms/bin/acoustic_fields.py remove fxaaa_id
+python ctms/bin/acoustic_fields.py add fxa_id
+```
+
 ## Logging
 
 When the environment variable ``CTMS_USE_MOZLOG`` is set to true or unset, then
