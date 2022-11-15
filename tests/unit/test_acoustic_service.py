@@ -63,18 +63,9 @@ def test_ctms_to_acoustic(
     main_acoustic_fields,
 ):
     contact_list = [example_contact, maximal_contact, minimal_contact]
-    example_contact_expected = [
-        20 + len(main_acoustic_fields),
-        len(example_contact.newsletters) - 2,
-    ]
-    maximal_contact_expected = [
-        20 + len(main_acoustic_fields),
-        len(maximal_contact.newsletters) - 2,
-    ]
-    minimal_contact_expected = [
-        18 + len(main_acoustic_fields),
-        len(minimal_contact.newsletters) - 2,
-    ]
+    example_contact_expected = [52, len(example_contact.newsletters) - 2]
+    maximal_contact_expected = [52, len(maximal_contact.newsletters) - 2]
+    minimal_contact_expected = [33, len(minimal_contact.newsletters) - 2]
     expected_results = {
         example_contact.email.email_id: example_contact_expected,
         maximal_contact.email.email_id: maximal_contact_expected,
@@ -116,34 +107,6 @@ EXPECTED_LOG = {
     "newsletter_count": 0,
     "product_count": 0,
     "success": True,
-    "skipped_fields": [
-        "amo.add_on_ids",
-        "amo.display_name",
-        "amo.email_opt_in",
-        "amo.language",
-        "amo.last_login",
-        "amo.location",
-        "amo.profile_url",
-        "amo.user",
-        "amo.user_id",
-        "amo.username",
-        "email.basket_token",
-        "email.create_timestamp",
-        "email.double_opt_in",
-        "email.email_format",
-        "email.email_lang",
-        "email.has_opted_out_of_email",
-        "email.mailing_country",
-        "email.sfdc_id",
-        "email.unsubscribe_reason",
-        "fxa.account_deleted",
-        "fxa.first_service",
-        "fxa.lang",
-        "fxa.primary_email",
-        "relay_waitlist.geo",
-        "vpn_waitlist.geo",
-        "vpn_waitlist.platform",
-    ],
 }
 
 

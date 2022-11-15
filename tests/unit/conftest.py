@@ -163,18 +163,10 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
 
 @pytest.fixture
 def main_acoustic_fields(dbsession):
-    fields = {
-        "first_name",
-        "last_name",
-        "email",
-        "email_id",
-        "fxa_id",
-        "fxa_created_date",
-    }
-    for field in fields:
-        dbsession.merge(AcousticField(field=field))
-    dbsession.commit()
-    return fields
+    records = (
+        dbsession.query(AcousticField).filter(AcousticField.tablename == "main").all()
+    )
+    return {r.field for r in records}
 
 
 @pytest.fixture
