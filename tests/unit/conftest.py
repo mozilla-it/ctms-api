@@ -7,6 +7,8 @@ from unittest import mock
 from uuid import UUID
 
 import pytest
+from alembic import command as alembic_command
+from alembic import config as alembic_config
 from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
@@ -33,7 +35,7 @@ from ctms.crud import (
     get_stripe_products,
     get_vpn_by_email_id,
 )
-from ctms.models import Base
+from ctms.models import AcousticField
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
@@ -43,6 +45,10 @@ from ctms.schemas import (
     StripeSubscriptionItemCreateSchema,
 )
 from tests.unit.sample_data import SAMPLE_CONTACTS, SAMPLE_STRIPE_DATA
+
+MY_FOLDER = os.path.dirname(__file__)
+TEST_FOLDER = os.path.dirname(MY_FOLDER)
+APP_FOLDER = os.path.dirname(TEST_FOLDER)
 
 
 @pytest.fixture(scope="session")
@@ -77,8 +83,11 @@ def engine(pytestconfig):
     echo = pytestconfig.getoption("verbose") > 2
     test_engine = create_engine(test_db_url, echo=echo)
 
-    # TODO: Convert to running alembic migrations
-    Base.metadata.create_all(bind=test_engine)
+    cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
+    with test_engine.begin() as cnx:
+        # pylint: disable-next=unsupported-assignment-operation
+        cfg.attributes["connection"] = cnx
+        alembic_command.upgrade(cfg, "head")
 
     yield test_engine
     test_engine.dispose()
@@ -151,6 +160,14 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
         "maximal": (maximal_contact.email.email_id, maximal_contact),
         "example": (example_contact.email.email_id, example_contact),
     }
+
+
+@pytest.fixture
+def main_acoustic_fields(dbsession):
+    records = (
+        dbsession.query(AcousticField).filter(AcousticField.tablename == "main").all()
+    )
+    return {r.field for r in records}
 
 
 @pytest.fixture
@@ -357,9 +374,7 @@ def pytest_generate_tests(metafunc):
 
     if "stripe_test_json" in metafunc.fixturenames:
         # Get names of Stripe test JSON files in test/data/stripe
-        my_folder = os.path.dirname(__file__)
-        test_folder = os.path.dirname(my_folder)
-        stripe_data_folder = os.path.join(test_folder, "data", "stripe")
+        stripe_data_folder = os.path.join(TEST_FOLDER, "data", "stripe")
         test_paths = glob(os.path.join(stripe_data_folder, "*.json"))
         test_files = [os.path.basename(test_path) for test_path in test_paths]
         metafunc.parametrize("stripe_test_json", test_files, indirect=True)
@@ -373,9 +388,7 @@ def stripe_test_json(request):
     The filenames are initialized by pytest_generate_tests.
     """
     filename = request.param
-    my_folder = os.path.dirname(__file__)
-    test_folder = os.path.dirname(my_folder)
-    stripe_data_folder = os.path.join(test_folder, "data", "stripe")
+    stripe_data_folder = os.path.join(TEST_FOLDER, "data", "stripe")
     sample_filepath = os.path.join(stripe_data_folder, filename)
     with open(sample_filepath, "r", encoding="utf8") as the_file:
         data = json.load(the_file)

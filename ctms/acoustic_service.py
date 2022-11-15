@@ -58,46 +58,6 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 
 
 class AcousticResources:
-    # TODO: externalize, maybe a DB table?
-    VALID_ACOUSTIC_MAIN_TABLE_FIELDS = {
-        "sfdc_id",
-        "email",
-        "amo_add_on_ids",
-        "amo_display_name",
-        "amo_email_opt_in",
-        "amo_language",
-        "amo_last_login",
-        "amo_location",
-        "amo_profile_url",
-        "amo_user",
-        "amo_user_id",
-        "amo_username",
-        "create_timestamp",
-        "email_format",
-        "email_id",
-        "email_lang",
-        "vpn_waitlist_geo",
-        "vpn_waitlist_platform",
-        "relay_waitlist_geo",
-        "fxa_id",
-        "fxa_account_deleted",
-        "fxa_lang",
-        "fxa_login_date",
-        "fxa_first_service",
-        "fxa_created_date",
-        "fxa_primary_email",
-        "double_opt_in",
-        "has_opted_out_of_email",
-        "mailing_country",
-        "first_name",
-        "last_name",
-        "sumo_contributor",
-        "sumo_user",
-        "sumo_username",
-        "basket_token",
-        "unsubscribe_reason",
-    }
-
     MAIN_TABLE_SUBSCR_FLAGS = {
         # maps the Basket/CTMS newsletter name to the Acoustic name
         "about-mozilla": "sub_about_mozilla",
@@ -199,15 +159,15 @@ class CTMSToAcousticService:
         self.context: Dict[str, Union[str, int, List[str]]] = {}
         self.metric_service = metric_service
 
-    def convert_ctms_to_acoustic(self, contact: ContactSchema):
-        acoustic_main_table = self._main_table_converter(contact)
+    def convert_ctms_to_acoustic(self, contact: ContactSchema, main_fields: set[str]):
+        acoustic_main_table = self._main_table_converter(contact, main_fields)
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
             acoustic_main_table, contact
         )
         product_rows = self._product_converter(contact)
         return acoustic_main_table, newsletter_rows, product_rows
 
-    def _main_table_converter(self, contact):
+    def _main_table_converter(self, contact, main_fields):
         acoustic_main_table = {
             # populate with all the sub_flags set to false
             # they'll get set to true below, as-needed
@@ -241,10 +201,7 @@ class CTMSToAcousticService:
                     ):
                         self.context["trace"] = inner_value
 
-                    if (
-                        acoustic_field_name
-                        in AcousticResources.VALID_ACOUSTIC_MAIN_TABLE_FIELDS
-                    ):
+                    if acoustic_field_name in main_fields:
                         if acoustic_field_name == "fxa_created_date":
                             inner_value = self.fxa_created_date_string_to_datetime(
                                 inner_value
@@ -460,7 +417,9 @@ class CTMSToAcousticService:
                 self.context[f"{table_name}_status"] = status
                 self.context[f"{table_name}_duration_s"] = duration_s
 
-    def attempt_to_upload_ctms_contact(self, contact: ContactSchema) -> bool:
+    def attempt_to_upload_ctms_contact(
+        self, contact: ContactSchema, main_fields: set[str]
+    ) -> bool:
         """
 
         :param contact: to be converted to acoustic table rows and uploaded
@@ -468,7 +427,9 @@ class CTMSToAcousticService:
         """
         self.context = {}
         try:
-            main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(contact)
+            main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(
+                contact, main_fields
+            )
             main_table_id = str(self.acoustic_main_table_id)
             email_id = main_table_data["email_id"]
             self.context["email_id"] = email_id
