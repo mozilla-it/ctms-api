@@ -1,7 +1,7 @@
 """Add Acoustic field
 
 Revision ID: 06f24cc01c09
-Revises: 6c7724982996
+Revises: 406251207612
 Create Date: 2022-11-11 17:32:04.411812
 
 """
@@ -16,7 +16,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '06f24cc01c09'  # pragma: allowlist secret
-down_revision = '6c7724982996'  # pragma: allowlist secret
+down_revision = '406251207612'  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 
