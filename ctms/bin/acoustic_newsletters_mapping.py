@@ -2,6 +2,7 @@
 """Manage Acoustic newsletters mapping: add and remove from the db."""
 
 import argparse
+import os
 import sys
 
 from ctms import config
@@ -22,7 +23,7 @@ def main(dbsession, test_args=None) -> int:
     parser_remove = subparsers.add_parser("remove")
     parser_remove.add_argument("mapping")
 
-    parser_list = subparsers.add_parser("list")
+    subparsers.add_parser("list")
 
     args = parser.parse_args(args=test_args)
     if args.action == "add":
@@ -39,7 +40,7 @@ def main(dbsession, test_args=None) -> int:
         )
         if not row:
             print(f"Unknown mapping '{args.mapping}'. Give up.")
-            return 2
+            return os.EX_NOTFOUND
         dbsession.delete(row)
         dbsession.commit()
         print("Removed.")
@@ -47,7 +48,7 @@ def main(dbsession, test_args=None) -> int:
         entries = dbsession.query(AcousticNewsletterMapping).all()
         print("\n".join(sorted(f"- {e.source!r} → {e.destination!r}" for e in entries)))
 
-    return 0
+    return os.EX_OK
 
 
 if __name__ == "__main__":
