@@ -35,7 +35,7 @@ from ctms.crud import (
     get_stripe_products,
     get_vpn_by_email_id,
 )
-from ctms.models import AcousticField
+from ctms.models import AcousticField, AcousticNewsletterMapping
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
@@ -168,6 +168,12 @@ def main_acoustic_fields(dbsession):
         dbsession.query(AcousticField).filter(AcousticField.tablename == "main").all()
     )
     return {r.field for r in records}
+
+
+@pytest.fixture
+def acoustic_newsletters_mapping(dbsession):
+    records = dbsession.query(AcousticNewsletterMapping).all()
+    return {r.source: r.destination for r in records}
 
 
 @pytest.fixture

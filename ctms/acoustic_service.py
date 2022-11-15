@@ -58,31 +58,6 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 
 
 class AcousticResources:
-    MAIN_TABLE_SUBSCR_FLAGS = {
-        # maps the Basket/CTMS newsletter name to the Acoustic name
-        "about-mozilla": "sub_about_mozilla",
-        "app-dev": "sub_apps_and_hacks",
-        "common-voice": "sub_common_voice",
-        "firefox-accounts-journey": "sub_firefox_accounts_journey",
-        "firefox-news": "sub_firefox_news",
-        "firefox-sweepstakes": "sub_firefox_sweepstakes",
-        "hubs": "sub_hubs",
-        "internet-health-report": "sub_internet_health_report",
-        "knowledge-is-power": "sub_knowledge_is_power",
-        "miti": "sub_miti",
-        "mixed-reality": "sub_mixed_reality",
-        "mozilla-and-you": "sub_firefox_news",
-        "mozilla-fellowship-awardee-alumni": "sub_mozilla_fellowship_awardee_alumni",
-        "mozilla-festival": "sub_mozilla_festival",
-        "mozilla-foundation": "sub_mozilla_foundation",
-        "mozilla-rally": "sub_rally",
-        "mozilla-technology": "sub_mozilla_technology",
-        "mozillians-nda": "sub_mozillians_nda",
-        "security-privacy-news": "sub_security_privacy_news",
-        "take-action-for-the-internet": "sub_take_action_for_the_internet",
-        "test-pilot": "sub_test_pilot",
-    }
-
     SKIP_FIELDS = set(
         (
             # Known skipped fields from CTMS
@@ -159,21 +134,21 @@ class CTMSToAcousticService:
         self.context: Dict[str, Union[str, int, List[str]]] = {}
         self.metric_service = metric_service
 
-    def convert_ctms_to_acoustic(self, contact: ContactSchema, main_fields: set[str]):
+    def convert_ctms_to_acoustic(
+        self,
+        contact: ContactSchema,
+        main_fields: set[str],
+        newsletters_mapping: dict[str, str],
+    ):
         acoustic_main_table = self._main_table_converter(contact, main_fields)
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
-            acoustic_main_table, contact
+            acoustic_main_table, contact, newsletters_mapping
         )
         product_rows = self._product_converter(contact)
         return acoustic_main_table, newsletter_rows, product_rows
 
     def _main_table_converter(self, contact, main_fields):
-        acoustic_main_table = {
-            # populate with all the sub_flags set to false
-            # they'll get set to true below, as-needed
-            v: "0"
-            for v in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS.values()
-        }
+        acoustic_main_table = {}
         acceptable_subdicts = ["email", "amo", "fxa", "vpn_waitlist", "relay_waitlist"]
         special_cases = {
             ("fxa", "fxa_id"): "fxa_id",
@@ -234,7 +209,7 @@ class CTMSToAcousticService:
             self.context["fxa_created_date_converted"] = "skipped"
         return inner_value
 
-    def _newsletter_converter(self, acoustic_main_table, contact):
+    def _newsletter_converter(self, acoustic_main_table, contact, newsletters_mapping):
         # create the RT rows for the newsletter table in acoustic
         newsletter_rows = []
         contact_newsletters: List[NewsletterSchema] = contact.newsletters
@@ -242,6 +217,12 @@ class CTMSToAcousticService:
         contact_email_format = contact.email.email_format
         contact_email_lang = contact.email.email_lang
         skipped = []
+
+        # populate with all the sub_flags set to false
+        # they'll get set to true below, as-needed
+        for sub_flag in newsletters_mapping.values():
+            acoustic_main_table[sub_flag] = "0"
+
         for newsletter in contact_newsletters:
             newsletter_template = {
                 "email_id": contact_email_id,
@@ -249,7 +230,7 @@ class CTMSToAcousticService:
                 "newsletter_lang": contact_email_lang,
             }
 
-            if newsletter.name in AcousticResources.MAIN_TABLE_SUBSCR_FLAGS:
+            if newsletter.name in newsletters_mapping:
                 newsletter_dict = newsletter.dict()
                 _today = datetime.date.today().isoformat()
                 newsletter_template["create_timestamp"] = newsletter_dict.get(
@@ -268,9 +249,7 @@ class CTMSToAcousticService:
                 newsletter_rows.append(newsletter_template)
                 # and finally flip the main table's sub_<newsletter> flag to true for each subscription
                 if newsletter.subscribed:
-                    acoustic_main_table[
-                        AcousticResources.MAIN_TABLE_SUBSCR_FLAGS[newsletter.name]
-                    ] = "1"
+                    acoustic_main_table[newsletters_mapping[newsletter.name]] = "1"
             else:
                 skipped.append(newsletter.name)
         if skipped:
@@ -418,7 +397,10 @@ class CTMSToAcousticService:
                 self.context[f"{table_name}_duration_s"] = duration_s
 
     def attempt_to_upload_ctms_contact(
-        self, contact: ContactSchema, main_fields: set[str]
+        self,
+        contact: ContactSchema,
+        main_fields: set[str],
+        newsletters_mapping: dict[str, str],
     ) -> bool:
         """
 
@@ -428,7 +410,7 @@ class CTMSToAcousticService:
         self.context = {}
         try:
             main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(
-                contact, main_fields
+                contact, main_fields, newsletters_mapping
             )
             main_table_id = str(self.acoustic_main_table_id)
             email_id = main_table_data["email_id"]

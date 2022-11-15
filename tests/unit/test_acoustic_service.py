@@ -61,6 +61,7 @@ def test_ctms_to_acoustic(
     maximal_contact,
     minimal_contact,
     main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     contact_list = [example_contact, maximal_contact, minimal_contact]
     example_contact_expected = [52, len(example_contact.newsletters) - 2]
@@ -79,7 +80,7 @@ def test_ctms_to_acoustic(
             _newsletter,
             _product,
         ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-            contact, main_acoustic_fields
+            contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
         assert _main is not None
         assert _newsletter is not None
@@ -114,18 +115,19 @@ def test_ctms_to_acoustic_mocked(
     base_ctms_acoustic_service,
     maximal_contact,
     main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
     _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        maximal_contact, main_acoustic_fields
+        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
     assert _newsletter is not None
     assert len(_product) == 0
     with capture_logs() as caplog:
         results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
-            maximal_contact, main_acoustic_fields
+            maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
     assert results  # success
     acoustic_mock.add_recipient.assert_called()
@@ -159,19 +161,26 @@ def test_ctms_to_acoustic_mocked(
 
 
 def test_ctms_to_acoustic_with_subscription(
-    base_ctms_acoustic_service, contact_with_stripe_subscription, main_acoustic_fields
+    base_ctms_acoustic_service,
+    contact_with_stripe_subscription,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     acoustic_mock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
     _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        contact_with_stripe_subscription, main_acoustic_fields
+        contact_with_stripe_subscription,
+        main_acoustic_fields,
+        acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
     assert len(_newsletter) == 0  # None in Main Table Subscriber flags
     assert len(_product) == 1
     with capture_logs() as caplog:
         results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
-            contact_with_stripe_subscription, main_acoustic_fields
+            contact_with_stripe_subscription,
+            main_acoustic_fields,
+            acoustic_newsletters_mapping,
         )
     assert results  # success
 
@@ -197,12 +206,15 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     metrics_ctms_acoustic_service,
     contact_with_stripe_subscription,
     main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     acoustic_mock = MagicMock()
     acoustic_svc = metrics_ctms_acoustic_service
     acoustic_svc.acoustic = acoustic_mock
     _main, _newsletter, _product = acoustic_svc.convert_ctms_to_acoustic(
-        contact_with_stripe_subscription, main_acoustic_fields
+        contact_with_stripe_subscription,
+        main_acoustic_fields,
+        acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
     assert len(_newsletter) == 0  # None in Main Table Subscriber flags
@@ -239,7 +251,9 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
 
     with capture_logs() as caplog:
         results = acoustic_svc.attempt_to_upload_ctms_contact(
-            contact_with_stripe_subscription, main_acoustic_fields
+            contact_with_stripe_subscription,
+            main_acoustic_fields,
+            acoustic_newsletters_mapping,
         )
     assert results  # success
 
@@ -284,7 +298,10 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
 
 
 def test_ctms_to_acoustic_traced_email(
-    base_ctms_acoustic_service, example_contact, main_acoustic_fields
+    base_ctms_acoustic_service,
+    example_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     """A contact requesting tracing is traced in the logs."""
     email = "tester+trace-me-mozilla-nov24@example.com"
@@ -292,14 +309,14 @@ def test_ctms_to_acoustic_traced_email(
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
     _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        example_contact, main_acoustic_fields
+        example_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
     assert _newsletter is not None
     assert len(_product) == 0
     with capture_logs() as caplog:
         results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
-            example_contact, main_acoustic_fields
+            example_contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
     assert results  # success
 
