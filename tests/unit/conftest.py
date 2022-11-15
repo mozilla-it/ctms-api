@@ -85,7 +85,9 @@ def engine(pytestconfig):
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
     with test_engine.begin() as cnx:
-        cfg.attributes["connection"] = cnx  # pylint:disable = E1137
+        cfg.attributes[  # pylint:disable = unsupported-assignment-operation
+            "connection"
+        ] = cnx
         alembic_command.upgrade(cfg, "head")
 
     yield test_engine

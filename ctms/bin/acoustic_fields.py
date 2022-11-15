@@ -2,6 +2,7 @@
 """Manage Acoustic fields: add and remove from the db."""
 
 import argparse
+import os
 import sys
 
 from ctms import config
@@ -9,7 +10,7 @@ from ctms.database import get_db_engine
 from ctms.models import AcousticField
 
 
-def main(dbsession, test_args=None) -> int:
+def main(dbsession, args=None) -> int:
     parser = argparse.ArgumentParser(
         description="""
         Manage Acoustic fields
@@ -39,7 +40,7 @@ def main(dbsession, test_args=None) -> int:
         default="main",
     )
 
-    args = parser.parse_args(args=test_args)
+    args = parser.parse_args(args=args)
     if args.action == "add":
         dbsession.merge(AcousticField(tablename=args.tablename, field=args.field))
         dbsession.commit()
@@ -55,7 +56,7 @@ def main(dbsession, test_args=None) -> int:
         )
         if not row:
             print(f"Unknown field '{args.tablename}.{args.field}'. Give up.")
-            return 2
+            return os.EX_NOTFOUND
         dbsession.delete(row)
         dbsession.commit()
         print("Removed.")
@@ -63,7 +64,7 @@ def main(dbsession, test_args=None) -> int:
         entries = dbsession.query(AcousticField).all()
         print("\n".join(sorted(f"- {e.tablename}.{e.field}" for e in entries)))
 
-    return 0
+    return os.EX_OK
 
 
 if __name__ == "__main__":
