@@ -62,7 +62,9 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable, _ = get_db_engine(settings)
+    connectable = context.config.attributes.get("connection", None)
+    if connectable is None:
+        connectable, _ = get_db_engine(settings)
 
     with connectable.connect() as connection:
         context.configure(
