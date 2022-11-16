@@ -32,7 +32,7 @@ lxml = "^4.9.1"
 prometheus-client = "0.10.1"
 structlog = "^21.1.0"
 colorama = "^0.4.4"
-psycopg2 = "^2.8.6"
+psycopg2 = "^2.9.5"
 
 
 [tool.poetry.dev-dependencies]
