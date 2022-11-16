@@ -95,15 +95,17 @@ def test_sync_acoustic_record_retry_path(
         "count_retry": 1,
         "end_time": end_time.isoformat(),
     }
+    # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
+    # Get Contact(x2), Increment Retry
+    expected_queries_count = 6
+
     if no_metrics:
-        # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
-        # Get Contact(x2), Increment Retry
-        assert watcher.count == 6
+        assert watcher.count == expected_queries_count
         assert context == expected_context
         return
 
     # Metrics adds two DB queries (total records and retries)
-    assert watcher.count == 8
+    assert watcher.count == expected_queries_count + 2
     expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
@@ -148,15 +150,17 @@ def test_sync_acoustic_record_delete_path(
         "count_synced": 1,
         "end_time": end_time.isoformat(),
     }
+    # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
+    # Get Contact(x2), Increment Retry
+    expected_queries_count = 6
+
     if no_metrics:
-        # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
-        # Get Contact(x2), Increment Retry
-        assert watcher.count == 6
+        assert watcher.count == expected_queries_count
         assert context == expected_context
         return
 
     # Metrics adds two DB queries (total records and retries)
-    assert watcher.count == 8
+    assert watcher.count == expected_queries_count + 2
     expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
