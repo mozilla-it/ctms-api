@@ -26,6 +26,7 @@ from ctms.crud import (
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
+    get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
     get_contacts_by_any_id,
@@ -36,7 +37,6 @@ from ctms.crud import (
     get_stripe_products,
     get_vpn_by_email_id,
 )
-from ctms.models import AcousticField, AcousticNewsletterMapping
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 from .auth import hash_password
 from .database import Base
 from .models import (
+    AcousticField,
     AcousticNewsletterMapping,
     AmoAccount,
     ApiClient,
@@ -844,6 +845,36 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
 
     products.sort(key=get_product_id)
     return products
+
+
+def get_all_acoustic_fields(dbsession, tablename=None):
+    query = dbsession.query(AcousticField)
+    if tablename:
+        query = query.filter(AcousticField.tablename == tablename)
+    return query.all()
+
+
+def create_acoustic_field(dbsession, tablename, field):
+    row = AcousticField(tablename=tablename, field=field)
+    dbsession.merge(row)
+    dbsession.commit()
+    return row
+
+
+def delete_acoustic_field(dbsession, tablename, field):
+    row = (
+        dbsession.query(AcousticField)
+        .filter(
+            AcousticField.tablename == tablename,
+            AcousticField.field == field,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        return None
+    dbsession.delete(row)
+    dbsession.commit()
+    return row
 
 
 def get_all_acoustic_newsletters_mapping(dbsession):

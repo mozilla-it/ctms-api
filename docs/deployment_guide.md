@@ -61,12 +61,9 @@ More information about CTMS operations is available on the
 The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
 in the database.
 
-In order to add or remove certain fields, use the `acoustic_fields.py` script:
+In order to add, list, or remove certain fields, use the `acoustic_fields.py` script:
 
-```
-python ctms/bin/acoustic_fields.py remove fxaaa_id
-python ctms/bin/acoustic_fields.py add fxa_id
-```
+See `python ctms/bin/acoustic_fields.py --help` for usage details.
 
 ## Acoustic Newsletters Fields
 
