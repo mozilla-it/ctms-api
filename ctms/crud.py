@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 from .auth import hash_password
 from .database import Base
 from .models import (
+    AcousticNewsletterMapping,
     AmoAccount,
     ApiClient,
     Email,
@@ -843,3 +844,28 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
 
     products.sort(key=get_product_id)
     return products
+
+
+def get_all_acoustic_newsletters_mapping(dbsession):
+    return dbsession.query(AcousticNewsletterMapping).all()
+
+
+def create_acoustic_newsletters_mapping(dbsession, source, destination):
+    row = AcousticNewsletterMapping(source=source, destination=destination)
+    # This will fail if the mapping already exists.
+    dbsession.add(row)
+    dbsession.commit()
+    return row
+
+
+def delete_acoustic_newsletters_mapping(dbsession, source):
+    row = (
+        dbsession.query(AcousticNewsletterMapping)
+        .filter(AcousticNewsletterMapping.source == source)
+        .one_or_none()
+    )
+    if not row:
+        return None
+    dbsession.delete(row)
+    dbsession.commit()
+    return row

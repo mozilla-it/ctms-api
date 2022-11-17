@@ -72,13 +72,10 @@ python ctms/bin/acoustic_fields.py add fxa_id
 
 The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
 
-In order to add or remove certain mappings, use the `acoustic_newsletters_mapping.py` script:
 
-```
-python ctms/bin/acoustic_newsletters_mapping.py remove "test-pilot"
-python ctms/bin/acoustic_newsletters_mapping.py add "test-pilot:sub_new_test_pilot"
-```
+In order to add, list, or remove certain mappings, use the `acoustic_newsletters_mapping.py` script.
 
+See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
 
 ## Logging
 
