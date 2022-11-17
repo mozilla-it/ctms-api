@@ -31,7 +31,7 @@ pysilverpop = "^0.2.6"
 lxml = "^4.9.1"
 prometheus-client = "0.10.1"
 structlog = "^21.1.0"
-colorama = "^0.4.4"
+colorama = "^0.4.6"
 psycopg2 = "^2.9.5"
 
 
