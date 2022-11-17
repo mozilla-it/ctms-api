@@ -12,7 +12,7 @@ authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
 python = ">=3.7, <3.11"
-fastapi = "^0.79.0"
+fastapi = "^0.84.0"
 starlette = "^0.19.1"
 requests = "^2.28.1"
 uvicorn = {extras = ["standard"], version = "^0.17.5"}
