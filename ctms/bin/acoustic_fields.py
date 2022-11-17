@@ -56,7 +56,7 @@ def main(dbsession, args=None) -> int:
         )
         if not row:
             print(f"Unknown field '{args.tablename}.{args.field}'. Give up.")
-            return os.EX_NOTFOUND
+            return os.EX_DATAERR
         dbsession.delete(row)
         dbsession.commit()
         print("Removed.")
