@@ -61,12 +61,18 @@ More information about CTMS operations is available on the
 The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
 in the database.
 
-In order to add or remove certain fields, use the `acoustic_fields.py` script:
+In order to add, list, or remove certain fields, use the `acoustic_fields.py` script:
 
-```
-python ctms/bin/acoustic_fields.py remove fxaaa_id
-python ctms/bin/acoustic_fields.py add fxa_id
-```
+See `python ctms/bin/acoustic_fields.py --help` for usage details.
+
+## Acoustic Newsletters Fields
+
+The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
+
+
+In order to add, list, or remove certain mappings, use the `acoustic_newsletters_mapping.py` script.
+
+See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
 
 ## Logging
 

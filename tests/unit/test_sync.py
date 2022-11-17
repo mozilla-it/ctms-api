@@ -56,17 +56,25 @@ def test_ctms_to_acoustic_sync_creation(sync_obj):
     assert sync_obj is not None
 
 
-def test_sync_to_acoustic(sync_obj, maximal_contact, main_acoustic_fields):
+def test_sync_to_acoustic(
+    sync_obj, maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+):
     sync_obj.ctms_to_acoustic = MagicMock()
-    result = sync_obj.sync_contact_with_acoustic(maximal_contact, main_acoustic_fields)
+    result = sync_obj.sync_contact_with_acoustic(
+        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
     assert result
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
-        maximal_contact, main_acoustic_fields
+        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
 
 
 def test_sync_acoustic_record_retry_path(
-    dbsession, sync_obj, maximal_contact, main_acoustic_fields
+    dbsession,
+    sync_obj,
+    maximal_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     sync_obj.ctms_to_acoustic = MagicMock(
         **{"attempt_to_upload_ctms_contact.return_value": False}
@@ -78,7 +86,7 @@ def test_sync_acoustic_record_retry_path(
         context = sync_obj.sync_records(dbsession, end_time=end_time)
         dbsession.flush()
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
-        maximal_contact, main_acoustic_fields
+        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
     expected_context = {
         "batch_limit": 20,
@@ -88,14 +96,14 @@ def test_sync_acoustic_record_retry_path(
         "end_time": end_time.isoformat(),
     }
     if no_metrics:
-        assert (
-            watcher.count == 5
-        )  # Get Acoustic Fields, Get All Records, Get Contact(x2), Increment Retry
+        # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
+        # Get Contact(x2), Increment Retry
+        assert watcher.count == 6
         assert context == expected_context
         return
 
     # Metrics adds two DB queries (total records and retries)
-    assert watcher.count == 7
+    assert watcher.count == 8
     expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
@@ -113,7 +121,12 @@ def test_sync_acoustic_record_retry_path(
 
 
 def test_sync_acoustic_record_delete_path(
-    dbsession, sync_obj, maximal_contact, settings, main_acoustic_fields
+    dbsession,
+    sync_obj,
+    maximal_contact,
+    settings,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
 ):
     no_metrics = sync_obj.metric_service is None
     sync_obj.ctms_to_acoustic = MagicMock(
@@ -126,7 +139,7 @@ def test_sync_acoustic_record_delete_path(
         context = sync_obj.sync_records(dbsession, end_time=end_time)
         dbsession.flush()
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
-        maximal_contact, main_acoustic_fields
+        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
     expected_context = {
         "batch_limit": 20,
@@ -136,14 +149,14 @@ def test_sync_acoustic_record_delete_path(
         "end_time": end_time.isoformat(),
     }
     if no_metrics:
-        assert (
-            watcher.count == 5
-        )  # Get Acoustic Fields, All Records, Get Contact(x2), Increment Retry
+        # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
+        # Get Contact(x2), Increment Retry
+        assert watcher.count == 6
         assert context == expected_context
         return
 
     # Metrics adds two DB queries (total records and retries)
-    assert watcher.count == 7
+    assert watcher.count == 8
     expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context

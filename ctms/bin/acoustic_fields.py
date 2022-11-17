@@ -1,29 +1,35 @@
 #!/usr/bin/env python3
-"""Manage Acoustic fields: add and remove from the db."""
+"""Manage Acoustic fields: add, list, and remove from the db."""
 
 import argparse
 import os
 import sys
 
 from ctms import config
+from ctms.crud import (
+    create_acoustic_field,
+    delete_acoustic_field,
+    get_all_acoustic_fields,
+)
 from ctms.database import get_db_engine
-from ctms.models import AcousticField
 
 
 def main(dbsession, args=None) -> int:
     parser = argparse.ArgumentParser(
-        description="""
-        Manage Acoustic fields
-        """
+        description="Manage Acoustic fields",
     )
     subparsers = parser.add_subparsers(dest="action")
-    parser_add = subparsers.add_parser("add")
+    parser_add = subparsers.add_parser(
+        "add", usage="""python acoustic_fields.py add "fxaid" """
+    )
     parser_add.add_argument("field")
     parser_add.add_argument(
         "--tablename", "-t", help="Acoustic table name", default="main"
     )
 
-    parser_remove = subparsers.add_parser("remove")
+    parser_remove = subparsers.add_parser(
+        "remove", usage="""python acoustic_fields.py remove "fxaid" """
+    )
     parser_remove.add_argument("field")
     parser_remove.add_argument(
         "--tablename",
@@ -42,37 +48,26 @@ def main(dbsession, args=None) -> int:
 
     args = parser.parse_args(args=args)
     if args.action == "add":
-        dbsession.merge(AcousticField(tablename=args.tablename, field=args.field))
-        dbsession.commit()
-        print("Added.")
+        row = create_acoustic_field(dbsession, args.tablename, args.field)
+        print(f"Added '{row.tablename}.{row.field}'.")
     elif args.action == "remove":
-        row = (
-            dbsession.query(AcousticField)
-            .filter(
-                AcousticField.tablename == args.tablename,
-                AcousticField.field == args.field,
-            )
-            .one_or_none()
-        )
+        row = delete_acoustic_field(dbsession, args.tablename, args.field)
         if not row:
             print(f"Unknown field '{args.tablename}.{args.field}'. Give up.")
             return os.EX_DATAERR
-        dbsession.delete(row)
-        dbsession.commit()
-        print("Removed.")
+        print(f"Removed '{row.tablename}.{row.field}'.")
     else:
-        entries = dbsession.query(AcousticField).all()
+        entries = get_all_acoustic_fields(dbsession)
         print("\n".join(sorted(f"- {e.tablename}.{e.field}" for e in entries)))
 
     return os.EX_OK
 
 
 if __name__ == "__main__":
-    # Get the database
     config_settings = config.Settings()
     engine, session_factory = get_db_engine(config_settings)
     session = session_factory()
     with engine.connect() as connection:
-        ret = main(session)  # pylint:disable = invalid-name
+        return_code = main(session)  # pylint:disable = invalid-name
 
-    sys.exit(ret)
+    sys.exit(return_code)

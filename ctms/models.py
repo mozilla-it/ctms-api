@@ -199,6 +199,13 @@ class AcousticField(Base):
     )
 
 
+class AcousticNewsletterMapping(Base):
+    __tablename__ = "acoustic_newsletter_mapping"
+
+    source = Column(String, primary_key=True)
+    destination = Column(String)
+
+
 class VpnWaitlist(Base):
     __tablename__ = "vpn_waitlist"
 

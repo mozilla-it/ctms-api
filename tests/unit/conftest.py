@@ -26,6 +26,8 @@ from ctms.crud import (
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
+    get_all_acoustic_fields,
+    get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
     get_contacts_by_any_id,
     get_email,
@@ -35,7 +37,6 @@ from ctms.crud import (
     get_stripe_products,
     get_vpn_by_email_id,
 )
-from ctms.models import AcousticField
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
@@ -164,10 +165,14 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
 
 @pytest.fixture
 def main_acoustic_fields(dbsession):
-    records = (
-        dbsession.query(AcousticField).filter(AcousticField.tablename == "main").all()
-    )
+    records = get_all_acoustic_fields(dbsession, tablename="main")
     return {r.field for r in records}
+
+
+@pytest.fixture
+def acoustic_newsletters_mapping(dbsession):
+    records = get_all_acoustic_newsletters_mapping(dbsession)
+    return {r.source: r.destination for r in records}
 
 
 @pytest.fixture

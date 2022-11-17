@@ -13,7 +13,7 @@ from ctms.crud import (
     get_all_acoustic_retries_count,
     retry_acoustic_record,
 )
-from ctms.models import AcousticField, PendingAcousticRecord
+from ctms.models import AcousticField, AcousticNewsletterMapping, PendingAcousticRecord
 from ctms.schemas import ContactSchema
 
 
@@ -53,7 +53,12 @@ class CTMSToAcousticSync:
         self.is_acoustic_enabled = is_acoustic_enabled
         self.metric_service = metric_service
 
-    def sync_contact_with_acoustic(self, contact: ContactSchema, main_fields: set[str]):
+    def sync_contact_with_acoustic(
+        self,
+        contact: ContactSchema,
+        main_fields: set[str],
+        newsletters_mapping: dict[str, str],
+    ):
         """
 
         :param contact:
@@ -62,14 +67,18 @@ class CTMSToAcousticSync:
         try:
             # Convert ContactSchema to Acoustic Readable, attempt API call
             return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
-                contact, main_fields
+                contact, main_fields, newsletters_mapping
             )
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Error executing sync.sync_contact_with_acoustic")
             return False
 
     def _sync_pending_record(
-        self, db, pending_record: PendingAcousticRecord, main_fields: set[str]
+        self,
+        db,
+        pending_record: PendingAcousticRecord,
+        main_fields: set[str],
+        newsletters_mapping: dict[str, str],
     ) -> str:
         state = "unknown"
         try:
@@ -77,7 +86,9 @@ class CTMSToAcousticSync:
                 contact: ContactSchema = get_acoustic_record_as_contact(
                     db, pending_record
                 )
-                is_success = self.sync_contact_with_acoustic(contact, main_fields)
+                is_success = self.sync_contact_with_acoustic(
+                    contact, main_fields, newsletters_mapping
+                )
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
@@ -129,6 +140,13 @@ class CTMSToAcousticSync:
         )
         main_fields = {entry.field for entry in main_acoustic_fields}
 
+        newsletters_mapping_entries: List[AcousticNewsletterMapping] = db.query(
+            AcousticNewsletterMapping
+        ).all()
+        newsletters_mapping = {
+            entry.source: entry.destination for entry in newsletters_mapping_entries
+        }
+
         # Get all Records before current time
         all_acoustic_records_before_now: List[
             PendingAcousticRecord
@@ -144,7 +162,9 @@ class CTMSToAcousticSync:
         states: Dict[str, int] = defaultdict(int)
         record_created = None
         for acoustic_record in all_acoustic_records_before_now:
-            state = self._sync_pending_record(db, acoustic_record, main_fields)
+            state = self._sync_pending_record(
+                db, acoustic_record, main_fields, newsletters_mapping
+            )
             total += 1
 
             states[state] += 1
