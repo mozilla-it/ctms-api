@@ -40,7 +40,7 @@ def main(dbsession, test_args=None) -> int:
         )
         if not row:
             print(f"Unknown mapping '{args.mapping}'. Give up.")
-            return os.EX_NOTFOUND
+            return os.EX_DATAERR
         dbsession.delete(row)
         dbsession.commit()
         print("Removed.")
