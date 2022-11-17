@@ -17,16 +17,20 @@ from ctms.database import get_db_engine
 def main(dbsession, test_args=None) -> int:
     parser = argparse.ArgumentParser(
         description="Manage Acoustic Newsletter mapping",
-        usage="""
-        python acoustic_newsletters_mapping.py add "test-pilot:sub_new_test_pilot" """,
     )
     subparsers = parser.add_subparsers(dest="action")
-    parser_add = subparsers.add_parser("add")
+    parser_add = subparsers.add_parser(
+        "add",
+        usage="""python acoustic_newsletters_mapping.py add "test-pilot:sub_new_test_pilot" """,
+    )
     parser_add.add_argument(
         "mapping", help="Add newsletter mapping specified as 'source:destination'"
     )
 
-    parser_remove = subparsers.add_parser("remove")
+    parser_remove = subparsers.add_parser(
+        "remove",
+        usage="""python acoustic_newsletters_mapping.py remove "test-pilot" """,
+    )
     parser_remove.add_argument(
         "source", help="Remove newsletter mapping with specified 'source'"
     )

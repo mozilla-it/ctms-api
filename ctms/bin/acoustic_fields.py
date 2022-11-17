@@ -17,17 +17,19 @@ from ctms.database import get_db_engine
 def main(dbsession, args=None) -> int:
     parser = argparse.ArgumentParser(
         description="Manage Acoustic fields",
-        usage="""
-        python acoustic_fields.py add fxaid """,
     )
     subparsers = parser.add_subparsers(dest="action")
-    parser_add = subparsers.add_parser("add")
+    parser_add = subparsers.add_parser(
+        "add", usage="""python acoustic_fields.py add "fxaid" """
+    )
     parser_add.add_argument("field")
     parser_add.add_argument(
         "--tablename", "-t", help="Acoustic table name", default="main"
     )
 
-    parser_remove = subparsers.add_parser("remove")
+    parser_remove = subparsers.add_parser(
+        "remove", usage="""python acoustic_fields.py remove "fxaid" """
+    )
     parser_remove.add_argument("field")
     parser_remove.add_argument(
         "--tablename",
