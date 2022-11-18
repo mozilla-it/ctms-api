@@ -39,7 +39,7 @@ psycopg2 = "^2.9.5"
 pre-commit = "^2.20.0"
 sphinx = "^5.1.1"
 pytest = "^6.1.2"
-isort = {extras = ["pyproject"], version = "^4.3.21"}
+isort = {extras = ["pyproject"], version = "^5.10.1"}
 black = "^22.10.0"
 coverage = {extras = ["toml"], version = "^6.5"}
 mypy = "^0.910"
