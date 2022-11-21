@@ -5,6 +5,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: development
+    image: web
     volumes:
       - type: bind
         source: .
@@ -27,6 +28,11 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
       LC_COLLATE: en_US.UTF8
       LC_CTYPE: en_US.UTF8
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
   postgres-admin:
     image: adminer
     restart: always
@@ -34,3 +40,17 @@ services:
       - postgres
     ports:
       - 8080:8080
+
+  tests:
+    image: web
+    depends_on:
+      web:
+        condition: service_started
+      postgres:
+          condition: service_healthy
+    command: ["bash", "./docker/test.sh"]
+    profiles: [test]
+    init: true
+    env_file:
+      - docker/config/local_dev.env
+      - .env
