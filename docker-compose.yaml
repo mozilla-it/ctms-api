@@ -38,7 +38,8 @@ services:
     image: adminer
     restart: always
     depends_on:
-      - postgres
+      postgres:
+          condition: service_healthy
     ports:
       - 8080:8080
 
