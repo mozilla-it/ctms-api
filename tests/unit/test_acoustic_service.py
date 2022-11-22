@@ -55,48 +55,84 @@ def test_base_service_creation(base_ctms_acoustic_service):
     assert base_ctms_acoustic_service is not None
 
 
-def test_ctms_to_acoustic(
+def test_ctms_to_acoustic_no_product(
     base_ctms_acoustic_service,
-    example_contact,
+    minimal_contact,
     maximal_contact,
+    example_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    for i, contact in enumerate([minimal_contact, maximal_contact, example_contact]):
+        assert len(contact.products) == 0
+        _, _, products = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+            contact, main_acoustic_fields, acoustic_newsletters_mapping
+        )
+        assert len(products) == 0, f"{i + 1}/3: no products in contact."
+
+
+def test_ctms_to_acoustic_newsletters(
+    base_ctms_acoustic_service,
     minimal_contact,
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    example_contact_expected = [52, len(example_contact.newsletters) - 2]
-    maximal_contact_expected = [52, len(maximal_contact.newsletters) - 2]
-    minimal_contact_expected = [33, len(minimal_contact.newsletters) - 2]
-    expected_results = {
-        example_contact.email.email_id: example_contact_expected,
-        maximal_contact.email.email_id: maximal_contact_expected,
-        minimal_contact.email.email_id: minimal_contact_expected,
-    }
+    (main, newsletters, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
 
-    for contact in contact_list:
-        expected = expected_results.get(contact.email.email_id)
-        (
-            _main,
-            _newsletter,
-            _product,
-        ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-            contact, main_acoustic_fields, acoustic_newsletters_mapping
-        )
-        assert _main is not None
-        assert _newsletter is not None
-        assert (
-            len(_main) == expected[0]
-        ), f"Expected {expected[0]} with id {contact.email.email_id}"
-        assert (
-            len(_newsletter) == expected[1]
-        ), f"Expected {expected[1]} with id {contact.email.email_id}"
-        assert _main["email"] == contact.email.primary_email
-        if contact.fxa is not None:
-            assert _main["fxa_id"] == contact.fxa.fxa_id
-        for row in _newsletter:
-            assert row["email_id"] == str(contact.email.email_id)
-            assert row["newsletter_name"] is not None
-        assert len(_product) == 0
+    assert len(minimal_contact.newsletters) == 4
+    # Newsletters records
+    assert len(newsletters) == 2
+    app_dev, mofo = newsletters
+    assert (
+        app_dev["email_id"] == mofo["email_id"] == str(minimal_contact.email.email_id)
+    )
+    assert app_dev["newsletter_source"] == mofo["newsletter_source"] == None
+    assert app_dev["newsletter_name"] == "app-dev"
+    assert mofo["newsletter_name"] == "mozilla-foundation"
+    # Newsletters are marked as subscribed in main table
+    assert main["sub_apps_and_hacks"] == "1"
+    assert main["sub_mozilla_foundation"] == "1"
+    # Newsletters not in mapping are skipped
+    assert base_ctms_acoustic_service.context["newsletters_skipped"] == [
+        "maker-party",
+        "mozilla-learning-network",
+    ]
+
+
+def test_ctms_to_acoustic_minimal_fields(
+    base_ctms_acoustic_service,
+    minimal_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
+    assert main["email"] == minimal_contact.email.primary_email
+    assert main["basket_token"] == str(minimal_contact.email.basket_token)
+    assert main["mailing_country"] == minimal_contact.email.mailing_country
+    assert "skipped_fields" not in base_ctms_acoustic_service.context
+
+
+def test_ctms_to_acoustic_maximal_fields(
+    base_ctms_acoustic_service,
+    maximal_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    skip_fields = main_acoustic_fields - {"mailing_country"}
+    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        maximal_contact, skip_fields, acoustic_newsletters_mapping
+    )
+
+    assert main["email"] == maximal_contact.email.primary_email
+    assert main["basket_token"] == str(maximal_contact.email.basket_token)
+    assert main["fxa_id"] == maximal_contact.fxa.fxa_id
+    assert base_ctms_acoustic_service.context["skipped_fields"] == [
+        "email.mailing_country"
+    ]
 
 
 # Expected log context from successful .attempt_to_upload_ctms_contact()

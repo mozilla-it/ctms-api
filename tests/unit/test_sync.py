@@ -6,7 +6,6 @@ import pytest
 
 from ctms.crud import schedule_acoustic_record
 from ctms.sync import CTMSToAcousticSync, check_healthcheck, update_healthcheck
-from tests.unit.test_crud import StatementWatcher
 
 
 @pytest.fixture
@@ -82,9 +81,8 @@ def test_sync_acoustic_record_retry_path(
     _setup_pending_record(dbsession, email_id=maximal_contact.email.email_id)
     no_metrics = sync_obj.metric_service is None
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-    with StatementWatcher(dbsession.connection()) as watcher:
-        context = sync_obj.sync_records(dbsession, end_time=end_time)
-        dbsession.flush()
+
+    context = sync_obj.sync_records(dbsession, end_time=end_time)
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
         maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
@@ -95,15 +93,11 @@ def test_sync_acoustic_record_retry_path(
         "count_retry": 1,
         "end_time": end_time.isoformat(),
     }
+
     if no_metrics:
-        # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
-        # Get Contact(x2), Increment Retry
-        assert watcher.count == 6
         assert context == expected_context
         return
 
-    # Metrics adds two DB queries (total records and retries)
-    assert watcher.count == 8
     expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
@@ -133,11 +127,11 @@ def test_sync_acoustic_record_delete_path(
         **{"attempt_to_upload_ctms_contact.return_value": True}
     )
     _setup_pending_record(dbsession, email_id=maximal_contact.email.email_id)
-
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-    with StatementWatcher(dbsession.connection()) as watcher:
-        context = sync_obj.sync_records(dbsession, end_time=end_time)
-        dbsession.flush()
+
+    context = sync_obj.sync_records(dbsession, end_time=end_time)
+    dbsession.flush()
+
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
         maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
@@ -148,15 +142,11 @@ def test_sync_acoustic_record_delete_path(
         "count_synced": 1,
         "end_time": end_time.isoformat(),
     }
+
     if no_metrics:
-        # Get Acoustic Fields, Get Acoustic newsletters mappings, Get All Records,
-        # Get Contact(x2), Increment Retry
-        assert watcher.count == 6
         assert context == expected_context
         return
 
-    # Metrics adds two DB queries (total records and retries)
-    assert watcher.count == 8
     expected_context["retry_backlog"] = 0
     expected_context["sync_backlog"] = 1
     assert context == expected_context
