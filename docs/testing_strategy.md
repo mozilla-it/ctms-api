@@ -30,7 +30,7 @@ with the database.
 
 ### To run the tests:
 You can run the suite by first entering the web container:
-> make test-shell
+> make shell
 
 And then run the installed ``pytest``:
 > pytest

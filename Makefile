@@ -21,7 +21,6 @@ help:
 	@echo ""
 	@echo "  test        - run test suite"
 	@echo "  shell       - open a shell in the web container"
-	@echo "  test-shell  - open a shell in test environment"
 	@echo "  db-only     - run PostgreSQL server"
 	@echo ""
 	@echo "  help    - see this text"
@@ -74,6 +73,3 @@ ifneq (1, ${MK_KEEP_DOCKER_UP})
 	docker-compose down
 endif
 
-.PHONY: test-shell
-test-shell: .env
-	docker-compose -f ./docker-compose.yaml run --rm ${MK_WITH_SERVICE_PORTS} web bash
