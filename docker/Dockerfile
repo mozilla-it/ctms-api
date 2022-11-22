@@ -87,12 +87,7 @@ CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 # 'lint' stage runs similar checks to pre-commit / scripts/lint.sh
 # running in check mode means build will fail if any linting errors occur
 FROM development AS lint
-RUN bandit -lll --recursive ctms --exclude "ctms/poetry.lock,ctms/.venv,ctms/.mypy,ctms/build"
-RUN mypy ctms
-RUN black --config ./pyproject.toml --check ctms tests
-RUN isort --recursive --settings-path ./pyproject.toml --check-only ctms
-RUN pylint ctms tests/unit
-CMD ./docker/lint.sh
+RUN ./docker/lint.sh
 
 
 # 'test' stage runs our unit tests with pytest and
