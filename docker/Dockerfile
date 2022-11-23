@@ -83,19 +83,6 @@ EXPOSE $PORT
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 
-
-# 'lint' stage runs similar checks to pre-commit / scripts/lint.sh
-# running in check mode means build will fail if any linting errors occur
-FROM development AS lint
-RUN ./docker/lint.sh
-
-
-# 'test' stage runs our unit tests with pytest and
-# coverage.  Build will fail if test coverage is under 80%
-FROM development AS test
-CMD ./docker/test.sh
-
-
 # 'production' stage uses the clean 'python-base' stage and copyies
 # in only our runtime deps that were installed in the 'builder-base'
 FROM python-base as production
