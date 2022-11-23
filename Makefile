@@ -36,8 +36,7 @@ help:
 
 .PHONY: build
 build: .env
-	docker-compose -f ./docker-compose.yaml build \
-		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
+	docker-compose build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
 lint: .env
@@ -45,7 +44,7 @@ lint: .env
 
 .PHONY: db-only
 db-only: .env
-	docker-compose -f ./docker-compose.yaml run --service-ports postgres postgres-admin
+	docker-compose up postgres-admin
 
 .PHONY: setup
 setup: .env
@@ -58,7 +57,7 @@ setup: .env
 
 .PHONY: shell
 shell: .env
-	docker-compose -f ./docker-compose.yaml run ${MK_WITH_SERVICE_PORTS} --rm web bash
+	docker-compose run ${MK_WITH_SERVICE_PORTS} --rm web bash
 
 .PHONY: start
 start: .env
