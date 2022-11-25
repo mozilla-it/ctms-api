@@ -45,3 +45,11 @@ def test_crash_unauthorized(anon_client):
     resp = anon_client.get("/__crash__")
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
+
+
+def test_exposed_configuration(anon_client, dbsession):
+    resp = anon_client.get("/configuration")
+    exposed = resp.json()
+
+    assert "fxa_lang" in exposed["acoustic"]["sync_fields"]["main"]
+    assert exposed["acoustic"]["newsletter_mappings"]["mozilla-rally"] == "sub_rally"

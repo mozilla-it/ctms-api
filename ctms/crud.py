@@ -848,7 +848,9 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
 
 
 def get_all_acoustic_fields(dbsession, tablename=None):
-    query = dbsession.query(AcousticField)
+    query = dbsession.query(AcousticField).order_by(
+        asc(AcousticField.tablename), asc(AcousticField.field)
+    )
     if tablename:
         query = query.filter(AcousticField.tablename == tablename)
     return query.all()
