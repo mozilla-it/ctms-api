@@ -39,9 +39,9 @@ from .config import re_trace_email
 from .crud import (
     create_contact,
     create_or_update_contact,
-    get_api_client_by_id,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
+    get_api_client_by_id,
     get_bulk_contacts,
     get_contact_by_email_id,
     get_email,
