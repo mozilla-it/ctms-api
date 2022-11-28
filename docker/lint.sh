@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+set -euo pipefail
 
 CURRENT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR="$(dirname "$CURRENT_DIR")"
@@ -15,7 +15,7 @@ if [ -n "$HAS_GIT" ]; then
     detect-secrets-hook $SECRETS_TO_SCAN --baseline .secrets.baseline
 fi
 
-mypy "${BASE_DIR}"
-black --config "${BASE_DIR}/pyproject.toml" "${BASE_DIR}"
-isort --recursive --settings-path "${BASE_DIR}/pyproject.toml" "${BASE_DIR}"
-pylint ctms tests/unit
+isort --check-only "${BASE_DIR}"
+black --check "${BASE_DIR}"
+mypy "${BASE_DIR}/ctms"
+pylint "${BASE_DIR}/ctms" "${BASE_DIR}/tests/unit"

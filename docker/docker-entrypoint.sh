@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+set -euo pipefail
 
 # activate our virtual environment here
 . /opt/pysetup/.venv/bin/activate

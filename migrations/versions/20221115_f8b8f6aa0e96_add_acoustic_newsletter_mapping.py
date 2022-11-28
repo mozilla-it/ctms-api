@@ -13,7 +13,6 @@ Create Date: 2022-11-15 12:20:10.096170
 import sqlalchemy as sa
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision = "f8b8f6aa0e96"  # pragma: allowlist secret
 down_revision = "06f24cc01c09"  # pragma: allowlist secret

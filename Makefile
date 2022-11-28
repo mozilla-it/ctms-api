@@ -21,7 +21,6 @@ help:
 	@echo ""
 	@echo "  test        - run test suite"
 	@echo "  shell       - open a shell in the web container"
-	@echo "  test-shell  - open a shell in test environment"
 	@echo "  db-only     - run PostgreSQL server"
 	@echo ""
 	@echo "  help    - see this text"
@@ -37,17 +36,15 @@ help:
 
 .PHONY: build
 build: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml build \
-		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
+	docker-compose build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
 lint: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.lint.yaml build \
-		--build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID} lint
+	docker-compose run --rm --no-deps web bash ./docker/lint.sh
 
 .PHONY: db-only
 db-only: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --service-ports postgres postgres-admin
+	docker-compose up postgres-admin
 
 .PHONY: setup
 setup: .env
@@ -60,7 +57,7 @@ setup: .env
 
 .PHONY: shell
 shell: .env
-	docker-compose -f ./docker-compose.yaml run ${MK_WITH_SERVICE_PORTS} --rm web bash
+	docker-compose run ${MK_WITH_SERVICE_PORTS} --rm web bash
 
 .PHONY: start
 start: .env
@@ -68,13 +65,10 @@ start: .env
 
 .PHONY: test
 test: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --rm ${MK_WITH_SERVICE_PORTS} tests
+	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} tests
 ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
 	docker-compose down
 endif
 
-.PHONY: test-shell
-test-shell: .env
-	docker-compose -f ./docker-compose.yaml -f ./tests/docker-compose.test.yaml run --rm ${MK_WITH_SERVICE_PORTS} web bash

@@ -40,7 +40,7 @@ The project is structured with the following in mind:
 
 Below are some files that are worth making note of:
 - [MAKEFILE](Makefile)
-    - Enabling commands such as: make {build | lint | setup | start | test | shell | test-shell | db-only}
+    - Enabling commands such as: make {build | lint | setup | start | test | shell | db-only}
 - [ctms/app.py](ctms/app.py)
     - FastAPI handling of HTTP Requests and routing to services
 - [ctms/bin/acoustic_sync.py](ctms/bin/acoustic_sync.py)
