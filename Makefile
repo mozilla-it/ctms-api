@@ -8,6 +8,9 @@ export
 CTMS_UID ?= 10001
 CTMS_GID ?= 10001
 
+VENV := $(shell echo $${VIRTUAL_ENV-.venv})
+INSTALL_STAMP = $(VENV)/.install.stamp
+
 .PHONY: help
 help:
 	@echo "Usage: make RULE"
@@ -33,14 +36,19 @@ help:
 	cp docker/config/env.dist .env; \
 	fi
 
+install: $(INSTALL_STAMP)
+$(INSTALL_STAMP): poetry.lock
+	@if [ -z $(shell command -v poetry 2> /dev/null) ]; then echo "Poetry could not be found. See https://python-poetry.org/docs/"; exit 2; fi
+	POETRY_VIRTUALENVS_IN_PROJECT=1 poetry install --no-root
+	touch $(INSTALL_STAMP)
 
 .PHONY: build
 build: .env
 	docker-compose build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
-lint: .env
-	docker-compose run --rm --no-deps web bash ./docker/lint.sh
+lint: .env $(INSTALL_STAMP)
+	bin/lint.sh
 
 .PHONY: db-only
 db-only: .env
