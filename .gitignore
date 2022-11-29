@@ -10,6 +10,5 @@ build
 reports/
 .coverage
 htmlcov/
-.isort.cfg
 docs/_build
 .env

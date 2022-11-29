@@ -15,7 +15,7 @@ if [ -n "$HAS_GIT" ]; then
     detect-secrets-hook $SECRETS_TO_SCAN --baseline .secrets.baseline
 fi
 
-isort --settings-path ./pyproject.toml --check-only "${BASE_DIR}"
+isort --check-only "${BASE_DIR}"
 black --check "${BASE_DIR}"
 mypy "${BASE_DIR}/ctms"
 pylint "${BASE_DIR}/ctms" "${BASE_DIR}/tests/unit"
