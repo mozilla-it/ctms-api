@@ -1,11 +1,10 @@
 """Prometheus metrics for instrumentation and monitoring."""
 
 from itertools import product
-from typing import Any, Dict, cast
+from typing import Any, Type, cast
 
 from fastapi import FastAPI
 from prometheus_client import CollectorRegistry, Counter, Histogram
-from prometheus_client.metrics import MetricWrapperBase
 from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.utils import INF
 from pydantic import ValidationError
@@ -15,7 +14,7 @@ from starlette.routing import Route
 from ctms import config
 from ctms.crud import get_active_api_client_ids
 
-METRICS_PARAMS = {
+METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
     "requests": (
         Counter,
         {
@@ -92,7 +91,7 @@ def get_metrics_reporting_registry(
     return process_registry
 
 
-def init_metrics(registry: CollectorRegistry) -> Dict[str, MetricWrapperBase]:
+def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram]:
     """Initialize the metrics with the registry."""
     metrics = {}
     for name, init_bits in METRICS_PARAMS.items():
@@ -102,7 +101,7 @@ def init_metrics(registry: CollectorRegistry) -> Dict[str, MetricWrapperBase]:
 
 
 def init_metrics_labels(
-    dbsession: Session, app: FastAPI, metrics: Dict[str, MetricWrapperBase]
+    dbsession: Session, app: FastAPI, metrics: dict[str, Counter | Histogram]
 ) -> None:
     """Create the initial metric combinations."""
     openapi = app.openapi()
@@ -149,7 +148,7 @@ def init_metrics_labels(
 
 
 def emit_response_metrics(
-    context: Dict[str, Any], metrics: Dict[str, MetricWrapperBase]
+    context: dict[str, Any], metrics: dict[str, Counter | Histogram]
 ) -> None:
     """Emit metrics for a response."""
     if not metrics:
@@ -166,14 +165,16 @@ def emit_response_metrics(
     status_code = context["status_code"]
     status_code_family = str(status_code)[0] + "xx"
 
-    metrics["requests"].labels(
+    counter = cast(Counter, metrics["requests"])
+    counter.labels(
         method=method,
         path_template=path_template,
         status_code=status_code,
         status_code_family=status_code_family,
     ).inc()
 
-    metrics["requests_duration"].labels(
+    histogram = cast(Histogram, metrics["requests_duration"])
+    histogram.labels(
         method=method,
         path_template=path_template,
         status_code_family=status_code_family,
@@ -181,7 +182,8 @@ def emit_response_metrics(
 
     client_id = context.get("client_id")
     if client_id:
-        metrics["api_requests"].labels(
+        counter = cast(Counter, metrics["api_requests"])
+        counter.labels(
             method=method,
             path_template=path_template,
             client_id=client_id,
