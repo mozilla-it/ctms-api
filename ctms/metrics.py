@@ -1,7 +1,7 @@
 """Prometheus metrics for instrumentation and monitoring."""
 
 from itertools import product
-from typing import Any, Dict, Type, cast
+from typing import Any, Type, cast
 
 from fastapi import FastAPI
 from prometheus_client import CollectorRegistry, Counter, Histogram
@@ -91,7 +91,7 @@ def get_metrics_reporting_registry(
     return process_registry
 
 
-def init_metrics(registry: CollectorRegistry) -> Dict[str, Counter | Histogram]:
+def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram]:
     """Initialize the metrics with the registry."""
     metrics = {}
     for name, init_bits in METRICS_PARAMS.items():
@@ -101,7 +101,7 @@ def init_metrics(registry: CollectorRegistry) -> Dict[str, Counter | Histogram]:
 
 
 def init_metrics_labels(
-    dbsession: Session, app: FastAPI, metrics: Dict[str, Counter | Histogram]
+    dbsession: Session, app: FastAPI, metrics: dict[str, Counter | Histogram]
 ) -> None:
     """Create the initial metric combinations."""
     openapi = app.openapi()
@@ -148,7 +148,7 @@ def init_metrics_labels(
 
 
 def emit_response_metrics(
-    context: Dict[str, Any], metrics: Dict[str, Counter | Histogram]
+    context: dict[str, Any], metrics: dict[str, Counter | Histogram]
 ) -> None:
     """Emit metrics for a response."""
     if not metrics:
