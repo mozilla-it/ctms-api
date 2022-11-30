@@ -48,8 +48,8 @@ def test_crash_unauthorized(anon_client):
 
 
 def test_exposed_configuration(anon_client, dbsession):
-    resp = anon_client.get("/configuration")
+    resp = anon_client.get("/acoustic_configuration")
     exposed = resp.json()
 
-    assert "fxa_lang" in exposed["acoustic"]["sync_fields"]["main"]
-    assert exposed["acoustic"]["newsletter_mappings"]["mozilla-rally"] == "sub_rally"
+    assert "fxa_lang" in exposed["sync_fields"]["main"]
+    assert exposed["newsletter_mappings"]["mozilla-rally"] == "sub_rally"

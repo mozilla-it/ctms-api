@@ -919,12 +919,12 @@ def metrics(request: Request):
     return Response(generate_latest(registry), status_code=200, headers=headers)
 
 
-@app.get("/configuration", tags=["Platform"])
+@app.get("/acoustic_configuration", tags=["Platform"])
 def configuration(
     request: Request,
     db_session: Session = Depends(get_db),
 ):
-    """Return configuration information, publicly readable"""
+    """Return Acoustic configuration, publicly readable"""
     all_fields = get_all_acoustic_fields(db_session)
     fields_grouped_by_tablename = defaultdict(list)
     for entry in all_fields:
@@ -936,10 +936,8 @@ def configuration(
     }
 
     return {
-        "acoustic": {
-            "sync_fields": fields_grouped_by_tablename,
-            "newsletter_mappings": newsletter_mappings,
-        }
+        "sync_fields": fields_grouped_by_tablename,
+        "newsletter_mappings": newsletter_mappings,
     }
 
 
