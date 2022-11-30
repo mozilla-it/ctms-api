@@ -20,10 +20,10 @@ from ctms.metrics import (
 # Higher numbers = more ways to slice data, more storage, more processing time for summaries
 
 # Cardinality of ctms_requests_total counter
-METHOD_PATH_CODE_COMBINATIONS = 50
+METHOD_PATH_CODE_COMBINATIONS = 51
 
 # Cardinality of ctms_requests_duration_seconds histogram
-METHOD_PATH_CODEFAM_COMBOS = 36
+METHOD_PATH_CODEFAM_COMBOS = 37
 DURATION_BUCKETS = 8
 DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 

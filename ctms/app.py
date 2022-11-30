@@ -5,6 +5,7 @@ import json
 import sys
 import time
 from base64 import b64decode
+from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Dict, List, Literal, Optional, Tuple, Union
@@ -38,6 +39,8 @@ from .config import re_trace_email
 from .crud import (
     create_contact,
     create_or_update_contact,
+    get_all_acoustic_fields,
+    get_all_acoustic_newsletters_mapping,
     get_api_client_by_id,
     get_bulk_contacts,
     get_contact_by_email_id,
@@ -914,6 +917,28 @@ def metrics(request: Request):
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_reporting_registry(get_metrics_registry())
     return Response(generate_latest(registry), status_code=200, headers=headers)
+
+
+@app.get("/acoustic_configuration", tags=["Platform"])
+def configuration(
+    request: Request,
+    db_session: Session = Depends(get_db),
+):
+    """Return Acoustic configuration, publicly readable"""
+    all_fields = get_all_acoustic_fields(db_session)
+    fields_grouped_by_tablename = defaultdict(list)
+    for entry in all_fields:
+        fields_grouped_by_tablename[entry.tablename].append(entry.field)
+
+    newsletter_mappings = {
+        entry.source: entry.destination
+        for entry in get_all_acoustic_newsletters_mapping(db_session)
+    }
+
+    return {
+        "sync_fields": fields_grouped_by_tablename,
+        "newsletter_mappings": newsletter_mappings,
+    }
 
 
 def _process_stripe_object(
