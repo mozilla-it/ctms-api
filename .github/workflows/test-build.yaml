@@ -34,13 +34,7 @@ jobs:
           push: false
           target: "development"
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
-      
-      - name: Run linting
-        run: |-
-          docker run --rm \
-          ghcr.io/${{ github.repository }}:${{ github.sha }} \
-          ./docker/lint.sh
-      
+
       - name: Run tests
         run: |-
           docker run --rm \
