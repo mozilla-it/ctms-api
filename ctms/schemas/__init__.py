@@ -38,12 +38,6 @@ from .newsletter import (
     UpdatedNewsletterInSchema,
 )
 from .product import ProductBaseSchema
-from .relay import (
-    RelayWaitlistInSchema,
-    RelayWaitlistSchema,
-    RelayWaitlistTableSchema,
-    UpdatedRelayWaitlistInSchema,
-)
 from .stripe_customer import (
     StripeCustomerCreateSchema,
     StripeCustomerModelSchema,
@@ -80,11 +74,15 @@ from .stripe_subscription_item import (
     StripeSubscriptionItemOutputSchema,
     StripeSubscriptionItemUpsertSchema,
 )
-from .vpn import (
+from .waitlist import (
     UpdatedVpnWaitlistInSchema,
     VpnWaitlistInSchema,
     VpnWaitlistSchema,
     VpnWaitlistTableSchema,
+    RelayWaitlistInSchema,
+    RelayWaitlistSchema,
+    RelayWaitlistTableSchema,
+    UpdatedRelayWaitlistInSchema,
 )
 from .web import (
     BadRequestResponse,

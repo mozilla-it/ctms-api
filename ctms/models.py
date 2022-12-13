@@ -128,7 +128,7 @@ class Waitlist(Base):
     name = Column(String(255), nullable=False)
     geo = Column(String(100), nullable=False)
     source = Column(Text)
-    fields = Column(JSON, nullable=False, server_default='{}')
+    fields = Column(JSON, nullable=False, server_default="{}")
 
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -138,6 +138,7 @@ class Waitlist(Base):
     )
 
     email = relationship("Email", back_populates="waitlists", uselist=False)
+
 
 class FirefoxAccount(Base):
     __tablename__ = "fxa"

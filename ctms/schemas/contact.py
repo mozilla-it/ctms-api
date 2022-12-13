@@ -17,8 +17,12 @@ from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .product import ProductBaseSchema
-from .relay import RelayWaitlistInSchema, RelayWaitlistSchema
-from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
+from .waitlist import (
+    RelayWaitlistInSchema,
+    RelayWaitlistSchema,
+    VpnWaitlistInSchema,
+    VpnWaitlistSchema,
+)
 
 
 class ContactSchema(ComparableBase):
