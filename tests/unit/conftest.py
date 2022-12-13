@@ -36,6 +36,7 @@ from ctms.crud import (
     get_newsletters_by_email_id,
     get_stripe_products,
     get_vpn_by_email_id,
+    get_waitlists_by_email_id,
 )
 from ctms.schemas import (
     ApiClientSchema,
@@ -284,6 +285,7 @@ def post_contact(request, client, dbsession):
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
+            _check_written("waitlists", get_waitlists_by_email_id, result_list=True)
 
         # Check that GET returns the same contact
         if code in {200, 201}:
@@ -362,6 +364,7 @@ def put_contact(request, client, dbsession):
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
+            _check_written("waitlists", get_waitlists_by_email_id)
 
         # Check that GET returns the same contact
         if code in {200, 201}:

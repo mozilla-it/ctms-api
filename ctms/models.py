@@ -2,6 +2,7 @@ from typing import Optional, cast
 from uuid import UUID as PythonUUID
 
 from sqlalchemy import (
+    JSON,
     TIMESTAMP,
     Boolean,
     Column,
@@ -10,7 +11,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    JSON,
     PrimaryKeyConstraint,
     String,
     Text,

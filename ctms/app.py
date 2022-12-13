@@ -172,6 +172,7 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
         newsletters=email.newsletters,
         vpn_waitlist=email.vpn_waitlist,
         relay_waitlist=email.relay_waitlist,
+        waitlists=email.waitlists,
     )
 
 
@@ -280,6 +281,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
                 newsletters=contact.newsletters or [],
                 vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
                 relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+                waitlists=contact.waitlists or [],
             )
             for contact in results
         ]
@@ -511,6 +513,7 @@ def read_ctms_by_any_id(
             newsletters=contact.newsletters or [],
             vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
             relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+            waitlists=contact.waitlists or [],
         )
         for contact in contacts
     ]
@@ -547,6 +550,7 @@ def get_ctms_response_or_404(db, email_id):
         fxa=contact.fxa or FirefoxAccountsSchema(),
         mofo=contact.mofo or MozillaFoundationSchema(),
         newsletters=contact.newsletters or [],
+        waitlists=contact.waitlists or [],
         vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
         relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
         status="ok",

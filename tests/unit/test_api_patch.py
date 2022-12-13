@@ -81,6 +81,7 @@ def test_patch_one_new_value(
             newsletters=contact.newsletters or [],
             vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
             relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+            waitlists=contact.waitlists or [],
         ).json()
     )
     existing_value = expected[group_name][key]
@@ -162,6 +163,7 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
             newsletters=maximal_contact.newsletters or [],
             vpn_waitlist=maximal_contact.vpn_waitlist or VpnWaitlistSchema(),
             relay_waitlist=maximal_contact.relay_waitlist or RelayWaitlistSchema(),
+            waitlists=maximal_contact.waitlists or [],
         ).json()
     )
     existing_value = expected[group_name][key]

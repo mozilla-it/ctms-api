@@ -14,6 +14,7 @@ from ctms.schemas import (
     NewsletterSchema,
     RelayWaitlistSchema,
     VpnWaitlistSchema,
+    WaitlistSchema,
 )
 
 # A contact that has just some of the fields entered
@@ -110,6 +111,20 @@ SAMPLE_MAXIMAL = ContactSchema(
     relay_waitlist=RelayWaitlistSchema(
         geo="ca",
     ),
+    waitlists=[
+        WaitlistSchema(
+            name="a-software",
+            geo="fr",
+            source="https://a-software.mozilla.org/",
+            fields={},
+        ),
+        WaitlistSchema(
+            name="super-product",
+            geo="fr",
+            source="https://super-product.mozilla.org/",
+            fields={"platform": "win64"},
+        ),
+    ],
 )
 
 
@@ -130,6 +145,7 @@ SAMPLE_EXAMPLE = ContactSchema(
     vpn_waitlist=VpnWaitlistSchema(**_gather_examples(VpnWaitlistSchema)),
     relay_waitlist=RelayWaitlistSchema(**_gather_examples(RelayWaitlistSchema)),
     newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
+    waitlists=ContactSchema.schema()["properties"]["waitlists"]["example"],
 )
 
 SAMPLE_TO_ADD = ContactSchema(

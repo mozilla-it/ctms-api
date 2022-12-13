@@ -92,6 +92,7 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
         "status": "ok",
         "vpn_waitlist": {"geo": None, "platform": None},
         "relay_waitlist": {"geo": None},
+        "waitlists": [],
     }
 
 
@@ -205,6 +206,20 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
         "status": "ok",
         "vpn_waitlist": {"geo": "ca", "platform": "windows,android"},
         "relay_waitlist": {"geo": "ca"},
+        "waitlists": [
+            {
+                "fields": {},
+                "geo": "fr",
+                "name": "a-software",
+                "source": "https://a-software.mozilla.org/",
+            },
+            {
+                "fields": {"platform": "win64"},
+                "geo": "fr",
+                "name": "super-product",
+                "source": "https://super-product.mozilla.org/",
+            },
+        ],
     }
 
 
@@ -279,6 +294,14 @@ def test_get_ctms_for_api_example(client, example_contact):
         "status": "ok",
         "vpn_waitlist": {"geo": "fr", "platform": "ios,mac"},
         "relay_waitlist": {"geo": "fr"},
+        "waitlists": [
+            {
+                "fields": {"platform": "win64"},
+                "geo": "fr",
+                "name": "example-product",
+                "source": None,
+            }
+        ],
     }
 
 

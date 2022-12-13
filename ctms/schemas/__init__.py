@@ -75,14 +75,17 @@ from .stripe_subscription_item import (
     StripeSubscriptionItemUpsertSchema,
 )
 from .waitlist import (
-    UpdatedVpnWaitlistInSchema,
-    VpnWaitlistInSchema,
-    VpnWaitlistSchema,
-    VpnWaitlistTableSchema,
     RelayWaitlistInSchema,
     RelayWaitlistSchema,
     RelayWaitlistTableSchema,
     UpdatedRelayWaitlistInSchema,
+    UpdatedVpnWaitlistInSchema,
+    UpdatedWaitlistInSchema,
+    VpnWaitlistInSchema,
+    VpnWaitlistSchema,
+    VpnWaitlistTableSchema,
+    WaitlistInSchema,
+    WaitlistSchema,
 )
 from .web import (
     BadRequestResponse,

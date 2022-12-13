@@ -87,16 +87,22 @@ class StatementWatcher:
 
 
 def test_get_email(dbsession, example_contact):
-    """An email is retrieved in two queries, and newsletters are sorted by name."""
+    """An email is retrieved in two queries, and newsletters and waitlists
+    are sorted by name."""
     email_id = example_contact.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         email = get_email(dbsession, email_id)
-    assert watcher.count == 2, watcher.statements
+    assert watcher.count == 3, watcher.statements
     assert email.email_id == email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         newsletter_names = [newsletter.name for newsletter in email.newsletters]
         assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
         assert sorted(newsletter_names) == newsletter_names
+    assert watcher.count == 0, watcher.statements
+    with StatementWatcher(dbsession.connection()) as watcher:
+        waitlists_names = [waitlist.name for waitlist in email.waitlists]
+        assert waitlists_names == ["example-product"]
+        assert sorted(waitlists_names) == waitlists_names
     assert watcher.count == 0, watcher.statements
 
 
@@ -105,7 +111,7 @@ def test_get_email_with_stripe_customer(dbsession, contact_with_stripe_customer)
     email_id = contact_with_stripe_customer.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         email = get_email(dbsession, email_id)
-    assert watcher.count == 3, watcher.statements
+    assert watcher.count == 4, watcher.statements
     assert email.email_id == email_id
     newsletter_names = [newsletter.name for newsletter in email.newsletters]
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
@@ -124,7 +130,7 @@ def test_get_email_with_stripe_subscription(
     email_id = contact_with_stripe_subscription.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         email = get_email(dbsession, email_id)
-    assert watcher.count == 5, watcher.statements
+    assert watcher.count == 6, watcher.statements
     assert email.email_id == email_id
 
     with StatementWatcher(dbsession.connection()) as watcher:
@@ -168,7 +174,7 @@ def test_get_emails_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_va
     """An email is fetched by alternate id in two queries."""
     with StatementWatcher(dbsession.connection()) as watcher:
         emails = get_emails_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(emails) == 1
     newsletter_names = [newsletter.name for newsletter in emails[0].newsletters]
     assert sorted(newsletter_names) == newsletter_names
@@ -229,7 +235,7 @@ def test_get_multiple_emails_by_any_id(
 
     with StatementWatcher(dbsession.connection()) as watcher:
         emails = get_emails_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(emails) == 2
     for email in emails:
         newsletter_names = [newsletter.name for newsletter in email.newsletters]
@@ -241,7 +247,7 @@ def test_get_contact_by_email_id_found(dbsession, example_contact):
     email_id = example_contact.email.email_id
     with StatementWatcher(dbsession.connection()) as watcher:
         contact = get_contact_by_email_id(dbsession, email_id)
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert contact["email"].email_id == email_id
     newsletter_names = [nl.name for nl in contact["newsletters"]]
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
@@ -305,7 +311,7 @@ def test_schedule_then_get_acoustic_records_as_contacts(
             get_acoustic_record_as_contact(dbsession, record) for record in record_list
         ]
 
-    assert watcher.count == 6
+    assert watcher.count == 3 * 3
     assert len(contact_record_list) == 3
     for record in contact_record_list:
         assert record.email is not None
@@ -610,7 +616,7 @@ def test_get_bulk_contacts_mofo_relevant_false(
             limit=10,
             mofo_relevant=mofo_relevant_flag,
         )
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(bulk_contact_list) == 2
 
 
@@ -638,7 +644,7 @@ def test_get_bulk_contacts_mofo_relevant_true(
             limit=10,
             mofo_relevant=mofo_relevant_flag,
         )
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(bulk_contact_list) == 1
     for contact in bulk_contact_list:
         assert contact.mofo.mofo_relevant == mofo_relevant_flag
@@ -668,7 +674,7 @@ def test_get_bulk_contacts_some_after_higher_limit(
             limit=2,
             after_email_id=after_id,
         )
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(bulk_contact_list) == 2
     assert last_contact in bulk_contact_list
     assert sorted_list[-2] in bulk_contact_list
@@ -698,7 +704,7 @@ def test_get_bulk_contacts_some_after(
             limit=1,
             after_email_id=after_id,
         )
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(bulk_contact_list) == 1
     assert last_contact in bulk_contact_list
 
@@ -720,7 +726,7 @@ def test_get_bulk_contacts_some(
             end_time=datetime.now(timezone.utc),
             limit=10,
         )
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(bulk_contact_list) == 3
     assert example_contact in bulk_contact_list
     assert maximal_contact in bulk_contact_list
@@ -737,7 +743,7 @@ def test_get_bulk_contacts_one(dbsession, example_contact):
         bulk_contact_list = get_bulk_contacts(
             dbsession, start_time=start_time, end_time=end_time, limit=10
         )
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(bulk_contact_list) == 1
     assert bulk_contact_list[0].email.email_id == email_id
 
@@ -772,7 +778,7 @@ def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_v
     """A contacts is fetched by alternate id in two queries."""
     with StatementWatcher(dbsession.connection()) as watcher:
         contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(contacts) == 1
     newsletter_names = [nl.name for nl in contacts[0]["newsletters"]]
     assert sorted(newsletter_names) == newsletter_names
@@ -833,7 +839,7 @@ def test_get_multiple_contacts_by_any_id(
 
     with StatementWatcher(dbsession.connection()) as watcher:
         contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert watcher.count == 2
+    assert watcher.count == 3
     assert len(contacts) == 2
     for contact in contacts:
         newsletter_names = [nl.name for nl in contact["newsletters"]]

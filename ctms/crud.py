@@ -32,6 +32,7 @@ from .models import (
     StripeSubscription,
     StripeSubscriptionItem,
     VpnWaitlist,
+    Waitlist,
 )
 from .schemas import (
     AddOnsInSchema,
@@ -58,7 +59,9 @@ from .schemas import (
     UpdatedNewsletterInSchema,
     UpdatedRelayWaitlistInSchema,
     UpdatedVpnWaitlistInSchema,
+    UpdatedWaitlistInSchema,
     VpnWaitlistInSchema,
+    WaitlistInSchema,
 )
 from .schemas.base import BaseModel
 
@@ -91,6 +94,10 @@ def get_vpn_by_email_id(db: Session, email_id: UUID4):
     return db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).one_or_none()
 
 
+def get_waitlists_by_email_id(db: Session, email_id: UUID4):
+    return db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
+
+
 def _contact_base_query(db):
     """Return a query that will fetch related contact data, ready to filter."""
     return (
@@ -101,6 +108,7 @@ def _contact_base_query(db):
         .options(joinedload(Email.vpn_waitlist))
         .options(joinedload(Email.relay_waitlist))
         .options(selectinload("newsletters"))
+        .options(selectinload("waitlists"))
         .options(joinedload(Email.stripe_customer))
         .options(selectinload("stripe_customer.subscriptions"))
         .options(selectinload("stripe_customer.subscriptions.subscription_items"))
@@ -164,6 +172,7 @@ def get_bulk_contacts(
                 "newsletters": email.newsletters,
                 "vpn_waitlist": email.vpn_waitlist,
                 "relay_waitlist": email.relay_waitlist,
+                "waitlists": email.waitlists,
             }
         )
         for email in bulk_contacts
@@ -194,6 +203,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
         "vpn_waitlist": email.vpn_waitlist,
         "relay_waitlist": email.relay_waitlist,
         "products": products,
+        "waitlists": email.waitlists,
     }
 
 
@@ -299,6 +309,7 @@ def get_contacts_by_any_id(
                 "newsletters": email.newsletters,
                 "vpn_waitlist": email.vpn_waitlist,
                 "relay_waitlist": email.relay_waitlist,
+                "waitlists": email.waitlists,
             }
         )
     return data
@@ -573,6 +584,37 @@ def create_or_update_newsletters(
         db.execute(stmt)
 
 
+def create_waitlist(
+    db: Session, email_id: UUID4, waitlist: WaitlistInSchema
+) -> Optional[Waitlist]:
+    if waitlist.is_default():
+        return None
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict())
+    db.add(db_waitlist)
+    return db_waitlist
+
+
+def create_or_update_waitlists(
+    db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
+):
+    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    db.query(Waitlist).filter(
+        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+    ).delete(
+        synchronize_session=False
+    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+
+    if waitlists:
+        waitlists = [
+            UpdatedWaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
+        ]
+        stmt = insert(Waitlist).values(
+            [{"email_id": email_id, **wl.dict()} for wl in waitlists]
+        )
+
+        db.execute(stmt)
+
+
 def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
     create_email(db, contact.email)
     if contact.amo:
@@ -587,6 +629,8 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
         create_relay_waitlist(db, email_id, contact.relay_waitlist)
     for newsletter in contact.newsletters:
         create_newsletter(db, email_id, newsletter)
+    for waitlist in contact.waitlists:
+        create_waitlist(db, email_id, waitlist)
 
 
 def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSchema):
@@ -597,6 +641,7 @@ def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSc
     create_or_update_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     create_or_update_relay_waitlist(db, email_id, contact.relay_waitlist)
     create_or_update_newsletters(db, email_id, contact.newsletters)
+    create_or_update_waitlists(db, email_id, contact.waitlists)
 
 
 def update_contact(db: Session, email: Email, update_data: dict) -> None:
@@ -653,6 +698,24 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                         db, email_id, NewsletterInSchema(**nl_update)
                     )
                     email.newsletters.append(new)
+
+    if "waitlists" in update_data:
+        if update_data["waitlists"] == "DELETE":
+            # TODO
+            pass
+            # # for newsletter in getattr(email, "waitlists", []):
+            #     update_orm(newsletter, {"subscribed": False})
+        else:
+            existing = {}
+            for waitlist in getattr(email, "waitlists", []):
+                existing[waitlist.name] = waitlist
+            for wl_update in update_data["waitlists"]:
+                if wl_update["name"] in existing:
+                    pass
+                    # update_orm(existing[wl_update["name"]], wl_update)
+                elif wl_update.get("subscribed", True):
+                    new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
+                    email.waitlists.append(new)
 
     # On any PATCH event, the central/email table's time is updated as well.
     update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})

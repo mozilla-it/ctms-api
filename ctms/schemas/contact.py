@@ -22,6 +22,8 @@ from .waitlist import (
     RelayWaitlistSchema,
     VpnWaitlistInSchema,
     VpnWaitlistSchema,
+    WaitlistInSchema,
+    WaitlistSchema,
 )
 
 
@@ -33,6 +35,7 @@ class ContactSchema(ComparableBase):
     fxa: Optional[FirefoxAccountsSchema] = None
     mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterSchema] = []
+    waitlists: List[WaitlistSchema] = []
     vpn_waitlist: Optional[VpnWaitlistSchema] = None
     relay_waitlist: Optional[RelayWaitlistSchema] = None
     products: List[ProductBaseSchema] = []
@@ -42,7 +45,17 @@ class ContactSchema(ComparableBase):
             "newsletters": {
                 "description": "List of newsletters for which the contact is or was subscribed",
                 "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
-            }
+            },
+            "waitlists": {
+                "description": "List of waitlists for which the contact is or was subscribed",
+                "example": [
+                    {
+                        "name": "example-product",
+                        "geo": "fr",
+                        "fields": {"platform": "win64"},
+                    }
+                ],
+            },
         }
 
     def as_identity_response(self) -> "IdentityResponse":
@@ -93,6 +106,7 @@ class ContactInBase(ComparableBase):
     fxa: Optional[FirefoxAccountsInSchema] = None
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = []
+    waitlists: List[WaitlistInSchema] = []
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
@@ -146,6 +160,7 @@ class ContactPatchSchema(ComparableBase):
     fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]]
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
+    waitlists: Optional[Union[List[WaitlistSchema], Literal["DELETE"]]]
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
 
@@ -171,6 +186,18 @@ class ContactPatchSchema(ComparableBase):
             "relay_waitlist": {
                 "description": 'Relay Waitlist data to update, or "DELETE" to reset.'
             },
+            "waitlists": {
+                "description": (
+                    "List of waitlists to add or update, or 'DELETE' to reset."
+                ),
+                "example": [
+                    {
+                        "name": "example-product",
+                        "geo": "fr",
+                        "fields": {"platform": "win64"},
+                    }
+                ],
+            },
         }
 
 
@@ -188,6 +215,7 @@ class CTMSResponse(BaseModel):
     newsletters: List[NewsletterSchema]
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
+    waitlists: List[WaitlistSchema]
 
 
 class CTMSSingleResponse(CTMSResponse):
