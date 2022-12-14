@@ -139,6 +139,8 @@ class Waitlist(Base):
 
     email = relationship("Email", back_populates="waitlists", uselist=False)
 
+    __table_args__ = (UniqueConstraint("email_id", "name", name="uix_wl_email_name"),)
+
 
 class FirefoxAccount(Base):
     __tablename__ = "fxa"
