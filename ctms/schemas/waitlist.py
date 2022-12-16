@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import UUID4, Field, HttpUrl
+from pydantic import UUID4, Field, HttpUrl, root_validator
 
 from .base import ComparableBase
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
@@ -19,6 +19,7 @@ class WaitlistBase(ComparableBase):
     """
 
     name: str = Field(
+        min_length=1,
         description="Basket slug for the waitlist",
         example="new-product",
     )
@@ -38,6 +39,12 @@ class WaitlistBase(ComparableBase):
 
     def __lt__(self, other):
         return self.name < other.name
+
+    @root_validator
+    def check_fields(cls, values):
+        if "name" in values:
+            validate_waitlist_fields(values["name"], values.get("fields", {}))
+        return values
 
     class Config:
         orm_mode = True
@@ -76,6 +83,31 @@ class WaitlistTableSchema(WaitlistBase):
 
     class Config:
         extra = "forbid"
+
+
+def validate_waitlist_fields(name: str, fields: dict):
+    if name == "vpn":
+
+        class VPNFieldsSchema(ComparableBase):
+            """
+            Once waitlists will have been migrated to a full N-N relationship,
+            this will be the only remaining VPN specific piece of code.
+            """
+
+            platform: Optional[str] = Field(
+                default=None,
+                min_length=1,
+                max_length=100,
+                description=(
+                    "VPN waitlist platforms as comma-separated list"
+                ),
+                example="ios,mac",
+            )
+
+            class Config:
+                extra = "forbid"
+
+        VPNFieldsSchema(**fields)
 
 
 class RelayWaitlistBase(ComparableBase):
