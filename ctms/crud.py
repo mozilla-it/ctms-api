@@ -597,9 +597,9 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
-    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    names = [waitlist.name for waitlist in waitlists]
     db.query(Waitlist).filter(
-        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+        Waitlist.email_id == email_id, Waitlist.name.in_(names)
     ).delete(
         synchronize_session=False
     )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
@@ -700,22 +700,21 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                     email.newsletters.append(new)
 
     if "waitlists" in update_data:
-        if update_data["waitlists"] == "DELETE":
-            # TODO
-            pass
-            # # for newsletter in getattr(email, "waitlists", []):
-            #     update_orm(newsletter, {"subscribed": False})
-        else:
-            existing = {}
-            for waitlist in getattr(email, "waitlists", []):
-                existing[waitlist.name] = waitlist
-            for wl_update in update_data["waitlists"]:
-                if wl_update["name"] in existing:
-                    pass
-                    # update_orm(existing[wl_update["name"]], wl_update)
-                elif wl_update.get("subscribed", True):
-                    new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
-                    email.waitlists.append(new)
+        existing = {}
+        for waitlist in getattr(email, "waitlists", []):
+            existing[waitlist.name] = waitlist
+        for wl_update in update_data["waitlists"]:
+            if wl_update["name"] in existing:
+                # Update the Waitlist ORM object
+                update_orm(existing[wl_update["name"]], wl_update)
+                del existing[wl_update["name"]]
+            else:
+                new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
+                email.waitlists.append(new)
+        # Waitlists that are not listed are deleted.
+        for to_delete in existing.values():
+            db.delete(to_delete)
+            email.waitlists.remove(to_delete)
 
     # On any PATCH event, the central/email table's time is updated as well.
     update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})

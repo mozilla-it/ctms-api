@@ -500,3 +500,74 @@ def test_patch_with_trace(client, minimal_contact):
     assert len(caplogs) == 1
     assert caplogs[0]["trace"] == "jeff+trace-me-mozilla-1@example.com"
     assert caplogs[0]["trace_json"] == patch_data
+
+
+def test_patch_will_validate_waitlist_fields(client, maximal_contact):
+    """PATCH validates waitlist schema."""
+    email_id = maximal_contact.email.email_id
+
+    patch_data = {"waitlists": [{"name": "future-tech"}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 422
+    details = resp.json()
+    assert details["detail"][0]["loc"] == ["body", "waitlists", 0, "geo"]
+
+
+def test_patch_to_add_a_waitlist(client, maximal_contact):
+    """PATCH can add a single waitlist."""
+    email_id = maximal_contact.email.email_id
+    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    patch_data = {"waitlists": existing + [{"name": "future-tech", "geo": "es"}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) + 1
+    assert actual["waitlists"][-1] == {
+        "name": "future-tech",
+        "geo": "es",
+        "source": None,
+        "fields": {},
+    }
+
+
+def test_patch_to_update_a_waitlist(client, maximal_contact):
+    """PATCH can update a waitlist."""
+    email_id = maximal_contact.email.email_id
+    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    existing[0]["geo"] = "ca"
+    patch_data = {"waitlists": existing}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"][0]["geo"] != maximal_contact.waitlists[0].geo
+
+
+def test_patch_to_remove_a_waitlist(client, maximal_contact):
+    """PATCH can remove a single waitlist."""
+    email_id = maximal_contact.email.email_id
+    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    patch_data = {"waitlists": existing[:-1]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) - 1
+
+
+def test_patch_to_remove_all_waitlists(client, maximal_contact):
+    """PATCH can remove all waitlists."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {"waitlists": []}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == 0
+
+
+def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):
+    """PATCH won't update waitlists if omitted."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {"email": {"first_name": "Jeff"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists)

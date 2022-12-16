@@ -22,8 +22,7 @@ class WaitlistBase(ComparableBase):
         description="Basket slug for the waitlist",
         example="new-product",
     )
-    geo: Optional[str] = Field(
-        default=None,
+    geo: str = Field(
         max_length=100,
         description="Waitlist country",
         example="fr",
@@ -34,8 +33,11 @@ class WaitlistBase(ComparableBase):
         example="https://www.mozilla.org/en-US/",
     )
     fields: dict = Field(
-        default={}, description="Additional fields", example='{"platform": "fr"}'
+        default={}, description="Additional fields", example='{"platform": "linux"}'
     )
+
+    def __lt__(self, other):
+        return self.name < other.name
 
     class Config:
         orm_mode = True

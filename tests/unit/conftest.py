@@ -303,7 +303,7 @@ def put_contact(request, client, dbsession):
     _id = (
         request.param
         if hasattr(request, "param")
-        else "d1da1c99-fe09-44db-9c68-78a75752574d"
+        else "d1da1c99-fe09-44db-9c68-78a75752574d"  # SAMPLE_TO_ADD
     )
     sample_email_id = UUID(str(_id))
     _contact = SAMPLE_CONTACTS[sample_email_id]

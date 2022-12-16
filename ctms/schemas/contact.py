@@ -95,6 +95,8 @@ class ContactSchema(ComparableBase):
             default_fields.add("mofo")
         if all(n.is_default() for n in self.newsletters):
             default_fields.add("newsletters")
+        if all(n.is_default() for n in self.waitlists):
+            default_fields.add("waitlists")
         return default_fields
 
 
@@ -111,12 +113,7 @@ class ContactInBase(ComparableBase):
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
     class Config:
-        fields = {
-            "newsletters": {
-                "description": "List of newsletters for which the contact is or was subscribed",
-                "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
-            }
-        }
+        fields = ContactSchema.Config.fields
 
     def idempotent_equal(self, other):
         def _noneify(field):
@@ -132,6 +129,7 @@ class ContactInBase(ComparableBase):
             and _noneify(self.vpn_waitlist) == _noneify(other.vpn_waitlist)
             and _noneify(self.relay_waitlist) == _noneify(other.relay_waitlist)
             and sorted(self.newsletters) == sorted(other.newsletters)
+            and sorted(self.waitlists) == sorted(other.waitlists)
         )
 
 
@@ -160,7 +158,7 @@ class ContactPatchSchema(ComparableBase):
     fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]]
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
-    waitlists: Optional[Union[List[WaitlistSchema], Literal["DELETE"]]]
+    waitlists: Optional[List[WaitlistSchema]]
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
 
@@ -187,9 +185,7 @@ class ContactPatchSchema(ComparableBase):
                 "description": 'Relay Waitlist data to update, or "DELETE" to reset.'
             },
             "waitlists": {
-                "description": (
-                    "List of waitlists to add or update, or 'DELETE' to reset."
-                ),
+                "description": ("List of waitlists to add or update."),
                 "example": [
                     {
                         "name": "example-product",
