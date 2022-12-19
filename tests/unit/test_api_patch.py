@@ -571,3 +571,72 @@ def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
+
+
+def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "vpn",
+            "geo": "fr",
+            "source": None,
+            "fields": {
+                "platform": "win32",
+            },
+        }
+    ]
+
+
+def test_patch_vpn_waitlist_legacy_delete(client, minimal_contact):
+    # TODO: use maximal contact once migrated.
+    email_id = minimal_contact.email.email_id
+    patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    before = len(actual["waitlists"])
+
+    patch_data = {"vpn_waitlist": "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_vpn_waitlist_legacy_delete_default(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    before = len(actual["waitlists"])
+
+    patch_data = {"vpn_waitlist": {"geo": None, "platform": None}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_vpn_waitlist_legacy_update(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    before = len(actual["waitlists"])
+
+    patch_data = {"vpn_waitlist": {"geo": "it", "platform": "linux"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"][-1] == {
+        "name": "vpn",
+        "geo": "it",
+        "source": None,
+        "fields": {"platform": "linux"},
+    }

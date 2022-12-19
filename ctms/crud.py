@@ -662,7 +662,6 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
         "amo": (create_amo, AddOnsInSchema),
         "fxa": (create_fxa, FirefoxAccountsInSchema),
         "mofo": (create_mofo, MozillaFoundationInSchema),
-        "vpn_waitlist": (create_vpn_waitlist, VpnWaitlistInSchema),
         "relay_waitlist": (create_relay_waitlist, RelayWaitlistInSchema),
     }
     for group_name, (creator, schema) in simple_groups.items():
@@ -699,10 +698,30 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                     )
                     email.newsletters.append(new)
 
+    existing = {}
+    for waitlist in email.waitlists:
+        existing[waitlist.name] = waitlist
+
+    if "waitlists" not in update_data:
+        # We may be dealing with a legacy payload.
+        # See if waitlists were specified.
+        if "vpn_waitlist" in update_data:
+            # Mimic a recent payload format.
+            updated = {k: WaitlistInSchema.from_orm(wl) for k, wl in existing.items()}
+
+            if update_data["vpn_waitlist"] == "DELETE":
+                updated.pop("vpn")
+            else:
+                # Create, update, or remove the vpn waitlist record.
+                parsed = VpnWaitlistInSchema(**update_data["vpn_waitlist"])
+                if parsed.is_default():
+                    updated.pop("vpn")
+                else:
+                    updated["vpn"] = WaitlistInSchema(name="vpn", geo=parsed.geo, fields={"platform": parsed.platform})
+
+            update_data["waitlists"] = [wl.dict() for wl in updated.values()]
+
     if "waitlists" in update_data:
-        existing = {}
-        for waitlist in getattr(email, "waitlists", []):
-            existing[waitlist.name] = waitlist
         for wl_update in update_data["waitlists"]:
             if wl_update["name"] in existing:
                 # Update the Waitlist ORM object
