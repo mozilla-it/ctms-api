@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import deepcopy
 
 import uuid
 from collections import defaultdict
@@ -496,31 +497,45 @@ def create_or_update_mofo(
     db.execute(stmt)
 
 
-def create_vpn_waitlist(
-    db: Session, email_id: UUID4, vpn_waitlist: VpnWaitlistInSchema
-) -> Optional[VpnWaitlist]:
-    if vpn_waitlist.is_default():
-        return None
-    db_vpn_waitlist = VpnWaitlist(email_id=email_id, **vpn_waitlist.dict())
-    db.add(db_vpn_waitlist)
-    return db_vpn_waitlist
-
-
-def create_or_update_vpn_waitlist(
-    db: Session, email_id: UUID4, vpn_waitlist: Optional[VpnWaitlistInSchema]
+def format_legacy_vpn_waitlist_input(
+    db: Session, email_id: UUID4, input_data, schema_class
 ):
-    if not vpn_waitlist or vpn_waitlist.is_default():
-        db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).delete()
-        return
+    # Use a dict to handle all the different schemas for create, create_or_update, or update
+    formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
 
-    # Providing update timestamp
-    updated_vpn = UpdatedVpnWaitlistInSchema(**vpn_waitlist.dict())
+    if len(formatted.get("waitlists", [])) > 0:
+        # We are dealing with the current format. Nothing to do.
+        return input_data
 
-    stmt = insert(VpnWaitlist).values(email_id=email_id, **updated_vpn.dict())
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[VpnWaitlist.email_id], set_=updated_vpn.dict()
-    )
-    db.execute(stmt)
+    # Handle the VPN waitlist info that were specified.
+    if "vpn_waitlist" in formatted:
+        # Mimic a recent payload format using the values in database.
+        existing_waitlists = (
+            db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
+        )
+        updated = {wl.name: WaitlistInSchema.from_orm(wl) for wl in existing_waitlists}
+
+        if formatted["vpn_waitlist"] == "DELETE" or formatted["vpn_waitlist"] is None:
+            updated.pop("vpn", None)
+        else:
+            # Create, update, or remove the vpn waitlist record.
+            parsed = VpnWaitlistInSchema(**formatted["vpn_waitlist"])
+            if parsed.is_default():
+                updated.pop("vpn", None)
+            else:
+                # Create or update.
+                updated["vpn"] = WaitlistInSchema(
+                    name="vpn", geo=parsed.geo, fields={"platform": parsed.platform}
+                )
+                # Note: if `waitlists` was explicitly specified as an empty list and the `vpn_waitlist` fields too,
+                # this would have precedence. Since our schemas have an empty list of waitlists by default, this
+                # preserves simplicity and serves our retro compatibility needs.
+
+        formatted["waitlists"] = [wl.dict() for wl in updated.values()]
+
+    # TODO: relay
+
+    return formatted if schema_class == dict else schema_class(**formatted)
 
 
 def create_relay_waitlist(
@@ -623,12 +638,12 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
         create_fxa(db, email_id, contact.fxa)
     if contact.mofo:
         create_mofo(db, email_id, contact.mofo)
-    if contact.vpn_waitlist:
-        create_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     if contact.relay_waitlist:
         create_relay_waitlist(db, email_id, contact.relay_waitlist)
     for newsletter in contact.newsletters:
         create_newsletter(db, email_id, newsletter)
+
+    contact = format_legacy_vpn_waitlist_input(db, email_id, contact, ContactInSchema)
     for waitlist in contact.waitlists:
         create_waitlist(db, email_id, waitlist)
 
@@ -638,9 +653,10 @@ def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSc
     create_or_update_amo(db, email_id, contact.amo)
     create_or_update_fxa(db, email_id, contact.fxa)
     create_or_update_mofo(db, email_id, contact.mofo)
-    create_or_update_vpn_waitlist(db, email_id, contact.vpn_waitlist)
     create_or_update_relay_waitlist(db, email_id, contact.relay_waitlist)
     create_or_update_newsletters(db, email_id, contact.newsletters)
+
+    contact = format_legacy_vpn_waitlist_input(db, email_id, contact, ContactPutSchema)
     create_or_update_waitlists(db, email_id, contact.waitlists)
 
 
@@ -698,28 +714,11 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                     )
                     email.newsletters.append(new)
 
+    update_data = format_legacy_vpn_waitlist_input(db, email_id, update_data, dict)
+
     existing = {}
     for waitlist in email.waitlists:
         existing[waitlist.name] = waitlist
-
-    if "waitlists" not in update_data:
-        # We may be dealing with a legacy payload.
-        # See if waitlists were specified.
-        if "vpn_waitlist" in update_data:
-            # Mimic a recent payload format.
-            updated = {k: WaitlistInSchema.from_orm(wl) for k, wl in existing.items()}
-
-            if update_data["vpn_waitlist"] == "DELETE":
-                updated.pop("vpn")
-            else:
-                # Create, update, or remove the vpn waitlist record.
-                parsed = VpnWaitlistInSchema(**update_data["vpn_waitlist"])
-                if parsed.is_default():
-                    updated.pop("vpn")
-                else:
-                    updated["vpn"] = WaitlistInSchema(name="vpn", geo=parsed.geo, fields={"platform": parsed.platform})
-
-            update_data["waitlists"] = [wl.dict() for wl in updated.values()]
 
     if "waitlists" in update_data:
         for wl_update in update_data["waitlists"]:

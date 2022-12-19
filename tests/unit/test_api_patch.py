@@ -60,8 +60,6 @@ def swap_bool(existing):
         ("mofo", "mofo_email_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
         ("mofo", "mofo_contact_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
         ("mofo", "mofo_relevant", swap_bool),
-        ("vpn_waitlist", "geo", "uk"),
-        ("vpn_waitlist", "platform", "linux"),
         ("relay_waitlist", "geo", "uk"),
     ),
 )
@@ -144,8 +142,6 @@ def test_patch_one_new_value(
         ("mofo", "mofo_email_id"),
         ("mofo", "mofo_contact_id"),
         ("mofo", "mofo_relevant"),
-        ("vpn_waitlist", "geo"),
-        ("vpn_waitlist", "platform"),
         ("relay_waitlist", "geo"),
     ),
 )
@@ -623,6 +619,26 @@ def test_patch_vpn_waitlist_legacy_delete_default(client, minimal_contact):
 
 
 def test_patch_vpn_waitlist_legacy_update(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    before = len(actual["waitlists"])
+
+    patch_data = {"vpn_waitlist": {"geo": "it"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"][-1] == {
+        "name": "vpn",
+        "geo": "it",
+        "source": None,
+        "fields": {"platform": None},
+    }
+
+
+def test_patch_vpn_waitlist_legacy_update_full(client, minimal_contact):
     email_id = minimal_contact.email.email_id
     patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
