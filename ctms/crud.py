@@ -32,7 +32,6 @@ from .models import (
     StripePrice,
     StripeSubscription,
     StripeSubscriptionItem,
-    VpnWaitlist,
     Waitlist,
 )
 from .schemas import (
@@ -92,7 +91,11 @@ def get_newsletters_by_email_id(db: Session, email_id: UUID4):
 
 
 def get_vpn_by_email_id(db: Session, email_id: UUID4):
-    return db.query(VpnWaitlist).filter(VpnWaitlist.email_id == email_id).one_or_none()
+    return (
+        db.query(Waitlist)
+        .filter(Waitlist.email_id == email_id, Waitlist.name == "vpn")
+        .one_or_none()
+    )
 
 
 def get_waitlists_by_email_id(db: Session, email_id: UUID4):
@@ -106,7 +109,6 @@ def _contact_base_query(db):
         .options(joinedload(Email.amo))
         .options(joinedload(Email.fxa))
         .options(joinedload(Email.mofo))
-        .options(joinedload(Email.vpn_waitlist))
         .options(joinedload(Email.relay_waitlist))
         .options(selectinload("newsletters"))
         .options(selectinload("waitlists"))

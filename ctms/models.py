@@ -64,7 +64,6 @@ class Email(Base):
     )
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
-    vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
     relay_waitlist = relationship(
         "RelayWaitlist", back_populates="email", uselist=False
     )
@@ -79,6 +78,19 @@ class Email(Base):
         secondaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
     )
+
+    @property
+    def vpn_waitlist(self):
+        """Mimic legacy fields by looking for a VPN entry in the Waitlist table."""
+        # TODO: why not db.query(Waitlist).filter(...).one_or_none()
+        by_name = {wl.name: wl for wl in self.waitlists}
+        if "vpn" not in by_name:
+            return None
+        vpn_waitlist = by_name["vpn"]
+        return {
+            "geo": vpn_waitlist.geo,
+            "platform": vpn_waitlist.fields.get("platform"),
+        }
 
     # Class Comparators
     @hybrid_property
@@ -230,26 +242,6 @@ class AcousticNewsletterMapping(Base):
 
     source = Column(String, primary_key=True)
     destination = Column(String)
-
-
-class VpnWaitlist(Base):
-    __tablename__ = "vpn_waitlist"
-
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
-    geo = Column(String(100))
-    platform = Column(String(100))
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
-
-    email = relationship("Email", back_populates="vpn_waitlist", uselist=False)
 
 
 class RelayWaitlist(Base):

@@ -53,7 +53,12 @@ class ContactSchema(ComparableBase):
                         "name": "example-product",
                         "geo": "fr",
                         "fields": {"platform": "win64"},
-                    }
+                    },
+                    {
+                        "name": "vpn",
+                        "geo": "fr",
+                        "fields": {"platform": "ios,mac"},
+                    },
                 ],
             },
         }

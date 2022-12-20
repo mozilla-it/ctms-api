@@ -219,6 +219,12 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
                 "name": "super-product",
                 "source": "https://super-product.mozilla.org/",
             },
+            {
+                "fields": {"platform": "windows,android"},
+                "geo": "ca",
+                "name": "vpn",
+                "source": None,
+            },
         ],
     }
 
@@ -300,7 +306,13 @@ def test_get_ctms_for_api_example(client, example_contact):
                 "geo": "fr",
                 "name": "example-product",
                 "source": None,
-            }
+            },
+            {
+                "fields": {"platform": "ios,mac"},
+                "geo": "fr",
+                "name": "vpn",
+                "source": None,
+            },
         ],
     }
 

@@ -124,6 +124,13 @@ SAMPLE_MAXIMAL = ContactSchema(
             source="https://super-product.mozilla.org/",
             fields={"platform": "win64"},
         ),
+        WaitlistSchema(
+            name="vpn",
+            geo="ca",
+            fields={
+                "platform": "windows,android",
+            },
+        ),
     ],
 )
 

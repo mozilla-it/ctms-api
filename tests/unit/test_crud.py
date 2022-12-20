@@ -101,7 +101,7 @@ def test_get_email(dbsession, example_contact):
     assert watcher.count == 0, watcher.statements
     with StatementWatcher(dbsession.connection()) as watcher:
         waitlists_names = [waitlist.name for waitlist in email.waitlists]
-        assert waitlists_names == ["example-product"]
+        assert waitlists_names == ["example-product", "vpn"]
         assert sorted(waitlists_names) == waitlists_names
     assert watcher.count == 0, watcher.statements
 
