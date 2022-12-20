@@ -21,7 +21,7 @@ from ctms.schemas import (
     EmailTableSchema,
     FirefoxAccountsTableSchema,
     NewsletterTableSchema,
-    VpnWaitlistTableSchema,
+    WaitlistTableSchema,
 )
 
 
@@ -110,13 +110,13 @@ def _newsletter_modifier(line: dict) -> NewsletterTableSchema:
     return NewsletterTableSchema(**newline)
 
 
-def _vpn_waitlist_modifier(line: dict) -> VpnWaitlistTableSchema:
+def _waitlist_modifier(line: dict) -> WaitlistTableSchema:
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
-        key = re.sub("^vpn_waitlist_", "", key)
+        key = re.sub("^waitlist_", "", key)
         newline[key] = val
-    return VpnWaitlistTableSchema(**newline)
+    return WaitlistTableSchema(**newline)
 
 
 def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
@@ -186,10 +186,10 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
         5,
         report_frequency,
     )
-    inputs.vpn_waitlist = bq_reader(
+    inputs.waitlists = bq_reader(
         bq_client,
-        f"{args.prefix}_contact_to_vpn_waitlist",
-        _vpn_waitlist_modifier,
+        f"{args.prefix}_contact_to_waitlist",
+        _waitlist_modifier,
         5,
         5,
         report_frequency,

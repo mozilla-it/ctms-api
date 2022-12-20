@@ -99,15 +99,13 @@ def newsletter_modifier(
     return newline
 
 
-def vpn_waitlist_modifier(
-    i: int, line: dict, isdev: bool, canonical_mapping, skip_writes
-):
+def waitlist_modifier(i: int, line: dict, isdev: bool, canonical_mapping, skip_writes):
     email_id = line["email_id"]
     if canonical_mapping.get(email_id) or email_id in skip_writes:
         raise NonCanonicalError  # We don't insert non-canonical email records
     _ensure_timestamps(line)
     newline = {}
     for key, val in line.items():
-        key = re.sub("^vpn_waitlist_", "", key)
+        key = re.sub("^waitlist_", "", key)
         newline[key] = val
     return newline

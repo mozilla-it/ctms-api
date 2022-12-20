@@ -17,7 +17,7 @@ from ctms.csv_helpers import (
     email_modifier,
     fxa_modifier,
     newsletter_modifier,
-    vpn_waitlist_modifier,
+    waitlist_modifier,
 )
 
 
@@ -107,8 +107,8 @@ def main(test_args=None) -> int:
     ) as fxa_out, open(
         os.path.join(args.out, "newsletters.csv"), "w", encoding="utf8"
     ) as newsletters_out, open(
-        os.path.join(args.out, "vpn_waitlist.csv"), "w", encoding="utf8"
-    ) as vpn_waitlist_out, open(
+        os.path.join(args.out, "waitlist.csv"), "w", encoding="utf8"
+    ) as waitlist_out, open(
         os.path.join(args.out, "amo.csv"), "w", encoding="utf8"
     ) as amo_out:
         email_writer = csv.DictWriter(
@@ -129,9 +129,9 @@ def main(test_args=None) -> int:
                 ","
             ),
         )
-        vpn_waitlist_writer = csv.DictWriter(
-            vpn_waitlist_out,
-            fieldnames="email_id,geo,platform,create_timestamp,update_timestamp".split(
+        waitlist_writer = csv.DictWriter(
+            waitlist_out,
+            fieldnames="email_id,name,geo,source,create_timestamp,update_timestamp".split(
                 ","
             ),
         )
@@ -145,7 +145,7 @@ def main(test_args=None) -> int:
         email_writer.writeheader()
         fxa_writer.writeheader()
         newsletter_writer.writeheader()
-        vpn_waitlist_writer.writeheader()
+        waitlist_writer.writeheader()
         amo_writer.writeheader()
 
         total = 0
@@ -208,15 +208,15 @@ def main(test_args=None) -> int:
                     start,
                     estimated_total,
                 )
-            elif "contact_to_vpn_waitlist" in f:
+            elif "contact_to_waitlist" in f:
                 csv_reader(
                     directory,
                     f,
-                    vpn_waitlist_modifier,
+                    waitlist_modifier,
                     isdev,
                     canonical_mapping,
                     skip_writes,
-                    vpn_waitlist_writer,
+                    waitlist_writer,
                     total,
                     start,
                     estimated_total,

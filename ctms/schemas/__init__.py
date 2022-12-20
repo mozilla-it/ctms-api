@@ -86,6 +86,7 @@ from .waitlist import (
     VpnWaitlistTableSchema,
     WaitlistInSchema,
     WaitlistSchema,
+    WaitlistTableSchema,
 )
 from .web import (
     BadRequestResponse,

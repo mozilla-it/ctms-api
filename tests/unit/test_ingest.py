@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from ctms.ingest import Ingester, InputIOs
-from ctms.models import AmoAccount, Email, Newsletter
+from ctms.models import AmoAccount, Email, Newsletter, Waitlist
 from ctms.schemas import AddOnsTableSchema, EmailTableSchema, NewsletterTableSchema
 
 
@@ -14,8 +14,8 @@ def test_input_io_can_finalize():
     ios.amo = iter(())
     ios.emails = iter(())
     ios.fxa = iter(())
-    ios.vpn_waitlist = iter(())
     ios.newsletters = iter(())
+    ios.waitlists = iter(())
     ios.finalize()
 
 
@@ -42,13 +42,13 @@ def empty_ios():
     ios.amo = iter(())
     ios.emails = iter(())
     ios.fxa = iter(())
-    ios.vpn_waitlist = iter(())
     ios.newsletters = iter(())
+    ios.waitlists = iter(())
     ios.finalize()
     return ios
 
 
-def _check_saved(dbsession, emails=None, amos=None, newsletters=None):
+def _check_saved(dbsession, emails=None, amos=None, newsletters=None, waitlists=None):
     if emails:
         saved_emails = dbsession.query(Email).all()
         assert len(saved_emails) == len(emails)
@@ -58,6 +58,9 @@ def _check_saved(dbsession, emails=None, amos=None, newsletters=None):
     if newsletters:
         saved_newsletters = dbsession.query(Newsletter).all()
         assert len(saved_newsletters) == len(newsletters)
+    if waitlists:
+        saved_waitlists = dbsession.query(Waitlist).all()
+        assert len(saved_waitlists) == len(waitlists)
 
 
 def test_ingest_empty(connection, empty_ios):
@@ -153,8 +156,12 @@ def test_ingest_emails_and_newsletters(connection, empty_ios, dbsession, batch_s
             update_timestamp=datetime.now(timezone.utc),
         ).dict(),
     ]
+    waitlists = []
     empty_ios.emails = emails
     empty_ios.newsletters = newsletters
     ingester = Ingester(empty_ios, connection, batch_size=batch_size)
     ingester.run()
-    _check_saved(dbsession, emails, newsletters=newsletters)
+    _check_saved(dbsession, emails, newsletters=newsletters, waitlists=waitlists)
+
+
+# TODO test waitlists import from CSV

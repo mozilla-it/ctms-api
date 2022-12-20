@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.engine import Connection
 
 from ctms.database import Base
-from ctms.models import AmoAccount, Email, FirefoxAccount, Newsletter, VpnWaitlist
+from ctms.models import AmoAccount, Email, FirefoxAccount, Newsletter, Waitlist
 
 
 @dataclass
@@ -15,8 +15,8 @@ class InputIOs:
     amo: Any = None
     emails: Any = None
     fxa: Any = None
-    vpn_waitlist: Any = None
     newsletters: Any = None
+    waitlists: Any = None
 
     def finalize(self):
         missing = []
@@ -87,10 +87,14 @@ class Ingester:
                 FirefoxAccount,
                 {"index_elements": [FirefoxAccount.email_id]},
             )
+            # TODO: figure out this
+            # self._table_loop(
+            #     self.inputs.vpn_waitlist,
+            #     VpnWaitlist,
+            #     {"index_elements": [VpnWaitlist.email_id]},
+            # )
             self._table_loop(
-                self.inputs.vpn_waitlist,
-                VpnWaitlist,
-                {"index_elements": [VpnWaitlist.email_id]},
+                self.inputs.waitlists, Waitlist, {"constraint": "uix_wl_email_name"}
             )
             self._table_loop(
                 self.inputs.newsletters, Newsletter, {"constraint": "uix_email_name"}

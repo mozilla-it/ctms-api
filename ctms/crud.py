@@ -628,6 +628,9 @@ def create_or_update_waitlists(
         stmt = insert(Waitlist).values(
             [{"email_id": email_id, **wl.dict()} for wl in waitlists]
         )
+        stmt = stmt.on_conflict_do_update(
+            constraint="uix_wl_email_name", set_=dict(stmt.excluded)
+        )
 
         db.execute(stmt)
 

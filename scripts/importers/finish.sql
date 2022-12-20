@@ -8,7 +8,6 @@ alter table vpn_waitlist add primary key (id);
 alter table amo add constraint amo_email_id_key unique (email_id);
 alter table fxa add constraint fxa_email_id_key unique (email_id);
 alter table newsletters add constraint uix_email_name unique (email_id, "name");
-alter table vpn_waitlist add constraint vpn_waitlist_email_id_key unique (email_id);
 alter table fxa add constraint fxa_fxa_id_key unique (fxa_id);
 
 -- Easy enough to add this now too
@@ -38,13 +37,11 @@ alter table emails add constraint emails_basket_token_key unique (basket_token);
 delete from amo where not exists (select from emails where email_id = amo.email_id);
 delete from fxa where not exists (select from emails where email_id = fxa.email_id);
 delete from newsletters where not exists (select from emails where email_id = newsletters.email_id);
-delete from vpn_waitlist where not exists (select from emails where email_id = vpn_waitlist.email_id);
 
 -- Now add the foreign keys back!
 alter table amo add constraint amo_email_id_fkey foreign key (email_id) references emails (email_id);
 alter table fxa add constraint fxa_email_id_fkey foreign key (email_id) references emails (email_id);
 alter table newsletters add constraint newsletters_email_id_fkey foreign key (email_id) references emails (email_id);
-alter table vpn_waitlist add constraint vpn_waitlist_email_id_fkey foreign key (email_id) references emails (email_id);
 alter table mofo add constraint mofo_email_id_fkey foreign key (email_id) references emails (email_id);
 
 -- One more cleanup

@@ -18,7 +18,7 @@ from ctms.csv_helpers import (
     email_modifier,
     fxa_modifier,
     newsletter_modifier,
-    vpn_waitlist_modifier,
+    waitlist_modifier,
 )
 from ctms.database import get_db_engine
 from ctms.ingest import Ingester, InputIOs
@@ -105,8 +105,9 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     amos = []
     fxas = []
     newsletters = []
-    vpn_waitlists = []
+    waitlists = []
     for f in os.listdir(directory):
+        print(directory, f)
         if "contact_to_email" in f:
             total += 1
             emails.append(
@@ -140,13 +141,13 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
                     skip_writes,
                 )
             )
-        elif "contact_to_vpn_waitlist" in f:
+        elif "contact_to_waitlist" in f:
             total += 1
-            vpn_waitlists.append(
+            waitlists.append(
                 csv_reader(
                     directory,
                     f,
-                    vpn_waitlist_modifier,
+                    waitlist_modifier,
                     isdev,
                     canonical_mapping,
                     skip_writes,
@@ -157,7 +158,7 @@ def main(db: Connection, cfg: config.Settings, test_args=None) -> int:
     inputs.emails = chain(*emails)
     inputs.fxa = chain(*fxas)
     inputs.newsletters = chain(*newsletters)
-    inputs.vpn_waitlist = chain(*vpn_waitlists)
+    inputs.waitlists = chain(*waitlists)
     try:
         inputs.finalize()
     except BaseException as e:  # pylint:disable = W0703

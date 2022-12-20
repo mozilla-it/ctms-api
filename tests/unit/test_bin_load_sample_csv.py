@@ -40,7 +40,7 @@ def test_create(connection, dbsession, settings, test_data_dir):
     assert (
         contact.fxa.created_date == "2019-05-28"
     )  # This is not our timestamp, but a fxa thing
-    assert contact.vpn_waitlist
+    assert len(contact.waitlists) == 1
     assert len(contact.newsletters) == 4
     assert "firefox-accounts-journey" in [n.name for n in contact.newsletters]
 
@@ -69,6 +69,6 @@ def test_create_no_amo(connection, dbsession, settings, test_data_dir):
     assert (
         contact.fxa.created_date == "2019-05-28"
     )  # This is not our timestamp, but a fxa thing
-    assert contact.vpn_waitlist
+    assert len(contact.waitlists) == 1
     assert len(contact.newsletters) == 4
     assert "firefox-accounts-journey" in [n.name for n in contact.newsletters]
