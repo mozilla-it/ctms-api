@@ -624,7 +624,6 @@ def test_patch_vpn_waitlist_legacy_update(client, minimal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    before = len(actual["waitlists"])
 
     patch_data = {"vpn_waitlist": {"geo": "it"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -644,7 +643,6 @@ def test_patch_vpn_waitlist_legacy_update_full(client, minimal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    before = len(actual["waitlists"])
 
     patch_data = {"vpn_waitlist": {"geo": "it", "platform": "linux"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
