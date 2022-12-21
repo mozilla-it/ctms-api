@@ -68,10 +68,6 @@ USER app
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
-# Copying in our entrypoint
-COPY --chown=app:app ./docker/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
 # venv already has runtime deps installed we get a quicker install
 WORKDIR $PYSETUP_PATH
 RUN poetry install --no-root
@@ -80,25 +76,17 @@ WORKDIR /app
 COPY --chown=app:app . .
 
 EXPOSE $PORT
-ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
 
 # 'production' stage uses the clean 'python-base' stage and copyies
 # in only our runtime deps that were installed in the 'builder-base'
 FROM python-base as production
-ENV FASTAPI_ENV=production \
-    IS_GUNICORN=1 \
-    PROMETHEUS_MULTIPROC=1
+ENV FASTAPI_ENV=production
 
 COPY --from=builder-base $VENV_PATH $VENV_PATH
-COPY ./docker/gunicorn_conf.py /gunicorn_conf.py
-
-COPY ./docker/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
 
 COPY . /app
 WORKDIR /app
 
 EXPOSE $PORT
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD gunicorn -k uvicorn.workers.UvicornWorker -c /gunicorn_conf.py ctms.app:app
+CMD uvicorn ctms.app:app

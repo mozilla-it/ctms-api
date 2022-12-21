@@ -5,13 +5,10 @@ from typing import Any, Type, cast
 
 from fastapi import FastAPI
 from prometheus_client import CollectorRegistry, Counter, Histogram
-from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.utils import INF
-from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from starlette.routing import Route
 
-from ctms import config
 from ctms.crud import get_active_api_client_ids
 
 METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
@@ -58,37 +55,6 @@ METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
         },
     ),
 }
-
-
-def get_metrics_reporting_registry(
-    process_registry: CollectorRegistry,
-) -> CollectorRegistry:
-    """
-    Get the metrics registry for reporting metrics.
-
-    If we're running under gunicorn, then each worker has its own process and
-    its own process collector. For reporting, we need a fresh registry with a
-    multiprocess collector that points to the metrics folder (created empty at
-    startup, with a database file for each process and metric type). It will
-    use the databases in this folder to generate combined metrics across the
-    processes, and will not double-count the reporting process's metrics.
-
-    If we're not running under gunicorn, then return the passed per-process
-    registry, which is the only metrics registry. In the single-process case,
-    We could use the default prometheus_client.REGISTRY, but it makes tests
-    easier to write if it is possible to replace the registry with a fresh one.
-    """
-    try:
-        settings = config.Settings()
-        prometheus_multiproc_dir = settings.prometheus_multiproc_dir
-    except ValidationError:
-        prometheus_multiproc_dir = None
-
-    if prometheus_multiproc_dir:
-        registry = CollectorRegistry()
-        MultiProcessCollector(registry, path=prometheus_multiproc_dir)
-        return registry
-    return process_registry
 
 
 def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram]:

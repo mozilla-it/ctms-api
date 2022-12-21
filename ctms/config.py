@@ -3,7 +3,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseSettings, DirectoryPath, PostgresDsn
+from pydantic import BaseSettings, PostgresDsn
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
@@ -31,8 +31,6 @@ class Settings(BaseSettings):
     sentry_debug: bool = False
 
     fastapi_env: Optional[str] = None
-    is_gunicorn: bool = False
-    prometheus_multiproc_dir: Optional[DirectoryPath] = None
 
     pubsub_audience: Optional[str] = None
     pubsub_email: Optional[str] = None
@@ -68,8 +66,6 @@ class Settings(BaseSettings):
 
         fields = {
             "fastapi_env": {"env": "fastapi_env"},
-            "is_gunicorn": {"env": "is_gunicorn"},
-            "prometheus_multiproc_dir": {"env": "prometheus_multiproc_dir"},
         }
 
 
