@@ -41,7 +41,7 @@ class WaitlistBase(ComparableBase):
         return self.name < other.name
 
     @root_validator
-    def check_fields(self, values):
+    def check_fields(cls, values):  # pylint:disable = no-self-argument
         if "name" in values:
             validate_waitlist_fields(values["name"], values.get("fields", {}))
         return values
