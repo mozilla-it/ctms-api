@@ -6,7 +6,12 @@ import pytest
 
 from ctms.ingest import Ingester, InputIOs
 from ctms.models import AmoAccount, Email, Newsletter, Waitlist
-from ctms.schemas import AddOnsTableSchema, EmailTableSchema, NewsletterTableSchema
+from ctms.schemas import (
+    AddOnsTableSchema,
+    EmailTableSchema,
+    NewsletterTableSchema,
+    WaitlistTableSchema,
+)
 
 
 def test_input_io_can_finalize():
@@ -127,7 +132,9 @@ def test_ingest_emails_and_amo(connection, empty_ios, dbsession, batch_size):
 
 
 @pytest.mark.parametrize("batch_size", [10, 1, 2, 100])
-def test_ingest_emails_and_newsletters(connection, empty_ios, dbsession, batch_size):
+def test_ingest_emails_and_newsletters_and_waitlists(
+    connection, empty_ios, dbsession, batch_size
+):
     emails = [
         EmailTableSchema(
             email_id=uuid4(),
@@ -156,12 +163,18 @@ def test_ingest_emails_and_newsletters(connection, empty_ios, dbsession, batch_s
             update_timestamp=datetime.now(timezone.utc),
         ).dict(),
     ]
-    waitlists = []
+    waitlists = [
+        WaitlistTableSchema(
+            email_id=emails[0]["email_id"],
+            name="fans",
+            geo="mx",
+            create_timestamp=datetime.now(timezone.utc),
+            update_timestamp=datetime.now(timezone.utc),
+        ).dict(),
+    ]
     empty_ios.emails = emails
     empty_ios.newsletters = newsletters
+    empty_ios.waitlists = waitlists
     ingester = Ingester(empty_ios, connection, batch_size=batch_size)
     ingester.run()
     _check_saved(dbsession, emails, newsletters=newsletters, waitlists=waitlists)
-
-
-# TODO test waitlists import from CSV
