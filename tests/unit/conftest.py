@@ -34,6 +34,7 @@ from ctms.crud import (
     get_fxa_by_email_id,
     get_mofo_by_email_id,
     get_newsletters_by_email_id,
+    get_relay_by_email_id,
     get_stripe_products,
     get_vpn_by_email_id,
     get_waitlists_by_email_id,
@@ -285,6 +286,7 @@ def post_contact(request, client, dbsession):
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
+            _check_written("relay_waitlist", get_relay_by_email_id)
             _check_written("waitlists", get_waitlists_by_email_id, result_list=True)
 
         # Check that GET returns the same contact
@@ -364,6 +366,7 @@ def put_contact(request, client, dbsession):
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id)
             _check_written("vpn_waitlist", get_vpn_by_email_id)
+            _check_written("relay_waitlist", get_relay_by_email_id)
             _check_written("waitlists", get_waitlists_by_email_id)
 
         # Check that GET returns the same contact

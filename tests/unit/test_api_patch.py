@@ -60,7 +60,6 @@ def swap_bool(existing):
         ("mofo", "mofo_email_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
         ("mofo", "mofo_contact_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
         ("mofo", "mofo_relevant", swap_bool),
-        ("relay_waitlist", "geo", "uk"),
     ),
 )
 def test_patch_one_new_value(
@@ -142,7 +141,6 @@ def test_patch_one_new_value(
         ("mofo", "mofo_email_id"),
         ("mofo", "mofo_contact_id"),
         ("mofo", "mofo_relevant"),
-        ("relay_waitlist", "geo"),
     ),
 )
 def test_patch_to_default(client, maximal_contact, group_name, key):
@@ -654,3 +652,102 @@ def test_patch_vpn_waitlist_legacy_update_full(client, minimal_contact):
         "source": None,
         "fields": {"platform": "linux"},
     }
+
+
+def test_patch_relay_waitlist_legacy_add(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"relay_waitlist": {"geo": "fr"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "relay",
+            "geo": "fr",
+            "source": None,
+            "fields": {},
+        }
+    ]
+
+
+def test_patch_relay_waitlist_legacy_delete(client, minimal_contact):
+    # TODO: use maximal contact once migrated.
+    email_id = minimal_contact.email.email_id
+    patch_data = {"relay_waitlist": {"geo": "fr"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    before = len(actual["waitlists"])
+
+    patch_data = {"relay_waitlist": "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_relay_waitlist_legacy_delete_default(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"relay_waitlist": {"geo": "fr"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    before = len(actual["waitlists"])
+
+    patch_data = {"relay_waitlist": {"geo": None}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_relay_waitlist_legacy_update(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"relay_waitlist": {"geo": "fr"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+
+    patch_data = {"relay_waitlist": {"geo": "it"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"][-1] == {
+        "name": "relay",
+        "geo": "it",
+        "source": None,
+        "fields": {},
+    }
+
+
+def test_patch_relay_waitlist_legacy_update_all(client, minimal_contact):
+    # Test that all relay waitlists records are updated from the legacy way.
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "waitlists": [
+            {"name": "relay", "geo": "fr"},
+            {"name": "relay-vpn-bundle", "geo": "fr"},
+        ]
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+
+    patch_data = {"relay_waitlist": {"geo": "it"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "relay",
+            "geo": "it",
+            "source": None,
+            "fields": {},
+        },
+        {
+            "name": "relay-vpn-bundle",
+            "geo": "it",
+            "source": None,
+            "fields": {},
+        },
+    ]

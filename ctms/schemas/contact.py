@@ -55,6 +55,10 @@ class ContactSchema(ComparableBase):
                         "fields": {"platform": "win64"},
                     },
                     {
+                        "name": "relay",
+                        "geo": "fr",
+                    },
+                    {
                         "name": "vpn",
                         "geo": "fr",
                         "fields": {"platform": "ios,mac"},

@@ -109,7 +109,7 @@ SAMPLE_MAXIMAL = ContactSchema(
         platform="windows,android",
     ),
     relay_waitlist=RelayWaitlistSchema(
-        geo="ca",
+        geo="cn",
     ),
     waitlists=[
         WaitlistSchema(
@@ -117,6 +117,10 @@ SAMPLE_MAXIMAL = ContactSchema(
             geo="fr",
             source="https://a-software.mozilla.org/",
             fields={},
+        ),
+        WaitlistSchema(
+            name="relay",
+            geo="cn",
         ),
         WaitlistSchema(
             name="super-product",

@@ -64,9 +64,6 @@ class Email(Base):
     )
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
-    relay_waitlist = relationship(
-        "RelayWaitlist", back_populates="email", uselist=False
-    )
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
@@ -78,6 +75,17 @@ class Email(Base):
         secondaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
     )
+
+    @property
+    def relay_waitlist(self):
+        """Mimic legacy fields by looking for the first Relay entry in the Waitlist table."""
+        by_name = {wl.name: wl for wl in self.waitlists}
+        relay_waitlists = [
+            wl for name, wl in by_name.items() if name.startswith("relay")
+        ]
+        if not relay_waitlists:
+            return None
+        return {"geo": relay_waitlists[0].geo}  # First waitlist found.
 
     @property
     def vpn_waitlist(self):
@@ -140,7 +148,7 @@ class Waitlist(Base):
     name = Column(String(255), nullable=False)
     geo = Column(String(100), nullable=False)
     source = Column(Text)
-    fields = Column(JSON, nullable=False, server_default="{}")
+    fields = Column(JSON, nullable=False, server_default="'{}'::json")
 
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -242,25 +250,6 @@ class AcousticNewsletterMapping(Base):
 
     source = Column(String, primary_key=True)
     destination = Column(String)
-
-
-class RelayWaitlist(Base):
-    __tablename__ = "relay_waitlist"
-
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
-    geo = Column(String(100))
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
-
-    email = relationship("Email", back_populates="relay_waitlist", uselist=False)
 
 
 class ApiClient(Base):
