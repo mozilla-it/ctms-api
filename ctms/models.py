@@ -79,6 +79,7 @@ class Email(Base):
     @property
     def relay_waitlist(self):
         """Mimic legacy fields by looking for the first Relay entry in the Waitlist table."""
+        # Use a dict instead of a query since `waitlists` is likely to be already populated in `crud.py`
         by_name = {wl.name: wl for wl in self.waitlists}
         relay_waitlists = [
             wl for name, wl in by_name.items() if name.startswith("relay")
@@ -90,7 +91,7 @@ class Email(Base):
     @property
     def vpn_waitlist(self):
         """Mimic legacy fields by looking for a VPN entry in the Waitlist table."""
-        # TODO: why not db.query(Waitlist).filter(...).one_or_none()
+        # Use a dict instead of a query since `waitlists` is likely to be already populated in `crud.py`
         by_name = {wl.name: wl for wl in self.waitlists}
         if "vpn" not in by_name:
             return None
