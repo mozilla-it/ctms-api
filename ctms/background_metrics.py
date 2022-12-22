@@ -104,6 +104,17 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
         self.pushgateway_url = pushgateway_url
         self.job_name = "prometheus-pushgateway"
 
+        self.sync_loop_duration_seconds = Gauge(
+            name=metric_prefix + "acoustic_sync_loop_duration_seconds",
+            documentation="Acoustic sync loop duration in seconds.",
+            labelnames=[
+                "app_kubernetes_io_component",
+                "app_kubernetes_io_instance",
+                "app_kubernetes_io_name",
+            ],
+            registry=registry,
+        )
+
     def inc_acoustic_request_total(self, method, status, table):
         self.requests.labels(
             method=method,
@@ -161,3 +172,10 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
 
     def push_to_gateway(self):
         push_to_gateway(self.pushgateway_url, job=self.job_name, registry=self.registry)
+
+    def set_sync_loop_duration_seconds(self, duration_seconds):
+        self.sync_loop_duration_seconds.labels(
+            app_kubernetes_io_component=self.app_kubernetes_io_component,
+            app_kubernetes_io_instance=self.app_kubernetes_io_instance,
+            app_kubernetes_io_name=self.app_kubernetes_io_name,
+        ).set(duration_seconds)
