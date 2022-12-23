@@ -77,13 +77,11 @@ from .stripe_subscription_item import (
 from .waitlist import (
     RelayWaitlistInSchema,
     RelayWaitlistSchema,
-    RelayWaitlistTableSchema,
     UpdatedRelayWaitlistInSchema,
     UpdatedVpnWaitlistInSchema,
     UpdatedWaitlistInSchema,
     VpnWaitlistInSchema,
     VpnWaitlistSchema,
-    VpnWaitlistTableSchema,
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,
