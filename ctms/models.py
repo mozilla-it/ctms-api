@@ -79,27 +79,23 @@ class Email(Base):
     @property
     def relay_waitlist(self):
         """Mimic legacy fields by looking for the first Relay entry in the Waitlist table."""
-        # Use a dict instead of a query since `waitlists` is likely to be already populated in `crud.py`
-        by_name = {wl.name: wl for wl in self.waitlists}
-        relay_waitlists = [
-            wl for name, wl in by_name.items() if name.startswith("relay")
-        ]
-        if not relay_waitlists:
-            return None
-        return {"geo": relay_waitlists[0].geo}  # First waitlist found.
+        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
+        for waitlist in self.waitlists:
+            if waitlist.name.startswith("relay"):
+                return {"geo": waitlist.geo}
+        return None
 
     @property
     def vpn_waitlist(self):
         """Mimic legacy fields by looking for a VPN entry in the Waitlist table."""
-        # Use a dict instead of a query since `waitlists` is likely to be already populated in `crud.py`
-        by_name = {wl.name: wl for wl in self.waitlists}
-        if "vpn" not in by_name:
-            return None
-        vpn_waitlist = by_name["vpn"]
-        return {
-            "geo": vpn_waitlist.geo,
-            "platform": vpn_waitlist.fields.get("platform"),
-        }
+        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
+        for waitlist in self.waitlists:
+            if waitlist.name == "vpn":
+                return {
+                    "geo": waitlist.geo,
+                    "platform": waitlist.fields.get("platform"),
+                }
+        return None
 
     # Class Comparators
     @hybrid_property
