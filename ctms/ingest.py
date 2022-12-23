@@ -87,12 +87,6 @@ class Ingester:
                 FirefoxAccount,
                 {"index_elements": [FirefoxAccount.email_id]},
             )
-            # TODO: figure out this
-            # self._table_loop(
-            #     self.inputs.vpn_waitlist,
-            #     VpnWaitlist,
-            #     {"index_elements": [VpnWaitlist.email_id]},
-            # )
             self._table_loop(
                 self.inputs.waitlists, Waitlist, {"constraint": "uix_wl_email_name"}
             )

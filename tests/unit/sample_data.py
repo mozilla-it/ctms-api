@@ -12,8 +12,6 @@ from ctms.schemas import (
     FirefoxAccountsSchema,
     MozillaFoundationSchema,
     NewsletterSchema,
-    RelayWaitlistSchema,
-    VpnWaitlistSchema,
     WaitlistSchema,
 )
 
@@ -104,13 +102,6 @@ SAMPLE_MAXIMAL = ContactSchema(
         NewsletterSchema(name="mozilla-festival"),
         NewsletterSchema(name="mozilla-foundation", lang="fr"),
     ],
-    vpn_waitlist=VpnWaitlistSchema(
-        geo="ca",
-        platform="windows,android",
-    ),
-    relay_waitlist=RelayWaitlistSchema(
-        geo="cn",
-    ),
     waitlists=[
         WaitlistSchema(
             name="a-software",
@@ -153,10 +144,11 @@ SAMPLE_EXAMPLE = ContactSchema(
     amo=AddOnsSchema(**_gather_examples(AddOnsSchema)),
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fxa=FirefoxAccountsSchema(**_gather_examples(FirefoxAccountsSchema)),
-    vpn_waitlist=VpnWaitlistSchema(**_gather_examples(VpnWaitlistSchema)),
-    relay_waitlist=RelayWaitlistSchema(**_gather_examples(RelayWaitlistSchema)),
     newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
-    waitlists=ContactSchema.schema()["properties"]["waitlists"]["example"],
+    waitlists=[
+        WaitlistSchema(**example)
+        for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
+    ],
 )
 
 SAMPLE_TO_ADD = ContactSchema(

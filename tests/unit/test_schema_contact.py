@@ -19,7 +19,6 @@ def test_idempotent_equal():
         ("email", "email_format", "T"),
         ("fxa", "lang", "es"),
         ("mofo", "mofo_relevant", False),
-        ("vpn_waitlist", "geo", "ir"),
     ),
 )
 def test_change_field_not_idempotent_equal(group, field, value):

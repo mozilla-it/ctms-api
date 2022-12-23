@@ -126,14 +126,6 @@ RelayWaitlistInSchema = RelayWaitlistBase
 RelayWaitlistSchema = RelayWaitlistBase
 
 
-class UpdatedRelayWaitlistInSchema(RelayWaitlistInSchema):
-    update_timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Relay Waitlist data update timestamp",
-        example="2021-01-28T21:26:57.511Z",
-    )
-
-
 class VpnWaitlistBase(ComparableBase):
     """
     The Mozilla VPN Waitlist schema.
@@ -165,11 +157,3 @@ class VpnWaitlistBase(ComparableBase):
 # No need to change anything, just extend if you want to
 VpnWaitlistInSchema = VpnWaitlistBase
 VpnWaitlistSchema = VpnWaitlistBase
-
-
-class UpdatedVpnWaitlistInSchema(VpnWaitlistInSchema):
-    update_timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="VPN Waitlist data update timestamp",
-        example="2021-01-28T21:26:57.511Z",
-    )

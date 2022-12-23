@@ -16,8 +16,6 @@ from ctms.schemas import (
     FirefoxAccountsSchema,
     MozillaFoundationInSchema,
     MozillaFoundationSchema,
-    RelayWaitlistSchema,
-    VpnWaitlistSchema,
 )
 
 
@@ -76,8 +74,6 @@ def test_patch_one_new_value(
             fxa=contact.fxa or FirefoxAccountsSchema(),
             mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
-            vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
-            relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
             waitlists=contact.waitlists or [],
         ).json()
     )
@@ -155,8 +151,6 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
             fxa=maximal_contact.fxa or FirefoxAccountsSchema(),
             mofo=maximal_contact.mofo or MozillaFoundationSchema(),
             newsletters=maximal_contact.newsletters or [],
-            vpn_waitlist=maximal_contact.vpn_waitlist or VpnWaitlistSchema(),
-            relay_waitlist=maximal_contact.relay_waitlist or RelayWaitlistSchema(),
             waitlists=maximal_contact.waitlists or [],
         ).json()
     )
@@ -170,8 +164,6 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
         ),
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
-        "vpn_waitlist": VpnWaitlistSchema(),
-        "relay_waitlist": RelayWaitlistSchema(),
     }[group_name].__fields__[key]
     assert not field.required
     default_value = field.get_default()
@@ -193,8 +185,8 @@ def test_patch_to_group_default(client, dbsession, maximal_contact):
     """PATCH to default values deletes a group."""
     email_id = maximal_contact.email.email_id
     email = get_email(dbsession, email_id)
-    assert email.vpn_waitlist
-    assert email.relay_waitlist
+    assert "vpn" in {wl.name for wl in email.waitlists}
+    assert "relay" in {wl.name for wl in email.waitlists}
 
     patch_data = {
         "vpn_waitlist": {"geo": None, "platform": None},
@@ -207,8 +199,8 @@ def test_patch_to_group_default(client, dbsession, maximal_contact):
     assert actual["relay_waitlist"] == {"geo": None}
 
     email = get_email(dbsession, email_id)
-    assert not email.vpn_waitlist
-    assert not email.relay_waitlist
+    assert "vpn" not in {wl.name for wl in email.waitlists}
+    assert "relay" not in {wl.name for wl in email.waitlists}
 
 
 def test_patch_cannot_set_timestamps(client, maximal_contact):
@@ -245,6 +237,10 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert expected["products"] == []
     assert "products" not in actual
     actual["products"] = []
+    # The response shows computed fields for retro-compat. Contact schema
+    # does not have them.
+    del actual["vpn_waitlist"]
+    del actual["relay_waitlist"]
     assert actual == expected
 
 
@@ -441,9 +437,7 @@ def test_patch_unsubscribe_all(client, maximal_contact):
     assert all(not nl["subscribed"] for nl in actual["newsletters"])
 
 
-@pytest.mark.parametrize(
-    "group_name", ("amo", "fxa", "mofo", "vpn_waitlist", "relay_waitlist")
-)
+@pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo"))
 def test_patch_to_delete_group(client, maximal_contact, group_name):
     """PATCH with a group set to "DELETE" resets the group to defaults."""
     email_id = maximal_contact.email.email_id
@@ -455,8 +449,6 @@ def test_patch_to_delete_group(client, maximal_contact, group_name):
         "amo": AddOnsSchema(),
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
-        "vpn_waitlist": VpnWaitlistSchema(),
-        "relay_waitlist": RelayWaitlistSchema(),
     }[group_name].dict()
     assert actual[group_name] == defaults
 

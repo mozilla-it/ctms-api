@@ -76,12 +76,8 @@ from .stripe_subscription_item import (
 )
 from .waitlist import (
     RelayWaitlistInSchema,
-    RelayWaitlistSchema,
-    UpdatedRelayWaitlistInSchema,
-    UpdatedVpnWaitlistInSchema,
     UpdatedWaitlistInSchema,
     VpnWaitlistInSchema,
-    VpnWaitlistSchema,
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,

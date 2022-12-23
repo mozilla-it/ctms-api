@@ -87,22 +87,6 @@ def get_newsletters_by_email_id(db: Session, email_id: UUID4):
     return db.query(Newsletter).filter(Newsletter.email_id == email_id).all()
 
 
-def get_vpn_by_email_id(db: Session, email_id: UUID4):
-    return (
-        db.query(Waitlist)
-        .filter(Waitlist.email_id == email_id, Waitlist.name == "vpn")
-        .one_or_none()
-    )
-
-
-def get_relay_by_email_id(db: Session, email_id: UUID4):
-    return (
-        db.query(Waitlist)
-        .filter(Waitlist.email_id == email_id, Waitlist.name.startswith("relay"))
-        .one_or_none()
-    )
-
-
 def get_waitlists_by_email_id(db: Session, email_id: UUID4):
     return db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
 
@@ -177,8 +161,6 @@ def get_bulk_contacts(
                 "fxa": email.fxa,
                 "mofo": email.mofo,
                 "newsletters": email.newsletters,
-                "vpn_waitlist": email.vpn_waitlist,
-                "relay_waitlist": email.relay_waitlist,
                 "waitlists": email.waitlists,
             }
         )
@@ -207,8 +189,6 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
         "fxa": email.fxa,
         "mofo": email.mofo,
         "newsletters": email.newsletters,
-        "vpn_waitlist": email.vpn_waitlist,
-        "relay_waitlist": email.relay_waitlist,
         "products": products,
         "waitlists": email.waitlists,
     }
@@ -314,8 +294,6 @@ def get_contacts_by_any_id(
                 "fxa": email.fxa,
                 "mofo": email.mofo,
                 "newsletters": email.newsletters,
-                "vpn_waitlist": email.vpn_waitlist,
-                "relay_waitlist": email.relay_waitlist,
                 "waitlists": email.waitlists,
             }
         )

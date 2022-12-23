@@ -76,27 +76,6 @@ class Email(Base):
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
     )
 
-    @property
-    def relay_waitlist(self):
-        """Mimic legacy fields by looking for the first Relay entry in the Waitlist table."""
-        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
-        for waitlist in self.waitlists:
-            if waitlist.name.startswith("relay"):
-                return {"geo": waitlist.geo}
-        return None
-
-    @property
-    def vpn_waitlist(self):
-        """Mimic legacy fields by looking for a VPN entry in the Waitlist table."""
-        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
-        for waitlist in self.waitlists:
-            if waitlist.name == "vpn":
-                return {
-                    "geo": waitlist.geo,
-                    "platform": waitlist.fields.get("platform"),
-                }
-        return None
-
     # Class Comparators
     @hybrid_property
     def primary_email_insensitive(self):

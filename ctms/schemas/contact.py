@@ -36,8 +36,6 @@ class ContactSchema(ComparableBase):
     mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterSchema] = []
     waitlists: List[WaitlistSchema] = []
-    vpn_waitlist: Optional[VpnWaitlistSchema] = None
-    relay_waitlist: Optional[RelayWaitlistSchema] = None
     products: List[ProductBaseSchema] = []
 
     class Config:
@@ -67,6 +65,27 @@ class ContactSchema(ComparableBase):
             },
         }
 
+    @property
+    def relay_waitlist(self):
+        """Mimic legacy fields by looking for the first Relay entry in the Waitlist table."""
+        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
+        for waitlist in self.waitlists:
+            if waitlist.name.startswith("relay"):
+                return RelayWaitlistSchema(geo=waitlist.geo)
+        return None
+
+    @property
+    def vpn_waitlist(self):
+        """Mimic legacy fields by looking for a VPN entry in the Waitlist table."""
+        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
+        for waitlist in self.waitlists:
+            if waitlist.name == "vpn":
+                return VpnWaitlistSchema(
+                    geo=waitlist.geo,
+                    platform=waitlist.fields.get("platform"),
+                )
+        return None
+
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
         return IdentityResponse(
@@ -88,18 +107,6 @@ class ContactSchema(ComparableBase):
             default_fields.add("amo")
         if hasattr(self, "fxa") and self.fxa and self.fxa.is_default():
             default_fields.add("fxa")
-        if (
-            hasattr(self, "vpn_waitlist")
-            and self.vpn_waitlist
-            and self.vpn_waitlist.is_default()
-        ):
-            default_fields.add("vpn_waitlist")
-        if (
-            hasattr(self, "relay_waitlist")
-            and self.relay_waitlist
-            and self.relay_waitlist.is_default()
-        ):
-            default_fields.add("relay_waitlist")
         if hasattr(self, "mofo") and self.mofo and self.mofo.is_default():
             default_fields.add("mofo")
         if all(n.is_default() for n in self.newsletters):
@@ -118,6 +125,7 @@ class ContactInBase(ComparableBase):
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = []
     waitlists: List[WaitlistInSchema] = []
+    # Retro-compat fields. Drop once Basket uses the `waitlists` list.
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
@@ -135,8 +143,6 @@ class ContactInBase(ComparableBase):
             and _noneify(self.amo) == _noneify(other.amo)
             and _noneify(self.fxa) == _noneify(other.fxa)
             and _noneify(self.mofo) == _noneify(other.mofo)
-            and _noneify(self.vpn_waitlist) == _noneify(other.vpn_waitlist)
-            and _noneify(self.relay_waitlist) == _noneify(other.relay_waitlist)
             and sorted(self.newsletters) == sorted(other.newsletters)
             and sorted(self.waitlists) == sorted(other.waitlists)
         )
@@ -168,6 +174,7 @@ class ContactPatchSchema(ComparableBase):
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
     waitlists: Optional[List[WaitlistSchema]]
+    # Retro-compat fields. Drop once Basket uses the `waitlists` list.
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
 
@@ -218,9 +225,27 @@ class CTMSResponse(BaseModel):
     fxa: FirefoxAccountsSchema
     mofo: MozillaFoundationSchema
     newsletters: List[NewsletterSchema]
+    waitlists: List[WaitlistSchema]
+    # Retro-compat fields
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
-    waitlists: List[WaitlistSchema]
+
+    def __init__(self, *args, **kwargs) -> None:
+        # Show computed fields in response for retro-compatibility.
+        kwargs["vpn_waitlist"] = VpnWaitlistSchema()
+        kwargs["relay_waitlist"] = RelayWaitlistSchema()
+        for waitlist in kwargs.get("waitlists", []):
+            if isinstance(waitlist, dict):
+                # TODO: figure out why sometimes dict, sometimes WaitlistSchema
+                waitlist = WaitlistSchema(**waitlist)
+            if waitlist.name == "vpn":
+                kwargs["vpn_waitlist"] = VpnWaitlistSchema(
+                    geo=waitlist.geo,
+                    platform=waitlist.fields.get("platform"),
+                )
+            if waitlist.name.startswith("relay"):
+                kwargs["relay_waitlist"] = RelayWaitlistSchema(geo=waitlist.geo)
+        super().__init__(*args, **kwargs)
 
 
 class CTMSSingleResponse(CTMSResponse):

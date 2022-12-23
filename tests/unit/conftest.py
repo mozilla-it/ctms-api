@@ -34,9 +34,7 @@ from ctms.crud import (
     get_fxa_by_email_id,
     get_mofo_by_email_id,
     get_newsletters_by_email_id,
-    get_relay_by_email_id,
     get_stripe_products,
-    get_vpn_by_email_id,
     get_waitlists_by_email_id,
 )
 from ctms.schemas import (
@@ -132,7 +130,7 @@ def minimal_contact(dbsession):
     assert contact.amo is None
     assert contact.fxa is None
     assert contact.mofo is None
-    assert contact.vpn_waitlist is None
+    assert len(contact.waitlists) == 0
     create_contact(dbsession, email_id, contact)
     dbsession.commit()
     return contact
@@ -285,8 +283,6 @@ def post_contact(request, client, dbsession):
             _check_written("fxa", get_fxa_by_email_id)
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
-            _check_written("vpn_waitlist", get_vpn_by_email_id)
-            _check_written("relay_waitlist", get_relay_by_email_id)
             _check_written("waitlists", get_waitlists_by_email_id, result_list=True)
 
         # Check that GET returns the same contact
@@ -365,8 +361,6 @@ def put_contact(request, client, dbsession):
             _check_written("fxa", get_fxa_by_email_id)
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id)
-            _check_written("vpn_waitlist", get_vpn_by_email_id)
-            _check_written("relay_waitlist", get_relay_by_email_id)
             _check_written("waitlists", get_waitlists_by_email_id)
 
         # Check that GET returns the same contact
