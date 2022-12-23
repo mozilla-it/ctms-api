@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from structlog.testing import capture_logs
 
-from ctms.crud import create_contact, get_email
+from ctms.crud import create_contact
 from ctms.schemas import (
     AddOnsInSchema,
     AddOnsSchema,
@@ -179,28 +179,6 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
     expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
     assert actual == expected
-
-
-def test_patch_to_group_default(client, dbsession, maximal_contact):
-    """PATCH to default values deletes a group."""
-    email_id = maximal_contact.email.email_id
-    email = get_email(dbsession, email_id)
-    assert "vpn" in {wl.name for wl in email.waitlists}
-    assert "relay" in {wl.name for wl in email.waitlists}
-
-    patch_data = {
-        "vpn_waitlist": {"geo": None, "platform": None},
-        "relay_waitlist": {"geo": None},
-    }
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
-    assert resp.status_code == 200
-    actual = resp.json()
-    assert actual["vpn_waitlist"] == {"geo": None, "platform": None}
-    assert actual["relay_waitlist"] == {"geo": None}
-
-    email = get_email(dbsession, email_id)
-    assert "vpn" not in {wl.name for wl in email.waitlists}
-    assert "relay" not in {wl.name for wl in email.waitlists}
 
 
 def test_patch_cannot_set_timestamps(client, maximal_contact):
