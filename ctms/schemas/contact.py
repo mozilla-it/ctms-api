@@ -173,7 +173,7 @@ class ContactPatchSchema(ComparableBase):
     fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]]
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
-    waitlists: Optional[List[WaitlistSchema]]
+    waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]]
     # Retro-compat fields. Drop once Basket uses the `waitlists` list.
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
@@ -234,10 +234,14 @@ class CTMSResponse(BaseModel):
         # Show computed fields in response for retro-compatibility.
         kwargs["vpn_waitlist"] = VpnWaitlistSchema()
         kwargs["relay_waitlist"] = RelayWaitlistSchema()
+
         for waitlist in kwargs.get("waitlists", []):
             if isinstance(waitlist, dict):
-                # TODO: figure out why sometimes dict, sometimes WaitlistSchema
+                # TODO: figure out why dict from `response_model` decorators param in app.py)
                 waitlist = WaitlistSchema(**waitlist)
+            if isinstance(waitlist, WaitlistInSchema):
+                # Many tests instantiates CTMSResponse with `WaitlistInSchema` (input schema).
+                waitlist = WaitlistSchema(**waitlist.dict())
             if waitlist.name == "vpn":
                 kwargs["vpn_waitlist"] = VpnWaitlistSchema(
                     geo=waitlist.geo,

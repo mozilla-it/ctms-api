@@ -480,8 +480,7 @@ def test_patch_will_validate_waitlist_fields(client, maximal_contact):
 def test_patch_to_add_a_waitlist(client, maximal_contact):
     """PATCH can add a single waitlist."""
     email_id = maximal_contact.email.email_id
-    existing = [wl.dict() for wl in maximal_contact.waitlists]
-    patch_data = {"waitlists": existing + [{"name": "future-tech", "geo": "es"}]}
+    patch_data = {"waitlists": [{"name": "future-tech", "geo": "es"}]}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
@@ -492,6 +491,17 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
         "source": None,
         "fields": {},
     }
+
+
+def test_patch_does_not_add_an_unsubscribed_waitlist(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    patch_data = {
+        "waitlists": [{"name": "future-tech", "geo": "es", "subscribed": False}]
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
 
 
 def test_patch_to_update_a_waitlist(client, maximal_contact):
@@ -510,7 +520,7 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
     """PATCH can remove a single waitlist."""
     email_id = maximal_contact.email.email_id
     existing = [wl.dict() for wl in maximal_contact.waitlists]
-    patch_data = {"waitlists": existing[:-1]}
+    patch_data = {"waitlists": [{**existing[-1], "subscribed": False}]}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
@@ -520,7 +530,7 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
 def test_patch_to_remove_all_waitlists(client, maximal_contact):
     """PATCH can remove all waitlists."""
     email_id = maximal_contact.email.email_id
-    patch_data = {"waitlists": []}
+    patch_data = {"waitlists": "UNSUBSCRIBE"}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()

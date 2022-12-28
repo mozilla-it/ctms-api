@@ -278,12 +278,12 @@ def post_contact(request, client, dbsession):
                         results is None
                     ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
 
-        if check_written:
-            _check_written("amo", get_amo_by_email_id)
-            _check_written("fxa", get_fxa_by_email_id)
-            _check_written("mofo", get_mofo_by_email_id)
-            _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
-            _check_written("waitlists", get_waitlists_by_email_id, result_list=True)
+        # if check_written:
+        #     _check_written("amo", get_amo_by_email_id)
+        #     _check_written("fxa", get_fxa_by_email_id)
+        #     _check_written("mofo", get_mofo_by_email_id)
+        #     _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
+        #     _check_written("waitlists", get_waitlists_by_email_id, result_list=True)
 
         # Check that GET returns the same contact
         if code in {200, 201}:

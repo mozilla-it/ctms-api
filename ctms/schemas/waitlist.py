@@ -51,8 +51,21 @@ class WaitlistBase(ComparableBase):
 
 
 # No need to change anything, just extend if you want to
-WaitlistInSchema = WaitlistBase
 WaitlistSchema = WaitlistBase
+
+
+class WaitlistInSchema(WaitlistBase):
+    """Schema for input data."""
+
+    subscribed: bool = Field(
+        default=True, description="True to subscribe, False to unsubscribe"
+    )
+
+    def orm_dict(self):
+        """TODO: is there a native way to exclude attrs for ORM?"""
+        dict_for_orm = self.dict()
+        del dict_for_orm["subscribed"]
+        return dict_for_orm
 
 
 class UpdatedWaitlistInSchema(WaitlistInSchema):

@@ -484,6 +484,9 @@ def create_or_update_mofo(
 def format_legacy_vpn_relay_waitlist_input(
     db: Session, email_id: UUID4, input_data, schema_class
 ):
+    """
+    Mimic a recent payload format using the values in database.
+    """
     # Use a dict to handle all the different schemas for create, create_or_update, or update
     formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
 
@@ -491,65 +494,68 @@ def format_legacy_vpn_relay_waitlist_input(
         # We are dealing with the current format. Nothing to do.
         return input_data
 
-    if (  # pylint: disable=too-many-nested-blocks
-        "vpn_waitlist" in formatted or "relay_waitlist" in formatted
-    ):
-        # Mimic a recent payload format using the values in database.
-        existing_waitlists = (
-            db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
-        )
-        to_update = {
-            wl.name: WaitlistInSchema.from_orm(wl) for wl in existing_waitlists
-        }
+    existing_waitlists = {}
+    if "vpn_waitlist" in formatted or "relay_waitlist" in formatted:
+        rows = db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
+        existing_waitlists = {wl.name: wl for wl in rows}
 
-        if "vpn_waitlist" in formatted:
-            if (
-                formatted["vpn_waitlist"] == "DELETE"
-                or formatted["vpn_waitlist"] is None
-            ):
-                to_update.pop("vpn", None)
+    to_update = []
+    if "vpn_waitlist" in formatted:
+        has_vpn = "vpn" in existing_waitlists
+        if formatted["vpn_waitlist"] == "DELETE" or formatted["vpn_waitlist"] is None:
+            if has_vpn:
+                to_update.append(WaitlistInSchema(name="vpn", geo="", subscribed=False))
+        else:
+            # Create, update, or remove the vpn waitlist record.
+            parsed_vpn = VpnWaitlistInSchema(**formatted["vpn_waitlist"])
+            if has_vpn and parsed_vpn.is_default():
+                to_update.append(WaitlistInSchema(name="vpn", geo="", subscribed=False))
             else:
-                # Create, update, or remove the vpn waitlist record.
-                parsed_vpn = VpnWaitlistInSchema(**formatted["vpn_waitlist"])
-                if parsed_vpn.is_default():
-                    to_update.pop("vpn", None)
-                else:
-                    # Create or update.
-                    to_update["vpn"] = WaitlistInSchema(
+                # Create or update.
+                to_update.append(
+                    WaitlistInSchema(
                         name="vpn",
                         geo=parsed_vpn.geo,
                         fields={"platform": parsed_vpn.platform},
                     )
-                    # Note: if `waitlists` was explicitly specified as an empty list and the `vpn_waitlist` fields too,
-                    # this would have precedence. Since our schemas have an empty list of waitlists by default, this
-                    # preserves simplicity and serves our retro compatibility needs.
+                )
+                # Note: if `waitlists` was explicitly specified as an empty list and the `vpn_waitlist` fields too,
+                # this would have precedence. Since our schemas have an empty list of waitlists by default, this
+                # preserves simplicity and serves our retro compatibility needs.
 
-        if "relay_waitlist" in formatted:
-            their_relay_waitlists = [k for k in to_update if k.startswith("relay")]
-            if (
-                formatted["relay_waitlist"] == "DELETE"
-                or formatted["relay_waitlist"] is None
-            ):
-                # When deleting the Relay waitlist at the contact level, deletes all Relay waitlists.
-                for name in their_relay_waitlists:
-                    del to_update[name]
+    if "relay_waitlist" in formatted:
+        relay_waitlists = [
+            wl for wl in existing_waitlists.values() if wl.name.startswith("relay")
+        ]
+        if (
+            formatted["relay_waitlist"] == "DELETE"
+            or formatted["relay_waitlist"] is None
+        ):
+            # When deleting the Relay waitlist at the contact level, deletes all Relay waitlists.
+            for waitlist in relay_waitlists:
+                to_update.append(
+                    WaitlistInSchema(name=waitlist.name, geo="", subscribed=False)
+                )
+        else:
+            parsed_relay = RelayWaitlistInSchema(**formatted["relay_waitlist"])
+            if parsed_relay.is_default():
+                for waitlist in relay_waitlists:
+                    to_update.append(
+                        WaitlistInSchema(name=waitlist.name, geo="", subscribed=False)
+                    )
             else:
-                parsed_relay = RelayWaitlistInSchema(**formatted["relay_waitlist"])
-                if parsed_relay.is_default():
-                    for name in their_relay_waitlists:
-                        del to_update[name]
-                else:
-                    if len(their_relay_waitlists) == 0:  # Create with default name.
-                        to_update["relay"] = WaitlistInSchema(
-                            name="relay", geo=parsed_relay.geo
+                if len(relay_waitlists) == 0:  # Create with default name.
+                    to_update.append(
+                        WaitlistInSchema(name="relay", geo=parsed_relay.geo)
+                    )
+                else:  # Update all.
+                    for waitlist in relay_waitlists:
+                        to_update.append(
+                            WaitlistInSchema(name=waitlist.name, geo=parsed_relay.geo)
                         )
-                    else:  # Update all.
-                        for name in their_relay_waitlists:
-                            to_update[name] = WaitlistInSchema(
-                                name=name, geo=parsed_relay.geo
-                            )
 
-        formatted["waitlists"] = [wl.dict() for wl in to_update.values()]
+    if to_update:
+        formatted["waitlists"] = [wl.dict() for wl in to_update]
 
     return formatted if schema_class == dict else schema_class(**formatted)
 
@@ -593,7 +599,11 @@ def create_waitlist(
 ) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
-    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict())
+    if not isinstance(waitlist, WaitlistInSchema):
+        # Sample data are used as both input (`WaitlistInSchema`) and internal (`WaitlistSchema`)
+        # representations.
+        waitlist = WaitlistInSchema(**waitlist.dict())
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.orm_dict())
     db.add(db_waitlist)
     return db_waitlist
 
@@ -601,19 +611,25 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
-    names = [waitlist.name for waitlist in waitlists]
-    db.query(Waitlist).filter(
-        Waitlist.email_id == email_id, Waitlist.name.in_(names)
-    ).delete(
-        synchronize_session=False
-    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+    # Remove waitlists that are marked as subscribed.
+    names_to_delete = [
+        waitlist.name for waitlist in waitlists if not waitlist.subscribed
+    ]
+    if names_to_delete:
+        db.query(Waitlist).filter(
+            Waitlist.email_id == email_id, Waitlist.name.in_(names_to_delete)
+        ).delete(
+            synchronize_session=False
+        )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
 
-    if waitlists:
-        waitlists = [
-            UpdatedWaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
-        ]
+    waitlists_to_upsert = [
+        UpdatedWaitlistInSchema(**waitlist.dict())
+        for waitlist in waitlists
+        if waitlist.subscribed
+    ]
+    if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.dict()} for wl in waitlists]
+            [{"email_id": email_id, **wl.orm_dict()} for wl in waitlists_to_upsert]
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uix_wl_email_name", set_=dict(stmt.excluded)
@@ -715,18 +731,24 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
         existing[waitlist.name] = waitlist
 
     if "waitlists" in update_data:
-        for wl_update in update_data["waitlists"]:
-            if wl_update["name"] in existing:
-                # Update the Waitlist ORM object
-                update_orm(existing[wl_update["name"]], wl_update)
-                del existing[wl_update["name"]]
-            else:
-                new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
-                email.waitlists.append(new)
-        # Waitlists that are not listed are deleted.
-        for to_delete in existing.values():
-            db.delete(to_delete)
-            email.waitlists.remove(to_delete)
+        if update_data["waitlists"] == "UNSUBSCRIBE":
+            for waitlist_orm in existing.values():
+                db.delete(waitlist_orm)
+                email.waitlists.remove(waitlist_orm)
+        else:
+            for wl_update in update_data["waitlists"]:
+                if wl_update["name"] in existing:
+                    waitlist_orm = existing[wl_update["name"]]
+                    # Delete waitlists when `subscribed` is False
+                    if not wl_update.get("subscribed", True):
+                        db.delete(waitlist_orm)
+                        email.waitlists.remove(waitlist_orm)
+                    else:
+                        # Update the Waitlist ORM object
+                        update_orm(waitlist_orm, wl_update)
+                elif wl_update.get("subscribed", True):
+                    new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
+                    email.waitlists.append(new)
 
     # On any PATCH event, the central/email table's time is updated as well.
     update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})
