@@ -75,3 +75,4 @@ from .web import (
     TokenResponse,
     UnauthorizedResponse,
 )
+from .response import GDPRDeleteResponse

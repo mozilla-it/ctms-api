@@ -39,6 +39,7 @@ from .config import re_trace_email
 from .crud import (
     create_contact,
     create_or_update_contact,
+    gdpr_delete,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_api_client_by_id,
@@ -75,6 +76,7 @@ from .schemas import (
     CTMSSingleResponse,
     EmailSchema,
     FirefoxAccountsSchema,
+    GDPRDeleteResponse,
     IdentityResponse,
     MozillaFoundationSchema,
     NotFoundResponse,
@@ -1120,6 +1122,42 @@ def stripe_pubsub(
         }
         return JSONResponse(content=content, status_code=202)
     return {"status": "OK", "count": count}
+
+
+@app.delete(
+    "/ctms/gdpr/{email}",
+    tags=["Public"],
+    summary="delete email from database",
+    responses={
+        404: {"model": NotFoundResponse},
+    },
+    response_model=GDPRDeleteResponse,
+)
+def gdpr_delete_email(
+    email: str,
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+):
+    email_to_find = email.lower()
+    ids = all_ids(primary_email=email_to_find)
+    contacts = get_contacts_by_ids(db, **ids)
+
+    if not contacts:
+        raise HTTPException(status_code=404, detail=f"email {email} not found!")
+
+    dropped = list()
+
+    for contact in contacts:
+        gdpr_delete(db=db, email_id=contact.email.email_id)
+
+        dropped.append(
+            {
+                "primary_email": contact.email.primary_email,
+                "email_id": str(contact.email.email_id),
+            }
+        )
+
+    return GDPRDeleteResponse(status="ok", dropped=dropped)
 
 
 if __name__ == "__main__":

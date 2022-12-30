@@ -929,3 +929,19 @@ def delete_acoustic_newsletters_mapping(dbsession, source):
     dbsession.delete(row)
     dbsession.commit()
     return row
+
+
+def gdpr_delete(db: Session, email_id: str):
+    models = [
+        PendingAcousticRecord,
+        AmoAccount,
+        MozillaFoundationContact,
+        Newsletter,
+        Waitlist,
+        FirefoxAccount,
+        Email,
+    ]
+
+    for model in models:
+        db.query(model).filter(model.email_id == email_id).delete()
+        db.commit()
