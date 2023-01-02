@@ -1,6 +1,6 @@
 # Waitlists as Relationships
 
-* Status: proposed
+* Status: approved
 * Deciders: <CTMS stakeholders> + <Basket stakeholders>
 * Date: November 25, 2022
 
@@ -8,7 +8,7 @@
 
 Onboarding new waiting lists requires changing, releasing, and redeploying both CTMS and Basket.
 
-Each waitlist has its own schema with specific collected fields (eg. `country`, `platform`, ...).
+Each waitlist may have its own schema with specific collected fields (eg. `country`, `platform`, ...).
 
 Basket uses [some specific code](https://github.com/mozmeao/basket/blob/341facbb2b199bfe2f26488942d0fa251010c1c8/basket/news/backends/ctms.py#L84-L87) to transform flat form data into CTMS nested objects, that has to be modified when a new waitlist has to be sent to CTMS.
 
@@ -116,7 +116,7 @@ For example:
 
 This would mimic what currently already [exists for newsletters](https://github.com/mozilla-it/ctms-api/blob/3d0c0071c8f2565f1a24f039adc4f5526d58e0d2/ctms/models.py#L58-L60).
 
-The database migration is relatively obvious: create the new table, copy from the individual tables to the new one, delete individual tables.
+The database migration is relatively obvious: create the new table, copy from the individual tables to the new one, delete individual tables (see details below).
 
 Unlike newsletters, waitlists have custom fields. In order to validate the fields when data is posted (by Basket), we could keep the approach of having hard-coded pydantic schemas in the CTMS code base.
 
@@ -307,3 +307,38 @@ In order to onboard a new waitlist we would have to:
 1. Run a command to add the new fields schema
 
 There is no need to modify or redeploy CTMS or Basket anymore.
+
+
+## About Data Migration
+
+Each row of the `vpn_waitlist` table will become a row in the `waitlist` with `name = "vpn"`.
+
+Each row of the `relay_waitlist` table will be turned into one or multiple rows in the `waitlist`, depending on subscribed newsletters.
+
+```mermaid
+erDiagram
+    EmailContact }o--o{ newsletters:""
+    EmailContact }o--o| RelayWaitlist:""
+    EmailContact {
+        string email_id PK
+    }
+    RelayWaitlist {
+        string email_id FK
+        string geo
+        timestamp create_timestamp
+        timestamp update_timestamp
+    }
+    newsletters {
+        string email_id FK
+        string name "e.g. relay-waitlist"
+        boolean subscribed
+        timestamp create_timestamp
+        timestamp update_timestamp
+    }
+```
+
+All subscriptions to newsletters starting with `relay-` will be turned into a row in the `waitlist` table. For example, if a contact has subscribed to the `relay-vpn-waitlist`, then a row in the `waitlist` table will be created with `name="relay-vpn"`.
+
+TODO: Shall newsletters rows be deleted?
+
+TODO: Shall all newsletters rows ending with `-waitlist` be turned into `waitlist` rows? eg. graceland?
