@@ -42,8 +42,8 @@ In order to choose our solution we considered the following criteria:
 
 1. [Option 0 - Do nothing](#option-0---do-nothing)
 1. [Option 1 - Store waitlists as relationships](#option-1---store-waitlists-as-relationships)
-1. [Option 2 - Option 1 + Generic waitlists forms in Basket](#option-2---option-1-+-generic-waitlists-forms-in-basket)
-1. [Option 3 - Option 2 + Waitlist schemas in database](#option-3---option-2-+-waitlist-schemas-in-database)
+1. [Option 2 - Option 1 + Generic waitlists forms in Basket](#option-2---option-1--generic-waitlists-forms-in-basket)
+1. [Option 3 - Option 2 + Waitlist schemas in database](#option-3---option-2--waitlist-schemas-in-database)
 
 ## Decision Outcome
 
