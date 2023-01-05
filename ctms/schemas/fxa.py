@@ -61,21 +61,3 @@ class UpdatedFirefoxAccountsInSchema(FirefoxAccountsInSchema):
         description="FXA data update timestamp",
         example="2021-01-28T21:26:57.511Z",
     )
-
-
-class FirefoxAccountsTableSchema(FirefoxAccountsBase):
-    email_id: UUID4 = Field(
-        description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
-    )
-    create_timestamp: datetime = Field(
-        description="FXA data creation timestamp",
-        example="2020-12-05T19:21:50.908000+00:00",
-    )
-    update_timestamp: datetime = Field(
-        description="FXA data update timestamp",
-        example="2021-02-04T15:36:57.511000+00:00",
-    )
-
-    class Config:
-        extra = "forbid"

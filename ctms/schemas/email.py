@@ -91,20 +91,6 @@ class EmailSchema(EmailBase):
     )
 
 
-class EmailTableSchema(EmailSchema):
-    create_timestamp: datetime = Field(
-        description="Contact creation date, CreatedDate in Salesforce",
-        example="2020-03-28T15:41:00.000Z",
-    )
-    update_timestamp: datetime = Field(
-        description="Contact last modified date, LastModifiedDate in Salesforce",
-        example="2021-01-28T21:26:57.511Z",
-    )
-
-    class Config:
-        extra = "forbid"
-
-
 class EmailInSchema(EmailBase):
     """Nearly identical to EmailPutSchema but the email_id is not required."""
 

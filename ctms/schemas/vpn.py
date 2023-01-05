@@ -46,21 +46,3 @@ class UpdatedVpnWaitlistInSchema(VpnWaitlistInSchema):
         description="VPN Waitlist data update timestamp",
         example="2021-01-28T21:26:57.511Z",
     )
-
-
-class VpnWaitlistTableSchema(VpnWaitlistBase):
-    email_id: UUID4 = Field(
-        description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
-    )
-    create_timestamp: datetime = Field(
-        description="VPN Waitlist data creation timestamp",
-        example="2020-12-05T19:21:50.908000+00:00",
-    )
-    update_timestamp: datetime = Field(
-        description="VPN Waitlist data update timestamp",
-        example="2021-02-04T15:36:57.511000+00:00",
-    )
-
-    class Config:
-        extra = "forbid"
