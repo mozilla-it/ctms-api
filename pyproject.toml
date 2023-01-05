@@ -24,7 +24,7 @@ python-multipart = "^0.0.5"
 python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 passlib = {extras = ["argon2"], version = "^1.7.4"}
 python-dateutil = "^2.8.1"
-google-cloud-bigquery = "^2.13.1"
+google-cloud-bigquery = "^3.4.1"
 dockerflow = "^2022.8.0"
 sentry-sdk = "^1.10.1"
 pysilverpop = "^0.2.6"
