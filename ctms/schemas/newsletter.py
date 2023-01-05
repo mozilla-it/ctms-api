@@ -1,10 +1,9 @@
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from pydantic import UUID4, Field, HttpUrl
+from pydantic import Field, HttpUrl
 
 from .base import ComparableBase
-from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class NewsletterBase(ComparableBase):

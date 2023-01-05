@@ -1,10 +1,9 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import UUID4, Field
+from pydantic import Field
 
 from .base import ComparableBase
-from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class RelayWaitlistBase(ComparableBase):

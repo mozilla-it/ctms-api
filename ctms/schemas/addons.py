@@ -1,10 +1,9 @@
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from pydantic import UUID4, Field, validator
+from pydantic import Field
 
 from .base import ComparableBase
-from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 
 class AddOnsBase(ComparableBase):
