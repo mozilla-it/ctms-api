@@ -24,8 +24,8 @@ depends_on = None
 def upgrade():
     # Migrate the Relay data to the `waitlist` table.
     """
-    INSERT INTO waitlists(email_id, name, geo, create_timestamp, update_timestamp)
-    SELECT nl.email_id, REPLACE(nl.name, '-waitlist', ''), geo, rw.create_timestamp, rw.update_timestamp
+    INSERT INTO waitlists(email_id, name, fields, create_timestamp, update_timestamp)
+    SELECT nl.email_id, REPLACE(nl.name, '-waitlist', ''), json_build_object('geo', geo), rw.create_timestamp, rw.update_timestamp
     FROM relay_waitlist as rw
         INNER JOIN newsletters AS nl ON rw.email_id = nl.email_id
     WHERE nl.name LIKE 'relay%';
@@ -67,7 +67,7 @@ def downgrade():
     op.execute(
         """
     INSERT INTO relay_waitlist(email_id, geo, create_timestamp, update_timestamp)
-    SELECT email_id, geo, create_timestamp, update_timestamp
+    SELECT email_id, fields->>'geo', create_timestamp, update_timestamp
     FROM waitlists
     WHERE name LIKE 'relay%'
     ON CONFLICT (email_id) DO UPDATE SET geo = EXCLUDED.geo

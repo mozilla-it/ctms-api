@@ -23,11 +23,6 @@ class WaitlistBase(ComparableBase):
         description="Basket slug for the waitlist",
         example="new-product",
     )
-    geo: str = Field(
-        max_length=100,
-        description="Waitlist country",
-        example="fr",
-    )
     source: Optional[HttpUrl] = Field(
         default=None,
         description="Source URL of subscription",
@@ -60,6 +55,13 @@ class WaitlistInSchema(WaitlistBase):
     subscribed: bool = Field(
         default=True, description="True to subscribe, False to unsubscribe"
     )
+
+    @root_validator
+    def check_fields(cls, values):  # pylint:disable = no-self-argument
+        if "subscribed" in values and values["subscribed"]:
+            return super().check_fields(values)
+        # If subscribed is False, we don't need to validate fields.
+        return values
 
     def orm_dict(self):
         """TODO: is there a native way to exclude attrs for ORM?"""
@@ -95,14 +97,32 @@ class WaitlistTableSchema(WaitlistBase):
 
 
 def validate_waitlist_fields(name: str, fields: dict):
-    if name == "vpn":
+    """
+    Once waitlists will have been migrated to a full N-N relationship,
+    this will be the only remaining VPN specific piece of code.
+    """
+    if name == "relay":
+
+        class RelayFieldsSchema(ComparableBase):
+            geo: str = Field(
+                max_length=100,
+                description="Waitlist country",
+                example="fr",
+            )
+
+            class Config:
+                extra = "forbid"
+
+        RelayFieldsSchema(**fields)
+
+    elif name == "vpn":
 
         class VPNFieldsSchema(ComparableBase):
-            """
-            Once waitlists will have been migrated to a full N-N relationship,
-            this will be the only remaining VPN specific piece of code.
-            """
-
+            geo: str = Field(
+                max_length=100,
+                description="Waitlist country",
+                example="fr",
+            )
             platform: Optional[str] = Field(
                 default=None,
                 min_length=1,

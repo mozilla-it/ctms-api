@@ -25,8 +25,8 @@ def upgrade():
     # Migrate the VPN data to the `waitlist` table.
     op.execute(
         """
-    INSERT INTO waitlists(email_id, name, geo, fields, create_timestamp, update_timestamp)
-    SELECT email_id, 'vpn', geo, json_build_object('platform', platform), create_timestamp, update_timestamp
+    INSERT INTO waitlists(email_id, name, fields, create_timestamp, update_timestamp)
+    SELECT email_id, 'vpn', json_build_object('platform', platform, 'geo', geo), create_timestamp, update_timestamp
     FROM vpn_waitlist
     """
     )
@@ -71,7 +71,7 @@ def downgrade():
     op.execute(
         """
     INSERT INTO vpn_waitlist(email_id, geo, platform, create_timestamp, update_timestamp)
-    SELECT email_id, geo, fields->>'platform', create_timestamp, update_timestamp
+    SELECT email_id, fields->>'geo', fields->>'platform', create_timestamp, update_timestamp
     FROM waitlists
     WHERE name == 'vpn'
     """

@@ -470,34 +470,31 @@ def test_patch_will_validate_waitlist_fields(client, maximal_contact):
     """PATCH validates waitlist schema."""
     email_id = maximal_contact.email.email_id
 
-    patch_data = {"waitlists": [{"name": "future-tech"}]}
+    patch_data = {"waitlists": [{"name": "future-tech", "source": 42}]}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 422
     details = resp.json()
-    assert details["detail"][0]["loc"] == ["body", "waitlists", 0, "geo"]
+    assert details["detail"][0]["loc"] == ["body", "waitlists", 0, "source"]
 
 
 def test_patch_to_add_a_waitlist(client, maximal_contact):
     """PATCH can add a single waitlist."""
     email_id = maximal_contact.email.email_id
-    patch_data = {"waitlists": [{"name": "future-tech", "geo": "es"}]}
+    patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["waitlists"]) == len(maximal_contact.waitlists) + 1
     assert actual["waitlists"][-1] == {
         "name": "future-tech",
-        "geo": "es",
         "source": None,
-        "fields": {},
+        "fields": {"geo": "es"},
     }
 
 
 def test_patch_does_not_add_an_unsubscribed_waitlist(client, maximal_contact):
     email_id = maximal_contact.email.email_id
-    patch_data = {
-        "waitlists": [{"name": "future-tech", "geo": "es", "subscribed": False}]
-    }
+    patch_data = {"waitlists": [{"name": "future-tech", "subscribed": False}]}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
@@ -508,12 +505,15 @@ def test_patch_to_update_a_waitlist(client, maximal_contact):
     """PATCH can update a waitlist."""
     email_id = maximal_contact.email.email_id
     existing = [wl.dict() for wl in maximal_contact.waitlists]
-    existing[0]["geo"] = "ca"
+    existing[0]["fields"]["geo"] = "ca"
     patch_data = {"waitlists": existing}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert actual["waitlists"][0]["geo"] != maximal_contact.waitlists[0].geo
+    assert (
+        actual["waitlists"][0]["fields"]["geo"]
+        != maximal_contact.waitlists[0].fields["geo"]
+    )
 
 
 def test_patch_to_remove_a_waitlist(client, maximal_contact):
@@ -556,9 +556,9 @@ def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
     assert actual["waitlists"] == [
         {
             "name": "vpn",
-            "geo": "fr",
             "source": None,
             "fields": {
+                "geo": "fr",
                 "platform": "win32",
             },
         }
@@ -598,9 +598,8 @@ def test_patch_vpn_waitlist_legacy_update(client, maximal_contact):
     actual = resp.json()
     assert actual["waitlists"][-1] == {
         "name": "vpn",
-        "geo": "it",
         "source": None,
-        "fields": {"platform": None},
+        "fields": {"geo": "it", "platform": None},
     }
 
 
@@ -615,9 +614,8 @@ def test_patch_vpn_waitlist_legacy_update_full(client, maximal_contact):
     actual = resp.json()
     assert actual["waitlists"][-1] == {
         "name": "vpn",
-        "geo": "it",
         "source": None,
-        "fields": {"platform": "linux"},
+        "fields": {"geo": "it", "platform": "linux"},
     }
 
 
@@ -630,9 +628,8 @@ def test_patch_relay_waitlist_legacy_add(client, minimal_contact):
     assert actual["waitlists"] == [
         {
             "name": "relay",
-            "geo": "fr",
             "source": None,
-            "fields": {},
+            "fields": {"geo": "fr"},
         }
     ]
 
@@ -670,9 +667,8 @@ def test_patch_relay_waitlist_legacy_update(client, maximal_contact):
     by_name = {v["name"]: v for v in actual["waitlists"]}
     assert by_name["relay"] == {
         "name": "relay",
-        "geo": "it",
         "source": None,
-        "fields": {},
+        "fields": {"geo": "it"},
     }
 
 
@@ -681,8 +677,8 @@ def test_patch_relay_waitlist_legacy_update_all(client, minimal_contact):
     email_id = minimal_contact.email.email_id
     patch_data = {
         "waitlists": [
-            {"name": "relay", "geo": "fr"},
-            {"name": "relay-vpn-bundle", "geo": "fr"},
+            {"name": "relay", "fields": {"geo": "fr"}},
+            {"name": "relay-vpn-bundle", "fields": {"geo": "fr"}},
         ]
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -696,14 +692,12 @@ def test_patch_relay_waitlist_legacy_update_all(client, minimal_contact):
     assert actual["waitlists"] == [
         {
             "name": "relay",
-            "geo": "it",
             "source": None,
-            "fields": {},
+            "fields": {"geo": "it"},
         },
         {
             "name": "relay-vpn-bundle",
-            "geo": "it",
             "source": None,
-            "fields": {},
+            "fields": {"geo": "it"},
         },
     ]

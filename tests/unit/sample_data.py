@@ -105,24 +105,22 @@ SAMPLE_MAXIMAL = ContactSchema(
     waitlists=[
         WaitlistSchema(
             name="a-software",
-            geo="fr",
             source="https://a-software.mozilla.org/",
-            fields={},
+            fields={"geo": "fr"},
         ),
         WaitlistSchema(
             name="relay",
-            geo="cn",
+            fields={"geo": "cn"},
         ),
         WaitlistSchema(
             name="super-product",
-            geo="fr",
             source="https://super-product.mozilla.org/",
-            fields={"platform": "win64"},
+            fields={"geo": "fr", "platform": "win64"},
         ),
         WaitlistSchema(
             name="vpn",
-            geo="ca",
             fields={
+                "geo": "ca",
                 "platform": "windows,android",
             },
         ),

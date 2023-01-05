@@ -28,7 +28,6 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("email_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
-        sa.Column("geo", sa.String(length=100), nullable=False),
         sa.Column("source", sa.Text(), nullable=True),
         sa.Column("fields", sa.JSON(), server_default="{}", nullable=False),
         sa.Column(
