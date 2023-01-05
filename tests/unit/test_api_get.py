@@ -208,26 +208,22 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
         "relay_waitlist": {"geo": "cn"},
         "waitlists": [
             {
-                "fields": {},
-                "geo": "fr",
+                "fields": {"geo": "fr"},
                 "name": "a-software",
                 "source": "https://a-software.mozilla.org/",
             },
             {
-                "fields": {},
-                "geo": "cn",
+                "fields": {"geo": "cn"},
                 "name": "relay",
                 "source": None,
             },
             {
-                "fields": {"platform": "win64"},
-                "geo": "fr",
+                "fields": {"geo": "fr", "platform": "win64"},
                 "name": "super-product",
                 "source": "https://super-product.mozilla.org/",
             },
             {
-                "fields": {"platform": "windows,android"},
-                "geo": "ca",
+                "fields": {"geo": "ca", "platform": "windows,android"},
                 "name": "vpn",
                 "source": None,
             },
@@ -308,20 +304,17 @@ def test_get_ctms_for_api_example(client, example_contact):
         "relay_waitlist": {"geo": "fr"},
         "waitlists": [
             {
-                "fields": {"platform": "win64"},
-                "geo": "fr",
+                "fields": {"geo": "fr", "platform": "win64"},
                 "name": "example-product",
                 "source": None,
             },
             {
-                "fields": {},
-                "geo": "fr",
+                "fields": {"geo": "fr"},
                 "name": "relay",
                 "source": None,
             },
             {
-                "fields": {"platform": "ios,mac"},
-                "geo": "fr",
+                "fields": {"geo": "fr", "platform": "ios,mac"},
                 "name": "vpn",
                 "source": None,
             },

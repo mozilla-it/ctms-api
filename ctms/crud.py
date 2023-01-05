@@ -504,19 +504,18 @@ def format_legacy_vpn_relay_waitlist_input(
         has_vpn = "vpn" in existing_waitlists
         if formatted["vpn_waitlist"] == "DELETE" or formatted["vpn_waitlist"] is None:
             if has_vpn:
-                to_update.append(WaitlistInSchema(name="vpn", geo="", subscribed=False))
+                to_update.append(WaitlistInSchema(name="vpn", subscribed=False))
         else:
             # Create, update, or remove the vpn waitlist record.
             parsed_vpn = VpnWaitlistInSchema(**formatted["vpn_waitlist"])
             if has_vpn and parsed_vpn.is_default():
-                to_update.append(WaitlistInSchema(name="vpn", geo="", subscribed=False))
+                to_update.append(WaitlistInSchema(name="vpn", subscribed=False))
             else:
                 # Create or update.
                 to_update.append(
                     WaitlistInSchema(
                         name="vpn",
-                        geo=parsed_vpn.geo,
-                        fields={"platform": parsed_vpn.platform},
+                        fields={"geo": parsed_vpn.geo, "platform": parsed_vpn.platform},
                     )
                 )
                 # Note: if `waitlists` was explicitly specified as an empty list and the `vpn_waitlist` fields too,
@@ -533,25 +532,25 @@ def format_legacy_vpn_relay_waitlist_input(
         ):
             # When deleting the Relay waitlist at the contact level, deletes all Relay waitlists.
             for waitlist in relay_waitlists:
-                to_update.append(
-                    WaitlistInSchema(name=waitlist.name, geo="", subscribed=False)
-                )
+                to_update.append(WaitlistInSchema(name=waitlist.name, subscribed=False))
         else:
             parsed_relay = RelayWaitlistInSchema(**formatted["relay_waitlist"])
             if parsed_relay.is_default():
                 for waitlist in relay_waitlists:
                     to_update.append(
-                        WaitlistInSchema(name=waitlist.name, geo="", subscribed=False)
+                        WaitlistInSchema(name=waitlist.name, subscribed=False)
                     )
             else:
                 if len(relay_waitlists) == 0:  # Create with default name.
                     to_update.append(
-                        WaitlistInSchema(name="relay", geo=parsed_relay.geo)
+                        WaitlistInSchema(name="relay", fields={"geo": parsed_relay.geo})
                     )
                 else:  # Update all.
                     for waitlist in relay_waitlists:
                         to_update.append(
-                            WaitlistInSchema(name=waitlist.name, geo=parsed_relay.geo)
+                            WaitlistInSchema(
+                                name=waitlist.name, fields={"geo": parsed_relay.geo}
+                            )
                         )
 
     if to_update:

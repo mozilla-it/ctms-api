@@ -6,10 +6,10 @@ from ctms.schemas.waitlist import WaitlistInSchema
 @pytest.mark.parametrize(
     "data",
     [
-        {"name": "a", "geo": "b"},
-        {"name": "a", "geo": "b", "source": None},
-        {"name": "a", "geo": "b", "source": "http://website.com"},
-        {"name": "a", "geo": "b", "source": "http://website.com", "fields": {}},
+        {"name": "a"},
+        {"name": "a", "source": None},
+        {"name": "a", "source": "http://website.com"},
+        {"name": "a", "source": "http://website.com", "fields": {}},
         {
             "name": "a",
             "geo": "b",
@@ -43,8 +43,9 @@ def test_waitlist_with_invalid_input_data(data):
 @pytest.mark.parametrize(
     "data",
     [
-        {"name": "vpn", "geo": "b", "fields": {"platform": ""}},
-        {"name": "vpn", "geo": "b", "fields": {"platform": "win64", "extra": "boom"}},
+        {"name": "vpn", "fields": {"platform": "linux"}},
+        {"name": "vpn", "fields": {"geo": "b", "platform": ""}},
+        {"name": "vpn", "fields": {"geo": "b", "platform": "win64", "extra": "boom"}},
     ],
 )
 def test_vpn_waitlist_invalid_data(data):
@@ -55,10 +56,10 @@ def test_vpn_waitlist_invalid_data(data):
 @pytest.mark.parametrize(
     "data",
     [
-        {"name": "vpn", "geo": "b"},
-        {"name": "vpn", "geo": "b", "fields": {}},
-        {"name": "vpn", "geo": "b", "fields": {"platform": None}},
-        {"name": "vpn", "geo": "b", "fields": {"platform": "win64"}},
+        {"name": "vpn"},
+        {"name": "vpn", "fields": {"geo": "b"}},
+        {"name": "vpn", "fields": {"geo": "b", "platform": None}},
+        {"name": "vpn", "fields": {"geo": "b", "platform": "win64"}},
     ],
 )
 def test_vpn_waitlist_valid_data(data):

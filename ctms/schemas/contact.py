@@ -49,17 +49,15 @@ class ContactSchema(ComparableBase):
                 "example": [
                     {
                         "name": "example-product",
-                        "geo": "fr",
-                        "fields": {"platform": "win64"},
+                        "fields": {"geo": "fr", "platform": "win64"},
                     },
                     {
                         "name": "relay",
-                        "geo": "fr",
+                        "fields": {"geo": "fr"},
                     },
                     {
                         "name": "vpn",
-                        "geo": "fr",
-                        "fields": {"platform": "ios,mac"},
+                        "fields": {"geo": "fr", "platform": "ios,mac"},
                     },
                 ],
             },
@@ -71,7 +69,7 @@ class ContactSchema(ComparableBase):
         # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
         for waitlist in self.waitlists:
             if waitlist.name.startswith("relay"):
-                return RelayWaitlistSchema(geo=waitlist.geo)
+                return RelayWaitlistSchema(geo=waitlist.fields.get("geo"))
         return None
 
     @property
@@ -81,7 +79,7 @@ class ContactSchema(ComparableBase):
         for waitlist in self.waitlists:
             if waitlist.name == "vpn":
                 return VpnWaitlistSchema(
-                    geo=waitlist.geo,
+                    geo=waitlist.fields.get("geo"),
                     platform=waitlist.fields.get("platform"),
                 )
         return None
@@ -205,8 +203,7 @@ class ContactPatchSchema(ComparableBase):
                 "example": [
                     {
                         "name": "example-product",
-                        "geo": "fr",
-                        "fields": {"platform": "win64"},
+                        "fields": {"geo": "fr", "platform": "win64"},
                     }
                 ],
             },
@@ -244,11 +241,13 @@ class CTMSResponse(BaseModel):
                 waitlist = WaitlistSchema(**waitlist.dict())
             if waitlist.name == "vpn":
                 kwargs["vpn_waitlist"] = VpnWaitlistSchema(
-                    geo=waitlist.geo,
+                    geo=waitlist.fields.get("geo"),
                     platform=waitlist.fields.get("platform"),
                 )
             if waitlist.name.startswith("relay"):
-                kwargs["relay_waitlist"] = RelayWaitlistSchema(geo=waitlist.geo)
+                kwargs["relay_waitlist"] = RelayWaitlistSchema(
+                    geo=waitlist.fields.get("geo")
+                )
         super().__init__(*args, **kwargs)
 
 
