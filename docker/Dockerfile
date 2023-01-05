@@ -48,7 +48,7 @@ RUN apt-get install --no-install-recommends -y \
 # Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
 USER app
 RUN python3 -m venv $POETRY_HOME && \
-$POETRY_HOME/bin/pip install poetry==1.2.0 && \
+$POETRY_HOME/bin/pip install poetry==1.3.1 && \
 $POETRY_HOME/bin/poetry --version
 
 # We copy our Python requirements here to cache them
