@@ -27,10 +27,13 @@ class Settings(BaseSettings):
     token_expiration: timedelta = timedelta(minutes=60)
     server_prefix: str = "http://localhost:8000"
     use_mozlog: bool = True
+    log_sqlalchemy: bool = False
     logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
     fastapi_env: Optional[str] = None
+    host: str = "0.0.0.0"
+    port: int = 8000
 
     pubsub_audience: Optional[str] = None
     pubsub_email: Optional[str] = None
@@ -66,6 +69,8 @@ class Settings(BaseSettings):
 
         fields = {
             "fastapi_env": {"env": "fastapi_env"},
+            "host": {"env": "host"},
+            "port": {"env": "port"},
         }
 
 

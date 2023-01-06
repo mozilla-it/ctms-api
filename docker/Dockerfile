@@ -17,7 +17,7 @@ ENV PYTHONPATH=/app \
     VENV_PATH="/opt/pysetup/.venv" \
     PORT=8000
 
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+ENV PATH="$VENV_PATH/bin:$POETRY_HOME/bin:$PATH"
 
 # Set up user and group
 ARG userid=10001
@@ -76,7 +76,7 @@ WORKDIR /app
 COPY --chown=app:app . .
 
 EXPOSE $PORT
-CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
+CMD ["python", "asgi.py"]
 
 # 'production' stage uses the clean 'python-base' stage and copyies
 # in only our runtime deps that were installed in the 'builder-base'
@@ -85,8 +85,8 @@ ENV FASTAPI_ENV=production
 
 COPY --from=builder-base $VENV_PATH $VENV_PATH
 
-COPY . /app
 WORKDIR /app
+COPY --chown=app:app . .
 
 EXPOSE $PORT
-CMD uvicorn ctms.app:app
+CMD ["python", "asgi.py"]

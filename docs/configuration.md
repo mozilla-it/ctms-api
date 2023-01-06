@@ -30,6 +30,9 @@ production, they are set as part of the runtime environment.
   MozLog format.
 * ``CTMS_LOGGING_LEVEL`` - The minimum level for logs. Defaults to ``INFO`` if
   unset. Unset in production, and set to ``INFO`` in development.
+* ``CTMS_LOG_SQLALCHEMY`` - Determines whether SQLAlchemy logs should be
+  emmited. Defaults to ``False`` if unset. Unset in production, and set to
+  ``False`` in development.
 * ``CTMS_SENTRY_DEBUG`` - If set to True, then sentry initialization and capture is
   logged as well. This may be useful for development, but is not recommended for
   production.
