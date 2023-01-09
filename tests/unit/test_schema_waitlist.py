@@ -12,9 +12,8 @@ from ctms.schemas.waitlist import WaitlistInSchema
         {"name": "a", "source": "http://website.com", "fields": {}},
         {
             "name": "a",
-            "geo": "b",
             "source": "http://website.com",
-            "fields": {"foo": "bar"},
+            "fields": {"foo": "bar", "geo": "b"},
         },
     ],
 )
@@ -25,14 +24,13 @@ def test_waitlist_with_valid_input_data(data):
 @pytest.mark.parametrize(
     "data",
     [
-        {"name": "a"},
-        {"name": "a", "geo": None},
-        {"name": "", "geo": "b"},
-        {"name": None, "geo": "b"},
-        {"name": "a", "geo": "b", "source": "*&^"},
-        {"name": "a", "geo": "b", "fields": None},
-        {"name": "a", "geo": "b", "fields": "foo"},
-        {"name": "a", "geo": "b", "fields": [{}]},
+        {"name": ""},
+        {"name": None},
+        {"name": "a", "source": ""},
+        {"name": "a", "source": "*&^"},
+        {"name": "a", "fields": None},
+        {"name": "a", "fields": "foo"},
+        {"name": "a", "fields": [{}]},
     ],
 )
 def test_waitlist_with_invalid_input_data(data):
@@ -43,12 +41,19 @@ def test_waitlist_with_invalid_input_data(data):
 @pytest.mark.parametrize(
     "data",
     [
+        # VPN
+        {"name": "vpn", "fields": {"geo": None}},
         {"name": "vpn", "fields": {"platform": "linux"}},
         {"name": "vpn", "fields": {"geo": "b", "platform": ""}},
         {"name": "vpn", "fields": {"geo": "b", "platform": "win64", "extra": "boom"}},
+        # Relay
+        {"name": "relay"},
+        {"name": "relay", "fields": {"geo": None}},
+        {"name": "relay", "fields": {"geo": "fr", "extra": "boom"}},
+        {"name": "relay", "fields": {"foo": "bar"}},
     ],
 )
-def test_vpn_waitlist_invalid_data(data):
+def test_relay_and_vpn_waitlist_invalid_data(data):
     with pytest.raises(ValueError):
         WaitlistInSchema(**data)
 
@@ -56,11 +61,16 @@ def test_vpn_waitlist_invalid_data(data):
 @pytest.mark.parametrize(
     "data",
     [
-        {"name": "vpn"},
+        # VPN
         {"name": "vpn", "fields": {"geo": "b"}},
+        {"name": "vpn", "fields": {"geo": ""}},
         {"name": "vpn", "fields": {"geo": "b", "platform": None}},
         {"name": "vpn", "fields": {"geo": "b", "platform": "win64"}},
+        # Relay
+        {"name": "relay", "fields": {"geo": "b"}},
+        {"name": "relay", "fields": {"geo": ""}},
+        {"name": "relay", "fields": {"geo": "b"}},
     ],
 )
-def test_vpn_waitlist_valid_data(data):
+def test_relay_and_vpn_waitlist_valid_data(data):
     WaitlistInSchema(**data)
