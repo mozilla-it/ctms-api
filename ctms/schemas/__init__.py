@@ -1,9 +1,4 @@
-from .addons import (
-    AddOnsInSchema,
-    AddOnsSchema,
-    AddOnsTableSchema,
-    UpdatedAddOnsInSchema,
-)
+from .addons import AddOnsInSchema, AddOnsSchema, UpdatedAddOnsInSchema
 from .api_client import ApiClientSchema
 from .bulk import BulkRequestSchema
 from .contact import (
@@ -21,22 +16,15 @@ from .email import (
     EmailPatchSchema,
     EmailPutSchema,
     EmailSchema,
-    EmailTableSchema,
     UpdatedEmailPutSchema,
 )
 from .fxa import (
     FirefoxAccountsInSchema,
     FirefoxAccountsSchema,
-    FirefoxAccountsTableSchema,
     UpdatedFirefoxAccountsInSchema,
 )
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import (
-    NewsletterInSchema,
-    NewsletterSchema,
-    NewsletterTableSchema,
-    UpdatedNewsletterInSchema,
-)
+from .newsletter import NewsletterInSchema, NewsletterSchema, UpdatedNewsletterInSchema
 from .product import ProductBaseSchema
 from .stripe_customer import (
     StripeCustomerCreateSchema,
@@ -80,7 +68,6 @@ from .waitlist import (
     VpnWaitlistInSchema,
     WaitlistInSchema,
     WaitlistSchema,
-    WaitlistTableSchema,
 )
 from .web import (
     BadRequestResponse,
