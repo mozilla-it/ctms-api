@@ -72,9 +72,10 @@ start: .env
 	docker-compose up
 
 .PHONY: test
-test: .env
-	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} tests
-ifneq (1, ${MK_KEEP_DOCKER_UP})
+test: .env $(INSTALL_STAMP)
+	docker-compose up --wait postgres
+	bin/test.sh
+ifneq (1, ${MK_KEEP_DOCKER_UP})	
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
 	docker-compose down

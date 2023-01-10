@@ -4,12 +4,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      target: development
     image: web
-    volumes:
-      - type: bind
-        source: .
-        target: /app
+    volumes: 
+      - .:/app
     ports:
       - ${PORT:-8000}:${PORT:-8000}
     # Let the init system handle signals for us.
@@ -43,16 +40,3 @@ services:
     ports:
       - 8080:8080
 
-  tests:
-    image: web
-    depends_on:
-      web:
-        condition: service_started
-      postgres:
-          condition: service_healthy
-    command: ["bash", "./docker/test.sh"]
-    profiles: [test]
-    init: true
-    env_file:
-      - docker/config/local_dev.env
-      - .env

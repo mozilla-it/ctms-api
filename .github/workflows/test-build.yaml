@@ -23,25 +23,17 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Build test image
-        uses: docker/build-push-action@v2
+      - uses: actions/checkout@v3
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v4
         with:
-          context: .
-          file: docker/Dockerfile
-          push: false
-          target: "development"
-          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
-
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Install dependencies
+        run: poetry install
       - name: Run tests
-        run: |-
-          docker run --rm \
-          -e CTMS_DB_URL \
-          -e CTMS_SECRET_KEY \
-          ghcr.io/${{ github.repository }}:${{ github.sha }} \
-          ./docker/test.sh
+        run: bin/test.sh
         env:
           CTMS_DB_URL: postgresql://postgres:postgres@172.17.0.1:5432/postgres
           CTMS_SECRET_KEY: secret_${{ github.sha }}
