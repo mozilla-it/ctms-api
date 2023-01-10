@@ -30,12 +30,13 @@ production, they are set as part of the runtime environment.
   MozLog format.
 * ``CTMS_LOGGING_LEVEL`` - The minimum level for logs. Defaults to ``INFO`` if
   unset. Unset in production, and set to ``INFO`` in development.
+* ``CTMS_LOG_SQLALCHEMY`` - Determines whether SQLAlchemy logs should be
+  emmited. Defaults to ``False`` if unset. Unset in production, and set to
+  ``False`` in development.
 * ``CTMS_SENTRY_DEBUG`` - If set to True, then sentry initialization and capture is
   logged as well. This may be useful for development, but is not recommended for
   production.
 * ``CTMS_FASTAPI_ENV`` - To determine which environment is being run; defaults to `None`.
-* ``CTMS_IS_GUNICORN`` - Is Gunicorn being used to run FastAPI app; defaults to `False`
-* ``CTMS_PROMETHEUS_MULTIPROC_DIR`` - For collecting and pushing App metrics to Promethesus for Monitoring; defaults to `None`.
 * ``CTMS_PUBSUB_AUDIENCE`` - Audience (or Server) shared between FxA and CTMS; part of claims analysis to ensure request payload is trustworthy.
 * ``CTMS_PUBSUB_EMAIL`` - Email (or Service Account) shared between FxA and CTMS; part of claims analysis to ensure request payload is trustworthy.
 * ``CTMS_PUBSUB_CLIENT`` - Client (or Token) shared between FxA and CTMS; part of claims analysis to ensure request payload is trustworthy.

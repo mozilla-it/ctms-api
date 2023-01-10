@@ -3,7 +3,7 @@ from datetime import timedelta
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseSettings, DirectoryPath, PostgresDsn
+from pydantic import BaseSettings, PostgresDsn
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
@@ -27,12 +27,13 @@ class Settings(BaseSettings):
     token_expiration: timedelta = timedelta(minutes=60)
     server_prefix: str = "http://localhost:8000"
     use_mozlog: bool = True
+    log_sqlalchemy: bool = False
     logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
     fastapi_env: Optional[str] = None
-    is_gunicorn: bool = False
-    prometheus_multiproc_dir: Optional[DirectoryPath] = None
+    host: str = "0.0.0.0"
+    port: int = 8000
 
     pubsub_audience: Optional[str] = None
     pubsub_email: Optional[str] = None
@@ -68,8 +69,8 @@ class Settings(BaseSettings):
 
         fields = {
             "fastapi_env": {"env": "fastapi_env"},
-            "is_gunicorn": {"env": "is_gunicorn"},
-            "prometheus_multiproc_dir": {"env": "prometheus_multiproc_dir"},
+            "host": {"env": "host"},
+            "port": {"env": "port"},
         }
 
 
