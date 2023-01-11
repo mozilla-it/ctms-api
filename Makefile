@@ -17,14 +17,14 @@ help:
 	@echo ""
 	@echo "CTMS make rules:"
 	@echo ""
-	@echo "  build   - build docker containers"
-	@echo "  lint    - lint check for code"
-	@echo "  setup   - (re)create the database"
-	@echo "  start   - run the API service"
-	@echo ""
-	@echo "  test        - run test suite"
-	@echo "  shell       - open a shell in the web container"
-	@echo "  db-only     - run PostgreSQL server"
+	@echo "  build          - build docker containers"
+	@echo "  db-only        - run PostgreSQL server"
+	@echo "  lint           - lint check for code"
+	@echo "  setup          - (re)create the database"
+	@echo "  shell          - open a shell in the web container"
+	@echo "  start          - run the API service"
+	@echo "  test           - run test suite"
+	@echo "  update-secrets - scan repository for secrets and update baseline file, if necessary"
 	@echo ""
 	@echo "  help    - see this text"
 
@@ -81,3 +81,6 @@ ifneq (1, ${MK_KEEP_DOCKER_UP})
 	docker-compose down
 endif
 
+.PHONY: update-secrets
+update-secrets:
+	bin/update_baseline.sh
