@@ -32,8 +32,8 @@ help:
 .env:
 	@if [ ! -f .env ]; \
 	then \
-	echo "Copying env.dist to .env..."; \
-	cp docker/config/env.dist .env; \
+	echo "Copying .env.example to .env"; \
+	cp .env.example .env; \
 	fi
 
 install: $(INSTALL_STAMP)
