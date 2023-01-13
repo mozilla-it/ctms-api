@@ -47,7 +47,7 @@ build: .env
 	docker-compose build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
-lint: .env $(INSTALL_STAMP)
+lint: $(INSTALL_STAMP)
 	bin/lint.sh
 
 .PHONY: db-only
