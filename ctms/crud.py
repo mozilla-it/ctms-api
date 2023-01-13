@@ -482,13 +482,16 @@ def create_or_update_mofo(
 
 
 def format_legacy_vpn_relay_waitlist_input(
-    db: Session, email_id: UUID4, input_data, schema_class
+    db: Session, email_id: UUID4, input_data, schema_class, metrics: Optional[Dict]
 ):
     """
     Mimic a recent payload format using the values in database.
     """
     # Use a dict to handle all the different schemas for create, create_or_update, or update
     formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
+
+    if metrics and ("vpn_waitlist" in formatted or "relay_waitlist" in formatted):
+        metrics["legacy_waitlists_requests"].inc()
 
     if len(formatted.get("waitlists", [])) > 0:
         # We are dealing with the current format. Nothing to do.
@@ -637,7 +640,9 @@ def create_or_update_waitlists(
         db.execute(stmt)
 
 
-def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
+def create_contact(
+    db: Session, email_id: UUID4, contact: ContactInSchema, metrics: Optional[Dict]
+):
     create_email(db, contact.email)
     if contact.amo:
         create_amo(db, email_id, contact.amo)
@@ -649,13 +654,15 @@ def create_contact(db: Session, email_id: UUID4, contact: ContactInSchema):
         create_newsletter(db, email_id, newsletter)
 
     contact = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, contact, ContactInSchema
+        db, email_id, contact, ContactInSchema, metrics
     )
     for waitlist in contact.waitlists:
         create_waitlist(db, email_id, waitlist)
 
 
-def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSchema):
+def create_or_update_contact(
+    db: Session, email_id: UUID4, contact: ContactPutSchema, metrics: Optional[Dict]
+):
     create_or_update_email(db, contact.email)
     create_or_update_amo(db, email_id, contact.amo)
     create_or_update_fxa(db, email_id, contact.fxa)
@@ -663,12 +670,14 @@ def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSc
     create_or_update_newsletters(db, email_id, contact.newsletters)
 
     contact = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, contact, ContactPutSchema
+        db, email_id, contact, ContactPutSchema, metrics
     )
     create_or_update_waitlists(db, email_id, contact.waitlists)
 
 
-def update_contact(db: Session, email: Email, update_data: dict) -> None:
+def update_contact(
+    db: Session, email: Email, update_data: dict, metrics: Optional[Dict]
+) -> None:
     """Update an existing contact using a sparse update dictionary"""
     email_id = email.email_id
 
@@ -722,7 +731,7 @@ def update_contact(db: Session, email: Email, update_data: dict) -> None:
                     email.newsletters.append(new)
 
     update_data = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, update_data, dict
+        db, email_id, update_data, dict, metrics
     )
 
     existing = {}

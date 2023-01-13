@@ -278,7 +278,7 @@ def test_patch_error_on_id_conflict(
             fxa_id=1337, primary_email="fxa-conflict@example.com"
         ),
     )
-    create_contact(dbsession, conflict_id, conflicting_data)
+    create_contact(dbsession, conflict_id, conflicting_data, metrics=None)
 
     existing_value = getattr(getattr(maximal_contact, group_name), key)
     conflicting_value = getattr(getattr(conflicting_data, group_name), key)

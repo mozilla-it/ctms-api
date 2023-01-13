@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
-from ctms.app import app, get_api_client, get_db
+from ctms.app import app, get_api_client, get_db, get_metrics
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
@@ -131,7 +131,7 @@ def minimal_contact(dbsession):
     assert contact.fxa is None
     assert contact.mofo is None
     assert len(contact.waitlists) == 0
-    create_contact(dbsession, email_id, contact)
+    create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 
@@ -140,7 +140,7 @@ def minimal_contact(dbsession):
 def maximal_contact(dbsession):
     email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
     contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact)
+    create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 
@@ -149,7 +149,7 @@ def maximal_contact(dbsession):
 def example_contact(dbsession):
     email_id = UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")
     contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact)
+    create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 

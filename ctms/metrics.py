@@ -57,6 +57,13 @@ METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
             "documentation": "Total count of contacts added to Acoustic sync backlog",
         },
     ),
+    "legacy_waitlists_requests": (
+        Counter,
+        {
+            "name": "ctms_legacy_waitlists_requests_total",
+            "documentation": "Total count of API calls that use the legacy waitlists format",
+        },
+    ),
 }
 
 
