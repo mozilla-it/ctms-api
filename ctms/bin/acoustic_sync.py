@@ -48,21 +48,28 @@ def main(db, settings):
         update_healthcheck(healthcheck_path)
 
         duration_s = monotonic() - prev
+
         if context["count_total"] == context["batch_limit"]:
             to_sleep = 0
+
         else:
             to_sleep = settings.acoustic_loop_min_secs - duration_s
 
         if context["count_total"] == 0:
             context["trivial"] = True
+
         logger.info(
             "sync_service cycle complete",
             loop_duration_s=round(duration_s, 3),
             loop_sleep_s=round(to_sleep, 3),
             **context
         )
+
+        metric_service.set_sync_loop_duration_seconds(round(duration_s, 3))
+
         if to_sleep > 0:
             sleep(to_sleep)
+
         prev = monotonic()
 
 
