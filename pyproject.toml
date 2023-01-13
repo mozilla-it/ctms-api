@@ -119,7 +119,7 @@ profile = "black"
     ]
 
 [tool.mypy]
-# Sync Python version with docker/Dockerfile
+# Sync Python version with Dockerfile
 python_version = "3.10"
 # Look for errors in this file
 warn_unused_configs = true

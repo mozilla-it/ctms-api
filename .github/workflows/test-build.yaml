@@ -48,7 +48,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: docker/Dockerfile
           push: false
           target: "production"
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}-test-build
