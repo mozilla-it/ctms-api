@@ -1,6 +1,7 @@
 .bash_history
 .cache
 .coverage
+.DS_STORE
 .env
 .idea/
 .mypy_cache/
