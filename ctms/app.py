@@ -57,13 +57,8 @@ from .ingest_stripe import (
     StripeIngestUnknownObjectError,
     ingest_stripe_object,
 )
-from .log import configure_logging, context_from_request, get_log_line
-from .metrics import (
-    emit_response_metrics,
-    get_metrics_reporting_registry,
-    init_metrics,
-    init_metrics_labels,
-)
+from .log import context_from_request, get_log_line
+from .metrics import emit_response_metrics, init_metrics, init_metrics_labels
 from .models import Email, StripeCustomer
 from .monitor import check_database, get_version
 from .schemas import (
@@ -97,6 +92,9 @@ app = FastAPI(
 SessionLocal = None
 METRICS_REGISTRY = CollectorRegistry()
 METRICS = None
+
+# We could use the default prometheus_client.REGISTRY, but it makes tests
+# easier to write if it is possible to replace the registry with a fresh one.
 get_metrics_registry = lambda: METRICS_REGISTRY
 get_metrics = lambda: METRICS
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
@@ -117,8 +115,6 @@ if "pytest" not in sys.argv[0]:  # pragma: no cover
 @app.on_event("startup")
 def startup_event():  # pragma: no cover
     global SessionLocal, METRICS  # pylint:disable = W0603
-    settings = get_settings()
-    configure_logging(settings.use_mozlog, settings.logging_level.name)
     _, SessionLocal = get_db_engine(get_settings())
     METRICS = init_metrics(METRICS_REGISTRY)
     init_metrics_labels(SessionLocal(), app, METRICS)
@@ -908,7 +904,7 @@ def metrics(request: Request):
     if agent.startswith("Prometheus/"):
         request.state.log_context["trivial_code"] = 200
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
-    registry = get_metrics_reporting_registry(get_metrics_registry())
+    registry = get_metrics_registry()
     return Response(generate_latest(registry), status_code=200, headers=headers)
 
 

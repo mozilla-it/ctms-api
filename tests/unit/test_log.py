@@ -110,5 +110,5 @@ def test_configure_logging(use_mozlog, logging_level):
         handlers = ["mozlog"]
     else:
         handlers = ["humans"]
-    assert args[0]["root"] == {"handlers": handlers, "level": "WARNING"}
+    assert args[0]["root"] == {"handlers": handlers, "level": logging_level}
     assert args[0]["loggers"]["ctms"]["level"] == logging_level

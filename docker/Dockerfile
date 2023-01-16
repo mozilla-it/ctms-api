@@ -1,104 +1,45 @@
-# Dockerfile
-# Uses multi-stage builds requiring Docker 17.05 or higher
-# See https://docs.docker.com/develop/develop-images/multistage-build/
+FROM python:3.10.6 as python-base
 
-# Creating a python base with shared environment variables
-FROM python:3.10.6-slim as python-base
-ENV PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=off \
+ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100 \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    PIP_NO_CACHE_DIR=off \
+    POETRY_HOME=/opt/poetry\
     POETRY_NO_INTERACTION=1 \
-    PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv" \
-    PORT=8000
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    PYSETUP_PATH="/opt/pysetup"
 
-ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
-
-# Set up user and group
-ARG userid=10001
-ARG groupid=10001
-WORKDIR /app
-RUN groupadd --gid $groupid app && \
-    useradd -g app --uid $userid --shell /usr/sbin/nologin --create-home app
-
-RUN mkdir -p $POETRY_HOME && \
-    chown app:app /opt/poetry && \
-    mkdir -p $PYSETUP_PATH && \
-    chown app:app $PYSETUP_PATH && \
-    mkdir -p /app && \
-    chown app:app /app
-
-RUN apt-get update && \
-    apt-get install --assume-yes apt-utils && \
-    echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
-    apt-get install --no-install-recommends -y \
-      libpq5
-
-# builder-base is used to build dependencies
-FROM python-base as builder-base
-RUN apt-get install --no-install-recommends -y \
-      build-essential \
-      libpq-dev
-
-# Install Poetry - respects $POETRY_VERSION & $POETRY_HOME
-USER app
 RUN python3 -m venv $POETRY_HOME && \
 $POETRY_HOME/bin/pip install poetry==1.3.1 && \
 $POETRY_HOME/bin/poetry --version
 
-# We copy our Python requirements here to cache them
-# and install only runtime deps using poetry
 WORKDIR $PYSETUP_PATH
-COPY --chown=app:app ./poetry.lock ./pyproject.toml ./
-RUN poetry install --no-dev --no-root
+COPY ./poetry.lock ./pyproject.toml ./
+RUN $POETRY_HOME/bin/poetry install --no-dev --no-root
 
+FROM python:3.10.6-slim as production
 
-# 'development' stage installs all dev deps and can be used to develop code.
-# For example using docker-compose to mount local volume under /app
-FROM python-base as development
-ENV FASTAPI_ENV=development
+COPY bin/update_and_install_system_packages.sh /opt
+RUN opt/update_and_install_system_packages.sh libpq5
 
-# Copying poetry and venv into image
+ENV PATH="/opt/pysetup/.venv/bin:$PATH" \
+    PORT=8000 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    VENV_PATH="/opt/pysetup/.venv"
+
+COPY --from=python-base $VENV_PATH $VENV_PATH
+
+# Set up user and group
+ARG userid=10001
+ARG groupid=10001
+RUN groupadd --gid $groupid app && \
+    useradd -g app --uid $userid --shell /usr/sbin/nologin --create-home app
 USER app
-COPY --from=builder-base $POETRY_HOME $POETRY_HOME
-COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
-
-# Copying in our entrypoint
-COPY --chown=app:app ./docker/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-# venv already has runtime deps installed we get a quicker install
-WORKDIR $PYSETUP_PATH
-RUN poetry install --no-root
-
 WORKDIR /app
+
 COPY --chown=app:app . .
 
 EXPOSE $PORT
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD uvicorn ctms.app:app --reload --host=0.0.0.0 --port=$PORT
-
-# 'production' stage uses the clean 'python-base' stage and copyies
-# in only our runtime deps that were installed in the 'builder-base'
-FROM python-base as production
-ENV FASTAPI_ENV=production \
-    IS_GUNICORN=1 \
-    PROMETHEUS_MULTIPROC=1
-
-COPY --from=builder-base $VENV_PATH $VENV_PATH
-COPY ./docker/gunicorn_conf.py /gunicorn_conf.py
-
-COPY ./docker/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-COPY . /app
-WORKDIR /app
-
-EXPOSE $PORT
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD gunicorn -k uvicorn.workers.UvicornWorker -c /gunicorn_conf.py ctms.app:app
+CMD ["python", "asgi.py"]

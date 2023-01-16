@@ -1,20 +1,13 @@
 # Test for metrics
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from prometheus_client import CollectorRegistry, generate_latest
-from prometheus_client.multiprocess import MultiProcessCollector
 from prometheus_client.parser import text_string_to_metric_families
-from pydantic import ValidationError
 from structlog.testing import capture_logs
 
 from ctms.app import app
-from ctms.metrics import (
-    METRICS_PARAMS,
-    get_metrics_reporting_registry,
-    init_metrics,
-    init_metrics_labels,
-)
+from ctms.metrics import METRICS_PARAMS, init_metrics, init_metrics_labels
 
 # Metric cardinatility numbers
 # These numbers change as routes are added or changed
@@ -59,38 +52,6 @@ def metrics(setup_metrics):
     """Get the test metrics"""
     _, test_metrics = setup_metrics
     return test_metrics
-
-
-def test_get_metrics_reporting_registry_standard():
-    """get_metrics_reporting_registry() returns the passed registry."""
-    passed_registry = CollectorRegistry()
-    with patch("ctms.metrics.config.Settings") as settings:
-        settings.return_value.prometheus_multiproc_dir = None
-        the_registry = get_metrics_reporting_registry(passed_registry)
-    assert the_registry is passed_registry
-
-
-def test_get_metrics_reporting_registry_multiprocess(tmp_path):
-    """get_metrics_reporting_registry() can register a multiprocessing collector."""
-    passed_registry = CollectorRegistry()
-    with patch("ctms.metrics.config.Settings") as settings:
-        settings.return_value.prometheus_multiproc_dir = tmp_path
-        the_registry = get_metrics_reporting_registry(passed_registry)
-    assert the_registry is not passed_registry
-    # pylint: disable=protected-access
-    collectors = list(the_registry._collector_to_names.keys())
-    assert len(collectors) == 1
-    assert isinstance(collectors[0], MultiProcessCollector)
-
-
-def test_get_metrics_reporting_registry_settings_error():
-    """get_metrics_reporting_registry() handles invalid settings."""
-    passed_registry = CollectorRegistry()
-    with patch("ctms.metrics.config.Settings") as settings:
-        settings.side_effect = ValidationError(errors=[], model=Mock)
-        the_registry = get_metrics_reporting_registry(passed_registry)
-    assert the_registry is passed_registry
-    assert not the_registry._collector_to_names  # pylint: disable=protected-access
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):

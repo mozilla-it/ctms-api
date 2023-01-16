@@ -20,6 +20,8 @@ for this project to ensure correct environment setup.
 
 The project is structured with the following in mind:
 
+- [bin/*](bin/)
+    - Some scripts that have proven useful within the CTMS ecosystem
 - [docs/*](docs/)
     - Documentation to guide others around the project interactions
 - [ctms/*](ctms/)
@@ -30,8 +32,6 @@ The project is structured with the following in mind:
         - Pydantic Models for Data Modeling and Contract Validation
 - [migrations/*](migrations/)
     - Alembic migrations that act as a changelog or version control system for implementing DB changes in an ordered fashion
-- [scripts/*](scripts/)
-    - Some scripts that have proven useful within the CTMS ecosystem
 - [tests/unit/*](test/unit/)
     - Test suite using pytest
 

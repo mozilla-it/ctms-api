@@ -20,15 +20,10 @@ curl -sSL https://install.python-poetry.org | python3 -
 ```
 
 ## Setup Dependencies
-Install prod dependencies in pyproject.toml through poetry:
+To set up dependencies necessary for local development, run:
 
 ```sh
-poetry install --no-dev
-```
-
-Install ALL deps including DEV dependencies:
-```sh
-poetry install
+make install
 ```
 
 If these fail with an error like:

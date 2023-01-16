@@ -17,14 +17,14 @@ help:
 	@echo ""
 	@echo "CTMS make rules:"
 	@echo ""
-	@echo "  build   - build docker containers"
-	@echo "  lint    - lint check for code"
-	@echo "  setup   - (re)create the database"
-	@echo "  start   - run the API service"
-	@echo ""
-	@echo "  test        - run test suite"
-	@echo "  shell       - open a shell in the web container"
-	@echo "  db-only     - run PostgreSQL server"
+	@echo "  build          - build docker containers"
+	@echo "  db-only        - run PostgreSQL server"
+	@echo "  lint           - lint check for code"
+	@echo "  setup          - (re)create the database"
+	@echo "  shell          - open a shell in the web container"
+	@echo "  start          - run the API service"
+	@echo "  test           - run test suite"
+	@echo "  update-secrets - scan repository for secrets and update baseline file, if necessary"
 	@echo ""
 	@echo "  help    - see this text"
 
@@ -72,11 +72,15 @@ start: .env
 	docker-compose up
 
 .PHONY: test
-test: .env
-	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} tests
-ifneq (1, ${MK_KEEP_DOCKER_UP})
+test: .env $(INSTALL_STAMP)
+	docker-compose up --wait postgres
+	bin/test.sh
+ifneq (1, ${MK_KEEP_DOCKER_UP})	
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
 	docker-compose down
 endif
 
+.PHONY: update-secrets
+update-secrets:
+	bin/update_baseline.sh
