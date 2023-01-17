@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import uuid
 from collections import defaultdict
-from copy import deepcopy
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
@@ -13,6 +12,10 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
 from .auth import hash_password
+from .backport_legacy_waitlists import (
+    backport_newsletters_waitlists,
+    format_legacy_vpn_relay_waitlist_input,
+)
 from .database import Base
 from .models import (
     AcousticField,
@@ -45,7 +48,6 @@ from .schemas import (
     MozillaFoundationInSchema,
     NewsletterInSchema,
     ProductBaseSchema,
-    RelayWaitlistInSchema,
     StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
@@ -57,7 +59,6 @@ from .schemas import (
     UpdatedFirefoxAccountsInSchema,
     UpdatedNewsletterInSchema,
     UpdatedWaitlistInSchema,
-    VpnWaitlistInSchema,
     WaitlistInSchema,
 )
 from .schemas.base import BaseModel
@@ -481,161 +482,6 @@ def create_or_update_mofo(
     db.execute(stmt)
 
 
-def backport_newsletters_waitlists(
-    db: Session, email_id: UUID4, input_data, schema_class
-):
-    """
-    The role of this function is to turn the waitlists that were implemented using basic
-    newsletters in CTMS-136 into real waitlists.
-    """
-    formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
-
-    if formatted.get("waitlists") == "UNSUBSCRIBE":
-        return input_data
-
-    # This will be empty on contact creation.
-    waitlists_in_db = {
-        wl.name: {"name": wl.name, "source": wl.source, "fields": wl.fields}
-        for wl in get_waitlists_by_email_id(db, email_id)
-    }
-
-    # This backport function is called after `format_legacy_vpn_relay_waitlist_input()`
-    # hence we can lookup the `waitlists` field in the input data.
-    input_waitlists_by_name = {wl["name"]: wl for wl in formatted.get("waitlists", [])}
-
-    relay_newsletters_to_backport = []
-    input_newsletters = formatted.get("newsletters", [])
-    if input_newsletters == "UNSUBSCRIBE":
-        for wl in waitlists_in_db.values():
-            if wl["name"].startswith("relay-"):
-                relay_newsletters_to_backport.append(
-                    {"name": wl["name"] + "-waitlist", "subscribed": False}
-                )
-    else:
-        for newsletter in input_newsletters:
-            # We are looking of `relay-*-waitlist`, but not `relay` which is already processed
-            # and turned into the `relay_waitlist` attribute by Basket already.
-            if newsletter["name"].startswith("relay-"):
-                if (
-                    newsletter["name"].replace("-waitlist", "")
-                    not in input_waitlists_by_name
-                ):
-                    relay_newsletters_to_backport.append(newsletter)
-
-    if not relay_newsletters_to_backport:
-        # Nothing to do.
-        return input_data
-
-    main_relay = input_waitlists_by_name.get("relay")
-    if not main_relay:
-        # We have no information about the main `relay` waitlist in payload.
-        main_relay = waitlists_in_db.get("relay")
-
-    if not main_relay:
-        # This is problematic: a `relay-*-waitlist` newsletter was subscribed, without
-        # the main `relay` waitlist information.
-        # TODO: raise error?
-        main_relay = {"name": "relay", "fields": {"geo": ""}}
-
-    # Now that all available information was gathered, backport.
-    for newsletter in relay_newsletters_to_backport:
-        waitlist_name = newsletter["name"].replace("-waitlist", "")
-        if not newsletter.get("subscribed"):
-            input_waitlists_by_name[waitlist_name] = {
-                "name": waitlist_name,
-                "subscribed": False,
-            }
-        else:
-            input_waitlists_by_name[waitlist_name] = {
-                **main_relay,
-                "name": waitlist_name,
-            }
-
-    formatted["waitlists"] = list(input_waitlists_by_name.values())
-    return formatted if schema_class == dict else schema_class(**formatted)
-
-
-def format_legacy_vpn_relay_waitlist_input(
-    db: Session, email_id: UUID4, input_data, schema_class, metrics: Optional[Dict]
-):
-    """
-    Mimic a recent payload format using the values in database.
-    """
-    # Use a dict to handle all the different schemas for create, create_or_update, or update
-    formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
-
-    if metrics and ("vpn_waitlist" in formatted or "relay_waitlist" in formatted):
-        metrics["legacy_waitlists_requests"].inc()
-
-    if len(formatted.get("waitlists", [])) > 0:
-        # We are dealing with the current format. Nothing to do.
-        return input_data
-
-    existing_waitlists = {}
-    if "vpn_waitlist" in formatted or "relay_waitlist" in formatted:
-        rows = db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
-        existing_waitlists = {wl.name: wl for wl in rows}
-
-    to_update = []
-    if "vpn_waitlist" in formatted:
-        has_vpn = "vpn" in existing_waitlists
-        if formatted["vpn_waitlist"] == "DELETE" or formatted["vpn_waitlist"] is None:
-            if has_vpn:
-                to_update.append(WaitlistInSchema(name="vpn", subscribed=False))
-        else:
-            # Create, update, or remove the vpn waitlist record.
-            parsed_vpn = VpnWaitlistInSchema(**formatted["vpn_waitlist"])
-            if has_vpn and parsed_vpn.is_default():
-                to_update.append(WaitlistInSchema(name="vpn", subscribed=False))
-            else:
-                # Create or update.
-                to_update.append(
-                    WaitlistInSchema(
-                        name="vpn",
-                        fields={"geo": parsed_vpn.geo, "platform": parsed_vpn.platform},
-                    )
-                )
-                # Note: if `waitlists` was explicitly specified as an empty list and the `vpn_waitlist` fields too,
-                # this would have precedence. Since our schemas have an empty list of waitlists by default, this
-                # preserves simplicity and serves our retro compatibility needs.
-
-    if "relay_waitlist" in formatted:
-        relay_waitlists = [
-            wl for wl in existing_waitlists.values() if wl.name.startswith("relay")
-        ]
-        if (
-            formatted["relay_waitlist"] == "DELETE"
-            or formatted["relay_waitlist"] is None
-        ):
-            # When deleting the Relay waitlist at the contact level, deletes all Relay waitlists.
-            for waitlist in relay_waitlists:
-                to_update.append(WaitlistInSchema(name=waitlist.name, subscribed=False))
-        else:
-            parsed_relay = RelayWaitlistInSchema(**formatted["relay_waitlist"])
-            if parsed_relay.is_default():
-                for waitlist in relay_waitlists:
-                    to_update.append(
-                        WaitlistInSchema(name=waitlist.name, subscribed=False)
-                    )
-            else:
-                if len(relay_waitlists) == 0:  # Create with default name.
-                    to_update.append(
-                        WaitlistInSchema(name="relay", fields={"geo": parsed_relay.geo})
-                    )
-                else:  # Update all.
-                    for waitlist in relay_waitlists:
-                        to_update.append(
-                            WaitlistInSchema(
-                                name=waitlist.name, fields={"geo": parsed_relay.geo}
-                            )
-                        )
-
-    if to_update:
-        formatted["waitlists"] = [wl.dict() for wl in to_update]
-
-    return formatted if schema_class == dict else schema_class(**formatted)
-
-
 def create_newsletter(
     db: Session, email_id: UUID4, newsletter: NewsletterInSchema
 ) -> Optional[Newsletter]:
@@ -756,19 +602,20 @@ def create_or_update_contact(
     create_or_update_waitlists(db, email_id, contact.waitlists)
 
 
+def _update_orm(orm: Base, update_dict: dict):
+    """Update a SQLAlchemy model from an update dictionary."""
+    for key, value in update_dict.items():
+        setattr(orm, key, value)
+
+
 def update_contact(
     db: Session, email: Email, update_data: dict, metrics: Optional[Dict]
 ) -> None:
     """Update an existing contact using a sparse update dictionary"""
     email_id = email.email_id
 
-    def update_orm(orm: Base, update_dict: dict):
-        """Update a SQLAlchemy model from an update dictionary."""
-        for key, value in update_dict.items():
-            setattr(orm, key, value)
-
     if "email" in update_data:
-        update_orm(email, update_data["email"])
+        _update_orm(email, update_data["email"])
 
     simple_groups: Dict[
         str, Tuple[Callable[[Session, UUID4, Any], Optional[Base]], Type[Any]]
@@ -789,33 +636,32 @@ def update_contact(
                     new = creator(db, email_id, schema(**update_data[group_name]))
                     setattr(email, group_name, new)
                 else:
-                    update_orm(existing, update_data[group_name])
+                    _update_orm(existing, update_data[group_name])
                     if schema.from_orm(existing).is_default():
                         db.delete(existing)
                         setattr(email, group_name, None)
 
+    update_data = format_legacy_vpn_relay_waitlist_input(
+        db, email_id, update_data, dict, metrics
+    )
+    update_data = backport_newsletters_waitlists(db, email_id, update_data, dict)
+
     if "newsletters" in update_data:
         if update_data["newsletters"] == "UNSUBSCRIBE":
             for newsletter in getattr(email, "newsletters", []):
-                update_orm(newsletter, {"subscribed": False})
+                _update_orm(newsletter, {"subscribed": False})
         else:
             existing = {}
             for newsletter in getattr(email, "newsletters", []):
                 existing[newsletter.name] = newsletter
             for nl_update in update_data["newsletters"]:
                 if nl_update["name"] in existing:
-                    update_orm(existing[nl_update["name"]], nl_update)
+                    _update_orm(existing[nl_update["name"]], nl_update)
                 elif nl_update.get("subscribed", True):
                     new = create_newsletter(
                         db, email_id, NewsletterInSchema(**nl_update)
                     )
                     email.newsletters.append(new)
-
-    update_data = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, update_data, dict, metrics
-    )
-
-    update_data = backport_newsletters_waitlists(db, email_id, update_data, dict)
 
     existing = {}
     for waitlist in email.waitlists:
@@ -836,13 +682,13 @@ def update_contact(
                         email.waitlists.remove(waitlist_orm)
                     else:
                         # Update the Waitlist ORM object
-                        update_orm(waitlist_orm, wl_update)
+                        _update_orm(waitlist_orm, wl_update)
                 elif wl_update.get("subscribed", True):
                     new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
                     email.waitlists.append(new)
 
     # On any PATCH event, the central/email table's time is updated as well.
-    update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})
+    _update_orm(email, {"update_timestamp": datetime.now(timezone.utc)})
 
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):
