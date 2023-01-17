@@ -481,6 +481,80 @@ def create_or_update_mofo(
     db.execute(stmt)
 
 
+def backport_newsletters_waitlists(
+    db: Session, email_id: UUID4, input_data, schema_class
+):
+    """
+    The role of this function is to turn the waitlists that were implemented using basic
+    newsletters in CTMS-136 into real waitlists.
+    """
+    formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
+
+    if formatted.get("waitlists") == "UNSUBSCRIBE":
+        return input_data
+
+    # This will be empty on contact creation.
+    waitlists_in_db = {
+        wl.name: {"name": wl.name, "source": wl.source, "fields": wl.fields}
+        for wl in get_waitlists_by_email_id(db, email_id)
+    }
+
+    # This backport function is called after `format_legacy_vpn_relay_waitlist_input()`
+    # hence we can lookup the `waitlists` field in the input data.
+    input_waitlists_by_name = {wl["name"]: wl for wl in formatted.get("waitlists", [])}
+
+    relay_newsletters_to_backport = []
+    input_newsletters = formatted.get("newsletters", [])
+    if input_newsletters == "UNSUBSCRIBE":
+        for wl in waitlists_in_db.values():
+            if wl["name"].startswith("relay-"):
+                relay_newsletters_to_backport.append(
+                    {"name": wl["name"] + "-waitlist", "subscribed": False}
+                )
+    else:
+        for newsletter in input_newsletters:
+            # We are looking of `relay-*-waitlist`, but not `relay` which is already processed
+            # and turned into the `relay_waitlist` attribute by Basket already.
+            if newsletter["name"].startswith("relay-"):
+                if (
+                    newsletter["name"].replace("-waitlist", "")
+                    not in input_waitlists_by_name
+                ):
+                    relay_newsletters_to_backport.append(newsletter)
+
+    if not relay_newsletters_to_backport:
+        # Nothing to do.
+        return input_data
+
+    main_relay = input_waitlists_by_name.get("relay")
+    if not main_relay:
+        # We have no information about the main `relay` waitlist in payload.
+        main_relay = waitlists_in_db.get("relay")
+
+    if not main_relay:
+        # This is problematic: a `relay-*-waitlist` newsletter was subscribed, without
+        # the main `relay` waitlist information.
+        # TODO: raise error?
+        main_relay = {"name": "relay", "fields": {"geo": ""}}
+
+    # Now that all available information was gathered, backport.
+    for newsletter in relay_newsletters_to_backport:
+        waitlist_name = newsletter["name"].replace("-waitlist", "")
+        if not newsletter.get("subscribed"):
+            input_waitlists_by_name[waitlist_name] = {
+                "name": waitlist_name,
+                "subscribed": False,
+            }
+        else:
+            input_waitlists_by_name[waitlist_name] = {
+                **main_relay,
+                "name": waitlist_name,
+            }
+
+    formatted["waitlists"] = list(input_waitlists_by_name.values())
+    return formatted if schema_class == dict else schema_class(**formatted)
+
+
 def format_legacy_vpn_relay_waitlist_input(
     db: Session, email_id: UUID4, input_data, schema_class, metrics: Optional[Dict]
 ):
@@ -650,12 +724,16 @@ def create_contact(
         create_fxa(db, email_id, contact.fxa)
     if contact.mofo:
         create_mofo(db, email_id, contact.mofo)
-    for newsletter in contact.newsletters:
-        create_newsletter(db, email_id, newsletter)
 
     contact = format_legacy_vpn_relay_waitlist_input(
         db, email_id, contact, ContactInSchema, metrics
     )
+
+    contact = backport_newsletters_waitlists(db, email_id, contact, ContactInSchema)
+
+    for newsletter in contact.newsletters:
+        create_newsletter(db, email_id, newsletter)
+
     for waitlist in contact.waitlists:
         create_waitlist(db, email_id, waitlist)
 
@@ -667,11 +745,14 @@ def create_or_update_contact(
     create_or_update_amo(db, email_id, contact.amo)
     create_or_update_fxa(db, email_id, contact.fxa)
     create_or_update_mofo(db, email_id, contact.mofo)
-    create_or_update_newsletters(db, email_id, contact.newsletters)
 
     contact = format_legacy_vpn_relay_waitlist_input(
         db, email_id, contact, ContactPutSchema, metrics
     )
+
+    contact = backport_newsletters_waitlists(db, email_id, contact, ContactPutSchema)
+
+    create_or_update_newsletters(db, email_id, contact.newsletters)
     create_or_update_waitlists(db, email_id, contact.waitlists)
 
 
@@ -733,6 +814,8 @@ def update_contact(
     update_data = format_legacy_vpn_relay_waitlist_input(
         db, email_id, update_data, dict, metrics
     )
+
+    update_data = backport_newsletters_waitlists(db, email_id, update_data, dict)
 
     existing = {}
     for waitlist in email.waitlists:
