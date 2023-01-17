@@ -63,27 +63,6 @@ class ContactSchema(ComparableBase):
             },
         }
 
-    @property
-    def relay_waitlist(self):
-        """Mimic legacy fields by looking for the first Relay entry in the Waitlist table."""
-        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
-        for waitlist in self.waitlists:
-            if waitlist.name.startswith("relay"):
-                return RelayWaitlistSchema(geo=waitlist.fields.get("geo"))
-        return None
-
-    @property
-    def vpn_waitlist(self):
-        """Mimic legacy fields by looking for a VPN entry in the Waitlist table."""
-        # Iterate `waitlists` since it is likely to be already populated by a join in `crud.py`
-        for waitlist in self.waitlists:
-            if waitlist.name == "vpn":
-                return VpnWaitlistSchema(
-                    geo=waitlist.fields.get("geo"),
-                    platform=waitlist.fields.get("platform"),
-                )
-        return None
-
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
         return IdentityResponse(

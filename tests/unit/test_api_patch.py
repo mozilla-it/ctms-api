@@ -589,8 +589,9 @@ def test_patch_vpn_waitlist_legacy_delete_default(client, maximal_contact):
 
 def test_patch_vpn_waitlist_legacy_update(client, maximal_contact):
     email_id = maximal_contact.email.email_id
-    assert maximal_contact.vpn_waitlist.geo != "it"
-    assert maximal_contact.vpn_waitlist.platform
+    wl_by_name = {wl.name: wl for wl in maximal_contact.waitlists}
+    assert wl_by_name["vpn"].fields["geo"] != "it"
+    assert wl_by_name["vpn"].fields["platform"]
 
     patch_data = {"vpn_waitlist": {"geo": "it"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -605,8 +606,9 @@ def test_patch_vpn_waitlist_legacy_update(client, maximal_contact):
 
 def test_patch_vpn_waitlist_legacy_update_full(client, maximal_contact):
     email_id = maximal_contact.email.email_id
-    assert maximal_contact.vpn_waitlist.geo != "it"
-    assert maximal_contact.vpn_waitlist.platform != "linux"
+    wl_by_name = {wl.name: wl for wl in maximal_contact.waitlists}
+    assert wl_by_name["vpn"].fields["geo"] != "it"
+    assert wl_by_name["vpn"].fields["platform"] != "linux"
 
     patch_data = {"vpn_waitlist": {"geo": "it", "platform": "linux"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -658,7 +660,8 @@ def test_patch_relay_waitlist_legacy_delete_default(client, maximal_contact):
 
 def test_patch_relay_waitlist_legacy_update(client, maximal_contact):
     email_id = maximal_contact.email.email_id
-    assert maximal_contact.relay_waitlist.geo != "it"
+    wl_by_name = {wl.name: wl for wl in maximal_contact.waitlists}
+    assert wl_by_name["relay"].fields["geo"] != "it"
 
     patch_data = {"relay_waitlist": {"geo": "it"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
