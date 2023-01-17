@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import UUID4, Field, HttpUrl, root_validator
+from pydantic import UUID4, AnyUrl, Field, root_validator
 
 from .base import ComparableBase
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
@@ -23,7 +23,7 @@ class WaitlistBase(ComparableBase):
         description="Basket slug for the waitlist",
         example="new-product",
     )
-    source: Optional[HttpUrl] = Field(
+    source: Optional[AnyUrl] = Field(
         default=None,
         description="Source URL of subscription",
         example="https://www.mozilla.org/en-US/",
