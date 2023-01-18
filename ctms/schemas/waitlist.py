@@ -16,6 +16,9 @@ class WaitlistBase(ComparableBase):
 
     In this implementation phase, it cohabits with individual (non-generic)
     schemas of Relay and VPN.
+
+    TODO waitlist: once Basket leverages the `waitlists` field, we can drop
+    `RelayWaitlistBase` and `VpnWaitlistBase`.
     """
 
     name: str = Field(
@@ -141,6 +144,7 @@ class RelayWaitlistBase(ComparableBase):
     """
     The Mozilla Relay Waitlist schema.
 
+    TODO waitlist: once Basket leverages the `waitlists` field.
     """
 
     geo: Optional[str] = Field(
@@ -165,6 +169,8 @@ class VpnWaitlistBase(ComparableBase):
 
     This was previously the Firefox Private Network (fpn) waitlist data,
     with a similar purpose.
+
+    TODO waitlist: once Basket leverages the `waitlists` field.
     """
 
     geo: Optional[str] = Field(

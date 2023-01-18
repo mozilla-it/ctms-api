@@ -102,7 +102,7 @@ class ContactInBase(ComparableBase):
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = []
     waitlists: List[WaitlistInSchema] = []
-    # Retro-compat fields. Drop once Basket uses the `waitlists` list.
+    # TODO waitlist: remove once Basket leverages the `waitlists` field.
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
@@ -151,7 +151,7 @@ class ContactPatchSchema(ComparableBase):
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
     waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]]
-    # Retro-compat fields. Drop once Basket uses the `waitlists` list.
+    # TODO waitlist: remove once Basket leverages the `waitlists` field.
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
 

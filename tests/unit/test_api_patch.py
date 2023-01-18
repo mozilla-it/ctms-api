@@ -217,6 +217,7 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     actual["products"] = []
     # The response shows computed fields for retro-compat. Contact schema
     # does not have them.
+    # TODO waitlist: remove once Basket reads from `waitlists` list.
     del actual["vpn_waitlist"]
     del actual["relay_waitlist"]
     assert actual == expected
