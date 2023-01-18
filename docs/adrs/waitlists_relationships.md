@@ -337,8 +337,10 @@ erDiagram
     }
 ```
 
-All subscriptions to newsletters starting with `relay-` will be turned into a row in the `waitlist` table. For example, if a contact has subscribed to the `relay-vpn-waitlist`, then a row in the `waitlist` table will be created with `name="relay-vpn"`.
+All subscriptions to newsletters starting with `relay-*` will be turned into rows in the `waitlist` table. The `geo` field will be the same between all `relay-*` waitlists, and be taken from the `relay` waitlist.
 
-TODO: Shall newsletters rows be deleted?
+For example, if contact is subscribed to the `relay-phone-masking-waitlist`, then a row in the `waitlist` table will be created with `name="relay-phone-masking", geo="{{contact.waitlists.relay.geo}}`.
 
-TODO: Shall all newsletters rows ending with `-waitlist` be turned into `waitlist` rows? eg. graceland?
+Until Basket reads the waitlists from the ``waitlists`` contact attribute, the information about waitlists subscriptions will be duplicated between the newsletter and the waitlist tables. Once Basket leverages the ``waitlists`` attribute entirely, then we can delete the related newsletters rows since they won't be read anymore.
+
+For more details about the Relay waitlists, see https://mozilla-hub.atlassian.net/browse/CTMS-136
