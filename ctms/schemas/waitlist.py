@@ -140,11 +140,53 @@ def validate_waitlist_fields(name: str, fields: dict):
         VPNFieldsSchema(**fields)
 
 
+def validate_waitlist_newsletters(values):
+    """
+    This helper validates that when subscribing to `relay-*-waitlist`
+    newsletters, the country is provided.
+    # TODO waitlist: remove once Basket leverages the `waitlists` field.
+    """
+    if "newsletters" not in values:
+        return values
+
+    newsletters = values["newsletters"]
+    if not isinstance(newsletters, list):
+        return values
+
+    relay_newsletter_found = False
+    for newsletter in newsletters:
+        if newsletter.subscribed and newsletter.name.startswith("relay-"):
+            relay_newsletter_found = True
+            break
+
+    if not relay_newsletter_found:
+        return values
+
+    # If specified using the legacy `relay_waitlist`
+    relay_country = None
+    relay_waitlist = values.get("relay_waitlist")
+    if relay_waitlist:
+        relay_country = relay_waitlist.geo
+    elif "waitlists" in values:
+        # If specified using the `waitlists` field (unlikely, but in our tests we do)
+        waitlists = values["waitlists"]
+        if isinstance(waitlists, list):
+            for waitlist in waitlists:
+                if waitlist.name == "relay":
+                    relay_country = waitlist.fields.get("geo")
+
+    # Relay country not specified, check if a relay newsletter is being subscribed.
+    if not relay_country:
+        raise ValueError("Relay country missing")
+
+    return values
+
+
 class RelayWaitlistBase(ComparableBase):
     """
     The Mozilla Relay Waitlist schema.
 
-    TODO waitlist: once Basket leverages the `waitlists` field.
+    TODO waitlist: remove once Basket leverages the `waitlists` field.
     """
 
     geo: Optional[str] = Field(
@@ -170,7 +212,7 @@ class VpnWaitlistBase(ComparableBase):
     This was previously the Firefox Private Network (fpn) waitlist data,
     with a similar purpose.
 
-    TODO waitlist: once Basket leverages the `waitlists` field.
+    TODO waitlist: remove once Basket leverages the `waitlists` field.
     """
 
     geo: Optional[str] = Field(

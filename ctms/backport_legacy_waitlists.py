@@ -61,13 +61,13 @@ def backport_newsletters_waitlists(
     if not main_relay:
         # This is problematic: a `relay-*-waitlist` newsletter was subscribed, without
         # the main `relay` waitlist information.
-        # TODO: raise error?
-        main_relay = {"name": "relay", "fields": {"geo": ""}}
+        names = ", ".join([nl["name"] for nl in relay_newsletters_to_backport])
+        raise ValueError(f"Relay country cannot be found for {names}")
 
     # Now that all available information was gathered, backport.
     for newsletter in relay_newsletters_to_backport:
         waitlist_name = newsletter["name"].replace("-waitlist", "")
-        if not newsletter.get("subscribed"):
+        if not newsletter.get("subscribed", True):
             input_waitlists_by_name[waitlist_name] = {
                 "name": waitlist_name,
                 "subscribed": False,

@@ -73,9 +73,10 @@ def test_relay_waitlist_created_on_newsletter_updated(
 
     contact = SAMPLE_MINIMAL.copy(
         update={
+            "relay_waitlist": {"geo": "es"},
             "newsletters": [
                 NewsletterInSchema(name="relay-phone-masking-waitlist"),
-            ]
+            ],
         }
     )
     create_or_update_contact(dbsession, email_id, contact, metrics={})

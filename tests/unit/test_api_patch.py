@@ -705,3 +705,60 @@ def test_patch_relay_waitlist_legacy_update_all(client, minimal_contact):
             "fields": {"geo": "it"},
         },
     ]
+
+
+def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
+    client, minimal_contact
+):
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "relay_waitlist": {"geo": "ru"},
+        "newsletters": [{"name": "relay-vpn-bundle-waitlist"}],
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "relay",
+            "source": None,
+            "fields": {"geo": "ru"},
+        },
+        {
+            "name": "relay-vpn-bundle",
+            "source": None,
+            "fields": {"geo": "ru"},
+        },
+    ]
+
+
+def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
+    client, minimal_contact
+):
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "relay_waitlist": {"geo": "ru"},
+        "newsletters": [{"name": "relay-vpn-bundle-waitlist"}],
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    current = resp.json()
+    assert len(current["waitlists"]) == 2
+
+    patch_data = {
+        "newsletters": [{"name": "relay-vpn-bundle-waitlist", "subscribed": False}]
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {"fields": {"geo": "ru"}, "name": "relay", "source": None}
+    ]
+
+
+def test_cannot_subscribe_to_relay_newsletter_without_relay_country(
+    client, minimal_contact
+):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"newsletters": [{"name": "relay-phone-waitlist"}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 422
