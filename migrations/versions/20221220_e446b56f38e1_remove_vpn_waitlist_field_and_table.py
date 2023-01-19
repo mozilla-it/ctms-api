@@ -73,6 +73,6 @@ def downgrade():
     INSERT INTO vpn_waitlist(email_id, geo, platform, create_timestamp, update_timestamp)
     SELECT email_id, fields->>'geo', fields->>'platform', create_timestamp, update_timestamp
     FROM waitlists
-    WHERE name == 'vpn'
+    WHERE name = 'vpn'
     """
     )
