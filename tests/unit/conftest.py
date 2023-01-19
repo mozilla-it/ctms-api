@@ -81,7 +81,7 @@ def engine(pytestconfig):
             drop_database(test_db_url)
         create_database(test_db_url)
 
-    echo = pytestconfig.getoption("verbose") > 2
+    echo = Settings().log_sqlalchemy or pytestconfig.getoption("verbose") > 2
     test_engine = create_engine(test_db_url, echo=echo)
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
