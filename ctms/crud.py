@@ -12,10 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
 from .auth import hash_password
-from .backport_legacy_waitlists import (
-    backport_newsletters_waitlists,
-    format_legacy_vpn_relay_waitlist_input,
-)
+from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
 from .database import Base
 from .models import (
     AcousticField,
@@ -575,8 +572,6 @@ def create_contact(
         db, email_id, contact, ContactInSchema, metrics
     )
 
-    contact = backport_newsletters_waitlists(db, email_id, contact, ContactInSchema)
-
     for newsletter in contact.newsletters:
         create_newsletter(db, email_id, newsletter)
 
@@ -595,8 +590,6 @@ def create_or_update_contact(
     contact = format_legacy_vpn_relay_waitlist_input(
         db, email_id, contact, ContactPutSchema, metrics
     )
-
-    contact = backport_newsletters_waitlists(db, email_id, contact, ContactPutSchema)
 
     create_or_update_newsletters(db, email_id, contact.newsletters)
     create_or_update_waitlists(db, email_id, contact.waitlists)
@@ -644,7 +637,6 @@ def update_contact(
     update_data = format_legacy_vpn_relay_waitlist_input(
         db, email_id, update_data, dict, metrics
     )
-    update_data = backport_newsletters_waitlists(db, email_id, update_data, dict)
 
     if "newsletters" in update_data:
         if update_data["newsletters"] == "UNSUBSCRIBE":

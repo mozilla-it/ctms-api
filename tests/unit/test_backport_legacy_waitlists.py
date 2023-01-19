@@ -35,7 +35,7 @@ def minimal_contact_with_relay_phone(dbsession):
     contact = SAMPLE_MINIMAL.copy(
         update={
             "waitlists": [
-                WaitlistInSchema(name="relay", fields={"geo": "es"}),
+                WaitlistInSchema(name="relay-vpn", fields={"geo": "es"}),
                 WaitlistInSchema(name="relay-phone-masking", fields={"geo": "es"}),
             ],
         }
@@ -49,7 +49,7 @@ def test_relay_waitlist_created_on_newsletter_subscribe(dbsession):
     email_id = SAMPLE_MINIMAL.email.email_id
     contact = SAMPLE_MINIMAL.copy(
         update={
-            "waitlists": [WaitlistInSchema(name="relay", fields={"geo": "fr"})],
+            "relay_waitlist": {"geo": "fr"},
             "newsletters": [
                 NewsletterInSchema(name="amazing-product"),
                 NewsletterInSchema(name="relay-phone-masking-waitlist"),
@@ -62,7 +62,7 @@ def test_relay_waitlist_created_on_newsletter_subscribe(dbsession):
     waitlists_by_name = {
         wl.name: wl for wl in get_waitlists_by_email_id(dbsession, email_id)
     }
-    assert sorted(waitlists_by_name.keys()) == ["relay", "relay-phone-masking"]
+    assert sorted(waitlists_by_name.keys()) == ["relay-phone-masking"]
     assert waitlists_by_name["relay-phone-masking"].fields["geo"] == "fr"
 
 
@@ -102,10 +102,8 @@ def test_relay_waitlist_unsubscribed_on_newsletter_unsubscribed(
     update_contact(dbsession, contact, patch_data.dict(exclude_unset=True), metrics={})
     dbsession.flush()
 
-    waitlists_by_name = {
-        wl.name: wl for wl in get_waitlists_by_email_id(dbsession, email_id)
-    }
-    assert sorted(waitlists_by_name.keys()) == ["relay"]
+    waitlists = get_waitlists_by_email_id(dbsession, email_id)
+    assert sorted(wl.name for wl in waitlists) == ["relay-vpn"]
 
 
 def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
@@ -117,27 +115,5 @@ def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
     update_contact(dbsession, contact, patch_data.dict(exclude_unset=True), metrics={})
     dbsession.flush()
 
-    waitlists_by_name = {
-        wl.name: wl for wl in get_waitlists_by_email_id(dbsession, email_id)
-    }
-    assert sorted(waitlists_by_name.keys()) == ["relay"]
-
-
-def test_relay_waitlists_unsubscribed_on_newsletter_and_relay_unsubscribed(
-    dbsession, minimal_contact_with_relay_phone
-):
-    email_id = minimal_contact_with_relay_phone.email.email_id
-    contact = get_email(dbsession, email_id)
-    patch_data = ContactPatchSchema(
-        relay_waitlist=RelayWaitlistInSchema(geo=None),
-        newsletters=[
-            NewsletterInSchema(name="relay-phone-masking-waitlist", subscribed=False),
-        ],
-    )
-    update_contact(dbsession, contact, patch_data.dict(exclude_unset=True), metrics={})
-    dbsession.flush()
-
-    waitlists_by_name = {
-        wl.name: wl for wl in get_waitlists_by_email_id(dbsession, email_id)
-    }
-    assert sorted(waitlists_by_name.keys()) == []
+    waitlists = get_waitlists_by_email_id(dbsession, email_id)
+    assert waitlists == []

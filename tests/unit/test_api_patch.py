@@ -720,11 +720,6 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
     actual = resp.json()
     assert actual["waitlists"] == [
         {
-            "name": "relay",
-            "source": None,
-            "fields": {"geo": "ru"},
-        },
-        {
             "name": "relay-vpn-bundle",
             "source": None,
             "fields": {"geo": "ru"},
@@ -742,7 +737,9 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     current = resp.json()
-    assert len(current["waitlists"]) == 2
+    assert current["waitlists"] == [
+        {"fields": {"geo": "ru"}, "name": "relay-vpn-bundle", "source": None}
+    ]
 
     patch_data = {
         "newsletters": [{"name": "relay-vpn-bundle-waitlist", "subscribed": False}]
@@ -750,9 +747,7 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert actual["waitlists"] == [
-        {"fields": {"geo": "ru"}, "name": "relay", "source": None}
-    ]
+    assert actual["waitlists"] == []
 
 
 def test_cannot_subscribe_to_relay_newsletter_without_relay_country(
