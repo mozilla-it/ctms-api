@@ -144,7 +144,7 @@ def test_alembic_migration_waitlists(engine):
         for email_id in email_id_vpn, email_id_relay, email_id_newsletter:
             create_statement = """
             INSERT INTO emails (email_id, primary_email, basket_token, sfdc_id, first_name, last_name, mailing_country, email_format, email_lang, double_opt_in, has_opted_out_of_email, unsubscribe_reason, create_timestamp, update_timestamp)
-            VALUES (:email_id, :email, :token, '001A000001aABcDEFG', NULL, NULL, 'us', 'H', 'en', False, False, NULL, NOW(), NOW())
+            VALUES (:email_id, :email, :token, '00VA000001aABcDEFG', NULL, NULL, 'us', 'H', 'en', False, False, NULL, NOW(), NOW())
             """
             params = {
                 "email_id": str(email_id),

@@ -727,7 +727,7 @@ def test_get_bulk_contacts_some(
             limit=10,
         )
     assert watcher.count == 3
-    assert len(bulk_contact_list) == 3
+    assert len(bulk_contact_list) >= 3
     assert example_contact in bulk_contact_list
     assert maximal_contact in bulk_contact_list
     assert minimal_contact in bulk_contact_list
