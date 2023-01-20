@@ -25,20 +25,24 @@ def upgrade():
     # Migrate the Relay data to the `waitlist` table.
 
     # This query will add a `waitlist` entry for each `relay-*-waitlist` newsletter.
-    op.execute("""
+    op.execute(
+        """
     INSERT INTO waitlists(email_id, name, fields, create_timestamp, update_timestamp)
     SELECT nl.email_id, REPLACE(nl.name, '-waitlist', ''), json_build_object('geo', geo), rw.create_timestamp, rw.update_timestamp
     FROM relay_waitlist AS rw
         INNER JOIN newsletters AS nl ON rw.email_id = nl.email_id
     WHERE nl.name LIKE 'relay%'
-    """)
+    """
+    )
     # Remove entries `relay_waitlist` that come from newsletters subscriptions.
-    op.execute("""
+    op.execute(
+        """
     DELETE FROM relay_waitlist AS rw
         USING newsletters AS nl
         WHERE rw.email_id = nl.email_id
           AND nl.name LIKE 'relay%'
-    """)
+    """
+    )
     # And now add a `waitlist` entry 'relay' for each `relay_waitlist` record that remains, which correspond
     # to contacts that subscribed the `relay` waitlist (and not newsletters).
     op.execute(

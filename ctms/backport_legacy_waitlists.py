@@ -102,22 +102,21 @@ def format_legacy_vpn_relay_waitlist_input(
                                 name=name, fields={"geo": parsed_relay.geo}
                             )
                         )
-                else:
+                elif len(relay_waitlists) == 0:
                     # Either we are subscribing to the `relay` waitlist, or we are updating all existing
                     # Relay waitlists attributes.
-                    if len(relay_waitlists) == 0:
+                    to_update.append(
+                        WaitlistInSchema(name="relay", fields={"geo": parsed_relay.geo})
+                    )
+                else:
+                    # `relay_waitlist` was specified but without newsletter, hence update geo field
+                    # of all relay waitlists.
+                    for waitlist in relay_waitlists:
                         to_update.append(
                             WaitlistInSchema(
-                                name="relay", fields={"geo": parsed_relay.geo}
+                                name=waitlist.name, fields={"geo": parsed_relay.geo}
                             )
                         )
-                    else:  # Update all.
-                        for waitlist in relay_waitlists:
-                            to_update.append(
-                                WaitlistInSchema(
-                                    name=waitlist.name, fields={"geo": parsed_relay.geo}
-                                )
-                            )
 
     if to_update:
         formatted["waitlists"] = [wl.dict() for wl in to_update]

@@ -7,12 +7,7 @@ from ctms.crud import (
     get_waitlists_by_email_id,
     update_contact,
 )
-from ctms.schemas import (
-    ContactPatchSchema,
-    NewsletterInSchema,
-    RelayWaitlistInSchema,
-    WaitlistInSchema,
-)
+from ctms.schemas import ContactPatchSchema, NewsletterInSchema, WaitlistInSchema
 from tests.unit.sample_data import SAMPLE_MINIMAL
 
 
