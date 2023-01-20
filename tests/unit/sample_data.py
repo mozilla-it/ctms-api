@@ -12,8 +12,7 @@ from ctms.schemas import (
     FirefoxAccountsSchema,
     MozillaFoundationSchema,
     NewsletterSchema,
-    RelayWaitlistSchema,
-    VpnWaitlistSchema,
+    WaitlistSchema,
 )
 
 # A contact that has just some of the fields entered
@@ -103,13 +102,29 @@ SAMPLE_MAXIMAL = ContactSchema(
         NewsletterSchema(name="mozilla-festival"),
         NewsletterSchema(name="mozilla-foundation", lang="fr"),
     ],
-    vpn_waitlist=VpnWaitlistSchema(
-        geo="ca",
-        platform="windows,android",
-    ),
-    relay_waitlist=RelayWaitlistSchema(
-        geo="ca",
-    ),
+    waitlists=[
+        WaitlistSchema(
+            name="a-software",
+            source="https://a-software.mozilla.org/",
+            fields={"geo": "fr"},
+        ),
+        WaitlistSchema(
+            name="relay",
+            fields={"geo": "cn"},
+        ),
+        WaitlistSchema(
+            name="super-product",
+            source="https://super-product.mozilla.org/",
+            fields={"geo": "fr", "platform": "win64"},
+        ),
+        WaitlistSchema(
+            name="vpn",
+            fields={
+                "geo": "ca",
+                "platform": "windows,android",
+            },
+        ),
+    ],
 )
 
 
@@ -127,9 +142,11 @@ SAMPLE_EXAMPLE = ContactSchema(
     amo=AddOnsSchema(**_gather_examples(AddOnsSchema)),
     email=EmailSchema(**_gather_examples(EmailSchema)),
     fxa=FirefoxAccountsSchema(**_gather_examples(FirefoxAccountsSchema)),
-    vpn_waitlist=VpnWaitlistSchema(**_gather_examples(VpnWaitlistSchema)),
-    relay_waitlist=RelayWaitlistSchema(**_gather_examples(RelayWaitlistSchema)),
     newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
+    waitlists=[
+        WaitlistSchema(**example)
+        for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
+    ],
 )
 
 SAMPLE_TO_ADD = ContactSchema(

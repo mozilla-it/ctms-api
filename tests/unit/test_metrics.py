@@ -7,7 +7,7 @@ from prometheus_client.parser import text_string_to_metric_families
 from structlog.testing import capture_logs
 
 from ctms.app import app
-from ctms.metrics import init_metrics, init_metrics_labels
+from ctms.metrics import METRICS_PARAMS, init_metrics, init_metrics_labels
 
 # Metric cardinatility numbers
 # These numbers change as routes are added or changed
@@ -219,6 +219,19 @@ def test_pending_sync(client, minimal_contact, registry):
     assert_pending_acoustic_sync_inc(registry)
 
 
+def test_patch_relay_waitlist_legacy_reports_metric(client, minimal_contact, registry):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"waitlists": [{"name": "relay", "fields": {"geo": "fr"}}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
+
+    patch_data = {"relay_waitlist": {"geo": "fr"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 1
+
+
 @pytest.mark.parametrize(
     "email_id,status_code",
     (
@@ -252,15 +265,19 @@ def test_unknown_path(anon_client, dbsession, registry):
     path = "/unknown"
     resp = anon_client.get(path)
     assert resp.status_code == 404
+
+    without_labels = []
+    for name, (_, params) in METRICS_PARAMS.items():
+        if "labelnames" not in params:
+            without_labels.append(f"ctms_{name}_total")
+            without_labels.append(f"ctms_{name}_created")
+
     metrics_text = generate_latest(registry).decode()
     for family in text_string_to_metric_families(metrics_text):
         if len(family.samples) == 1:
             # This metric is emitted, maybe because there are no labels
             sample = family.samples[0]
-            assert sample.name in (
-                "ctms_pending_acoustic_sync_total",
-                "ctms_pending_acoustic_sync_created",
-            )
+            assert sample.name in without_labels
             assert sample.labels == {}
         else:
             assert len(family.samples) == 0

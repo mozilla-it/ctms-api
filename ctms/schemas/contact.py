@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Literal, Optional, Set, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, root_validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -17,8 +17,15 @@ from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema
 from .product import ProductBaseSchema
-from .relay import RelayWaitlistInSchema, RelayWaitlistSchema
-from .vpn import VpnWaitlistInSchema, VpnWaitlistSchema
+from .waitlist import (
+    RelayWaitlistInSchema,
+    RelayWaitlistSchema,
+    VpnWaitlistInSchema,
+    VpnWaitlistSchema,
+    WaitlistInSchema,
+    WaitlistSchema,
+    validate_waitlist_newsletters,
+)
 
 
 class ContactSchema(ComparableBase):
@@ -29,8 +36,7 @@ class ContactSchema(ComparableBase):
     fxa: Optional[FirefoxAccountsSchema] = None
     mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterSchema] = []
-    vpn_waitlist: Optional[VpnWaitlistSchema] = None
-    relay_waitlist: Optional[RelayWaitlistSchema] = None
+    waitlists: List[WaitlistSchema] = []
     products: List[ProductBaseSchema] = []
 
     class Config:
@@ -38,7 +44,24 @@ class ContactSchema(ComparableBase):
             "newsletters": {
                 "description": "List of newsletters for which the contact is or was subscribed",
                 "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
-            }
+            },
+            "waitlists": {
+                "description": "List of waitlists for which the contact is or was subscribed",
+                "example": [
+                    {
+                        "name": "example-product",
+                        "fields": {"geo": "fr", "platform": "win64"},
+                    },
+                    {
+                        "name": "relay",
+                        "fields": {"geo": "fr"},
+                    },
+                    {
+                        "name": "vpn",
+                        "fields": {"geo": "fr", "platform": "ios,mac"},
+                    },
+                ],
+            },
         }
 
     def as_identity_response(self) -> "IdentityResponse":
@@ -62,22 +85,12 @@ class ContactSchema(ComparableBase):
             default_fields.add("amo")
         if hasattr(self, "fxa") and self.fxa and self.fxa.is_default():
             default_fields.add("fxa")
-        if (
-            hasattr(self, "vpn_waitlist")
-            and self.vpn_waitlist
-            and self.vpn_waitlist.is_default()
-        ):
-            default_fields.add("vpn_waitlist")
-        if (
-            hasattr(self, "relay_waitlist")
-            and self.relay_waitlist
-            and self.relay_waitlist.is_default()
-        ):
-            default_fields.add("relay_waitlist")
         if hasattr(self, "mofo") and self.mofo and self.mofo.is_default():
             default_fields.add("mofo")
         if all(n.is_default() for n in self.newsletters):
             default_fields.add("newsletters")
+        if all(n.is_default() for n in self.waitlists):
+            default_fields.add("waitlists")
         return default_fields
 
 
@@ -89,16 +102,23 @@ class ContactInBase(ComparableBase):
     fxa: Optional[FirefoxAccountsInSchema] = None
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = []
+    waitlists: List[WaitlistInSchema] = []
+    # TODO waitlist: remove once Basket leverages the `waitlists` field.
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
     class Config:
-        fields = {
-            "newsletters": {
-                "description": "List of newsletters for which the contact is or was subscribed",
-                "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
-            }
-        }
+        fields = ContactSchema.Config.fields
+
+    @root_validator
+    def check_fields(cls, values):  # pylint:disable = no-self-argument
+        """
+        This makes sure a Relay country is specified when one of the `relay-*-waitlist`
+        newsletter is subscribed.
+
+        TODO waitlist: remove once Basket leverages the `waitlists` field.
+        """
+        return validate_waitlist_newsletters(values)
 
     def idempotent_equal(self, other):
         def _noneify(field):
@@ -111,9 +131,8 @@ class ContactInBase(ComparableBase):
             and _noneify(self.amo) == _noneify(other.amo)
             and _noneify(self.fxa) == _noneify(other.fxa)
             and _noneify(self.mofo) == _noneify(other.mofo)
-            and _noneify(self.vpn_waitlist) == _noneify(other.vpn_waitlist)
-            and _noneify(self.relay_waitlist) == _noneify(other.relay_waitlist)
             and sorted(self.newsletters) == sorted(other.newsletters)
+            and sorted(self.waitlists) == sorted(other.waitlists)
         )
 
 
@@ -142,8 +161,20 @@ class ContactPatchSchema(ComparableBase):
     fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]]
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
+    waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]]
+    # TODO waitlist: remove once Basket leverages the `waitlists` field.
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
+
+    @root_validator
+    def check_fields(cls, values):  # pylint:disable = no-self-argument
+        """
+        This makes sure a Relay country is specified when one of the `relay-*-waitlist`
+        newsletter is subscribed.
+
+        TODO waitlist: remove once Basket leverages the `waitlists` field.
+        """
+        return validate_waitlist_newsletters(values)
 
     class Config:
         fields = {
@@ -167,6 +198,15 @@ class ContactPatchSchema(ComparableBase):
             "relay_waitlist": {
                 "description": 'Relay Waitlist data to update, or "DELETE" to reset.'
             },
+            "waitlists": {
+                "description": ("List of waitlists to add or update."),
+                "example": [
+                    {
+                        "name": "example-product",
+                        "fields": {"geo": "fr", "platform": "win64"},
+                    }
+                ],
+            },
         }
 
 
@@ -182,8 +222,33 @@ class CTMSResponse(BaseModel):
     fxa: FirefoxAccountsSchema
     mofo: MozillaFoundationSchema
     newsletters: List[NewsletterSchema]
+    waitlists: List[WaitlistSchema]
+    # Retro-compat fields
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
+
+    def __init__(self, *args, **kwargs) -> None:
+        # Show computed fields in response for retro-compatibility.
+        kwargs["vpn_waitlist"] = VpnWaitlistSchema()
+        kwargs["relay_waitlist"] = RelayWaitlistSchema()
+
+        for waitlist in kwargs.get("waitlists", []):
+            if isinstance(waitlist, dict):
+                # TODO: figure out why dict from `response_model` decorators param in app.py)
+                waitlist = WaitlistSchema(**waitlist)
+            if isinstance(waitlist, WaitlistInSchema):
+                # Many tests instantiates CTMSResponse with `WaitlistInSchema` (input schema).
+                waitlist = WaitlistSchema(**waitlist.dict())
+            if waitlist.name == "vpn":
+                kwargs["vpn_waitlist"] = VpnWaitlistSchema(
+                    geo=waitlist.fields.get("geo"),
+                    platform=waitlist.fields.get("platform"),
+                )
+            if waitlist.name.startswith("relay"):
+                kwargs["relay_waitlist"] = RelayWaitlistSchema(
+                    geo=waitlist.fields.get("geo")
+                )
+        super().__init__(*args, **kwargs)
 
 
 class CTMSSingleResponse(CTMSResponse):

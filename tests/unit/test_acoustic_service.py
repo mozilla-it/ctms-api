@@ -101,6 +101,36 @@ def test_ctms_to_acoustic_newsletters(
     ]
 
 
+def test_ctms_to_acoustic_waitlists_minimal(
+    base_ctms_acoustic_service,
+    minimal_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
+    assert len(minimal_contact.waitlists) == 0
+    assert main["vpn_waitlist_geo"] is None
+    assert main["vpn_waitlist_platform"] is None
+    assert main["relay_waitlist_geo"] is None
+
+
+def test_ctms_to_acoustic_waitlists_maximal(
+    base_ctms_acoustic_service,
+    maximal_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
+    assert len(maximal_contact.waitlists) == 4
+    assert main["vpn_waitlist_geo"] == "ca"
+    assert main["vpn_waitlist_platform"] == "windows,android"
+    assert main["relay_waitlist_geo"] == "cn"
+
+
 def test_ctms_to_acoustic_minimal_fields(
     base_ctms_acoustic_service,
     minimal_contact,

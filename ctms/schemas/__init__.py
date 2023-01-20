@@ -26,11 +26,6 @@ from .fxa import (
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema, UpdatedNewsletterInSchema
 from .product import ProductBaseSchema
-from .relay import (
-    RelayWaitlistInSchema,
-    RelayWaitlistSchema,
-    UpdatedRelayWaitlistInSchema,
-)
 from .stripe_customer import (
     StripeCustomerCreateSchema,
     StripeCustomerModelSchema,
@@ -67,7 +62,13 @@ from .stripe_subscription_item import (
     StripeSubscriptionItemOutputSchema,
     StripeSubscriptionItemUpsertSchema,
 )
-from .vpn import UpdatedVpnWaitlistInSchema, VpnWaitlistInSchema, VpnWaitlistSchema
+from .waitlist import (
+    RelayWaitlistInSchema,
+    UpdatedWaitlistInSchema,
+    VpnWaitlistInSchema,
+    WaitlistInSchema,
+    WaitlistSchema,
+)
 from .web import (
     BadRequestResponse,
     NotFoundResponse,

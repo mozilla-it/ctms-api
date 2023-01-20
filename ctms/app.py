@@ -78,10 +78,8 @@ from .schemas import (
     IdentityResponse,
     MozillaFoundationSchema,
     NotFoundResponse,
-    RelayWaitlistSchema,
     TokenResponse,
     UnauthorizedResponse,
-    VpnWaitlistSchema,
 )
 
 version_info = get_version()
@@ -166,8 +164,7 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
         fxa=email.fxa,
         mofo=email.mofo,
         newsletters=email.newsletters,
-        vpn_waitlist=email.vpn_waitlist,
-        relay_waitlist=email.relay_waitlist,
+        waitlists=email.waitlists,
     )
 
 
@@ -232,8 +229,7 @@ def get_contacts_by_ids(
             fxa=email.fxa,
             mofo=email.mofo,
             newsletters=email.newsletters,
-            vpn_waitlist=email.vpn_waitlist,
-            relay_waitlist=email.relay_waitlist,
+            waitlists=email.waitlists,
         )
         for email in rows
     ]
@@ -274,8 +270,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
                 fxa=contact.fxa or FirefoxAccountsSchema(),
                 mofo=contact.mofo or MozillaFoundationSchema(),
                 newsletters=contact.newsletters or [],
-                vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
-                relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+                waitlists=contact.waitlists or [],
             )
             for contact in results
         ]
@@ -505,8 +500,7 @@ def read_ctms_by_any_id(
             fxa=contact.fxa or FirefoxAccountsSchema(),
             mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
-            vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
-            relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+            waitlists=contact.waitlists or [],
         )
         for contact in contacts
     ]
@@ -543,8 +537,7 @@ def get_ctms_response_or_404(db, email_id):
         fxa=contact.fxa or FirefoxAccountsSchema(),
         mofo=contact.mofo or MozillaFoundationSchema(),
         newsletters=contact.newsletters or [],
-        vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
-        relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+        waitlists=contact.waitlists or [],
         status="ok",
     )
 
@@ -578,7 +571,7 @@ def create_ctms_contact(
             return get_ctms_response_or_404(db=db, email_id=email_id)
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
-        create_contact(db, email_id, contact)
+        create_contact(db, email_id, contact, get_metrics())
         schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
@@ -628,7 +621,7 @@ def create_or_update_ctms_contact(
         request.state.log_context["trace"] = email
         request.state.log_context["trace_json"] = content_json
     try:
-        create_or_update_contact(db, email_id, contact)
+        create_or_update_contact(db, email_id, contact, get_metrics())
         schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
@@ -674,7 +667,7 @@ def partial_update_ctms_contact(
         )
     current_email = get_email_or_404(db, email_id)
     update_data = contact.dict(exclude_unset=True)
-    update_contact(db, current_email, update_data)
+    update_contact(db, current_email, update_data, get_metrics())
     email = current_email.primary_email
     if re_trace_email.match(email):
         request.state.log_context["trace"] = email

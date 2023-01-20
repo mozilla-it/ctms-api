@@ -114,6 +114,11 @@ def test_get_ctms_bulk_by_timerange(
     assert dict_contact_expected["products"] == []
     assert "products" not in dict_contact_actual
     dict_contact_actual["products"] = []
+    # The response shows computed fields for retro-compat. Contact schema
+    # does not have them.
+    del dict_contact_actual["vpn_waitlist"]
+    del dict_contact_actual["relay_waitlist"]
+
     assert dict_contact_expected == dict_contact_actual
     assert results["next"] is not None
 

@@ -92,6 +92,7 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
         "status": "ok",
         "vpn_waitlist": {"geo": None, "platform": None},
         "relay_waitlist": {"geo": None},
+        "waitlists": [],
     }
 
 
@@ -204,7 +205,29 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
         ],
         "status": "ok",
         "vpn_waitlist": {"geo": "ca", "platform": "windows,android"},
-        "relay_waitlist": {"geo": "ca"},
+        "relay_waitlist": {"geo": "cn"},
+        "waitlists": [
+            {
+                "fields": {"geo": "fr"},
+                "name": "a-software",
+                "source": "https://a-software.mozilla.org/",
+            },
+            {
+                "fields": {"geo": "cn"},
+                "name": "relay",
+                "source": None,
+            },
+            {
+                "fields": {"geo": "fr", "platform": "win64"},
+                "name": "super-product",
+                "source": "https://super-product.mozilla.org/",
+            },
+            {
+                "fields": {"geo": "ca", "platform": "windows,android"},
+                "name": "vpn",
+                "source": None,
+            },
+        ],
     }
 
 
@@ -279,6 +302,23 @@ def test_get_ctms_for_api_example(client, example_contact):
         "status": "ok",
         "vpn_waitlist": {"geo": "fr", "platform": "ios,mac"},
         "relay_waitlist": {"geo": "fr"},
+        "waitlists": [
+            {
+                "fields": {"geo": "fr", "platform": "win64"},
+                "name": "example-product",
+                "source": None,
+            },
+            {
+                "fields": {"geo": "fr"},
+                "name": "relay",
+                "source": None,
+            },
+            {
+                "fields": {"geo": "fr", "platform": "ios,mac"},
+                "name": "vpn",
+                "source": None,
+            },
+        ],
     }
 
 

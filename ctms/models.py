@@ -2,6 +2,7 @@ from typing import Optional, cast
 from uuid import UUID as PythonUUID
 
 from sqlalchemy import (
+    JSON,
     TIMESTAMP,
     Boolean,
     Column,
@@ -58,12 +59,11 @@ class Email(Base):
     newsletters = relationship(
         "Newsletter", back_populates="email", order_by="Newsletter.name"
     )
+    waitlists = relationship(
+        "Waitlist", back_populates="email", order_by="Waitlist.name"
+    )
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
-    vpn_waitlist = relationship("VpnWaitlist", back_populates="email", uselist=False)
-    relay_waitlist = relationship(
-        "RelayWaitlist", back_populates="email", uselist=False
-    )
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
@@ -114,6 +114,27 @@ class Newsletter(Base):
     email = relationship("Email", back_populates="newsletters", uselist=False)
 
     __table_args__ = (UniqueConstraint("email_id", "name", name="uix_email_name"),)
+
+
+class Waitlist(Base):
+    __tablename__ = "waitlists"
+
+    id = Column(Integer, primary_key=True)
+    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    name = Column(String(255), nullable=False)
+    source = Column(Text)
+    fields = Column(JSON, nullable=False, server_default="'{}'::json")
+
+    create_timestamp = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    update_timestamp = Column(
+        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
+    )
+
+    email = relationship("Email", back_populates="waitlists", uselist=False)
+
+    __table_args__ = (UniqueConstraint("email_id", "name", name="uix_wl_email_name"),)
 
 
 class FirefoxAccount(Base):
@@ -204,45 +225,6 @@ class AcousticNewsletterMapping(Base):
 
     source = Column(String, primary_key=True)
     destination = Column(String)
-
-
-class VpnWaitlist(Base):
-    __tablename__ = "vpn_waitlist"
-
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
-    geo = Column(String(100))
-    platform = Column(String(100))
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
-
-    email = relationship("Email", back_populates="vpn_waitlist", uselist=False)
-
-
-class RelayWaitlist(Base):
-    __tablename__ = "relay_waitlist"
-
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
-    geo = Column(String(100))
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
-
-    email = relationship("Email", back_populates="relay_waitlist", uselist=False)
 
 
 class ApiClient(Base):

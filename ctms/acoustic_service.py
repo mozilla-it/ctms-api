@@ -144,12 +144,17 @@ class CTMSToAcousticService:
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
             acoustic_main_table, contact, newsletters_mapping
         )
+        acoustic_main_table = self._waitlist_converter(
+            acoustic_main_table,
+            contact,
+            main_fields,
+        )
         product_rows = self._product_converter(contact)
         return acoustic_main_table, newsletter_rows, product_rows
 
     def _main_table_converter(self, contact, main_fields):
         acoustic_main_table = {}
-        acceptable_subdicts = ["email", "amo", "fxa", "vpn_waitlist", "relay_waitlist"]
+        acceptable_subdicts = ["email", "amo", "fxa"]
         special_cases = {
             ("fxa", "fxa_id"): "fxa_id",
             ("email", "primary_email"): "email",
@@ -255,6 +260,29 @@ class CTMSToAcousticService:
         if skipped:
             self.context["newsletters_skipped"] = sorted(skipped)
         return newsletter_rows, acoustic_main_table
+
+    def _waitlist_converter(self, acoustic_main_table, contact, main_fields):
+        """Turns waitlists into flat fields on the main table.
+
+        If the field `{name}_waitlist_{field}` is not present in the `main_fields`
+        list, then it is ignored.
+        See `bin/acoustic_fields.py` to manage them (eg. add ``vpn_waitlist_source``).
+
+        Note: In the future, a dedicated relation/table for waitlists can be considered.
+        """
+        waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
+        for acoustic_field_name in main_fields:
+            if "_waitlist_" not in acoustic_field_name:
+                continue
+            name, _, field = acoustic_field_name.split("_")
+            value = None
+            if name in waitlists_by_name:
+                waitlist = waitlists_by_name[name]
+                value = getattr(waitlist, field, waitlist.fields.get(field, None))
+            acoustic_main_table[
+                acoustic_field_name
+            ] = self.transform_field_for_acoustic(value)
+        return acoustic_main_table
 
     @staticmethod
     def transform_field_for_acoustic(data):

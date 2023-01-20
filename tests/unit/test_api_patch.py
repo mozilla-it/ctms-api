@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from structlog.testing import capture_logs
 
-from ctms.crud import create_contact, get_email
+from ctms.crud import create_contact
 from ctms.schemas import (
     AddOnsInSchema,
     AddOnsSchema,
@@ -16,8 +16,6 @@ from ctms.schemas import (
     FirefoxAccountsSchema,
     MozillaFoundationInSchema,
     MozillaFoundationSchema,
-    RelayWaitlistSchema,
-    VpnWaitlistSchema,
 )
 
 
@@ -60,9 +58,6 @@ def swap_bool(existing):
         ("mofo", "mofo_email_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
         ("mofo", "mofo_contact_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
         ("mofo", "mofo_relevant", swap_bool),
-        ("vpn_waitlist", "geo", "uk"),
-        ("vpn_waitlist", "platform", "linux"),
-        ("relay_waitlist", "geo", "uk"),
     ),
 )
 def test_patch_one_new_value(
@@ -79,8 +74,7 @@ def test_patch_one_new_value(
             fxa=contact.fxa or FirefoxAccountsSchema(),
             mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
-            vpn_waitlist=contact.vpn_waitlist or VpnWaitlistSchema(),
-            relay_waitlist=contact.relay_waitlist or RelayWaitlistSchema(),
+            waitlists=contact.waitlists or [],
         ).json()
     )
     existing_value = expected[group_name][key]
@@ -143,9 +137,6 @@ def test_patch_one_new_value(
         ("mofo", "mofo_email_id"),
         ("mofo", "mofo_contact_id"),
         ("mofo", "mofo_relevant"),
-        ("vpn_waitlist", "geo"),
-        ("vpn_waitlist", "platform"),
-        ("relay_waitlist", "geo"),
     ),
 )
 def test_patch_to_default(client, maximal_contact, group_name, key):
@@ -160,8 +151,7 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
             fxa=maximal_contact.fxa or FirefoxAccountsSchema(),
             mofo=maximal_contact.mofo or MozillaFoundationSchema(),
             newsletters=maximal_contact.newsletters or [],
-            vpn_waitlist=maximal_contact.vpn_waitlist or VpnWaitlistSchema(),
-            relay_waitlist=maximal_contact.relay_waitlist or RelayWaitlistSchema(),
+            waitlists=maximal_contact.waitlists or [],
         ).json()
     )
     existing_value = expected[group_name][key]
@@ -174,8 +164,6 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
         ),
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
-        "vpn_waitlist": VpnWaitlistSchema(),
-        "relay_waitlist": RelayWaitlistSchema(),
     }[group_name].__fields__[key]
     assert not field.required
     default_value = field.get_default()
@@ -191,28 +179,6 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
     expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
     assert actual == expected
-
-
-def test_patch_to_group_default(client, dbsession, maximal_contact):
-    """PATCH to default values deletes a group."""
-    email_id = maximal_contact.email.email_id
-    email = get_email(dbsession, email_id)
-    assert email.vpn_waitlist
-    assert email.relay_waitlist
-
-    patch_data = {
-        "vpn_waitlist": {"geo": None, "platform": None},
-        "relay_waitlist": {"geo": None},
-    }
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
-    assert resp.status_code == 200
-    actual = resp.json()
-    assert actual["vpn_waitlist"] == {"geo": None, "platform": None}
-    assert actual["relay_waitlist"] == {"geo": None}
-
-    email = get_email(dbsession, email_id)
-    assert not email.vpn_waitlist
-    assert not email.relay_waitlist
 
 
 def test_patch_cannot_set_timestamps(client, maximal_contact):
@@ -249,6 +215,11 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert expected["products"] == []
     assert "products" not in actual
     actual["products"] = []
+    # The response shows computed fields for retro-compat. Contact schema
+    # does not have them.
+    # TODO waitlist: remove once Basket reads from `waitlists` list.
+    del actual["vpn_waitlist"]
+    del actual["relay_waitlist"]
     assert actual == expected
 
 
@@ -308,7 +279,7 @@ def test_patch_error_on_id_conflict(
             fxa_id=1337, primary_email="fxa-conflict@example.com"
         ),
     )
-    create_contact(dbsession, conflict_id, conflicting_data)
+    create_contact(dbsession, conflict_id, conflicting_data, metrics=None)
 
     existing_value = getattr(getattr(maximal_contact, group_name), key)
     conflicting_value = getattr(getattr(conflicting_data, group_name), key)
@@ -445,9 +416,7 @@ def test_patch_unsubscribe_all(client, maximal_contact):
     assert all(not nl["subscribed"] for nl in actual["newsletters"])
 
 
-@pytest.mark.parametrize(
-    "group_name", ("amo", "fxa", "mofo", "vpn_waitlist", "relay_waitlist")
-)
+@pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo"))
 def test_patch_to_delete_group(client, maximal_contact, group_name):
     """PATCH with a group set to "DELETE" resets the group to defaults."""
     email_id = maximal_contact.email.email_id
@@ -459,8 +428,6 @@ def test_patch_to_delete_group(client, maximal_contact, group_name):
         "amo": AddOnsSchema(),
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
-        "vpn_waitlist": VpnWaitlistSchema(),
-        "relay_waitlist": RelayWaitlistSchema(),
     }[group_name].dict()
     assert actual[group_name] == defaults
 
@@ -498,3 +465,295 @@ def test_patch_with_trace(client, minimal_contact):
     assert len(caplogs) == 1
     assert caplogs[0]["trace"] == "jeff+trace-me-mozilla-1@example.com"
     assert caplogs[0]["trace_json"] == patch_data
+
+
+def test_patch_will_validate_waitlist_fields(client, maximal_contact):
+    """PATCH validates waitlist schema."""
+    email_id = maximal_contact.email.email_id
+
+    patch_data = {"waitlists": [{"name": "future-tech", "source": 42}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 422
+    details = resp.json()
+    assert details["detail"][0]["loc"] == ["body", "waitlists", 0, "source"]
+
+
+def test_patch_to_add_a_waitlist(client, maximal_contact):
+    """PATCH can add a single waitlist."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) + 1
+    assert actual["waitlists"][-1] == {
+        "name": "future-tech",
+        "source": None,
+        "fields": {"geo": "es"},
+    }
+
+
+def test_patch_does_not_add_an_unsubscribed_waitlist(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    patch_data = {"waitlists": [{"name": "future-tech", "subscribed": False}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
+
+
+def test_patch_to_update_a_waitlist(client, maximal_contact):
+    """PATCH can update a waitlist."""
+    email_id = maximal_contact.email.email_id
+    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    existing[0]["fields"]["geo"] = "ca"
+    patch_data = {"waitlists": existing}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert (
+        actual["waitlists"][0]["fields"]["geo"]
+        != maximal_contact.waitlists[0].fields["geo"]
+    )
+
+
+def test_patch_to_remove_a_waitlist(client, maximal_contact):
+    """PATCH can remove a single waitlist."""
+    email_id = maximal_contact.email.email_id
+    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    patch_data = {"waitlists": [{**existing[-1], "subscribed": False}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) - 1
+
+
+def test_patch_to_remove_all_waitlists(client, maximal_contact):
+    """PATCH can remove all waitlists."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {"waitlists": "UNSUBSCRIBE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == 0
+
+
+def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):
+    """PATCH won't update waitlists if omitted."""
+    email_id = maximal_contact.email.email_id
+    patch_data = {"email": {"first_name": "Jeff"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
+
+
+def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "vpn",
+            "source": None,
+            "fields": {
+                "geo": "fr",
+                "platform": "win32",
+            },
+        }
+    ]
+
+
+def test_patch_vpn_waitlist_legacy_delete(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    before = len(maximal_contact.waitlists)
+
+    patch_data = {"vpn_waitlist": "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_vpn_waitlist_legacy_delete_default(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    before = len(maximal_contact.waitlists)
+
+    patch_data = {"vpn_waitlist": {"geo": None, "platform": None}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_vpn_waitlist_legacy_update(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    wl_by_name = {wl.name: wl for wl in maximal_contact.waitlists}
+    assert wl_by_name["vpn"].fields["geo"] != "it"
+    assert wl_by_name["vpn"].fields["platform"]
+
+    patch_data = {"vpn_waitlist": {"geo": "it"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"][-1] == {
+        "name": "vpn",
+        "source": None,
+        "fields": {"geo": "it", "platform": None},
+    }
+
+
+def test_patch_vpn_waitlist_legacy_update_full(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    wl_by_name = {wl.name: wl for wl in maximal_contact.waitlists}
+    assert wl_by_name["vpn"].fields["geo"] != "it"
+    assert wl_by_name["vpn"].fields["platform"] != "linux"
+
+    patch_data = {"vpn_waitlist": {"geo": "it", "platform": "linux"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"][-1] == {
+        "name": "vpn",
+        "source": None,
+        "fields": {"geo": "it", "platform": "linux"},
+    }
+
+
+def test_patch_relay_waitlist_legacy_add(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"relay_waitlist": {"geo": "fr"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "relay",
+            "source": None,
+            "fields": {"geo": "fr"},
+        }
+    ]
+
+
+def test_patch_relay_waitlist_legacy_delete(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    before = len(maximal_contact.waitlists)
+
+    patch_data = {"relay_waitlist": "DELETE"}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_relay_waitlist_legacy_delete_default(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    before = len(maximal_contact.waitlists)
+
+    patch_data = {"relay_waitlist": {"geo": None}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert len(actual["waitlists"]) == before - 1
+
+
+def test_patch_relay_waitlist_legacy_update(client, maximal_contact):
+    email_id = maximal_contact.email.email_id
+    wl_by_name = {wl.name: wl for wl in maximal_contact.waitlists}
+    assert wl_by_name["relay"].fields["geo"] != "it"
+
+    patch_data = {"relay_waitlist": {"geo": "it"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    by_name = {v["name"]: v for v in actual["waitlists"]}
+    assert by_name["relay"] == {
+        "name": "relay",
+        "source": None,
+        "fields": {"geo": "it"},
+    }
+
+
+def test_patch_relay_waitlist_legacy_update_all(client, minimal_contact):
+    # Test that all relay waitlists records are updated from the legacy way.
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "waitlists": [
+            {"name": "relay", "fields": {"geo": "fr"}},
+            {"name": "relay-vpn-bundle", "fields": {"geo": "fr"}},
+        ]
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+
+    patch_data = {"relay_waitlist": {"geo": "it"}}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "relay",
+            "source": None,
+            "fields": {"geo": "it"},
+        },
+        {
+            "name": "relay-vpn-bundle",
+            "source": None,
+            "fields": {"geo": "it"},
+        },
+    ]
+
+
+def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
+    client, minimal_contact
+):
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "relay_waitlist": {"geo": "ru"},
+        "newsletters": [{"name": "relay-vpn-bundle-waitlist"}],
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == [
+        {
+            "name": "relay-vpn-bundle",
+            "source": None,
+            "fields": {"geo": "ru"},
+        },
+    ]
+
+
+def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
+    client, minimal_contact
+):
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "relay_waitlist": {"geo": "ru"},
+        "newsletters": [{"name": "relay-vpn-bundle-waitlist"}],
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    current = resp.json()
+    assert current["waitlists"] == [
+        {"fields": {"geo": "ru"}, "name": "relay-vpn-bundle", "source": None}
+    ]
+
+    patch_data = {
+        "newsletters": [{"name": "relay-vpn-bundle-waitlist", "subscribed": False}]
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["waitlists"] == []
+
+
+def test_cannot_subscribe_to_relay_newsletter_without_relay_country(
+    client, minimal_contact
+):
+    email_id = minimal_contact.email.email_id
+    patch_data = {"newsletters": [{"name": "relay-phone-waitlist"}]}
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 422

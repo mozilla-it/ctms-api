@@ -133,7 +133,7 @@ def _compare_written_contacts(
         del sample.email.email_id
 
     for f in fields_not_written:
-        setattr(sample, f, [] if f == "newsletters" else None)
+        setattr(sample, f, [] if f in ("newsletters", "waitlists") else None)
 
     assert saved_contact.idempotent_equal(sample)
 

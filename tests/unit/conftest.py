@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
-from ctms.app import app, get_api_client, get_db
+from ctms.app import app, get_api_client, get_db, get_metrics
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
@@ -35,7 +35,7 @@ from ctms.crud import (
     get_mofo_by_email_id,
     get_newsletters_by_email_id,
     get_stripe_products,
-    get_vpn_by_email_id,
+    get_waitlists_by_email_id,
 )
 from ctms.schemas import (
     ApiClientSchema,
@@ -81,7 +81,7 @@ def engine(pytestconfig):
             drop_database(test_db_url)
         create_database(test_db_url)
 
-    echo = pytestconfig.getoption("verbose") > 2
+    echo = Settings().log_sqlalchemy or pytestconfig.getoption("verbose") > 2
     test_engine = create_engine(test_db_url, echo=echo)
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
@@ -130,8 +130,8 @@ def minimal_contact(dbsession):
     assert contact.amo is None
     assert contact.fxa is None
     assert contact.mofo is None
-    assert contact.vpn_waitlist is None
-    create_contact(dbsession, email_id, contact)
+    assert len(contact.waitlists) == 0
+    create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 
@@ -140,7 +140,7 @@ def minimal_contact(dbsession):
 def maximal_contact(dbsession):
     email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
     contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact)
+    create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 
@@ -149,7 +149,7 @@ def maximal_contact(dbsession):
 def example_contact(dbsession):
     email_id = UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")
     contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact)
+    create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 
@@ -283,7 +283,7 @@ def post_contact(request, client, dbsession):
             _check_written("fxa", get_fxa_by_email_id)
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id, result_list=True)
-            _check_written("vpn_waitlist", get_vpn_by_email_id)
+            _check_written("waitlists", get_waitlists_by_email_id, result_list=True)
 
         # Check that GET returns the same contact
         if code in {200, 201}:
@@ -301,7 +301,7 @@ def put_contact(request, client, dbsession):
     _id = (
         request.param
         if hasattr(request, "param")
-        else "d1da1c99-fe09-44db-9c68-78a75752574d"
+        else "d1da1c99-fe09-44db-9c68-78a75752574d"  # SAMPLE_TO_ADD
     )
     sample_email_id = UUID(str(_id))
     _contact = SAMPLE_CONTACTS[sample_email_id]
@@ -361,7 +361,7 @@ def put_contact(request, client, dbsession):
             _check_written("fxa", get_fxa_by_email_id)
             _check_written("mofo", get_mofo_by_email_id)
             _check_written("newsletters", get_newsletters_by_email_id)
-            _check_written("vpn_waitlist", get_vpn_by_email_id)
+            _check_written("waitlists", get_waitlists_by_email_id)
 
         # Check that GET returns the same contact
         if code in {200, 201}:
