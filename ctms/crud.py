@@ -128,8 +128,8 @@ def get_bulk_contacts(
     start_time: datetime,
     end_time: datetime,
     limit: int,
-    mofo_relevant: bool = None,
-    after_email_id: str = None,
+    mofo_relevant: Optional[bool] = None,
+    after_email_id: Optional[str] = None,
 ):
     """Get all the data for a bulk batched set of contacts."""
     after_email_uuid = None
