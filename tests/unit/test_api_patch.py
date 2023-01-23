@@ -481,7 +481,9 @@ def test_patch_will_validate_waitlist_fields(client, maximal_contact):
 def test_patch_to_add_a_waitlist(client, maximal_contact):
     """PATCH can add a single waitlist."""
     email_id = maximal_contact.email.email_id
-    patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
+    patch_data = {
+        "waitlists": [{"name": "future-tech", "fields": {"geo": "es", "pi": 3.14}}]
+    }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
@@ -489,7 +491,7 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
     assert actual["waitlists"][-1] == {
         "name": "future-tech",
         "source": None,
-        "fields": {"geo": "es"},
+        "fields": {"geo": "es", "pi": 3.14},
     }
 
 

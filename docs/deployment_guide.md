@@ -74,6 +74,19 @@ In order to add, list, or remove certain mappings, use the `acoustic_newsletters
 
 See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
 
+
+## How to onboard a new waitlist
+
+1. Create the waitlist in Basket. In Basket, waitlists are newsletters with a special flag. By convention, suffix the name with `-waitlist` (eg. `shield-waitlist`).
+1. By default extra fields won't be validated and all values will be accepted. In order to enforce typing and consistency, a specific schema must be added in `schemas/waitlists.py`. See ADR `waitlists_relationships.md` for more details.
+1. Create the necessary columns in Acoustic (eg. `sub_shield_waitlist`, `shield_waitlist_geo`, `shield_waitlist_age`).
+1. By default, CTMS does not synchronize any column. Fields have to be marked explicitly using the `python ctms/bin/acoustic_fields.py` command (see above).
+
+Possible Acoustic columns are:
+- `sub_<name>_waitlist` (bool), like newsletters
+- `<name>_waitlist_source` (str)
+- `<name>_waitlist_<field>` (type depends on schema)
+
 ## Logging
 
 When the environment variable ``CTMS_USE_MOZLOG`` is set to true or unset, then

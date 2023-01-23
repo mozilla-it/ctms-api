@@ -267,21 +267,27 @@ class CTMSToAcousticService:
         If the field `{name}_waitlist_{field}` is not present in the `main_fields`
         list, then it is ignored.
         See `bin/acoustic_fields.py` to manage them (eg. add ``vpn_waitlist_source``).
-
-        Note: In the future, a dedicated relation/table for waitlists can be considered.
         """
         waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
+        # Publish all potential fields (`waitlist.<field>` or `waitlist.fields[<field>]`)
         for acoustic_field_name in main_fields:
-            if "_waitlist_" not in acoustic_field_name:
-                continue
-            name, _, field = acoustic_field_name.split("_")
-            value = None
-            if name in waitlists_by_name:
-                waitlist = waitlists_by_name[name]
-                value = getattr(waitlist, field, waitlist.fields.get(field, None))
-            acoustic_main_table[
-                acoustic_field_name
-            ] = self.transform_field_for_acoustic(value)
+            if acoustic_field_name.startswith("sub_") and acoustic_field_name.endswith(
+                "_waitlist"
+            ):
+                _, name, _ = acoustic_field_name.split("_")
+                acoustic_main_table[acoustic_field_name] = (
+                    "1" if name in waitlists_by_name else None
+                )
+
+            if "_waitlist_" in acoustic_field_name:
+                name, _, field = acoustic_field_name.split("_")
+                value = None
+                if name in waitlists_by_name:
+                    waitlist = waitlists_by_name[name]
+                    value = getattr(waitlist, field, waitlist.fields.get(field, None))
+                acoustic_main_table[
+                    acoustic_field_name
+                ] = self.transform_field_for_acoustic(value)
         return acoustic_main_table
 
     @staticmethod
