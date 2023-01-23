@@ -5,7 +5,6 @@ from typing import List
 from uuid import uuid4
 
 import pytest
-import sqlalchemy.event
 
 from ctms.crud import (
     create_amo,
@@ -50,40 +49,6 @@ from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA, fake_stri
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
-
-
-class StatementWatcher:
-    """
-    Capture SQL statements emitted by code.
-
-    Based on https://stackoverflow.com/a/33691585/10612
-
-    Use as a context manager to count the number of execute()'s performed
-    against the given session / connection.
-
-    Usage:
-        with StatementWatcher(dbsession.connection()) as watcher:
-            dbsession.query(Email).all()
-        assert watcher.count == 1
-    """
-
-    def __init__(self, connection):
-        self.connection = connection
-        self.statements = []
-
-    def __enter__(self):
-        sqlalchemy.event.listen(self.connection, "before_cursor_execute", self.callback)
-        return self
-
-    def __exit__(self, *args):
-        sqlalchemy.event.remove(self.connection, "before_cursor_execute", self.callback)
-
-    def callback(self, conn, cursor, statement, parameters, context, execute_many):
-        self.statements.append((statement, parameters, execute_many))
-
-    @property
-    def count(self):
-        return len(self.statements)
 
 
 def test_get_email(dbsession, example_contact):
