@@ -86,22 +86,19 @@ instances and read by the CTMS API application for configuration. When
 possible, the default values of environment variables are appropriate for
 production.
 
-In the local development environment, the default configuration is in
-``docker/config/local_dev.env``, and overrides are in ``.env``. The file
-``docker/config/env.dist`` is the ``.env`` template for new developer
+In the local development environment, the default configuration is in ``.env``.
+The file ``.env.example`` is the ``.env`` template for new developer
 environments.
 
-All configuration in ``.env`` is optional. Linux users should set
-``CTMS_UID`` and ``CTMS_GID`` to match their user account, so that files
-created inside the docker container have the same permissions as their user
-account.
-
 ``.env`` is loaded in the ``Makefile``, making those configuration items
-available in Makefile targets and commands. ``local_dev.env`` and ``.env``
-are loaded by ``docker-compose`` and passed to Docker. Some adjust the build
-process by setting `ARG` variables in the ``Dockerfile``. Others are passed
-to the runtime environment. The CTMS API application then loads these from
-the environment.
+available in Makefile targets and commands. ``.env`` is also loaded by
+``docker-compose`` and passed to Docker. Some adjust the build process by
+setting `ARG` variables in the ``Dockerfile``. Others are passed to the runtime
+environment. The CTMS API application then loads these from the environment.
+
+Linux users should set ``CTMS_UID`` and ``CTMS_GID`` to match their user account,
+so that files created inside the docker container have the same permissions as
+their user account.
 
 ---
 [View All Docs](./)

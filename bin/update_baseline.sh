@@ -2,6 +2,6 @@
 
 set -euo pipefail
 
-detect-secrets scan . \
+poetry run detect-secrets scan . \
 --baseline .secrets.baseline \
 --exclude-files "(poetry.lock$)|(htmlcov/)"

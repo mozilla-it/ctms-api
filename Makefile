@@ -30,11 +30,8 @@ help:
 
 
 .env:
-	@if [ ! -f .env ]; \
-	then \
-	echo "Copying env.dist to .env..."; \
-	cp docker/config/env.dist .env; \
-	fi
+	echo "Copying .env.example to .env"; \
+	cp .env.example .env;
 
 install: $(INSTALL_STAMP)
 $(INSTALL_STAMP): poetry.lock
@@ -47,7 +44,7 @@ build: .env
 	docker-compose build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
-lint: .env $(INSTALL_STAMP)
+lint: $(INSTALL_STAMP)
 	bin/lint.sh
 
 .PHONY: db-only
