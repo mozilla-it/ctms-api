@@ -30,11 +30,8 @@ help:
 
 
 .env:
-	@if [ ! -f .env ]; \
-	then \
 	echo "Copying .env.example to .env"; \
-	cp .env.example .env; \
-	fi
+	cp .env.example .env;
 
 install: $(INSTALL_STAMP)
 $(INSTALL_STAMP): poetry.lock
