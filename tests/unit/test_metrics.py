@@ -260,7 +260,7 @@ def test_crash_request(client, dbsession, registry):
     assert_api_request_metric_inc(registry, "GET", path, "test_client", "5xx")
 
 
-def test_unknown_path(anon_client, dbsession, registry):
+def test_unknown_path(anon_client, registry):
     """A unknown path does not emit metrics with labels."""
     path = "/unknown"
     resp = anon_client.get(path)

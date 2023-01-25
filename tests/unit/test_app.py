@@ -47,7 +47,7 @@ def test_crash_unauthorized(anon_client):
     assert resp.json() == {"detail": "Not authenticated"}
 
 
-def test_exposed_configuration(anon_client, dbsession):
+def test_exposed_configuration(anon_client):
     resp = anon_client.get("/acoustic_configuration")
     exposed = resp.json()
 

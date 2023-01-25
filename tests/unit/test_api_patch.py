@@ -485,8 +485,10 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) + 1
-    assert actual["waitlists"][-1] == {
+    new_waitlists = actual["waitlists"]
+    assert len(new_waitlists) == len(maximal_contact.waitlists) + 1
+    new_waitlist = next((wl for wl in new_waitlists if wl["name"] == "future-tech"))
+    assert new_waitlist == {
         "name": "future-tech",
         "source": None,
         "fields": {"geo": "es"},
