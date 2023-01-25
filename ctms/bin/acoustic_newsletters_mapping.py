@@ -5,13 +5,12 @@ import argparse
 import os
 import sys
 
-from ctms import config
 from ctms.crud import (
     create_acoustic_newsletters_mapping,
     delete_acoustic_newsletters_mapping,
     get_all_acoustic_newsletters_mapping,
 )
-from ctms.database import get_db_engine
+from ctms.database import SessionLocal
 
 
 def main(dbsession, test_args=None) -> int:
@@ -57,10 +56,5 @@ def main(dbsession, test_args=None) -> int:
 
 
 if __name__ == "__main__":
-    config_settings = config.Settings()
-    engine, session_factory = get_db_engine(config_settings)
-    session = session_factory()
-    with engine.connect() as connection:
-        return_code = main(session)  # pylint:disable = invalid-name
-
-    sys.exit(return_code)
+    with SessionLocal() as session:
+        sys.exit(main(session))

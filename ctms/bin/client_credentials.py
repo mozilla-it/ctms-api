@@ -8,7 +8,7 @@ from secrets import token_urlsafe
 from ctms import config
 from ctms.auth import hash_password
 from ctms.crud import create_api_client, get_api_client_by_id
-from ctms.database import get_db_engine
+from ctms.database import SessionLocal
 from ctms.schemas import ApiClientSchema
 
 
@@ -178,14 +178,5 @@ def main(db, settings, test_args=None):
 if __name__ == "__main__":
     import sys
 
-    # Get the database
-    config_settings = config.Settings()
-    engine, session_factory = get_db_engine(config_settings)
-    session = session_factory()
-
-    try:
-        ret = main(session, config_settings)  # pylint:disable = C0103
-    finally:
-        session.close()
-
-    sys.exit(ret)
+    with SessionLocal() as session:
+        sys.exit(main(session, config.Settings()))

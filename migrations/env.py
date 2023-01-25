@@ -1,10 +1,9 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
 
 from ctms.config import Settings
-from ctms.database import get_db_engine
+from ctms.database import engine
 from ctms.models import Base
 
 settings = Settings()
@@ -64,7 +63,7 @@ def run_migrations_online():
     """
     connectable = context.config.attributes.get("connection", None)
     if connectable is None:
-        connectable, _ = get_db_engine(settings)
+        connectable = engine
 
     with connectable.connect() as connection:
         context.configure(

@@ -4,10 +4,11 @@ from time import monotonic, sleep
 
 import structlog
 from prometheus_client import CollectorRegistry
+from sqlalchemy.orm import Session
 
 from ctms import config
 from ctms.background_metrics import BackgroundMetricService
-from ctms.database import get_db_engine
+from ctms.database import engine_factory
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
 from ctms.sync import CTMSToAcousticSync, update_healthcheck
@@ -77,10 +78,6 @@ if __name__ == "__main__":
     init_sentry()
     config_settings = config.BackgroundSettings()
     configure_logging(logging_level=config_settings.logging_level.name)
-    engine, session_factory = get_db_engine(config_settings)
-    session = session_factory()
-
-    try:
+    engine = engine_factory(config_settings)
+    with Session(engine) as session:
         main(session, config_settings)
-    finally:
-        session.close()
