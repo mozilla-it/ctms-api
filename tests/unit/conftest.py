@@ -12,8 +12,8 @@ from alembic import config as alembic_config
 from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms.app import app, get_api_client, get_db, get_metrics
@@ -99,28 +99,32 @@ def engine(pytestconfig):
 @pytest.fixture
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
-    with engine.begin() as conn:
-        savepoint = conn.begin_nested()
-        yield conn
-        savepoint.rollback()
+    conn = engine.connect()
+    yield conn
+    conn.close()
 
 
 @pytest.fixture
 def dbsession(connection):
-    """Return a database session that rolls back."""
-    test_sessionmaker = sessionmaker(autocommit=False, autoflush=False, bind=connection)
-    db = test_sessionmaker()
+    """Return a database session that rolls back.
 
-    def test_get_db():
-        db.begin_nested()
-        try:
-            yield db
-        finally:
-            db.close()
+    Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
+    """
+    transaction = connection.begin()
+    session = Session(autocommit=False, autoflush=False, bind=connection)
+    nested = connection.begin_nested()
 
-    app.dependency_overrides[get_db] = test_get_db
-    yield db
-    del app.dependency_overrides[get_db]
+    # If the application code calls session.commit, it will end the nested
+    # transaction. Need to start a new one when that happens.
+    @event.listens_for(session, "after_transaction_end")
+    def end_savepoint(session, transaction):
+        nonlocal nested
+        if not nested.is_active:
+            nested = connection.begin_nested()
+
+    yield session
+    session.close()
+    transaction.rollback()
 
 
 @pytest.fixture
@@ -176,9 +180,15 @@ def acoustic_newsletters_mapping(dbsession):
 
 
 @pytest.fixture
-def anon_client():
+def anon_client(dbsession):
     """A test client with no authorization."""
-    return TestClient(app)
+
+    def override_get_db():
+        yield dbsession
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestClient(app)
+    app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.fixture

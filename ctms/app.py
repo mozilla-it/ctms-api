@@ -49,7 +49,7 @@ from .crud import (
     schedule_acoustic_record,
     update_contact,
 )
-from .database import get_db_engine
+from .database import SessionLocal
 from .exception_capture import init_sentry
 from .ingest_stripe import (
     StripeIngestActions,
@@ -89,7 +89,6 @@ app = FastAPI(
     description="CTMS API (work in progress)",
     version=version_info["version"],
 )
-SessionLocal = None
 METRICS_REGISTRY = CollectorRegistry()
 METRICS = None
 
@@ -114,8 +113,7 @@ if "pytest" not in sys.argv[0]:  # pragma: no cover
 
 @app.on_event("startup")
 def startup_event():  # pragma: no cover
-    global SessionLocal, METRICS  # pylint:disable = W0603
-    _, SessionLocal = get_db_engine(get_settings())
+    global METRICS  # pylint:disable = W0603
     METRICS = init_metrics(METRICS_REGISTRY)
     init_metrics_labels(SessionLocal(), app, METRICS)
 

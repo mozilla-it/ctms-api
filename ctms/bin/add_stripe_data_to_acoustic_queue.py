@@ -8,8 +8,7 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
-from ctms import config
-from ctms.database import get_db_engine
+from ctms.database import SessionLocal
 from ctms.ingest_stripe import (
     StripeIngestUnknownObjectError,
     StripeToAcousticParseError,
@@ -58,10 +57,8 @@ def get_parser():
 
 
 if __name__ == "__main__":
-    config_settings = config.Settings()
-    engine, session_factory = get_db_engine(config_settings)
-    session = session_factory()
     parser = get_parser()
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    main(session, args.filenames)
+    with SessionLocal() as session:
+        main(session, args.filenames)

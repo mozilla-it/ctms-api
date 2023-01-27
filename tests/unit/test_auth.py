@@ -149,7 +149,7 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
     }
 
 
-def test_post_token_fails_no_credentials(anon_client, dbsession):
+def test_post_token_fails_no_credentials(anon_client):
     """If no credentials are passed, token generation fails."""
     with capture_logs() as caplog:
         resp = anon_client.post("/token", {"grant_type": "client_credentials"})
@@ -158,9 +158,7 @@ def test_post_token_fails_no_credentials(anon_client, dbsession):
     assert caplog[0]["token_fail"] == "No credentials"
 
 
-def test_post_token_fails_unknown_api_client(
-    dbsession, anon_client, client_id_and_secret
-):
+def test_post_token_fails_unknown_api_client(anon_client, client_id_and_secret):
     """Authentication failes on unknown api_client ID."""
     good_id, good_secret = client_id_and_secret
     with capture_logs() as caplog:
@@ -327,7 +325,7 @@ def test_hashed_passwords():
     assert hashed1 != hashed2
 
 
-def test_post_pubsub_token(dbsession, anon_client, test_pubsub_settings):
+def test_post_pubsub_token(anon_client, test_pubsub_settings):
     """A PubSub client can authenticate."""
 
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
@@ -347,7 +345,7 @@ def test_post_pubsub_token(dbsession, anon_client, test_pubsub_settings):
 
 
 @pytest.mark.parametrize("name", ("pubsub_email", "pubsub_client"))
-def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
+def test_post_pubsub_token_checks_settings(anon_client, name):
     """PubSub fails if settings are unset."""
 
     class FakeSettings:
@@ -369,7 +367,7 @@ def test_post_pubsub_token_checks_settings(dbsession, anon_client, name):
         del app.dependency_overrides[get_settings]
 
 
-def test_post_pubsub_token_fail_client(dbsession, anon_client, test_pubsub_settings):
+def test_post_pubsub_token_fail_client(anon_client, test_pubsub_settings):
     """An error is returned if pubsub_client is incorrect."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = Exception("Should not be called.")
@@ -385,7 +383,7 @@ def test_post_pubsub_token_fail_client(dbsession, anon_client, test_pubsub_setti
     assert caplog[0]["auth_fail"] == "Verification mismatch"
 
 
-def test_post_pubsub_token_unknown_key(dbsession, anon_client, test_pubsub_settings):
+def test_post_pubsub_token_unknown_key(anon_client, test_pubsub_settings):
     """An error is returned if the jwt 'kid' doesn't refer to a known cert."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = ValueError(
@@ -403,7 +401,7 @@ def test_post_pubsub_token_unknown_key(dbsession, anon_client, test_pubsub_setti
     assert caplog[0]["auth_fail"] == "Unknown key"
 
 
-def test_post_pubsub_token_fail_ssl_fetch(dbsession, anon_client, test_pubsub_settings):
+def test_post_pubsub_token_fail_ssl_fetch(anon_client, test_pubsub_settings):
     """An error is returned if there is an issue fetching certs."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = TransportError(
@@ -421,9 +419,7 @@ def test_post_pubsub_token_fail_ssl_fetch(dbsession, anon_client, test_pubsub_se
     assert caplog[0]["auth_fail"] == "Google authentication failure"
 
 
-def test_post_pubsub_token_fail_wrong_email(
-    dbsession, anon_client, test_pubsub_settings
-):
+def test_post_pubsub_token_fail_wrong_email(anon_client, test_pubsub_settings):
     """An error is returned if the claim email doesn't match."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
     claim["email"] = "different_email@example.com"
@@ -444,9 +440,7 @@ def test_post_pubsub_token_fail_wrong_email(
     assert log["pubsub_email_verified"]
 
 
-def test_post_pubsub_token_fail_unverified_email(
-    dbsession, anon_client, test_pubsub_settings
-):
+def test_post_pubsub_token_fail_unverified_email(anon_client, test_pubsub_settings):
     """An error is returned if the claim email isn't verified."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
     del claim["email_verified"]

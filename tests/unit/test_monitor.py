@@ -37,7 +37,7 @@ def test_settings():
     del app.dependency_overrides[get_settings]
 
 
-def test_read_heartbeat(anon_client, dbsession, test_settings):
+def test_read_heartbeat(anon_client, test_settings):
     """The platform calls /__heartbeat__ to check backing services."""
     with capture_logs() as cap_logs:
         resp = anon_client.get("/__heartbeat__")
@@ -75,7 +75,7 @@ def test_read_heartbeat_no_db_fails(anon_client, mock_db):
     assert data == expected
 
 
-def test_read_heartbeat_acoustic_fails(anon_client, dbsession, test_settings):
+def test_read_heartbeat_acoustic_fails(anon_client, test_settings):
     """/__heartbeat__ returns 200 when measuring the acoustic backlog fails."""
     with patch(
         "ctms.monitor.get_all_acoustic_records_count", side_effect=SQATimeoutError()
@@ -105,7 +105,7 @@ def test_read_heartbeat_acoustic_fails(anon_client, dbsession, test_settings):
 
 @pytest.mark.parametrize("backlog, retry_backlog", ((51, 1), (1, 51)))
 def test_read_heartbeat_backlog_over_limit(
-    anon_client, dbsession, test_settings, backlog, retry_backlog
+    anon_client, test_settings, backlog, retry_backlog
 ):
     """/__heartbeat__ returns 503 when measuring the acoustic backlog fails."""
     test_settings["acoustic_max_backlog"] = 50
@@ -177,7 +177,7 @@ def test_read_health_by_bot(anon_client, method):
 
 
 @pytest.mark.parametrize("path", ("/__lbheartbeat__", "/__heartbeat__"))
-def test_head_monitoring_endpoints(anon_client, dbsession, path):
+def test_head_monitoring_endpoints(anon_client, path):
     """Monitoring endpoints can be called without credentials"""
     with capture_logs() as cap_logs:
         resp = anon_client.head(path)
