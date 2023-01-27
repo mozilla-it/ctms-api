@@ -106,7 +106,10 @@ def connection(engine):
 
 @pytest.fixture
 def dbsession(connection):
-    """Return a database session that rolls back."""
+    """Return a database session that rolls back.
+
+    Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
+    """
     transaction = connection.begin()
     session = Session(autocommit=False, autoflush=False, bind=connection)
     nested = connection.begin_nested()
