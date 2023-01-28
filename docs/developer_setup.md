@@ -1,5 +1,6 @@
 ## Developer Setup
 Technologies and tools in use:
+- Python: https://www.python.org/
 - Poetry: https://python-poetry.org/
 - Pre-commit: https://pre-commit.com/
 - Docker: https://www.docker.com/
@@ -7,19 +8,38 @@ Technologies and tools in use:
 - Pydantic: https://pydantic-docs.helpmanual.io/
 - SQLAlchemy: https://www.sqlalchemy.org/
 - Alembic: https://alembic.sqlalchemy.org
-- ...
 
 ---
+## Python
+CTMS is a Python application. We tend to keep the application up to date with
+the latest version of Python -- we pin to the patch version throughout the
+repository.
+
+To keep your development environment up to date, you may wish to install a
+Python version manager to switch Python versions along with the application.
+Tools for this include:
+- [pyenv](https://github.com/pyenv/pyenv)
+- [asdf](https://asdf-vm.com/)
+
+Dependabot will submit pull requests to update the Python version in the
+Dockerfile, but will miss other places like `pyproject.toml` and Github Action
+workflow files. This `sed`[^1] snippet will find/replace all Python versions in
+one go - in this example, from version `A.B.C` to `X.Y.Z`:
+```bash
+git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
+```
+
+Manually inspect the changes to filter out false positives.
 ## Poetry
 
-## Installation
+### Installation
 Install Poetry for osx/linux (please confirm via the [poetry docs](https://python-poetry.org/docs/#installation)):
 
 ```sh
 curl -sSL https://install.python-poetry.org | python3 -
 ```
 
-## Setup Dependencies
+### Setup Dependencies
 To set up dependencies necessary for local development, run:
 
 ```sh
@@ -101,6 +121,16 @@ exit
 The command `deactivate` might not work to full disengage the poetry shell as it does with `venv`.
 
 [...view poetry site for further documentation and details.](https://python-poetry.org/)
+
+### Keeping Poetry up to date
+Poetry is pinned to a specific version in a few places throughout the
+repository. This `sed`[^1] snippet will find/replace all of these insances in
+one go - in this example, from version `A.B.C` to `X.Y.Z`:
+```bash
+git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
+```
+
+Manually inspect the changes to filter out false positives.
 
 ---
 ## Pre-commit
@@ -290,3 +320,5 @@ After you've done the necessary developer setup, try 'make' for some quick first
 
 ---
 [View All Docs](./)
+
+[^1]: Use [`gnu-sed`](https://formulae.brew.sh/formula/gnu-sed#default) on Mac for command compatability 
