@@ -47,6 +47,9 @@ def format_legacy_vpn_relay_waitlist_input(
             if not newsletter["name"].endswith("-waitlist"):
                 continue
             name = newsletter["name"].replace("-waitlist", "")
+            # `guardian-vpn-waitlist` newsletter is the `vpn` waitlist.
+            if name == "guardian-vpn":
+                name = "vpn"
             if not newsletter.get("subscribed", True):
                 to_update.append(WaitlistInSchema(name=name, subscribed=False))
 

@@ -729,6 +729,38 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
     ]
 
 
+def test_unsubscribe_from_all_newsletters_removes_all_waitlists(
+    client, maximal_contact
+):
+    email_id = maximal_contact.email.email_id
+    assert len(maximal_contact.waitlists) > 0
+
+    patch_data = {
+        "newsletters": "UNSUBSCRIBE",
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    current = resp.json()
+    assert current["waitlists"] == []
+
+
+def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
+    client, maximal_contact
+):
+    email_id = maximal_contact.email.email_id
+    wl_names = {wl.name for wl in maximal_contact.waitlists}
+    assert "vpn" in wl_names
+
+    patch_data = {
+        "newsletters": [
+            {"name": "guardian-vpn-waitlist", "subscribed": False},
+        ]
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    current = resp.json()
+    wl_names = {wl["name"] for wl in current["waitlists"]}
+    assert "vpn" not in wl_names
+
+
 def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
     client, minimal_contact
 ):
