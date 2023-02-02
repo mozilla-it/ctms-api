@@ -25,6 +25,7 @@ class InputIOs:
                 missing.append(name)
 
         if missing:
+            # pylint: disable-next=broad-exception-raised
             raise BaseException(f"Must provide data for all tables. Missing {missing}")
 
 

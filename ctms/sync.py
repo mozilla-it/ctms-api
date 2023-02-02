@@ -205,8 +205,10 @@ def check_healthcheck(healthcheck_path, age_s):
     Return the current age.
     """
     if not healthcheck_path:
+        # pylint: disable-next=broad-exception-raised
         raise Exception("BACKGROUND_HEALTHCHECK_PATH not set")
     if age_s is None:
+        # pylint: disable-next=broad-exception-raised
         raise Exception("BACKGROUND_HEALTHCHECK_AGE_S not set")
     with open(healthcheck_path, "r", encoding="utf8") as health_file:
         content = health_file.read().strip()
@@ -214,5 +216,6 @@ def check_healthcheck(healthcheck_path, age_s):
         health_age_raw = (datetime.now(tz=timezone.utc) - written_at).total_seconds()
         health_age = round(health_age_raw, 3)
         if health_age > age_s:
+            # pylint: disable-next=broad-exception-raised
             raise Exception(f"Age {health_age}s > {age_s}s, written at {content}")
     return health_age
