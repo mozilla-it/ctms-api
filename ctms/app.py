@@ -94,8 +94,9 @@ METRICS = None
 
 # We could use the default prometheus_client.REGISTRY, but it makes tests
 # easier to write if it is possible to replace the registry with a fresh one.
-get_metrics_registry = lambda: METRICS_REGISTRY # pylint: disable=unnecessary-lambda-assignment
-get_metrics = lambda: METRICS # pylint: disable=unnecessary-lambda-assignment
+# pylint: disable-next=unnecessary-lambda-assignment
+get_metrics_registry = lambda: METRICS_REGISTRY
+get_metrics = lambda: METRICS  # pylint: disable=unnecessary-lambda-assignment
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
 
@@ -359,7 +360,8 @@ def get_pubsub_claim(
 ):
     for name in ("audience", "email", "client"):
         if not pubsub_settings[name]:
-            raise Exception(f"PUBSUB_{name.upper()} is unset") # pylint: disable=broad-exception-raised
+            # pylint: disable-next=broad-exception-raised
+            raise Exception(f"PUBSUB_{name.upper()} is unset")
 
     credentials_exception = HTTPException(
         status_code=401,
