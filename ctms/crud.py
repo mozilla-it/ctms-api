@@ -337,7 +337,8 @@ def get_all_acoustic_records_before(
     db: Session, end_time: datetime, retry_limit: int = 5, batch_limit=None
 ) -> List[PendingAcousticRecord]:
     """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
+    Get all the pending records before a given date. Allows retry limit to be provided at query time.
+    """
     query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
     if batch_limit:
         query = query.limit(batch_limit)
@@ -349,7 +350,8 @@ def get_all_acoustic_records_count(
     db: Session, end_time: datetime, retry_limit: int = 5
 ) -> int:
     """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time."""
+    Get all the pending records before a given date. Allows retry limit to be provided at query time.
+    """
     query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
     pending_records_count: int = query.count()
     return pending_records_count

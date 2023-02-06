@@ -77,7 +77,11 @@ def test_ctms_to_acoustic_newsletters(
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    (main, newsletters, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        main,
+        newsletters,
+        _,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
 
@@ -107,7 +111,11 @@ def test_ctms_to_acoustic_waitlists_minimal(
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        main,
+        _,
+        _,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
     assert len(minimal_contact.waitlists) == 0
@@ -122,7 +130,11 @@ def test_ctms_to_acoustic_waitlists_maximal(
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        main,
+        _,
+        _,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
     assert len(maximal_contact.waitlists) == 4
@@ -137,7 +149,11 @@ def test_ctms_to_acoustic_minimal_fields(
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        main,
+        _,
+        _,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
     assert main["email"] == minimal_contact.email.primary_email
@@ -153,7 +169,11 @@ def test_ctms_to_acoustic_maximal_fields(
     acoustic_newsletters_mapping,
 ):
     skip_fields = main_acoustic_fields - {"mailing_country"}
-    (main, _, _,) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        main,
+        _,
+        _,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact, skip_fields, acoustic_newsletters_mapping
     )
 
