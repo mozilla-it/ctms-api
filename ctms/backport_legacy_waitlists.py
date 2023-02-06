@@ -28,6 +28,31 @@ def format_legacy_vpn_relay_waitlist_input(
     existing_waitlists = {wl.name: wl for wl in rows}
 
     to_update = []
+
+    # Waitlists are bound to newsletters.
+    # Unsubscribing from the VPN newsletter or the Relay waitlists will un-enroll
+    # from the related waitlists.
+    input_newsletters = formatted.get("newsletters", [])
+    input_relay_newsletters = []
+    # If all newsletters are unsubscribed, then unsubscribe all waitlists in DB.
+    if input_newsletters == "UNSUBSCRIBE":
+        for waitlist in existing_waitlists.values():
+            to_update.append(WaitlistInSchema(name=waitlist.name, subscribed=False))
+    else:
+        input_relay_newsletters = [
+            nl for nl in input_newsletters if nl["name"].startswith("relay-")
+        ]
+        # Turn every waitlist newsletter unsubscription to an actual waitlist unsubscription.
+        for newsletter in input_newsletters:
+            if not newsletter["name"].endswith("-waitlist"):
+                continue
+            name = newsletter["name"].replace("-waitlist", "")
+            # `guardian-vpn-waitlist` newsletter is the `vpn` waitlist.
+            if name == "guardian-vpn":
+                name = "vpn"
+            if not newsletter.get("subscribed", True):
+                to_update.append(WaitlistInSchema(name=name, subscribed=False))
+
     if "vpn_waitlist" in formatted:
         has_vpn = "vpn" in existing_waitlists
         if formatted["vpn_waitlist"] == "DELETE" or formatted["vpn_waitlist"] is None:
@@ -54,24 +79,6 @@ def format_legacy_vpn_relay_waitlist_input(
         wl for wl in existing_waitlists.values() if wl.name.startswith("relay")
     ]
 
-    input_newsletters = formatted.get("newsletters", [])
-    input_relay_newsletters = []
-    if isinstance(input_newsletters, list):
-        input_relay_newsletters = [
-            nl for nl in input_newsletters if nl["name"].startswith("relay-")
-        ]
-
-    # For each `relay-*-waitlist` newsletter that is unsubscribed, we unsubscribed the equivalent waitlist.
-    for newsletter in input_relay_newsletters:
-        if not newsletter.get("subscribed", True):
-            name = newsletter["name"].replace("-waitlist", "")
-            to_update.append(WaitlistInSchema(name=name, subscribed=False))
-
-    # If all newsletters are unsubscribed, then unsubscribe all relay waitlists in DB.
-    if input_newsletters == "UNSUBSCRIBE":
-        for waitlist in relay_waitlists:
-            to_update.append(WaitlistInSchema(name=waitlist.name, subscribed=False))
-
     # For Relay newsletters subscriptions, see below. For subscriptions, we can be sure that `relay_waitlist`
     # if provided since we enforce it in the `ContactInBase` and `ContactPatchSchema` schemas.
 
@@ -93,8 +100,9 @@ def format_legacy_vpn_relay_waitlist_input(
             else:
                 # `relay_waitlist` field was specified.
                 if input_relay_newsletters:
-                    # We are subscribing to a `relay-*-waitlist` newsletter. We don't care whether the contact
-                    # had already subscribed to another Relay waitlist.
+                    # We are subscribing to a `relay-*-waitlist` newsletter.
+                    # We don't care whether the contact had already subscribed
+                    # to another Relay waitlist, we just subscribe.
                     for newsletter in input_relay_newsletters:
                         name = newsletter["name"].replace("-waitlist", "")
                         to_update.append(
@@ -103,14 +111,13 @@ def format_legacy_vpn_relay_waitlist_input(
                             )
                         )
                 elif len(relay_waitlists) == 0:
-                    # Either we are subscribing to the `relay` waitlist, or we are updating all existing
-                    # Relay waitlists attributes.
+                    # We are subscribing to the `relay` waitlist for the first time.
                     to_update.append(
                         WaitlistInSchema(name="relay", fields={"geo": parsed_relay.geo})
                     )
                 else:
                     # `relay_waitlist` was specified but without newsletter, hence update geo field
-                    # of all relay waitlists.
+                    # of all subscribed Relay waitlists.
                     for waitlist in relay_waitlists:
                         to_update.append(
                             WaitlistInSchema(
