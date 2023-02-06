@@ -77,11 +77,7 @@ def test_ctms_to_acoustic_newsletters(
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    (
-        main,
-        newsletters,
-        _,
-    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (main, newsletters, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
 
