@@ -6,7 +6,6 @@ from .base import ComparableBase
 
 
 class MozillaFoundationBase(ComparableBase):
-
     mofo_email_id: Optional[str] = Field(
         default=None,
         max_length=255,

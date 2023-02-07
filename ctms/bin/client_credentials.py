@@ -46,7 +46,6 @@ def print_new_credentials(
     sample_token="a_very_long_base64_string",
     enabled=True,
 ):
-
     print(
         f"""\
 Your OAuth2 client credentials are:

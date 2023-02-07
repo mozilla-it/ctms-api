@@ -498,7 +498,6 @@ class StripeToAcousticParseError(StripeIngestError):
 def ingest_stripe_object(
     db_session: Session, data: Dict[str, Any]
 ) -> Tuple[Optional[StripeBase], StripeIngestActions]:
-
     try:
         object_type = data["object"]
     except (TypeError, KeyError) as exception:
@@ -522,7 +521,6 @@ COLLECTORS: Dict[str, Callable[[Session, Dict[str, Any]], Optional[StripeModel]]
 
 
 def add_stripe_object_to_acoustic_queue(db_session: Session, data: Dict[str, Any]):
-
     try:
         object_type = data["object"]
         stripe_id = data["id"]
