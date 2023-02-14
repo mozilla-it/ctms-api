@@ -37,3 +37,9 @@ def test_unsubscribe_not_idempotent_equal():
     data["newsletters"][0]["subscribed"] = True
     modified = ContactInSchema(**data)
     assert not original.idempotent_equal(modified)
+
+
+def test_source_url_supports_localhost():
+    data = SAMPLE_MAXIMAL.dict()
+    data["newsletters"][0]["source"] = "http://localhost:8888/v1"
+    ContactInSchema(**data)
