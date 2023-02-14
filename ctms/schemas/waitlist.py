@@ -128,7 +128,6 @@ def validate_waitlist_fields(name: str, fields: dict):
             )
             platform: Optional[str] = Field(
                 default=None,
-                min_length=1,
                 max_length=100,
                 description="VPN waitlist platforms as comma-separated list",
                 example="ios,mac",

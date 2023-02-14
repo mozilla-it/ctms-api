@@ -44,7 +44,6 @@ def test_waitlist_with_invalid_input_data(data):
         # VPN
         {"name": "vpn", "fields": {"geo": None}},
         {"name": "vpn", "fields": {"platform": "linux"}},
-        {"name": "vpn", "fields": {"geo": "b", "platform": ""}},
         {"name": "vpn", "fields": {"geo": "b", "platform": "win64", "extra": "boom"}},
         # Relay
         {"name": "relay"},
@@ -64,6 +63,7 @@ def test_relay_and_vpn_waitlist_invalid_data(data):
         # VPN
         {"name": "vpn", "fields": {"geo": "b"}},
         {"name": "vpn", "fields": {"geo": ""}},
+        {"name": "vpn", "fields": {"geo": "b", "platform": ""}},
         {"name": "vpn", "fields": {"geo": "b", "platform": None}},
         {"name": "vpn", "fields": {"geo": "b", "platform": "win64"}},
         # Relay
