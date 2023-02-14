@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
-from pydantic import Field, HttpUrl
+from pydantic import AnyUrl, Field
 
 from .base import ComparableBase
 
@@ -25,7 +25,7 @@ class NewsletterBase(ComparableBase):
         max_length=5,
         description="Newsletter language code, usually 2 lowercase letters",
     )
-    source: Optional[HttpUrl] = Field(
+    source: Optional[AnyUrl] = Field(
         default=None,
         description="Source URL of subscription",
         example="https://www.mozilla.org/en-US/",
