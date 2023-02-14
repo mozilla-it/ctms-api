@@ -14,16 +14,16 @@ from ctms.metrics import METRICS_PARAMS, init_metrics, init_metrics_labels
 # Higher numbers = more ways to slice data, more storage, more processing time for summaries
 
 # Cardinality of ctms_requests_total counter
-METHOD_PATH_CODE_COMBINATIONS = 51
+METHOD_PATH_CODE_COMBINATIONS = 54
 
 # Cardinality of ctms_requests_duration_seconds histogram
-METHOD_PATH_CODEFAM_COMBOS = 37
+METHOD_PATH_CODEFAM_COMBOS = 39
 DURATION_BUCKETS = 8
 DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 
 # Base cardinatility of ctms_api_requests_total
 # Actual is multiplied by the number of API clients
-METHOD_API_PATH_COMBINATIONS = 17
+METHOD_API_PATH_COMBINATIONS = 19
 
 
 @pytest.fixture

@@ -39,6 +39,23 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
             }
         },
     ),
+    (
+        "DELETE",
+        "/ctms/contact@example.com",
+        [
+            {
+                "email_id": str(uuid4()),
+                "primary_email": "contact@example.com",
+                "basket_token": str(uuid4()),
+                "sfcd_id": str(),
+                "mofo_contact_id": str(),
+                "mofo_email_id": str(),
+                "amo_user_id": str(),
+                "fxa_id": str(),
+                "fxa_primary_email": str(),
+            }
+        ],
+    ),
 )
 
 
@@ -50,7 +67,7 @@ def test_unauthorized_api_call_fails(
     if method == "GET":
         resp = anon_client.get(path, params=params)
     else:
-        assert method in ("PATCH", "POST", "PUT")
+        assert method in ("PATCH", "POST", "PUT", "DELETE")
         resp = anon_client.request(method, path, json=params)
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
@@ -63,13 +80,13 @@ def test_authorized_api_call_succeeds(client, example_contact, method, path, par
         resp = client.get(path, params=params)
         assert resp.status_code == 200
     else:
-        assert method in ("PATCH", "POST", "PUT")
+        assert method in ("PATCH", "POST", "PUT", "DELETE")
         resp = client.request(method, path, json=params)
         if method == "PUT":
             assert resp.status_code in {200, 201}  # Either creates or updates
         elif method == "POST":
             assert resp.status_code == 201
-        else:  # PATCH
+        else:  # PATCH, DELETE
             assert resp.status_code == 200
 
 
