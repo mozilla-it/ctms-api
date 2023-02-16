@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+import sys
+
+import click
+from pydantic import BaseSettings
+from requests import Session
+from requests.auth import HTTPBasicAuth
+
+
+class Settings(BaseSettings):
+    api_url: str = "http://127.0.0.1:8000"
+    client_id: str
+    client_secret: str
+    session: Session
+
+    class Config:
+        env_prefix = "ctms_"
+
+
+@click.group()
+@click.pass_context
+def cli(ctx):
+    """ctms cli for gdpr actions."""
+    ctx.obj = Settings(session=Session())
+
+    response = ctx.obj.session.post(
+        f"{ctx.obj.api_url}/token",
+        auth=HTTPBasicAuth(ctx.obj.client_id, ctx.obj.client_secret),
+    )
+
+    if not response.ok:
+        print(f"{response.status_code}: {response.reason}", file=sys.stderr)
+
+    else:
+        data = response.json()
+        token = data["access_token"]
+
+        ctx.obj.session.headers.update({"Authorization": f"Bearer {token}"})
+
+
+@cli.command()
+@click.option("--email")
+@click.option("--email-list", type=click.File("r"))
+@click.pass_obj
+def delete(obj, email, email_list):
+    """delete single contact or a list of contacts from ctms"""
+    to_be_deleted = list()
+
+    if email_list:
+        for line in email_list.readlines():
+            to_be_deleted.append(line.rstrip())
+
+    if email:
+        to_be_deleted.append(email)
+
+    for item in to_be_deleted:
+        response = obj.session.delete(f"{obj.api_url}/ctms/{item}")
+
+        if not response.ok:
+            if response.status_code == 404:
+                print(f"{item} not found in CTMS")
+
+            else:
+                print(f"{response.status_code}: {response.reason}", file=sys.stderr)
+
+        else:
+            data = response.json()
+
+            for contact in data:
+                email_id = contact["email_id"]
+                msg = f"DELETING {item} (ctms id: {email_id})."
+
+                if contact["fxa_id"]:
+                    msg += " fxa: YES."
+
+                if contact["mofo_contact_id"]:
+                    msg += " mofo: YES."
+
+                print(msg)
+
+
+if __name__ == "__main__":
+    cli()

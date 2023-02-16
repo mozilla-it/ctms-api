@@ -39,6 +39,7 @@ from .config import re_trace_email
 from .crud import (
     create_contact,
     create_or_update_contact,
+    delete_contact,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_api_client_by_id,
@@ -688,6 +689,32 @@ def partial_update_ctms_contact(
         raise
     response.status_code = 200
     return get_ctms_response_or_404(db=db, email_id=email_id)
+
+
+@app.delete(
+    "/ctms/{primary_email}",
+    summary="Delete all contact information from primary email",
+    response_model=List[IdentityResponse],
+    responses={
+        404: {"model": NotFoundResponse},
+    },
+    tags=["Public"],
+)
+def delete_contact_by_primary_email(
+    primary_email: str,
+    db: Session = Depends(get_db),
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+):
+    ids = all_ids(primary_email=primary_email.lower())
+    contacts = get_contacts_by_ids(db, **ids)
+
+    if not contacts:
+        raise HTTPException(status_code=404, detail=f"email {primary_email} not found!")
+
+    for contact in contacts:
+        delete_contact(db=db, email_id=contact.email.email_id)
+
+    return [contact.as_identity_response() for contact in contacts]
 
 
 @app.get(
