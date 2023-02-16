@@ -282,7 +282,7 @@ class IdentityResponse(BaseModel):
 
     email_id: UUID
     primary_email: str
-    basket_token: UUID
+    basket_token: Optional[UUID] = None
     sfdc_id: Optional[str] = None
     mofo_contact_id: Optional[str] = None
     mofo_email_id: Optional[str] = None
