@@ -45,7 +45,11 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import SAMPLE_CONTACTS, SAMPLE_STRIPE_DATA
+from tests.unit.sample_data import (
+    SAMPLE_CONTACTS,
+    SAMPLE_MOST_MINIMAL,
+    SAMPLE_STRIPE_DATA,
+)
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -125,6 +129,20 @@ def dbsession(connection):
     yield session
     session.close()
     transaction.rollback()
+
+
+@pytest.fixture
+def most_minimal_contact(dbsession):
+    email_id = UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6")
+    contact = SAMPLE_MOST_MINIMAL
+    assert contact.amo is None
+    assert contact.fxa is None
+    assert contact.mofo is None
+    assert len(contact.waitlists) == 0
+    assert contact.email.basket_token is None
+    create_contact(dbsession, email_id, contact, get_metrics())
+    dbsession.commit()
+    return contact
 
 
 @pytest.fixture
