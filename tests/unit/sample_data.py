@@ -15,6 +15,14 @@ from ctms.schemas import (
     WaitlistSchema,
 )
 
+# A contact that only sets primary_email
+SAMPLE_MOST_MINIMAL = ContactSchema(
+    email=EmailSchema(
+        email_id=UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
+        primary_email="ctms-most-minimal-user@example.com",
+    ),
+)
+
 # A contact that has just some of the fields entered
 SAMPLE_MINIMAL = ContactSchema(
     email=EmailSchema(
