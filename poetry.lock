@@ -914,6 +914,18 @@ files = [
 ]
 
 [[package]]
+name = "inflection"
+version = "0.5.1"
+description = "A port of Ruby on Rails inflector to Python"
+category = "dev"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "inflection-0.5.1-py2.py3-none-any.whl", hash = "sha256:f38b2b640938a4f35ade69ac3d053042959b62a0f1076a5bbaa1b9526605a8a2"},
+    {file = "inflection-0.5.1.tar.gz", hash = "sha256:1a29730d366e996aaacffb2f1f1cb9593dc38e2ddd30c91250c6dde09ea9b417"},
+]
+
+[[package]]
 name = "iniconfig"
 version = "1.1.1"
 description = "iniconfig: brain-dead simple config-ini parsing"
@@ -1605,6 +1617,24 @@ pluggy = ">=0.12,<2.0"
 
 [package.extras]
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "xmlschema"]
+
+[[package]]
+name = "pytest-factoryboy"
+version = "2.5.1"
+description = "Factory Boy support for pytest."
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pytest_factoryboy-2.5.1-py3-none-any.whl", hash = "sha256:41e3465935322188daefc8720f83cebb16bf3d3a430356dc91151c55f31d99c7"},
+    {file = "pytest_factoryboy-2.5.1.tar.gz", hash = "sha256:7275a52299b20c0f58b63fdf7326b3fd2b7cbefbdaa90fdcfc776bbe92197484"},
+]
+
+[package.dependencies]
+factory_boy = ">=2.10.0"
+inflection = "*"
+pytest = ">=5.0.0"
+typing_extensions = "*"
 
 [[package]]
 name = "python-dateutil"
@@ -2516,4 +2546,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.1"
-content-hash = "ffc5d77397d5c5c8b20bc4cffd7518db4e001886c0a5e11320dbb4eb57995b64"
+content-hash = "1f51b427581390f3ae2bff557ab5345c0ea3f22ec5e120351f7c5835c6d81638"
