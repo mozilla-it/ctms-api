@@ -12,8 +12,8 @@ from alembic import config as alembic_config
 from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
+from pytest_factoryboy import register
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms.app import app, get_api_client, get_db, get_metrics
@@ -37,6 +37,7 @@ from ctms.crud import (
     get_stripe_products,
     get_waitlists_by_email_id,
 )
+from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
@@ -50,6 +51,8 @@ from tests.unit.sample_data import (
     SAMPLE_MOST_MINIMAL,
     SAMPLE_STRIPE_DATA,
 )
+
+from . import factories
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -100,10 +103,11 @@ def engine(pytestconfig):
         drop_database(test_db_url)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
     conn = engine.connect()
+    SessionLocal.configure(bind=conn)
     yield conn
     conn.close()
 
@@ -115,16 +119,17 @@ def dbsession(connection):
     Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
     """
     transaction = connection.begin()
-    session = Session(autocommit=False, autoflush=False, bind=connection)
-    nested = connection.begin_nested()
+    session = ScopedSessionLocal()
+    nested = session.begin_nested()
 
     # If the application code calls session.commit, it will end the nested
     # transaction. Need to start a new one when that happens.
-    @event.listens_for(session, "after_transaction_end")
-    def end_savepoint(session, transaction):
+    @event.listens_for(ScopedSessionLocal, "after_transaction_end")
+    def end_savepoint(*args):
         nonlocal nested
-        if not nested.is_active:
-            nested = connection.begin_nested()
+        if nested.is_active:
+            session.expire_all()
+            nested = session.begin_nested()
 
     yield session
     session.close()
@@ -156,6 +161,10 @@ def minimal_contact(dbsession):
     create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
+
+
+register(factories.EmailFactory)
+register(factories.NewsletterFactory)
 
 
 @pytest.fixture
