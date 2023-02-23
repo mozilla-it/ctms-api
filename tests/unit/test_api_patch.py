@@ -321,32 +321,25 @@ def test_patch_to_subscribe(client, maximal_contact):
     }
 
 
-def test_patch_to_update_subscription(client, maximal_contact):
+def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
     """PATCH can update an existing newsletter subscription."""
-    email_id = maximal_contact.email.email_id
-    existing_news_data = maximal_contact.newsletters[1].dict()
-    assert existing_news_data == {
-        "format": "T",
-        "lang": "fr",
-        "name": "common-voice",
-        "source": "https://commonvoice.mozilla.org/fr",
-        "subscribed": True,
-        "unsub_reason": None,
-    }
+    existing_newsletter = newsletter_factory()
+    dbsession.commit()
+    email_id = str(existing_newsletter.email.email_id)
     patch_data = {
-        "newsletters": [{"name": "common-voice", "format": "H", "lang": "en"}]
+        "newsletters": [{"name": existing_newsletter.name, "format": "H", "lang": "XX"}]
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
-    assert actual["newsletters"][1] == {
+    assert len(actual["newsletters"]) == 1
+    assert actual["newsletters"][0] == {
         "format": "H",
-        "lang": "en",
-        "name": "common-voice",
-        "source": "https://commonvoice.mozilla.org/fr",
-        "subscribed": True,
-        "unsub_reason": None,
+        "lang": "XX",
+        "name": existing_newsletter.name,
+        "source": existing_newsletter.source,
+        "subscribed": existing_newsletter.subscribed,
+        "unsub_reason": existing_newsletter.unsub_reason,
     }
 
 
