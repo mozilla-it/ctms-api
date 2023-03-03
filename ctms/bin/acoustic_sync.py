@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ctms import config
 from ctms.background_metrics import BackgroundMetricService
+from ctms.crud import bulk_schedule_acoustic_records
 from ctms.database import engine_factory
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
@@ -18,7 +19,8 @@ logger = structlog.get_logger("ctms.bin.acoustic_sync")
 
 
 @click.command()
-def main():
+@click.option("--email-list", type=click.File("r"))
+def main(email_list=None):
     """CTMS command to sync contacts with Acoustic."""
     init_sentry()
     settings = config.BackgroundSettings()
@@ -29,18 +31,28 @@ def main():
         "Setting up sync_service.",
         sync_feature_flag=settings.acoustic_sync_feature_flag,
     )
+
     metrics_registry = CollectorRegistry()
     metric_service = BackgroundMetricService(
         registry=metrics_registry, pushgateway_url=settings.prometheus_pushgateway_url
     )
 
+    to_resync = []
+    if email_list:
+        for line in email_list.readlines():
+            to_resync.append(line.rstrip().lower())
+
     with Session(engine) as session:
-        sync(session, settings, metric_service)
+        sync(session, settings, metric_service, to_resync=to_resync)
 
 
-def sync(db, settings, metric_service):
+def sync(db, settings, metric_service, to_resync=None):
     healthcheck_path = settings.background_healthcheck_path
     update_healthcheck(healthcheck_path)
+
+    if to_resync:
+        logger.info("Force resync of %s contacts", len(to_resync))
+        bulk_schedule_acoustic_records(db, to_resync)
 
     sync_service = CTMSToAcousticSync(
         client_id=settings.acoustic_client_id,

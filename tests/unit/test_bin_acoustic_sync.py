@@ -163,3 +163,33 @@ def test_main_not_enough_contacts(dbsession, test_env, mock_service):
     }
     assert loop_sleep_s == 0.0
     assert caplog[0]["event"] == "sync_service cycle complete"
+
+
+def test_main_force_resync(
+    dbsession,
+    test_env,
+    sample_contacts,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    """sync() with a list of primary emails to resync."""
+    _, some_contact = sample_contacts["minimal"]
+    to_resync = [
+        some_contact.email.primary_email,
+    ]
+    with capture_logs() as caplog, pytest.raises(HaltLoop):
+        with mock.patch(
+            "ctms.bin.acoustic_sync.CTMSToAcousticSync.sync_contact_with_acoustic"
+        ) as mocked_sync:
+            sync(
+                dbsession,
+                test_env["settings"],
+                test_env["metric_service"],
+                to_resync=to_resync,
+            )
+
+    assert caplog[0]["event"] == "Force resync of 1 contacts"
+
+    mocked_sync.assert_called_with(
+        some_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
