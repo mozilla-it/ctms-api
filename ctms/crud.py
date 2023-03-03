@@ -955,3 +955,23 @@ def delete_acoustic_newsletters_mapping(dbsession, source):
     dbsession.delete(row)
     dbsession.commit()
     return row
+
+
+def get_contacts_from_newsletter(dbsession, newsletter_name):
+    entries = (
+        dbsession.query(Newsletter)
+        .options(joinedload(Newsletter.email))
+        .filter(Newsletter.name == newsletter_name)
+        .all()
+    )
+    return entries
+
+
+def get_contacts_from_waitlist(dbsession, waitlist_name):
+    entries = (
+        dbsession.query(Waitlist)
+        .options(joinedload(Waitlist.email))
+        .filter(Waitlist.name == waitlist_name)
+        .all()
+    )
+    return entries

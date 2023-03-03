@@ -24,6 +24,8 @@ from ctms.crud import (
     get_bulk_contacts,
     get_contact_by_email_id,
     get_contacts_by_any_id,
+    get_contacts_from_newsletter,
+    get_contacts_from_waitlist,
     get_email,
     get_emails_by_any_id,
     get_stripe_customer_by_fxa_id,
@@ -989,3 +991,15 @@ def test_relations_on_stripe_subscription_items(
     assert subscription_item.subscription == subscription
     assert subscription_item.price == price
     assert subscription_item.get_email_id() == email_id
+
+
+def test_get_contacts_from_newsletter(dbsession, maximal_contact):
+    contacts = get_contacts_from_newsletter(dbsession, "common-voice")
+    assert len(contacts) == 1
+    assert contacts[0].email.email_id == maximal_contact.email.email_id
+
+
+def test_get_contacts_from_waitlist(dbsession, maximal_contact):
+    contacts = get_contacts_from_waitlist(dbsession, "a-software")
+    assert len(contacts) == 1
+    assert contacts[0].email.email_id == maximal_contact.email.email_id
