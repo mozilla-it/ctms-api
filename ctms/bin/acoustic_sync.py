@@ -2,6 +2,7 @@
 """Run continuously in the background, syncing acoustic with our db."""
 from time import monotonic, sleep
 
+import click
 import structlog
 from prometheus_client import CollectorRegistry
 from sqlalchemy.orm import Session
@@ -13,9 +14,17 @@ from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
 from ctms.sync import CTMSToAcousticSync, update_healthcheck
 
+logger = structlog.get_logger("ctms.bin.acoustic_sync")
 
-def main(db, settings):
-    logger = structlog.get_logger("ctms.bin.acoustic_sync")
+
+@click.command()
+def main():
+    """CTMS command to sync contacts with Acoustic."""
+    init_sentry()
+    settings = config.BackgroundSettings()
+    configure_logging(logging_level=settings.logging_level.name)
+    engine = engine_factory(settings)
+
     logger.info(
         "Setting up sync_service.",
         sync_feature_flag=settings.acoustic_sync_feature_flag,
@@ -24,6 +33,12 @@ def main(db, settings):
     metric_service = BackgroundMetricService(
         registry=metrics_registry, pushgateway_url=settings.prometheus_pushgateway_url
     )
+
+    with Session(engine) as session:
+        sync(session, settings, metric_service)
+
+
+def sync(db, settings, metric_service):
     healthcheck_path = settings.background_healthcheck_path
     update_healthcheck(healthcheck_path)
 
@@ -75,9 +90,4 @@ def main(db, settings):
 
 
 if __name__ == "__main__":
-    init_sentry()
-    config_settings = config.BackgroundSettings()
-    configure_logging(logging_level=config_settings.logging_level.name)
-    engine = engine_factory(config_settings)
-    with Session(engine) as session:
-        main(session, config_settings)
+    main()
