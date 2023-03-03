@@ -74,6 +74,29 @@ In order to add, list, or remove certain mappings, use the `acoustic_newsletters
 
 See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
 
+
+## Force resync of contacts
+
+In [CTMS-146](https://mozilla-hub.atlassian.net/browse/CTMS-146), we faced an issue where some contact data was not in sync with Acoustic.
+In order to force the resync of a batch of contacts, it is possible to pass the `acoustic_sync` command some options.
+
+For example, from a file containing primary emails (one per line):
+```
+python ctms/bin/acoustic_sync.py --email-list INPUT.txt
+```
+
+Or for all subscribers of a specific newsletter:
+```
+python ctms/bin/acoustic_sync.py --newsletter common-voice
+```
+
+Or a waitlist:
+```
+python ctms/bin/acoustic_sync.py --waitlist relay
+```
+
+See `python ctms/bin/acoustic_sync.py --help` for usage details.
+
 ## Logging
 
 When the environment variable ``CTMS_USE_MOZLOG`` is set to true or unset, then
