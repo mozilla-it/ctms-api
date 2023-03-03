@@ -89,7 +89,11 @@ def engine(pytestconfig):
         create_database(test_db_url)
 
     echo = Settings().log_sqlalchemy or pytestconfig.getoption("verbose") > 2
-    test_engine = create_engine(test_db_url, echo=echo)
+    test_engine = create_engine(
+        test_db_url,
+        echo=echo,
+        connect_args={"options": "-c timezone=utc"},
+    )
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
     with test_engine.begin() as cnx:
