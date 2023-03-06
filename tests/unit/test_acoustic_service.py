@@ -197,6 +197,7 @@ def test_ctms_to_acoustic_mocked(
         )
     assert results  # success
     acoustic_mock.add_recipient.assert_called()
+    acoustic_mock.delete_relational_table_data.assert_called()
     acoustic_mock.insert_update_relational_table.assert_called()
 
     acoustic_mock.add_recipient.assert_called_with(
@@ -206,6 +207,15 @@ def test_ctms_to_acoustic_mocked(
         allow_html=False,
         sync_fields={"email_id": _main["email_id"]},
         columns=_main,
+    )
+
+    acoustic_mock.delete_relational_table_data.assert_any_call(
+        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID,
+        rows=[{"email_id": str(maximal_contact.email.email_id)}],
+    )
+    acoustic_mock.delete_relational_table_data.assert_any_call(
+        table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
+        rows=[{"email_id": str(maximal_contact.email.email_id)}],
     )
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
@@ -323,6 +333,11 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
         )
     assert results  # success
 
+    acoustic_mock.delete_relational_table_data.assert_called_with(
+        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID,
+        rows=[{"email_id": str(contact_with_stripe_subscription.email.email_id)}],
+    )
+
     acoustic_mock.insert_update_relational_table.assert_called_with(
         table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
     )
@@ -358,6 +373,9 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
             "product_status": "success",
             "main_duration_s": log["main_duration_s"],
             "product_duration_s": log["product_duration_s"],
+            # We also deleted existing RT data for newsletters.
+            "newsletter_duration_s": log["newsletter_duration_s"],
+            "newsletter_status": "success",
         }
     )
     assert log == expected_log

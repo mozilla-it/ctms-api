@@ -396,16 +396,24 @@ class CTMSToAcousticService:
                 self.context["main_status"] = status
                 self.context["main_duration_s"] = duration_s
 
-    def _insert_update_relational_table(self, table_name, rows):
-        if not rows:
-            return
+    def _replace_relational_table_data(self, table_name, email_id, rows):
         start_time = time.monotonic()
-        status = "success"
         table_id = self.relational_tables[table_name]
+        status = "success"
+        method = "delete_relational_table_data"
         try:
-            self.acoustic.insert_update_relational_table(
-                table_id=table_id, rows=rows
-            )  # Call to Acoustic
+            # Calls to Acoustic
+            self.acoustic.delete_relational_table_data(
+                table_id=table_id,
+                rows=[
+                    {"email_id": email_id},
+                ],
+            )
+            if rows:
+                method = "insert_update_relational_table"
+                self.acoustic.insert_update_relational_table(
+                    table_id=table_id, rows=rows
+                )
         except Exception:  # pylint: disable=broad-except
             status = "failure"
             raise
@@ -414,7 +422,7 @@ class CTMSToAcousticService:
                 duration = time.monotonic() - start_time
                 duration_s = round(duration, 3)
                 metric_params = {
-                    "method": "insert_update_relational_table",
+                    "method": method,
                     "status": status,
                     "table": table_name,
                 }
@@ -450,8 +458,8 @@ class CTMSToAcousticService:
                 sync_fields={"email_id": email_id},
                 columns=main_table_data,
             )
-            self._insert_update_relational_table("newsletter", nl_data)
-            self._insert_update_relational_table("product", prod_data)
+            self._replace_relational_table_data("newsletter", email_id, nl_data)
+            self._replace_relational_table_data("product", email_id, prod_data)
 
             # success
             self.logger.debug(
