@@ -25,7 +25,7 @@ passlib = {extras = ["argon2"], version = "^1.7.4"}
 python-dateutil = "^2.8.1"
 dockerflow = "^2022.8.0"
 sentry-sdk = "^1.14.0"
-pysilverpop = "^0.2.6"
+pysilverpop = {git = "https://github.com/leplatrem/pysilverpop.git", rev = "add-delete-relational-table-data"}
 lxml = "^4.9.2"
 prometheus-client = "0.16.0"
 structlog = "^22.3.0"
