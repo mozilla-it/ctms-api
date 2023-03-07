@@ -5,8 +5,6 @@ set -e
 POETRY_RUN="poetry run"
 CURRENT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR="$(dirname "$CURRENT_DIR")"
-HAS_GIT="$(command -v git || echo '')"
-echo $HAS_GIT
 
 bandit () {
   $POETRY_RUN bandit -lll --recursive "${BASE_DIR}" --exclude "${BASE_DIR}/poetry.lock,${BASE_DIR}/.venv,${BASE_DIR}/.mypy,${BASE_DIR}/build"
@@ -15,13 +13,9 @@ black () {
   $POETRY_RUN black ${check:+--check} "${BASE_DIR}"
 }
 detect_secrets () {
-  if [ -n "$HAS_GIT" ]; then
-    # Scan only files fixed into the repo, omit poetry.lock
-    FILES_TO_SCAN=`git ls-tree --full-tree -r --name-only HEAD | grep -v poetry.lock`
-    $POETRY_RUN detect-secrets-hook $FILES_TO_SCAN --baseline .secrets.baseline
-  else
-    echo "Git not available. Skip detect-secrets"
-  fi
+  # Scan only files fixed into the repo, omit poetry.lock
+  FILES_TO_SCAN=`git ls-tree --full-tree -r --name-only HEAD | grep -v poetry.lock`
+  $POETRY_RUN detect-secrets-hook $FILES_TO_SCAN --baseline .secrets.baseline
 }
 isort () {
   $POETRY_RUN isort ${check:+--check-only} "${BASE_DIR}"
