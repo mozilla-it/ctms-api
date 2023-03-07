@@ -1045,4 +1045,4 @@ def test_cascade_is_reflected_in_orm(dbsession, maximal_contact, model):
     dbsession.commit()
 
     with pytest.raises(sqlalchemy.orm.exc.ObjectDeletedError):
-        instance.email
+        assert instance.email
