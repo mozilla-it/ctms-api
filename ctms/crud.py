@@ -598,18 +598,7 @@ def create_or_update_contact(
 
 
 def delete_contact(db: Session, email_id: UUID4):
-    db.query(PendingAcousticRecord).filter(
-        PendingAcousticRecord.email_id == email_id
-    ).delete()
-    db.query(AmoAccount).filter(AmoAccount.email_id == email_id).delete()
-    db.query(MozillaFoundationContact).filter(
-        MozillaFoundationContact.email_id == email_id
-    ).delete()
-    db.query(Newsletter).filter(Newsletter.email_id == email_id).delete()
-    db.query(Waitlist).filter(Waitlist.email_id == email_id).delete()
-    db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete()
     db.query(Email).filter(Email.email_id == email_id).delete()
-
     db.commit()
 
 
