@@ -1019,7 +1019,7 @@ def test_delete_happens_in_cascade_in_db(dbsession, maximal_contact, model):
 
     dbsession.query(Email).filter(Email.email_id == email_id).delete()
 
-    assert not (dbsession.query(model).filter(model.email_id == email_id).all())
+    assert not dbsession.query(model).filter(model.email_id == email_id).all()
 
 
 @pytest.mark.parametrize(
