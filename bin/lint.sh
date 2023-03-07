@@ -57,7 +57,6 @@ usage () {
   echo "  isort [--fix]"
   echo "  mypy"
   echo "  pylint"
-  echo "  yamllint"
 }
 
 subcommand='';
