@@ -8,6 +8,7 @@ from base64 import b64decode
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import lru_cache
+from secrets import token_hex
 from typing import Dict, List, Literal, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
@@ -449,6 +450,14 @@ async def log_request_middleware(request: Request, call_next):
             logger.error(log_line, **context)
         else:
             logger.info(log_line, **context)
+    return response
+
+
+@app.middleware("http")
+async def request_id(request: Request, call_next):
+    """Read the request id from headers. This is set by NGinx."""
+    request.state.rid = request.headers.get("X-Request-Id", token_hex(16))
+    response = await call_next(request)
     return response
 
 

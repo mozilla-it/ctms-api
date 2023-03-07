@@ -13,7 +13,12 @@ def test_request_log(client, minimal_contact):
     """A request is logged."""
     email_id = str(minimal_contact.email.email_id)
     with capture_logs() as cap_logs:
-        resp = client.get(f"/ctms/{email_id}")
+        resp = client.get(
+            f"/ctms/{email_id}",
+            headers={
+                "X-Request-Id": "foo-bar",
+            },
+        )
     assert resp.status_code == 200
     assert len(cap_logs) == 1
     log = cap_logs[0]
@@ -30,6 +35,7 @@ def test_request_log(client, minimal_contact):
             "accept-encoding": "gzip, deflate",
             "accept": "*/*",
             "connection": "keep-alive",
+            "x-request-id": "foo-bar",
         },
         "log_level": "info",
         "method": "GET",
@@ -37,6 +43,7 @@ def test_request_log(client, minimal_contact):
         "path_params": {"email_id": email_id},
         "path_template": "/ctms/{email_id}",
         "status_code": 200,
+        "rid": "foo-bar",
     }
     assert log == expected_log
 
@@ -90,6 +97,7 @@ def test_log_crash(client):
     assert len(cap_logs) == 1
     log = cap_logs[0]
     assert log["log_level"] == "error"
+    assert "rid" in log
     assert log["event"] == "testclient:50000 test_client 'GET /__crash__ HTTP/1.1' 500"
 
 
