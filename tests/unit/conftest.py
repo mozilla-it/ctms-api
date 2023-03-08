@@ -96,10 +96,10 @@ def engine(pytestconfig):
     )
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
-    with test_engine.begin() as cnx:
-        # pylint: disable-next=unsupported-assignment-operation
-        cfg.attributes["connection"] = cnx
-        alembic_command.upgrade(cfg, "head")
+
+    # pylint: disable-next=unsupported-assignment-operation
+    cfg.attributes["connection"] = test_engine
+    alembic_command.upgrade(cfg, "head")
 
     yield test_engine
     test_engine.dispose()

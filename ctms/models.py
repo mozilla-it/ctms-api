@@ -71,6 +71,7 @@ class Email(Base):
         "StripeCustomer",
         uselist=False,
         back_populates="email",
+        overlaps="fxa",
         primaryjoin="Email.email_id==FirefoxAccount.email_id",
         secondaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
@@ -158,7 +159,9 @@ class FirefoxAccount(Base):
         DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
     )
 
-    email = relationship("Email", back_populates="fxa", uselist=False)
+    email = relationship(
+        "Email", back_populates="fxa", overlaps="stripe_customer", uselist=False
+    )
     stripe_customer = relationship(
         "StripeCustomer",
         uselist=False,
@@ -310,6 +313,7 @@ class StripeCustomer(StripeBase):
         "Email",
         uselist=False,
         back_populates="stripe_customer",
+        overlaps="email,fxa",
         primaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
         secondaryjoin="remote(Email.email_id)==foreign(FirefoxAccount.email_id)",
         secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
