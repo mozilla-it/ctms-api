@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 
 from ctms.crud import (
+    create_acoustic_newsletters_mapping,
     create_amo,
     create_email,
     create_fxa,
@@ -31,7 +32,7 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
-from ctms.models import Email, PendingAcousticRecord
+from ctms.models import AcousticNewsletterMapping, Email, PendingAcousticRecord
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -989,3 +990,19 @@ def test_relations_on_stripe_subscription_items(
     assert subscription_item.subscription == subscription
     assert subscription_item.price == price
     assert subscription_item.get_email_id() == email_id
+
+
+def test_create_acoustic_newsletters_mapping(dbsession, maximal_contact):
+    assert len(dbsession.query(PendingAcousticRecord).all()) == 0
+    newsletter = maximal_contact.newsletters[1]
+    assert newsletter.subscribed
+    # Delete existing mapping (from migration file)
+    dbsession.query(AcousticNewsletterMapping).filter(
+        AcousticNewsletterMapping.source == newsletter.name
+    ).delete()
+
+    create_acoustic_newsletters_mapping(
+        dbsession, newsletter.name, "sub_main_table_field"
+    )
+
+    assert len(dbsession.query(PendingAcousticRecord).all()) > 0

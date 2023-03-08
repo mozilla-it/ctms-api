@@ -10,6 +10,7 @@ from pydantic import UUID4
 from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
+from sqlalchemy.sql.expression import true
 
 from .auth import hash_password
 from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
@@ -932,6 +933,17 @@ def create_acoustic_newsletters_mapping(dbsession, source, destination):
     row = AcousticNewsletterMapping(source=source, destination=destination)
     # This will fail if the mapping already exists.
     dbsession.add(row)
+
+    # Force a resync of all contacts that are subscribed to this newsletter.
+    newsletters_entries = (
+        dbsession.query(Newsletter)
+        .filter(Newsletter.name == source, Newsletter.subscribed == true())
+        .all()
+    )
+    for entry in newsletters_entries:
+        db_pending_record = PendingAcousticRecord(email_id=entry.email_id)
+        dbsession.add(db_pending_record)
+
     dbsession.commit()
     return row
 
