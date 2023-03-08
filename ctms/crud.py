@@ -98,10 +98,12 @@ def _contact_base_query(db):
         .options(joinedload(Email.mofo))
         .options(selectinload(Email.newsletters))
         .options(selectinload(Email.waitlists))
-        .options(joinedload(Email.stripe_customer))
-        .options(selectinload("stripe_customer.subscriptions"))
-        .options(selectinload("stripe_customer.subscriptions.subscription_items"))
-        .options(selectinload("stripe_customer.subscriptions.subscription_items.price"))
+        .options(
+            joinedload(Email.stripe_customer)
+            .subqueryload(StripeCustomer.subscriptions)
+            .subqueryload(StripeSubscription.subscription_items)
+            .subqueryload(StripeSubscriptionItem.price)
+        )
     )
 
 
