@@ -126,10 +126,9 @@ def test_alembic_migration_waitlists(engine):
     # Rollback to a revision before the waitlists were implemented as relationships.
     # As a side effect, this will test the rollback steps of the migrations files.
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
-    with engine.begin() as cnx:
-        # pylint: disable-next=unsupported-assignment-operation
-        cfg.attributes["connection"] = cnx
-        alembic_command.downgrade(cfg, "9c37ea9b5bba")
+    # pylint: disable-next=unsupported-assignment-operation
+    cfg.attributes["connection"] = engine
+    alembic_command.downgrade(cfg, "9c37ea9b5bba")
 
     # At this point we have the `waitlist` table, but the `vpn_waitlist`
     # and `relay_waitlist` haven't been migrated.
@@ -141,46 +140,50 @@ def test_alembic_migration_waitlists(engine):
 
     email_id_vpn, email_id_relay, email_id_newsletter = uuid4(), uuid4(), uuid4()
     with engine.connect() as connection:
-        for email_id in email_id_vpn, email_id_relay, email_id_newsletter:
-            create_statement = """
-            INSERT INTO emails (email_id, primary_email, basket_token, sfdc_id, first_name, last_name, mailing_country, email_format, email_lang, double_opt_in, has_opted_out_of_email, unsubscribe_reason, create_timestamp, update_timestamp)
-            VALUES (:email_id, :email, :token, '00VA000001aABcDEFG', NULL, NULL, 'us', 'H', 'en', False, False, NULL, NOW(), NOW())
+        with connection.begin():
+            for email_id in email_id_vpn, email_id_relay, email_id_newsletter:
+                create_statement = """
+                INSERT INTO emails (email_id, primary_email, basket_token, sfdc_id, first_name, last_name, mailing_country, email_format, email_lang, double_opt_in, has_opted_out_of_email, unsubscribe_reason, create_timestamp, update_timestamp)
+                VALUES (:email_id, :email, :token, '00VA000001aABcDEFG', NULL, NULL, 'us', 'H', 'en', False, False, NULL, NOW(), NOW())
+                """
+                connection.execute(
+                    text(create_statement),
+                    {
+                        "email_id": str(email_id),
+                        "email": f"{email_id}@example.org",
+                        "token": str(uuid4()),
+                    },
+                )
+
+            subscribe_vpn = """
+            INSERT INTO vpn_waitlist(email_id, geo, platform, create_timestamp, update_timestamp)
+            VALUES (:email_id, 'fr', 'linux', NOW(), NOW())
             """
-            params = {
-                "email_id": str(email_id),
-                "email": f"{email_id}@example.org",
-                "token": str(uuid4()),
-            }
-            connection.execute(text(create_statement), **params)
+            connection.execute(text(subscribe_vpn), {"email_id": email_id_vpn})
 
-        subscribe_vpn = """
-        INSERT INTO vpn_waitlist(email_id, geo, platform, create_timestamp, update_timestamp)
-        VALUES (:email_id, 'fr', 'linux', NOW(), NOW())
-        """
-        connection.execute(text(subscribe_vpn), email_id=email_id_vpn)
+            subscribe_relay = """
+            INSERT INTO relay_waitlist(email_id, geo, create_timestamp, update_timestamp)
+            VALUES (:email_id, 'it', NOW(), NOW())
+            """
+            connection.execute(text(subscribe_relay), {"email_id": email_id_relay})
 
-        subscribe_relay = """
-        INSERT INTO relay_waitlist(email_id, geo, create_timestamp, update_timestamp)
-        VALUES (:email_id, 'it', NOW(), NOW())
-        """
-        connection.execute(text(subscribe_relay), email_id=email_id_relay)
-
-        subscribe_newsletter = """
-        INSERT INTO newsletters(email_id, name, subscribed, format, lang, source, unsub_reason, update_timestamp)
-        VALUES (:email_id, 'relay-vpn-waitlist', true, 'H', 'en', NULL, NULL, NOW());
-        """
-        connection.execute(text(subscribe_newsletter), email_id=email_id_newsletter)
-        subscribe_relay = """
-        INSERT INTO relay_waitlist(email_id, geo, create_timestamp, update_timestamp)
-        VALUES (:email_id, 'es', NOW(), NOW())
-        """
-        connection.execute(text(subscribe_relay), email_id=email_id_newsletter)
+            subscribe_newsletter = """
+            INSERT INTO newsletters(email_id, name, subscribed, format, lang, source, unsub_reason, update_timestamp)
+            VALUES (:email_id, 'relay-vpn-waitlist', true, 'H', 'en', NULL, NULL, NOW());
+            """
+            connection.execute(
+                text(subscribe_newsletter), {"email_id": email_id_newsletter}
+            )
+            subscribe_relay = """
+            INSERT INTO relay_waitlist(email_id, geo, create_timestamp, update_timestamp)
+            VALUES (:email_id, 'es', NOW(), NOW())
+            """
+            connection.execute(text(subscribe_relay), {"email_id": email_id_newsletter})
 
     # Now migrate.
-    with engine.begin() as cnx:
-        # pylint: disable-next=unsupported-assignment-operation
-        cfg.attributes["connection"] = cnx
-        alembic_command.upgrade(cfg, "head")
+    # pylint: disable-next=unsupported-assignment-operation
+    cfg.attributes["connection"] = engine
+    alembic_command.upgrade(cfg, "head")
 
     # Now use the ORM to inspect that the migration went as expected.
     with engine.connect() as connection:
