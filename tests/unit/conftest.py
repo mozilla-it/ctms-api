@@ -124,18 +124,22 @@ def dbsession(connection):
     """
     transaction = connection.begin()
     session = ScopedSessionLocal()
-    nested = session.begin_nested()
+    nested = connection.begin_nested()
 
     # If the application code calls session.commit, it will end the nested
     # transaction. Need to start a new one when that happens.
-    @event.listens_for(ScopedSessionLocal, "after_transaction_end")
+    @event.listens_for(session, "after_transaction_end")
     def end_savepoint(*args):
         nonlocal nested
-        if nested.is_active:
-            session.expire_all()
-            nested = session.begin_nested()
+        if not nested.is_active:
+            nested = connection.begin_nested()
 
     yield session
+    # a nescessary addition to the example in the documentation linked above.
+    # Without this, the listener is not removed after each test ends and
+    # SQLAlchemy emits warnings:
+    #     `SAWarning: nested transaction already deassociated from connection`
+    event.remove(session, "after_transaction_end", end_savepoint)
     session.close()
     transaction.rollback()
 
