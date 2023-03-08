@@ -6,9 +6,12 @@ from structlog.testing import capture_logs
 from ctms.models import Email
 
 
-def test_get_ctms_for_minimal_contact(client, minimal_contact):
+def test_get_ctms_for_minimal_contact(client, dbsession, email_factory):
     """GET /ctms/{email_id} returns a contact with most fields unset."""
-    email_id = minimal_contact.email.email_id
+    contact = email_factory(newsletters=1)
+    newsletter = contact.newsletters[0]
+    dbsession.commit()
+    email_id = str(contact.email_id)
     resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == 200
     assert resp.json() == {
@@ -27,20 +30,20 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
             "username": None,
         },
         "email": {
-            "basket_token": "142e20b6-1ef5-43d8-b5f4-597430e956d7",
-            "create_timestamp": "2014-01-22T15:24:00+00:00",
-            "double_opt_in": False,
-            "email_format": "H",
-            "email_id": "93db83d4-4119-4e0c-af87-a713786fa81d",
-            "email_lang": "en",
-            "first_name": None,
-            "has_opted_out_of_email": False,
-            "last_name": None,
-            "mailing_country": "us",
-            "primary_email": "ctms-user@example.com",
-            "sfdc_id": "001A000001aABcDEFG",
-            "unsubscribe_reason": None,
-            "update_timestamp": "2020-01-22T15:24:00+00:00",
+            "basket_token": str(contact.basket_token),
+            "create_timestamp": contact.create_timestamp.isoformat(),
+            "double_opt_in": contact.double_opt_in,
+            "email_format": contact.email_format,
+            "email_id": str(contact.email_id),
+            "email_lang": contact.email_lang,
+            "first_name": contact.first_name,
+            "has_opted_out_of_email": contact.has_opted_out_of_email,
+            "last_name": contact.last_name,
+            "mailing_country": contact.mailing_country,
+            "primary_email": contact.primary_email,
+            "sfdc_id": None,
+            "unsubscribe_reason": contact.unsubscribe_reason,
+            "update_timestamp": contact.update_timestamp.isoformat(),
         },
         "fxa": {
             "created_date": None,
@@ -57,37 +60,13 @@ def test_get_ctms_for_minimal_contact(client, minimal_contact):
         },
         "newsletters": [
             {
-                "format": "H",
-                "lang": "en",
-                "name": "app-dev",
-                "source": None,
-                "subscribed": True,
-                "unsub_reason": None,
-            },
-            {
-                "format": "H",
-                "lang": "en",
-                "name": "maker-party",
-                "source": None,
-                "subscribed": True,
-                "unsub_reason": None,
-            },
-            {
-                "format": "H",
-                "lang": "en",
-                "name": "mozilla-foundation",
-                "source": None,
-                "subscribed": True,
-                "unsub_reason": None,
-            },
-            {
-                "format": "H",
-                "lang": "en",
-                "name": "mozilla-learning-network",
-                "source": None,
-                "subscribed": True,
-                "unsub_reason": None,
-            },
+                "format": newsletter.format,
+                "lang": newsletter.lang,
+                "name": newsletter.name,
+                "source": newsletter.source,
+                "subscribed": newsletter.subscribed,
+                "unsub_reason": newsletter.unsub_reason,
+            }
         ],
         "status": "ok",
         "vpn_waitlist": {"geo": None, "platform": None},
