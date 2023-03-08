@@ -2,74 +2,30 @@
 """Run continuously in the background, syncing acoustic with our db."""
 from time import monotonic, sleep
 
-import click
 import structlog
 from prometheus_client import CollectorRegistry
 from sqlalchemy.orm import Session
 
 from ctms import config
 from ctms.background_metrics import BackgroundMetricService
-from ctms.crud import (
-    bulk_schedule_acoustic_records,
-    get_contacts_from_newsletter,
-    get_contacts_from_waitlist,
-)
 from ctms.database import engine_factory
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
 from ctms.sync import CTMSToAcousticSync, update_healthcheck
 
-logger = structlog.get_logger("ctms.bin.acoustic_sync")
 
-
-@click.command()
-@click.option("--email-list", type=click.File("r"))
-@click.option("--newsletter")
-@click.option("--waitlist")
-def main(email_list=None, newsletter=None, waitlist=None):
-    """CTMS command to sync contacts with Acoustic."""
-    init_sentry()
-    settings = config.BackgroundSettings()
-    configure_logging(logging_level=settings.logging_level.name)
-    engine = engine_factory(settings)
-
+def main(db, settings):
+    logger = structlog.get_logger("ctms.bin.acoustic_sync")
     logger.info(
         "Setting up sync_service.",
         sync_feature_flag=settings.acoustic_sync_feature_flag,
     )
-
     metrics_registry = CollectorRegistry()
     metric_service = BackgroundMetricService(
         registry=metrics_registry, pushgateway_url=settings.prometheus_pushgateway_url
     )
-
-    to_resync = []
-    if email_list:
-        for line in email_list.readlines():
-            to_resync.append(line.rstrip().lower())
-
-    with Session(engine) as session:
-        if newsletter:
-            contacts = get_contacts_from_newsletter(session, newsletter)
-            if not contacts:
-                raise ValueError(f"Unknown newsletter {newsletter!r}")
-            to_resync.extend(c.email.primary_email for c in contacts)
-        if waitlist:
-            contacts = get_contacts_from_waitlist(session, waitlist)
-            if not contacts:
-                raise ValueError(f"Unknown waitlist {waitlist!r}")
-            to_resync.extend(c.email.primary_email for c in contacts)
-
-        sync(session, settings, metric_service, to_resync=to_resync)
-
-
-def sync(db, settings, metric_service, to_resync=None):
     healthcheck_path = settings.background_healthcheck_path
     update_healthcheck(healthcheck_path)
-
-    if to_resync:
-        logger.info("Force resync of %s contacts", len(to_resync))
-        bulk_schedule_acoustic_records(db, to_resync)
 
     sync_service = CTMSToAcousticSync(
         client_id=settings.acoustic_client_id,
@@ -107,7 +63,7 @@ def sync(db, settings, metric_service, to_resync=None):
             "sync_service cycle complete",
             loop_duration_s=round(duration_s, 3),
             loop_sleep_s=round(to_sleep, 3),
-            **context,
+            **context
         )
 
         metric_service.set_sync_loop_duration_seconds(round(duration_s, 3))
@@ -119,4 +75,9 @@ def sync(db, settings, metric_service, to_resync=None):
 
 
 if __name__ == "__main__":
-    main()
+    init_sentry()
+    config_settings = config.BackgroundSettings()
+    configure_logging(logging_level=config_settings.logging_level.name)
+    engine = engine_factory(config_settings)
+    with Session(engine) as session:
+        main(session, config_settings)
