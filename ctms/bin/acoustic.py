@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Schedule contacts to be synced to Acoustic."""
+import os
 import sys
 
 import click
@@ -56,7 +57,7 @@ def do_resync(dbsession, email_list=None, newsletter=None, waitlist=None):
     print("Force resync of %s contacts", len(to_resync))
     bulk_schedule_acoustic_records(dbsession, to_resync)
     dbsession.commit()
-    return 0
+    return os.EX_OK
 
 
 if __name__ == "__main__":
