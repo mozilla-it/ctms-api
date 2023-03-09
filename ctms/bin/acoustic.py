@@ -10,8 +10,11 @@ from ctms import config
 from ctms.crud import (
     bulk_schedule_acoustic_records,
     create_acoustic_field,
+    create_acoustic_newsletters_mapping,
     delete_acoustic_field,
+    delete_acoustic_newsletters_mapping,
     get_all_acoustic_fields,
+    get_all_acoustic_newsletters_mapping,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
 )
@@ -99,6 +102,46 @@ def fields_remove(ctx, field, tablename):
         print(f"Unknown field '{tablename}.{field}'. Give up.")
         return os.EX_DATAERR
     print(f"Removed '{row.tablename}.{row.field}'.")
+    return os.EX_OK
+
+
+@cli.group(name="newsletter-mappings", help="Manage newsletter Acoustic mappings")
+@click.pass_context
+def newsletter_mappings(ctx):
+    pass
+
+
+@newsletter_mappings.command(name="list")
+@click.pass_context
+def newsletter_mappings_list(ctx):
+    entries = get_all_acoustic_newsletters_mapping(ctx.obj["dbsession"])
+    print("\n".join(sorted(f"- {e.source!r} → {e.destination!r}" for e in entries)))
+    return os.EX_OK
+
+
+@newsletter_mappings.command(
+    name="add", help='Specified as "<newsletter-name>:<acoustic-column>"'
+)
+@click.argument("mapping")
+@click.pass_context
+def newsletter_mappings_add(ctx, mapping):
+    source, destination = mapping.split(":")
+    # This will fail if mapping already exists.
+    create_acoustic_newsletters_mapping(ctx.obj["dbsession"], source, destination)
+    print(f"Added {source!r} → {destination!r}.")
+    return os.EX_OK
+
+
+@newsletter_mappings.command(name="remove")
+@click.argument("source")
+@click.pass_context
+def newsletter_mappings_remove(ctx, source):
+    row = delete_acoustic_newsletters_mapping(ctx.obj["dbsession"], source)
+    if not row:
+        print(f"Unknown mapping '{source}'. Give up.")
+        return os.EX_DATAERR
+    print(f"Removed {row.source!r} → {row.destination!r}.")
+    return os.EX_OK
 
 
 def do_resync(

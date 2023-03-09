@@ -75,9 +75,9 @@ See `python ctms/bin/acoustic.py fields --help` for usage details.
 The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
 
 
-In order to add, list, or remove certain mappings, use the `acoustic_newsletters_mapping.py` script.
+In order to add, list, or remove certain mappings, use the `acoustic.py` command.
 
-See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
+See `python ctms/bin/acoustic.py newsletter-mappings --help` for usage details.
 
 
 ## Force resync of contacts
