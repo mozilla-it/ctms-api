@@ -9,6 +9,9 @@ import click
 from ctms import config
 from ctms.crud import (
     bulk_schedule_acoustic_records,
+    create_acoustic_field,
+    delete_acoustic_field,
+    get_all_acoustic_fields,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
 )
@@ -55,6 +58,47 @@ def resync(
     """CTMS command to sync contacts with Acoustic."""
     with SessionLocal() as dbsession:
         return do_resync(dbsession, yes, email_file, newsletter, waitlist)
+
+
+@cli.group(help="Manage Acoustic fields")
+@click.pass_context
+def fields(ctx):
+    pass
+
+
+@fields.command(name="list")
+@click.option(
+    "-t", "--tablename", default="main", help="Acoustic table name (default: 'main')"
+)
+@click.pass_context
+def fields_list(ctx, tablename):
+    entries = get_all_acoustic_fields(ctx.obj["dbsession"])
+    print("\n".join(sorted(f"- {e.tablename}.{e.field}" for e in entries)))
+
+
+@fields.command(name="add")
+@click.option(
+    "-t", "--tablename", default="main", help="Acoustic table name (default: 'main')"
+)
+@click.argument("field")
+@click.pass_context
+def fields_add(ctx, field, tablename):
+    row = create_acoustic_field(ctx.obj["dbsession"], tablename, field)
+    print(f"Added '{row.tablename}.{row.field}'.")
+
+
+@fields.command(name="remove")
+@click.option(
+    "-t", "--tablename", default="main", help="Acoustic table name (default: 'main')"
+)
+@click.argument("field")
+@click.pass_context
+def fields_remove(ctx, field, tablename):
+    row = delete_acoustic_field(ctx.obj["dbsession"], tablename, field)
+    if not row:
+        print(f"Unknown field '{tablename}.{field}'. Give up.")
+        return os.EX_DATAERR
+    print(f"Removed '{row.tablename}.{row.field}'.")
 
 
 def do_resync(
