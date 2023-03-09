@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 @click.group()
 @click.pass_context
 def cli(ctx):
-    """ctms cli for gdpr actions."""
+    """Delete a list of contacts"""
     ctx.obj = Settings(session=Session())
 
     response = ctx.obj.session.post(
