@@ -3,27 +3,29 @@
 
 import argparse
 import json
-import logging
 from typing import List, Tuple
 
+import structlog
 from sqlalchemy.orm import Session
 
+from ctms.config import Settings
 from ctms.database import SessionLocal
 from ctms.ingest_stripe import (
     StripeIngestActions,
     StripeIngestUnknownObjectError,
     ingest_stripe_object,
 )
+from ctms.log import configure_logging
 from ctms.models import StripeBase
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def main(db_session: Session, filenames: List[str]) -> None:
     """Load a Stripe object or list of objects from disk."""
 
     for filename in filenames:
-        logger.info("Reading data from %s...", filename)
+        logger.info("Reading data...", filename=filename)
         with open(filename, "r", encoding="utf8") as data_file:
             data = json.load(data_file)
 
@@ -42,11 +44,13 @@ def ingest_object(db_session, obj):
         ingestion_data: Tuple[StripeBase, StripeIngestActions] = ingest_stripe_object(
             db_session, obj
         )
-        logger.info("Object and Actions: %s %s", ingestion_data[0], ingestion_data[1])
+        logger.info(
+            "Object and Actions", objects=ingestion_data[0], actions=ingestion_data[1]
+        )
     except StripeIngestUnknownObjectError:
-        logger.info("Skipping %s %s", obj["object"], obj["id"])
+        logger.info("Skipping", object=obj["object"], id=obj["id"])
     else:
-        logger.info("Ingested %s %s", obj["object"], obj["id"])
+        logger.info("Ingested", object=obj["object"], id=obj["id"])
         db_session.commit()
 
 
@@ -61,6 +65,7 @@ def get_parser():
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO)
+    config_settings = Settings()
+    configure_logging(logging_level=config_settings.logging_level.name)
     with SessionLocal() as session:
         main(session, args.filenames)
