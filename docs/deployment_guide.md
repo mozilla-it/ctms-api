@@ -82,20 +82,20 @@ In order to force the resync of a batch of contacts, it is possible to run the `
 
 For example, from a file containing primary emails (one per line):
 ```
-python ctms/bin/acoustic_resync.py --email-list INPUT.txt
+python ctms/bin/acoustic.py resync --email-list INPUT.txt
 ```
 
 Or for all subscribers of a specific newsletter:
 ```
-python ctms/bin/acoustic_resync.py --newsletter common-voice
+python ctms/bin/acoustic.py resync --newsletter common-voice
 ```
 
 Or a waitlist:
 ```
-python ctms/bin/acoustic_resync.py --waitlist relay
+python ctms/bin/acoustic.py resync --waitlist relay
 ```
 
-See `python ctms/bin/acoustic_resync.py --help` for usage details.
+See `python ctms/bin/acoustic.py resync --help` for usage details.
 
 ## Logging
 

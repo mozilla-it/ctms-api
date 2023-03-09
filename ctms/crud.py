@@ -961,7 +961,7 @@ def get_contacts_from_newsletter(dbsession, newsletter_name):
     entries = (
         dbsession.query(Newsletter)
         .options(joinedload(Newsletter.email))
-        .filter(Newsletter.name == newsletter_name)
+        .filter(Newsletter.name == newsletter_name, Newsletter.subscribed.is_(True))
         .all()
     )
     return entries

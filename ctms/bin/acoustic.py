@@ -18,22 +18,26 @@ from ctms.log import configure_logging
 logger = structlog.get_logger("ctms.bin.acoustic_resync")
 
 
-@click.command()
+@click.group()
+@click.pass_context
+def cli(ctx):
+    ctx.obj["dbsession"] = SessionLocal()
+    settings = config.Settings()
+    configure_logging(logging_level=settings.logging_level.name)
+    init_sentry()
+
+
+@cli.command()
 @click.option("--email-list", type=click.File("r"))
 @click.option("--newsletter")
 @click.option("--waitlist")
-def main(email_list=None, newsletter=None, waitlist=None):
+@click.pass_context
+def resync(ctx, email_list=None, newsletter=None, waitlist=None):
     """CTMS command to sync contacts with Acoustic."""
-
-    with SessionLocal() as session:
-        sys.exit(resync(session, email_list, newsletter, waitlist))
+    return do_resync(ctx.obj["dbsession"], email_list, newsletter, waitlist)
 
 
-def resync(dbsession, email_list=None, newsletter=None, waitlist=None):
-    settings = config.Settings()
-    init_sentry()
-    configure_logging(logging_level=settings.logging_level.name)
-
+def do_resync(dbsession, email_list=None, newsletter=None, waitlist=None):
     to_resync = []
     if email_list:
         for line in email_list.readlines():
@@ -44,6 +48,7 @@ def resync(dbsession, email_list=None, newsletter=None, waitlist=None):
         if not contacts:
             raise ValueError(f"Unknown newsletter {newsletter!r}")
         to_resync.extend(c.email.primary_email for c in contacts)
+
     if waitlist:
         contacts = get_contacts_from_waitlist(dbsession, waitlist)
         if not contacts:
@@ -53,7 +58,8 @@ def resync(dbsession, email_list=None, newsletter=None, waitlist=None):
     logger.info("Force resync of %s contacts", len(to_resync))
     bulk_schedule_acoustic_records(dbsession, to_resync)
     dbsession.commit()
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(cli(obj={}))
