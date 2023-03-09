@@ -55,19 +55,6 @@ def test_ctms_to_acoustic_sync_creation(sync_obj):
     assert sync_obj is not None
 
 
-def test_sync_to_acoustic(
-    sync_obj, maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
-):
-    sync_obj.ctms_to_acoustic = MagicMock()
-    result = sync_obj.sync_contact_with_acoustic(
-        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
-    )
-    assert result
-    sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
-        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
-    )
-
-
 def test_sync_acoustic_record_retry_path(
     dbsession,
     sync_obj,

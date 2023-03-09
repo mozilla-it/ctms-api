@@ -53,26 +53,6 @@ class CTMSToAcousticSync:
         self.is_acoustic_enabled = is_acoustic_enabled
         self.metric_service = metric_service
 
-    def sync_contact_with_acoustic(
-        self,
-        contact: ContactSchema,
-        main_fields: set[str],
-        newsletters_mapping: dict[str, str],
-    ):
-        """
-
-        :param contact:
-        :return: Boolean value indicating success:True or failure:False
-        """
-        try:
-            # Convert ContactSchema to Acoustic Readable, attempt API call
-            return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
-                contact, main_fields, newsletters_mapping
-            )
-        except Exception:  # pylint: disable=W0703
-            self.logger.exception("Error executing sync.sync_contact_with_acoustic")
-            return False
-
     def _sync_pending_record(
         self,
         db,
@@ -82,13 +62,15 @@ class CTMSToAcousticSync:
     ) -> str:
         state = "unknown"
         try:
+            is_success = False
             if self.is_acoustic_enabled:
                 contact: ContactSchema = get_acoustic_record_as_contact(
                     db, pending_record
                 )
-                is_success = self.sync_contact_with_acoustic(
+                if self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
                     contact, main_fields, newsletters_mapping
-                )
+                ):
+                    is_success = True
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
