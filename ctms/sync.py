@@ -1,9 +1,10 @@
-import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Dict, List, Union
 
-from ctms.acoustic_service import Acoustic, CTMSToAcousticService
+import structlog
+
+from ctms.acoustic_service import Acoustic, AcousticUploadError, CTMSToAcousticService
 from ctms.background_metrics import BackgroundMetricService
 from ctms.crud import (
     delete_acoustic_record,
@@ -47,7 +48,7 @@ class CTMSToAcousticSync:
             acoustic_product_table_id=acoustic_product_table_id,
             metric_service=metric_service,
         )
-        self.logger = logging.getLogger(__name__)
+        self.logger = structlog.get_logger(__name__)
         self.retry_limit = retry_limit
         self.batch_limit = batch_limit
         self.is_acoustic_enabled = is_acoustic_enabled
@@ -67,10 +68,13 @@ class CTMSToAcousticSync:
                 contact: ContactSchema = get_acoustic_record_as_contact(
                     db, pending_record
                 )
-                if self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
-                    contact, main_fields, newsletters_mapping
-                ):
+                try:
+                    self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
+                        contact, main_fields, newsletters_mapping
+                    )
                     is_success = True
+                except AcousticUploadError as exc:
+                    self.logger.exception(f"Could not upload contact: {repr(exc)}")
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
@@ -94,6 +98,7 @@ class CTMSToAcousticSync:
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Exception occurred when processing acoustic record.")
             state = "exception"
+            raise
         return state
 
     def sync_records(self, db, end_time=None) -> Dict[str, Union[int, str]]:

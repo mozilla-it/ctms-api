@@ -3,7 +3,9 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
+from structlog.testing import capture_logs
 
+from ctms.acoustic_service import AcousticUploadError
 from ctms.crud import schedule_acoustic_record
 from ctms.sync import CTMSToAcousticSync, check_healthcheck, update_healthcheck
 
@@ -63,13 +65,15 @@ def test_sync_acoustic_record_retry_path(
     acoustic_newsletters_mapping,
 ):
     sync_obj.ctms_to_acoustic = MagicMock(
-        **{"attempt_to_upload_ctms_contact.return_value": False}
+        **{"attempt_to_upload_ctms_contact.side_effect": AcousticUploadError("Boom!")}
     )
     _setup_pending_record(dbsession, email_id=maximal_contact.email.email_id)
     no_metrics = sync_obj.metric_service is None
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
 
-    context = sync_obj.sync_records(dbsession, end_time=end_time)
+    with capture_logs() as caplog:
+        context = sync_obj.sync_records(dbsession, end_time=end_time)
+
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
         maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
@@ -99,6 +103,11 @@ def test_sync_acoustic_record_retry_path(
     assert registry.get_sample_value(f"{prefix}_total", labels) is None
     assert registry.get_sample_value(f"{prefix}_retries", labels) == 0
     assert registry.get_sample_value(f"{prefix}_backlog", labels) == 1
+
+    assert len(caplog) == 1
+    assert (
+        caplog[0]["event"] == "Could not upload contact: AcousticUploadError('Boom!')"
+    )
 
 
 def test_sync_acoustic_record_delete_path(

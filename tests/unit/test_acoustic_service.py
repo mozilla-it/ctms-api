@@ -192,10 +192,9 @@ def test_ctms_to_acoustic_mocked(
     assert _newsletter is not None
     assert len(_product) == 0
     with capture_logs() as caplog:
-        results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+        base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
-    assert results  # success
     acoustic_mock.add_recipient.assert_called()
     acoustic_mock.insert_update_relational_table.assert_called()
 
@@ -243,12 +242,11 @@ def test_ctms_to_acoustic_with_subscription(
     assert len(_newsletter) == 0  # None in Main Table Subscriber flags
     assert len(_product) == 1
     with capture_logs() as caplog:
-        results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+        base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             contact_with_stripe_subscription,
             main_acoustic_fields,
             acoustic_newsletters_mapping,
         )
-    assert results  # success
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
         table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
@@ -316,12 +314,11 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     assert _product[0] == expected_product
 
     with capture_logs() as caplog:
-        results = acoustic_svc.attempt_to_upload_ctms_contact(
+        acoustic_svc.attempt_to_upload_ctms_contact(
             contact_with_stripe_subscription,
             main_acoustic_fields,
             acoustic_newsletters_mapping,
         )
-    assert results  # success
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
         table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
@@ -381,10 +378,9 @@ def test_ctms_to_acoustic_traced_email(
     assert _newsletter is not None
     assert len(_product) == 0
     with capture_logs() as caplog:
-        results = base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
+        base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             example_contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
-    assert results  # success
 
     acoustic_mock.add_recipient.assert_called_once_with(
         list_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
