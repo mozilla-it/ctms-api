@@ -32,3 +32,21 @@ def test_main_force_resync_by_email_list(dbsession, sample_contacts, tmpdir):
     do_resync(dbsession, assume_yes=True, emails_file=f)
 
     assert len(dbsession.query(PendingAcousticRecord).all()) > 0
+
+
+def test_main_force_resync_by_reset_retry(dbsession, sample_contacts, tmpdir):
+    _, some_contact = sample_contacts["maximal"]
+    record = PendingAcousticRecord(email_id=some_contact.email.email_id, retry=99)
+    dbsession.add(record)
+    dbsession.flush()
+
+    do_resync(dbsession, reset_retries=True)
+
+    assert (
+        len(
+            dbsession.query(PendingAcousticRecord)
+            .filter(PendingAcousticRecord.retry > 0)
+            .all()
+        )
+        == 0
+    )

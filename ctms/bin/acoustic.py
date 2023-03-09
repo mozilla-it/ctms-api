@@ -11,6 +11,7 @@ from ctms.crud import (
     bulk_schedule_acoustic_records,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
+    reset_retry_acoustic_records,
 )
 from ctms.database import SessionLocal
 from ctms.exception_capture import init_sentry
@@ -41,6 +42,13 @@ def cli(ctx):
     default=False,
     help="Automatic yes to prompts.",
 )
+@click.option(
+    "--reset-retries",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Reset retry count of failing contacts",
+)
 @click.option("--email-file", type=click.File("r"))
 @click.option("--newsletter")
 @click.option("--waitlist")
@@ -48,18 +56,30 @@ def cli(ctx):
 def resync(
     ctx,
     yes: bool,
+    reset_retries: bool,
     email_file: TextIO,
     newsletter: Optional[str] = None,
     waitlist: Optional[str] = None,
 ):
     """CTMS command to sync contacts with Acoustic."""
     with SessionLocal() as dbsession:
-        return do_resync(dbsession, yes, email_file, newsletter, waitlist)
+        return do_resync(
+            dbsession, yes, reset_retries, email_file, newsletter, waitlist
+        )
 
 
 def do_resync(
-    dbsession, assume_yes=False, emails_file=None, newsletter=None, waitlist=None
+    dbsession,
+    assume_yes=False,
+    reset_retries=False,
+    emails_file=None,
+    newsletter=None,
+    waitlist=None,
 ):
+    resetted = 0
+    if reset_retries:
+        resetted = reset_retry_acoustic_records(dbsession)
+
     to_resync = []
     if emails_file:
         for line in emails_file.readlines():
@@ -77,7 +97,7 @@ def do_resync(
             raise ValueError(f"Unknown waitlist {waitlist!r}")
         to_resync.extend(c.email.primary_email for c in contacts)
 
-    print(f"Force resync of {len(to_resync)} contacts")
+    print(f"Force resync of {resetted + len(to_resync)} contacts")
     if to_resync and (assume_yes or confirm("Continue?")):
         bulk_schedule_acoustic_records(dbsession, to_resync)
         dbsession.commit()

@@ -7,7 +7,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, or_, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -374,6 +374,18 @@ def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
     db.bulk_save_objects(
         PendingAcousticRecord(email_id=email.email_id) for email in statement.all()
     )
+
+
+def reset_retry_acoustic_records(db: Session):
+    pending_records = (
+        db.query(PendingAcousticRecord).filter(PendingAcousticRecord.retry > 0).all()
+    )
+    count = len(pending_records)
+    db.execute(
+        update(PendingAcousticRecord),
+        [{"id": record.id, "retry": 0} for record in (pending_records)],
+    )
+    return count
 
 
 def schedule_acoustic_record(
