@@ -4,7 +4,6 @@ import os
 import sys
 
 import click
-import structlog
 
 from ctms import config
 from ctms.crud import (
@@ -61,4 +60,4 @@ def do_resync(dbsession, email_list=None, newsletter=None, waitlist=None):
 
 
 if __name__ == "__main__":
-    sys.exit(cli(obj={}))
+    sys.exit(cli(obj={}))  # pylint: disable=no-value-for-parameter
