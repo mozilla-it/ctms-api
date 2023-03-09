@@ -15,8 +15,6 @@ from ctms.database import SessionLocal
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
 
-logger = structlog.get_logger("ctms.bin.acoustic_resync")
-
 
 @click.group()
 @click.pass_context
@@ -55,7 +53,7 @@ def do_resync(dbsession, email_list=None, newsletter=None, waitlist=None):
             raise ValueError(f"Unknown waitlist {waitlist!r}")
         to_resync.extend(c.email.primary_email for c in contacts)
 
-    logger.info("Force resync of %s contacts", len(to_resync))
+    print("Force resync of %s contacts", len(to_resync))
     bulk_schedule_acoustic_records(dbsession, to_resync)
     dbsession.commit()
     return 0
