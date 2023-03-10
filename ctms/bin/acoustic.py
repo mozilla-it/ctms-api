@@ -2,6 +2,7 @@
 """Schedule contacts to be synced to Acoustic."""
 import os
 import sys
+from typing import Optional, TextIO
 
 import click
 
@@ -30,15 +31,20 @@ def cli(ctx):
 @click.option("--newsletter")
 @click.option("--waitlist")
 @click.pass_context
-def resync(ctx, email_list=None, newsletter=None, waitlist=None):
+def resync(
+    ctx,
+    emails_file: TextIO,
+    newsletter: Optional[str] = None,
+    waitlist: Optional[str] = None,
+):
     """CTMS command to sync contacts with Acoustic."""
-    return do_resync(ctx.obj["dbsession"], email_list, newsletter, waitlist)
+    return do_resync(ctx.obj["dbsession"], emails_file, newsletter, waitlist)
 
 
-def do_resync(dbsession, email_list=None, newsletter=None, waitlist=None):
+def do_resync(dbsession, emails_file=None, newsletter=None, waitlist=None):
     to_resync = []
-    if email_list:
-        for line in email_list.readlines():
+    if emails_file:
+        for line in emails_file.readlines():
             to_resync.append(line.decode("utf-8").rstrip().lower())
 
     if newsletter:
