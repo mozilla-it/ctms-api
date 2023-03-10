@@ -45,7 +45,7 @@ def do_resync(dbsession, emails_file=None, newsletter=None, waitlist=None):
     to_resync = []
     if emails_file:
         for line in emails_file.readlines():
-            to_resync.append(line.decode("utf-8").rstrip().lower())
+            to_resync.append(line.rstrip().lower())
 
     if newsletter:
         contacts = get_contacts_from_newsletter(dbsession, newsletter)
