@@ -55,6 +55,11 @@ from this repo and going outwards:
 More information about CTMS operations is available on the
 [ESS-CTMS Mana page](https://mana.mozilla.org/wiki/x/KIyXC) (*private*).
 
+## Delete Contacts in Bulk
+
+In order to delete all information about certain contacts, use the `delete_bulk.py` script.
+
+**Warning**: This command removes all related data immediately, but **won't delete** Acoustic data.
 
 ## Synchronized Acoustic Fields
 
