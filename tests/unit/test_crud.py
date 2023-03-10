@@ -993,13 +993,17 @@ def test_relations_on_stripe_subscription_items(
     assert subscription_item.get_email_id() == email_id
 
 
-def test_get_contacts_from_newsletter(dbsession, maximal_contact):
-    contacts = get_contacts_from_newsletter(dbsession, "common-voice")
+def test_get_contacts_from_newsletter(dbsession, newsletter_factory):
+    existing_newsletter = newsletter_factory()
+    dbsession.flush()
+    contacts = get_contacts_from_newsletter(dbsession, existing_newsletter.name)
     assert len(contacts) == 1
-    assert contacts[0].email.email_id == maximal_contact.email.email_id
+    assert contacts[0].email.email_id == existing_newsletter.email.email_id
 
 
-def test_get_contacts_from_waitlist(dbsession, maximal_contact):
-    contacts = get_contacts_from_waitlist(dbsession, "a-software")
+def test_get_contacts_from_waitlist(dbsession, waitlist_factory):
+    existing_waitlist = waitlist_factory()
+    dbsession.flush()
+    contacts = get_contacts_from_waitlist(dbsession, existing_waitlist.name)
     assert len(contacts) == 1
-    assert contacts[0].email.email_id == maximal_contact.email.email_id
+    assert contacts[0].email.email_id == existing_waitlist.email.email_id

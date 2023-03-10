@@ -173,6 +173,7 @@ def minimal_contact(dbsession):
 
 register(factories.EmailFactory)
 register(factories.NewsletterFactory)
+register(factories.WaitlistFactory)
 
 
 @pytest.fixture
