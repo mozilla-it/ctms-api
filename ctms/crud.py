@@ -371,9 +371,9 @@ def get_acoustic_record_as_contact(
 def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
     """Mark a list of primary email as pending synchronization."""
     statement = _contact_base_query(db).filter(Email.primary_email.in_(primary_emails))
-    for email in statement.all():
-        db_pending_record = PendingAcousticRecord(email_id=email.email_id)
-        db.add(db_pending_record)
+    db.bulk_save_objects(
+        PendingAcousticRecord(email_id=email.email_id) for email in statement.all()
+    )
 
 
 def schedule_acoustic_record(
