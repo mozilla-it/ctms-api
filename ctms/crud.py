@@ -107,6 +107,12 @@ def _contact_base_query(db):
     )
 
 
+def get_all_contacts(db):
+    """Fetch all contacts."""
+    bulk_contacts = _contact_base_query(db)
+    return bulk_contacts.order_by(asc(Email.email_id)).all()
+
+
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     filters = [
         Email.update_timestamp >= start_time,
