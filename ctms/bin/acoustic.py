@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Schedule contacts to be synced to Acoustic."""
+import csv
 import os
 import sys
 from typing import Optional, TextIO
+from uuid import UUID
 
 import click
+import sqlalchemy
 
 from ctms import config
+from ctms.acoustic_service import CTMSToAcousticService
 from ctms.crud import (
     bulk_schedule_acoustic_records,
     create_acoustic_field,
@@ -15,6 +19,7 @@ from ctms.crud import (
     delete_acoustic_newsletters_mapping,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
+    get_all_contacts_from_ids,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
     reset_retry_acoustic_records,
@@ -22,6 +27,7 @@ from ctms.crud import (
 from ctms.database import SessionLocal
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
+from ctms.schemas.contact import ContactSchema, get_stripe_products
 
 
 def confirm(msg):
@@ -196,6 +202,83 @@ def do_resync(
     dbsession.commit()
     print("Done.")
     return os.EX_OK
+
+
+@cli.command(help="Dump the contacts database in the same format as Acoustic")
+@click.option(
+    "-q",
+    "--query",
+    help="Query to select contacts to be dumped",
+    default="SELECT email_id FROM emails;",
+)
+@click.option("-o", "--output", type=click.File("w"))
+@click.pass_context
+def dump(
+    ctx,
+    query: str,
+    output: TextIO,
+):
+    """CTMS command to dump the contacts database."""
+    if output is None:
+        output = sys.stdout
+
+    with SessionLocal() as dbsession:
+        result = dbsession.execute(sqlalchemy.text(query))
+        email_ids = [row[0] for row in result.all()]
+
+        if not email_ids:
+            print("No contact found for query.")
+            sys.exit(os.EX_UNAVAILABLE)
+
+        first = email_ids[0]
+        if not isinstance(first, UUID):
+            print(f"Query should return UUID, found: {first}")
+            sys.exit(os.EX_USAGE)
+
+        answer = input(f"Dump CSV for {len(email_ids)} contacts [y/N]? ")
+        if not answer or answer.lower() != "y":
+            sys.exit(os.EX_OK)
+
+        contacts = get_all_contacts_from_ids(dbsession, email_ids=email_ids)
+        return do_dump(dbsession, contacts, output)
+
+
+def do_dump(dbsession, contacts, output: TextIO):
+    service = CTMSToAcousticService(
+        acoustic_client=None,
+        acoustic_main_table_id=-1,
+        acoustic_newsletter_table_id=-1,
+        acoustic_product_table_id=-1,
+    )
+    main_fields = {
+        f.field for f in get_all_acoustic_fields(dbsession, tablename="main")
+    }
+    newsletters_mapping = {
+        m.source: m.destination for m in get_all_acoustic_newsletters_mapping(dbsession)
+    }
+
+    fieldnames = None
+    writer = None
+    for email in contacts:
+        contact_mapping = {
+            "amo": email.amo,
+            "email": email,
+            "fxa": email.fxa,
+            "mofo": email.mofo,
+            "newsletters": email.newsletters,
+            "products": get_stripe_products(email),
+            "waitlists": email.waitlists,
+        }
+        contact = ContactSchema.parse_obj(contact_mapping)
+        main_table_row, _, _ = service.convert_ctms_to_acoustic(
+            contact, main_fields, newsletters_mapping
+        )
+        # Write header on the first iteration.
+        if fieldnames is None:
+            fieldnames = sorted(main_table_row.keys())
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+        writer.writerow(main_table_row)
 
 
 if __name__ == "__main__":
