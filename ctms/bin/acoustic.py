@@ -20,7 +20,6 @@ from ctms.log import configure_logging
 @click.group()
 @click.pass_context
 def cli(ctx):
-    ctx.obj["dbsession"] = SessionLocal()
     settings = config.Settings()
     configure_logging(logging_level=settings.logging_level.name)
     init_sentry()
@@ -38,7 +37,8 @@ def resync(
     waitlist: Optional[str] = None,
 ):
     """CTMS command to sync contacts with Acoustic."""
-    return do_resync(ctx.obj["dbsession"], emails_file, newsletter, waitlist)
+    with SessionLocal() as dbsession:
+        return do_resync(dbsession, emails_file, newsletter, waitlist)
 
 
 def do_resync(dbsession, emails_file=None, newsletter=None, waitlist=None):
