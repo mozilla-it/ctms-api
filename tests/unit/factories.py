@@ -24,6 +24,17 @@ class NewsletterFactory(BaseSQLAlchemyModelFactory):
     email = factory.SubFactory(factory="tests.unit.factories.EmailFactory")
 
 
+class WaitlistFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.Waitlist
+
+    name = factory.Sequence(lambda n: f"waitlist-{n}")
+    source = factory.Faker("url")
+    fields = {}
+
+    email = factory.SubFactory(factory="tests.unit.factories.EmailFactory")
+
+
 class EmailFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.Email

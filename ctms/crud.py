@@ -368,6 +368,14 @@ def get_acoustic_record_as_contact(
     return contact_schema
 
 
+def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
+    """Mark a list of primary email as pending synchronization."""
+    statement = _contact_base_query(db).filter(Email.primary_email.in_(primary_emails))
+    db.bulk_save_objects(
+        PendingAcousticRecord(email_id=email.email_id) for email in statement.all()
+    )
+
+
 def schedule_acoustic_record(
     db: Session,
     email_id: UUID4,
@@ -947,3 +955,23 @@ def delete_acoustic_newsletters_mapping(dbsession, source):
     dbsession.delete(row)
     dbsession.commit()
     return row
+
+
+def get_contacts_from_newsletter(dbsession, newsletter_name):
+    entries = (
+        dbsession.query(Newsletter)
+        .options(joinedload(Newsletter.email))
+        .filter(Newsletter.name == newsletter_name, Newsletter.subscribed.is_(True))
+        .all()
+    )
+    return entries
+
+
+def get_contacts_from_waitlist(dbsession, waitlist_name):
+    entries = (
+        dbsession.query(Waitlist)
+        .options(joinedload(Waitlist.email))
+        .filter(Waitlist.name == waitlist_name)
+        .all()
+    )
+    return entries
