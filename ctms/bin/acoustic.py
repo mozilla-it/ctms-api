@@ -26,13 +26,13 @@ def cli(ctx):
 
 
 @cli.command()
-@click.option("--email-list", type=click.File("r"))
+@click.option("--email-file", type=click.File("r"))
 @click.option("--newsletter")
 @click.option("--waitlist")
 @click.pass_context
 def resync(
     ctx,
-    emails_file: TextIO,
+    email_file: TextIO,
     newsletter: Optional[str] = None,
     waitlist: Optional[str] = None,
 ):

@@ -41,14 +41,14 @@ def cli(ctx):
 
 @cli.command()
 @click.option("--email")
-@click.option("--email-list", type=click.File("r"))
+@click.option("--email-file", type=click.File("r"))
 @click.pass_obj
-def delete(obj, email, email_list):
+def delete(obj, email, email_file):
     """delete single contact or a list of contacts from ctms"""
     to_be_deleted = []
 
-    if email_list:
-        for line in email_list.readlines():
+    if email_file:
+        for line in email_file.readlines():
             to_be_deleted.append(line.rstrip())
 
     if email:
