@@ -75,7 +75,8 @@ def fields(ctx):
 )
 @click.pass_context
 def fields_list(ctx, tablename):
-    entries = get_all_acoustic_fields(ctx.obj["dbsession"])
+    with SessionLocal() as dbsession:
+        entries = get_all_acoustic_fields(dbsession)
     print("\n".join(sorted(f"- {e.tablename}.{e.field}" for e in entries)))
 
 
@@ -86,7 +87,8 @@ def fields_list(ctx, tablename):
 @click.argument("field")
 @click.pass_context
 def fields_add(ctx, field, tablename):
-    row = create_acoustic_field(ctx.obj["dbsession"], tablename, field)
+    with SessionLocal() as dbsession:
+        row = create_acoustic_field(dbsession, tablename, field)
     print(f"Added '{row.tablename}.{row.field}'.")
 
 
@@ -97,7 +99,8 @@ def fields_add(ctx, field, tablename):
 @click.argument("field")
 @click.pass_context
 def fields_remove(ctx, field, tablename):
-    row = delete_acoustic_field(ctx.obj["dbsession"], tablename, field)
+    with SessionLocal() as dbsession:
+        row = delete_acoustic_field(dbsession, tablename, field)
     if not row:
         print(f"Unknown field '{tablename}.{field}'. Give up.")
         return os.EX_DATAERR
@@ -114,7 +117,8 @@ def newsletter_mappings(ctx):
 @newsletter_mappings.command(name="list")
 @click.pass_context
 def newsletter_mappings_list(ctx):
-    entries = get_all_acoustic_newsletters_mapping(ctx.obj["dbsession"])
+    with SessionLocal() as dbsession:
+        entries = get_all_acoustic_newsletters_mapping(dbsession)
     print("\n".join(sorted(f"- {e.source!r} → {e.destination!r}" for e in entries)))
     return os.EX_OK
 
@@ -127,7 +131,8 @@ def newsletter_mappings_list(ctx):
 def newsletter_mappings_add(ctx, mapping):
     source, destination = mapping.split(":")
     # This will fail if mapping already exists.
-    create_acoustic_newsletters_mapping(ctx.obj["dbsession"], source, destination)
+    with SessionLocal() as dbsession:
+        create_acoustic_newsletters_mapping(dbsession, source, destination)
     print(f"Added {source!r} → {destination!r}.")
     return os.EX_OK
 
@@ -136,7 +141,8 @@ def newsletter_mappings_add(ctx, mapping):
 @click.argument("source")
 @click.pass_context
 def newsletter_mappings_remove(ctx, source):
-    row = delete_acoustic_newsletters_mapping(ctx.obj["dbsession"], source)
+    with SessionLocal() as dbsession:
+        row = delete_acoustic_newsletters_mapping(dbsession, source)
     if not row:
         print(f"Unknown mapping '{source}'. Give up.")
         return os.EX_DATAERR
