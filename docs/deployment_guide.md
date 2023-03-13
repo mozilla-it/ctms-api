@@ -66,18 +66,18 @@ In order to delete all information about certain contacts, use the `delete_bulk.
 The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
 in the database.
 
-In order to add, list, or remove certain fields, use the `acoustic_fields.py` script:
+In order to add, list, or remove certain fields, use the `acoustic.py` command:
 
-See `python ctms/bin/acoustic_fields.py --help` for usage details.
+See `python ctms/bin/acoustic.py fields --help` for usage details.
 
 ## Acoustic Newsletters Fields
 
 The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
 
 
-In order to add, list, or remove certain mappings, use the `acoustic_newsletters_mapping.py` script.
+In order to add, list, or remove certain mappings, use the `acoustic.py` command.
 
-See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
+See `python ctms/bin/acoustic.py newsletter-mappings --help` for usage details.
 
 
 ## Force resync of contacts

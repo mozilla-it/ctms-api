@@ -9,6 +9,12 @@ import click
 from ctms import config
 from ctms.crud import (
     bulk_schedule_acoustic_records,
+    create_acoustic_field,
+    create_acoustic_newsletters_mapping,
+    delete_acoustic_field,
+    delete_acoustic_newsletters_mapping,
+    get_all_acoustic_fields,
+    get_all_acoustic_newsletters_mapping,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
 )
@@ -55,6 +61,93 @@ def resync(
     """CTMS command to sync contacts with Acoustic."""
     with SessionLocal() as dbsession:
         return do_resync(dbsession, yes, email_file, newsletter, waitlist)
+
+
+@cli.group(help="Manage Acoustic fields")
+@click.pass_context
+def fields(ctx):
+    pass
+
+
+@fields.command(name="list")
+@click.option(
+    "-t", "--tablename", default="main", help="Acoustic table name (default: 'main')"
+)
+@click.pass_context
+def fields_list(ctx, tablename):
+    with SessionLocal() as dbsession:
+        entries = get_all_acoustic_fields(dbsession)
+    print("\n".join(sorted(f"- {e.tablename}.{e.field}" for e in entries)))
+
+
+@fields.command(name="add")
+@click.option(
+    "-t", "--tablename", default="main", help="Acoustic table name (default: 'main')"
+)
+@click.argument("field")
+@click.pass_context
+def fields_add(ctx, field, tablename):
+    with SessionLocal() as dbsession:
+        row = create_acoustic_field(dbsession, tablename, field)
+    print(f"Added '{row.tablename}.{row.field}'.")
+
+
+@fields.command(name="remove")
+@click.option(
+    "-t", "--tablename", default="main", help="Acoustic table name (default: 'main')"
+)
+@click.argument("field")
+@click.pass_context
+def fields_remove(ctx, field, tablename):
+    with SessionLocal() as dbsession:
+        row = delete_acoustic_field(dbsession, tablename, field)
+    if not row:
+        print(f"Unknown field '{tablename}.{field}'. Give up.")
+        return os.EX_DATAERR
+    print(f"Removed '{row.tablename}.{row.field}'.")
+    return os.EX_OK
+
+
+@cli.group(name="newsletter-mappings", help="Manage newsletter Acoustic mappings")
+@click.pass_context
+def newsletter_mappings(ctx):
+    pass
+
+
+@newsletter_mappings.command(name="list")
+@click.pass_context
+def newsletter_mappings_list(ctx):
+    with SessionLocal() as dbsession:
+        entries = get_all_acoustic_newsletters_mapping(dbsession)
+    print("\n".join(sorted(f"- {e.source!r} → {e.destination!r}" for e in entries)))
+    return os.EX_OK
+
+
+@newsletter_mappings.command(
+    name="add", help='Specified as "<newsletter-name>:<acoustic-column>"'
+)
+@click.argument("mapping")
+@click.pass_context
+def newsletter_mappings_add(ctx, mapping):
+    source, destination = mapping.split(":")
+    # This will fail if mapping already exists.
+    with SessionLocal() as dbsession:
+        create_acoustic_newsletters_mapping(dbsession, source, destination)
+    print(f"Added {source!r} → {destination!r}.")
+    return os.EX_OK
+
+
+@newsletter_mappings.command(name="remove")
+@click.argument("source")
+@click.pass_context
+def newsletter_mappings_remove(ctx, source):
+    with SessionLocal() as dbsession:
+        row = delete_acoustic_newsletters_mapping(dbsession, source)
+    if not row:
+        print(f"Unknown mapping '{source}'. Give up.")
+        return os.EX_DATAERR
+    print(f"Removed {row.source!r} → {row.destination!r}.")
+    return os.EX_OK
 
 
 def do_resync(
