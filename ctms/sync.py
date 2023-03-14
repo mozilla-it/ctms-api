@@ -108,6 +108,7 @@ class CTMSToAcousticSync:
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Exception occurred when processing acoustic record.")
             state = "exception"
+            # Crash loudly, and alert operators since this isn't related to Acoustic.
             raise
         return state
 
