@@ -27,7 +27,6 @@ from ctms.crud import (
     delete_acoustic_record,
     get_acoustic_record_as_contact,
     get_all_acoustic_fields,
-    get_all_acoustic_newsletters_mapping,
     get_all_acoustic_records_before,
     get_bulk_contacts,
     get_contact_by_email_id,
