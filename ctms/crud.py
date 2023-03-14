@@ -387,10 +387,16 @@ def schedule_acoustic_record(
         metrics["pending_acoustic_sync"].inc()
 
 
-def retry_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
+def retry_acoustic_record(
+    db: Session,
+    pending_record: PendingAcousticRecord,
+    error_message: Optional[str] = None,
+) -> None:
     if pending_record.retry is None:
         pending_record.retry = 0
     pending_record.retry += 1
+    if error_message:
+        pending_record.last_error = error_message
     pending_record.update_timestamp = datetime.now(timezone.utc)
 
 

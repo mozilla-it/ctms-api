@@ -63,7 +63,7 @@ class CTMSToAcousticSync:
     ) -> str:
         state = "unknown"
         try:
-            is_success = False
+            sync_error = None
             if self.is_acoustic_enabled:
                 contact: ContactSchema = get_acoustic_record_as_contact(
                     db, pending_record
@@ -72,7 +72,6 @@ class CTMSToAcousticSync:
                     self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
                         contact, main_fields, newsletters_mapping
                     )
-                    is_success = True
                 except AcousticUploadError as exc:
                     email_domain = (
                         contact.email.primary_email.split("@")[1]
@@ -84,14 +83,14 @@ class CTMSToAcousticSync:
                         email_id=contact.email.email_id,
                         primary_email_domain=email_domain,
                     )
+                    sync_error = exc
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
                     "dropped from queue at this time."
                 )
-                is_success = True
 
-            if is_success:
+            if sync_error is None:
                 # on success delete pending_record from table
                 delete_acoustic_record(db, pending_record)
                 if self.is_acoustic_enabled:
@@ -102,7 +101,9 @@ class CTMSToAcousticSync:
                     self.metric_service.inc_acoustic_sync_total()
             else:
                 # on failure increment retry of record in table
-                retry_acoustic_record(db, pending_record)
+                retry_acoustic_record(
+                    db, pending_record, error_message=repr(sync_error)
+                )
                 state = "retry"
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Exception occurred when processing acoustic record.")

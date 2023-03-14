@@ -333,6 +333,19 @@ def test_schedule_then_get_acoustic_records_then_delete(
     assert len(record_list) == 0
 
 
+def retry_acoustic_record_with_error(dbsession, example_contact):
+    pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
+    retry_acoustic_record(dbsession, pending, error_message="Boom!")
+    dbsession.flush()
+
+    assert (
+        "Boom"
+        in dbsession.query(PendingAcousticRecord)
+        .filter(PendingAcousticRecord.email_id == example_contact.email.email_id)
+        .last_error
+    )
+
+
 def test_get_acoustic_record_no_stripe_customer(dbsession, example_contact):
     """A contact with no associated Stripe customer has no subscriptions."""
     pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
