@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Schedule contacts to be synced to Acoustic."""
+import csv
+import datetime
 import os
 import sys
 from typing import Optional, TextIO
@@ -7,6 +9,7 @@ from typing import Optional, TextIO
 import click
 
 from ctms import config
+from ctms.acoustic_service import CTMSToAcousticService
 from ctms.crud import (
     bulk_schedule_acoustic_records,
     create_acoustic_field,
@@ -15,6 +18,7 @@ from ctms.crud import (
     delete_acoustic_newsletters_mapping,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
+    get_all_contacts,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
     reset_retry_acoustic_records,
@@ -22,6 +26,7 @@ from ctms.crud import (
 from ctms.database import SessionLocal
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
+from ctms.schemas.contact import ContactSchema
 
 
 def confirm(msg):
@@ -160,6 +165,148 @@ def newsletter_mappings_remove(ctx, source):
     print(f"Removed {row.source!r} → {row.destination!r}.")
     return os.EX_OK
 
+
+@cli.command()
+@click.argument("dump-file", type=click.File("r"))
+@click.pass_context
+def compare(ctx, dump_file):
+    # Build a set of email IDs, to compare with the Acoustic dump.
+    db_email_ids = {}
+    with SessionLocal() as dbsession:
+        for contact in get_all_contacts(dbsession):
+            db_email_ids[str(contact.email_id)] = contact.primary_email
+    print(f"{len(db_email_ids)} contacts selected in database.")
+
+    reader = csv.DictReader(dump_file)
+    acoustic_extras = {}
+    i = 0
+    for row in reader:
+        if i % (len(db_email_ids) / 1000) == 0:
+            print(".", end="")
+        email_id = row["email_id"]
+        try:
+            del db_email_ids[email_id]
+        except KeyError:
+            acoustic_extras[email_id] = row
+        i += 1
+    total_csv_rows = i
+
+    print()
+    if db_email_ids:
+        print(f"{len(db_email_ids)} extraneous contacts in CTMS")
+        if confirm("Export data?"):
+            # Write primary emails into file. To be potentially used by `delete_bulk.py`.
+            filename = f"{datetime.datetime.now().isoformat()}.ctms-extras.csv"
+            print(f"Writing file {filename}...", end="")
+            with open(filename, "w", encoding="utf8") as f:
+                f.writelines(db_email_ids.values())
+            print("Done.")
+
+    if acoustic_extras:
+        print(f"{len(acoustic_extras)} extraneous contacts in Acoustic")
+        if confirm("Export data?"):
+            filename = f"{datetime.datetime.now().isoformat()}.acoustic-extras.csv"
+            print(f"Writing file {filename}...", end="")
+            with open(filename, "w", encoding="utf8") as f:
+                writer = None
+                for row in acoustic_extras.values():
+                    if writer is None:
+                        writer = csv.DictWriter(f, fieldnames=row.keys())
+                        writer.writeheader()
+                    writer.writerow(row)
+            print("Done.")
+
+    has_major_diff = db_email_ids or acoustic_extras
+    if has_major_diff or not confirm("Compare individual records?"):
+        return os.EX_OK
+
+    service = CTMSToAcousticService(
+        acoustic_client=None,
+        acoustic_main_table_id=-1,
+        acoustic_newsletter_table_id=-1,
+        acoustic_product_table_id=-1,
+    )
+    with SessionLocal() as dbsession:
+        main_fields = {
+            f.field for f in get_all_acoustic_fields(dbsession, tablename="main")
+        }
+        newsletters_mapping = {
+            m.source: m.destination
+            for m in get_all_acoustic_newsletters_mapping(dbsession)
+        }
+
+        iterator_db = iter(get_all_contacts(dbsession).all()) # TODO: yield_per(1000)
+        iterator_acoustic = csv.DictReader(dump_file)
+
+        filename = f"{datetime.datetime.now().isoformat()}.acoustic-diff.csv"
+        with open(filename, "w", encoding="utf8") as output:
+            i = 0
+            writer = None
+            while True:
+                if i % (total_csv_rows / 1000) == 0:
+                    print(".", end="")
+                i += 1
+                try:
+                    # This assumes that both sources are sorted consistently.
+                    email = next(iterator_db)
+                    csv_row = next(iterator_acoustic)
+                except StopIteration:
+                    break
+
+                if email.email_id != csv_row["email_id"]:
+                    raise ValueError(
+                        f"Rows are unsync ({email.email_id} != {csv_row['email_id']}). Cannot proceed with line to line comparison."
+                    )
+
+                # Build Acoustic row from database record.
+                contact_mapping = {
+                    "amo": email.amo,
+                    "email": email,
+                    "fxa": email.fxa,
+                    "mofo": email.mofo,
+                    "newsletters": email.newsletters,
+                    "products": [],  # TODO get_stripe_products(email)
+                    "waitlists": email.waitlists,
+                }
+                contact = ContactSchema.parse_obj(contact_mapping)
+                main_table_row, _, _ = service.convert_ctms_to_acoustic(
+                    contact, main_fields, newsletters_mapping
+                )
+                # Compare naively.
+                stripped_csv_row = {
+                    k: v
+                    for k, v in csv_row.items()
+                    if k
+                    not in (
+                        "RECIPIENT_ID",
+                        "Email",
+                        "Opt In Date",
+                        "Opted Out",
+                        "Opt In Details",
+                        "Email Type",
+                        "Opted Out Date",
+                        "Opt Out Details",
+                        "CRM LeadSource",
+                        "Last Modified Date",
+                        "Clicked Date",
+                        "FLAG_FOR_CONTACT_DELETION",
+                        "Open Date",
+                        "Sent Date",
+                    )
+                }
+                print(i, stripped_csv_row == main_table_row)
+                if stripped_csv_row == main_table_row:
+                    continue
+                # Write diff to file.
+                if writer is None:
+                    print(f"Writing file {filename}...", end="")
+                    writer = csv.DictWriter(
+                        output, fieldnames=("__source__",) + tuple(csv_row.keys())
+                    )
+                    writer.writeheader()
+                writer.writerow({"__source__": "acoustic", **csv_row})
+                writer.writerow({"__source__": "ctms", **main_table_row})
+            print("Done.")
 
 def do_resync(
     dbsession,

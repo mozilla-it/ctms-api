@@ -123,6 +123,10 @@ def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     return filters
 
 
+def get_all_contacts(db: Session):
+    return db.query(Email)
+
+
 def get_bulk_contacts(
     db: Session,
     start_time: datetime,
