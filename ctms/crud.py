@@ -921,7 +921,7 @@ def get_all_acoustic_fields(dbsession, tablename=None):
     return query.all()
 
 
-def create_acoustic_field(dbsession, tablename, field):
+def create_acoustic_field(dbsession: Session, tablename: str, field: str):
     row = AcousticField(tablename=tablename, field=field)
     dbsession.merge(row)
     dbsession.commit()

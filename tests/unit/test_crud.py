@@ -5,8 +5,10 @@ from typing import List
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.orm import Session
 
 from ctms.crud import (
+    create_acoustic_field,
     create_amo,
     create_email,
     create_fxa,
@@ -33,7 +35,7 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
-from ctms.models import Email, PendingAcousticRecord
+from ctms.models import AcousticField, Email, PendingAcousticRecord
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -1007,3 +1009,22 @@ def test_get_contacts_from_waitlist(dbsession, waitlist_factory):
     contacts = get_contacts_from_waitlist(dbsession, existing_waitlist.name)
     assert len(contacts) == 1
     assert contacts[0].email.email_id == existing_waitlist.email.email_id
+
+
+def test_create_acoustic_field(dbsession: Session):
+    fields = dbsession.query(AcousticField).filter_by(tablename="main")
+    main_fields = {f.field for f in fields}
+    assert "sub_test_field" not in main_fields
+
+    create_acoustic_field(dbsession, "main", "sub_test_field")
+    dbsession.commit()
+
+    main_fields = {f.field for f in fields}
+    assert "sub_test_field" in main_fields
+
+
+def test_create_acoustic_field_same_pkey_does_not_raise(dbsession: Session):
+    # though there is a composite primary key on tablename + field, attempting
+    # to add the same tablename + field does not raise an exception
+    create_acoustic_field(dbsession, "main", "sub_test_field")
+    create_acoustic_field(dbsession, "main", "sub_test_field")
