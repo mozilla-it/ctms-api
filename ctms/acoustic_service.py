@@ -57,6 +57,10 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 # End cherry-picked from django.utils.encoding
 
 
+class AcousticUploadError(Exception):
+    """Failure to upload a contact to Acoustic"""
+
+
 class AcousticResources:
     SKIP_FIELDS = set(
         (
@@ -429,7 +433,7 @@ class CTMSToAcousticService:
         contact: ContactSchema,
         main_fields: set[str],
         newsletters_mapping: dict[str, str],
-    ) -> bool:
+    ):  # raises AcousticUploadError
         """
 
         :param contact: to be converted to acoustic table rows and uploaded
@@ -459,12 +463,14 @@ class CTMSToAcousticService:
                 success=True,
                 **self.context,
             )
-            return True
-        except (SilverpopResponseException, Timeout):
+        except (SilverpopResponseException, Timeout) as exc:
             # failure
             self.logger.exception(
                 "Failure for contact in sync to acoustic...",
                 success=False,
                 **self.context,
             )
-            return False
+            # Silverpop is supposed to provide the fault string as message.
+            # https://github.com/theatlantic/pysilverpop/blob/ee9d60a6e/silverpop/api.py#L520
+            # Use `repr()` to obtain exception classname.
+            raise AcousticUploadError(repr(exc)) from exc

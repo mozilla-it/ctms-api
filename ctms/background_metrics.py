@@ -1,5 +1,3 @@
-import logging
-
 from prometheus_client import CollectorRegistry, Counter, Gauge, push_to_gateway
 from prometheus_client.metrics import Histogram
 from prometheus_client.utils import INF
@@ -12,7 +10,6 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
         pushgateway_url: str,
         metric_prefix="ctms_background_",
     ):
-        self.logger = logging.getLogger(__name__)
         self.registry = registry
         self.app_kubernetes_io_component = "background"
         self.app_kubernetes_io_instance = "ctms"
