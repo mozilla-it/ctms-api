@@ -12,8 +12,8 @@ from alembic import config as alembic_config
 from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
+from pytest_factoryboy import register
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms.app import app, get_api_client, get_db, get_metrics
@@ -37,6 +37,7 @@ from ctms.crud import (
     get_stripe_products,
     get_waitlists_by_email_id,
 )
+from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
@@ -50,6 +51,8 @@ from tests.unit.sample_data import (
     SAMPLE_MOST_MINIMAL,
     SAMPLE_STRIPE_DATA,
 )
+
+from . import factories
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -93,10 +96,10 @@ def engine(pytestconfig):
     )
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
-    with test_engine.begin() as cnx:
-        # pylint: disable-next=unsupported-assignment-operation
-        cfg.attributes["connection"] = cnx
-        alembic_command.upgrade(cfg, "head")
+
+    # pylint: disable-next=unsupported-assignment-operation
+    cfg.attributes["connection"] = test_engine
+    alembic_command.upgrade(cfg, "head")
 
     yield test_engine
     test_engine.dispose()
@@ -104,10 +107,11 @@ def engine(pytestconfig):
         drop_database(test_db_url)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
     conn = engine.connect()
+    SessionLocal.configure(bind=conn)
     yield conn
     conn.close()
 
@@ -119,18 +123,23 @@ def dbsession(connection):
     Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
     """
     transaction = connection.begin()
-    session = Session(autocommit=False, autoflush=False, bind=connection)
+    session = ScopedSessionLocal()
     nested = connection.begin_nested()
 
     # If the application code calls session.commit, it will end the nested
     # transaction. Need to start a new one when that happens.
     @event.listens_for(session, "after_transaction_end")
-    def end_savepoint(session, transaction):
+    def end_savepoint(*args):
         nonlocal nested
         if not nested.is_active:
             nested = connection.begin_nested()
 
     yield session
+    # a nescessary addition to the example in the documentation linked above.
+    # Without this, the listener is not removed after each test ends and
+    # SQLAlchemy emits warnings:
+    #     `SAWarning: nested transaction already deassociated from connection`
+    event.remove(session, "after_transaction_end", end_savepoint)
     session.close()
     transaction.rollback()
 
@@ -160,6 +169,11 @@ def minimal_contact(dbsession):
     create_contact(dbsession, email_id, contact, get_metrics())
     dbsession.commit()
     return contact
+
+
+register(factories.EmailFactory)
+register(factories.NewsletterFactory)
+register(factories.WaitlistFactory)
 
 
 @pytest.fixture

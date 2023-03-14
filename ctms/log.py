@@ -109,6 +109,7 @@ def context_from_request(request: Request) -> Dict:
         "client_host": host,
         "method": request.method,
         "path": request.url.path,
+        "rid": request.state.rid,
     }
 
     # Determine the path template, like "/ctms/{email_id}"

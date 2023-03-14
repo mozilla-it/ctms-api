@@ -55,24 +55,52 @@ from this repo and going outwards:
 More information about CTMS operations is available on the
 [ESS-CTMS Mana page](https://mana.mozilla.org/wiki/x/KIyXC) (*private*).
 
+## Delete Contacts in Bulk
+
+In order to delete all information about certain contacts, use the `delete_bulk.py` script.
+
+**Warning**: This command removes all related data immediately, but **won't delete** Acoustic data.
 
 ## Synchronized Acoustic Fields
 
 The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
 in the database.
 
-In order to add, list, or remove certain fields, use the `acoustic_fields.py` script:
+In order to add, list, or remove certain fields, use the `acoustic.py` command:
 
-See `python ctms/bin/acoustic_fields.py --help` for usage details.
+See `python ctms/bin/acoustic.py fields --help` for usage details.
 
 ## Acoustic Newsletters Fields
 
 The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
 
 
-In order to add, list, or remove certain mappings, use the `acoustic_newsletters_mapping.py` script.
+In order to add, list, or remove certain mappings, use the `acoustic.py` command.
 
-See `python ctms/bin/acoustic_newsletters_mapping.py --help` for usage details.
+See `python ctms/bin/acoustic.py newsletter-mappings --help` for usage details.
+
+
+## Force resync of contacts
+
+In [CTMS-146](https://mozilla-hub.atlassian.net/browse/CTMS-146), we faced an issue where some contact data was not in sync with Acoustic.
+In order to force the resync of a batch of contacts, it is possible to run the `acoustic_resync` as a one-shot command with some options.
+
+For example, from a file containing primary emails (one per line):
+```
+python ctms/bin/acoustic.py resync --email-list INPUT.txt
+```
+
+Or for all subscribers of a specific newsletter:
+```
+python ctms/bin/acoustic.py resync --newsletter common-voice
+```
+
+Or a waitlist:
+```
+python ctms/bin/acoustic.py resync --waitlist relay
+```
+
+See `python ctms/bin/acoustic.py resync --help` for usage details.
 
 ## Logging
 

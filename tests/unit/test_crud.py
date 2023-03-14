@@ -25,6 +25,8 @@ from ctms.crud import (
     get_bulk_contacts,
     get_contact_by_email_id,
     get_contacts_by_any_id,
+    get_contacts_from_newsletter,
+    get_contacts_from_waitlist,
     get_email,
     get_emails_by_any_id,
     get_stripe_customer_by_fxa_id,
@@ -1046,3 +1048,19 @@ def test_cascade_is_reflected_in_orm(dbsession, maximal_contact, model):
 
     with pytest.raises(sqlalchemy.orm.exc.ObjectDeletedError):
         assert instance.email
+
+
+def test_get_contacts_from_newsletter(dbsession, newsletter_factory):
+    existing_newsletter = newsletter_factory()
+    dbsession.flush()
+    contacts = get_contacts_from_newsletter(dbsession, existing_newsletter.name)
+    assert len(contacts) == 1
+    assert contacts[0].email.email_id == existing_newsletter.email.email_id
+
+
+def test_get_contacts_from_waitlist(dbsession, waitlist_factory):
+    existing_waitlist = waitlist_factory()
+    dbsession.flush()
+    contacts = get_contacts_from_waitlist(dbsession, existing_waitlist.name)
+    assert len(contacts) == 1
+    assert contacts[0].email.email_id == existing_waitlist.email.email_id
