@@ -918,29 +918,26 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
     return products
 
 
-def get_all_acoustic_fields(dbsession, tablename=None):
+def get_all_acoustic_fields(dbsession: Session, tablename: Optional[str] = None):
     query = dbsession.query(AcousticField).order_by(
         asc(AcousticField.tablename), asc(AcousticField.field)
     )
     if tablename:
-        query = query.filter(AcousticField.tablename == tablename)
+        query = query.filter_by(tablename=tablename)
     return query.all()
 
 
-def create_acoustic_field(dbsession, tablename, field):
+def create_acoustic_field(dbsession: Session, tablename: str, field: str):
     row = AcousticField(tablename=tablename, field=field)
     dbsession.merge(row)
     dbsession.commit()
     return row
 
 
-def delete_acoustic_field(dbsession, tablename, field):
+def delete_acoustic_field(dbsession: Session, tablename: str, field: str):
     row = (
         dbsession.query(AcousticField)
-        .filter(
-            AcousticField.tablename == tablename,
-            AcousticField.field == field,
-        )
+        .filter_by(tablename=tablename, field=field)
         .one_or_none()
     )
     if row is None:
