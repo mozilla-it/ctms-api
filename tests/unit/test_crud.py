@@ -20,8 +20,10 @@ from ctms.crud import (
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
+    delete_acoustic_field,
     delete_acoustic_record,
     get_acoustic_record_as_contact,
+    get_all_acoustic_fields,
     get_all_acoustic_records_before,
     get_bulk_contacts,
     get_contact_by_email_id,
@@ -1028,3 +1030,36 @@ def test_create_acoustic_field_same_pkey_does_not_raise(dbsession: Session):
     # to add the same tablename + field does not raise an exception
     create_acoustic_field(dbsession, "main", "sub_test_field")
     create_acoustic_field(dbsession, "main", "sub_test_field")
+
+
+def test_delete_acoustic_field(dbsession):
+    fields = dbsession.query(AcousticField)
+    assert ("main", "email") in [(f.tablename, f.field) for f in fields]
+
+    deleted = delete_acoustic_field(dbsession, "main", "email")
+
+    assert (deleted.tablename, deleted.field) == ("main", "email")
+    assert ("main", "email") not in [(f.tablename, f.field) for f in fields]
+
+
+def test_delete_acoustic_field_no_field_present(dbsession):
+    fields = dbsession.query(AcousticField)
+    assert ("foo", "bar") not in [(f.tablename, f.field) for f in fields]
+
+    deleted = delete_acoustic_field(dbsession, "foo", "bar")
+    assert deleted is None
+
+
+def test_get_all_acoustic_fields(dbsession):
+    assert (
+        len(get_all_acoustic_fields(dbsession))
+        == dbsession.query(AcousticField).count()
+    )
+
+
+def test_get_all_acoustic_fields_filter_by_tablename(dbsession):
+    dbsession.add(AcousticField(tablename="test", field="test"))
+    dbsession.flush()
+    num_fields = dbsession.query(AcousticField).count()
+    num_main_fields = len(get_all_acoustic_fields(dbsession, tablename="main"))
+    assert num_fields > num_main_fields
