@@ -271,6 +271,7 @@ class PendingAcousticRecord(Base):
     id = Column(Integer, primary_key=True)
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     retry = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, default="")
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

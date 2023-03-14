@@ -1,9 +1,10 @@
-import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Dict, List, Union
 
-from ctms.acoustic_service import Acoustic, CTMSToAcousticService
+import structlog
+
+from ctms.acoustic_service import Acoustic, AcousticUploadError, CTMSToAcousticService
 from ctms.background_metrics import BackgroundMetricService
 from ctms.crud import (
     delete_acoustic_record,
@@ -47,31 +48,11 @@ class CTMSToAcousticSync:
             acoustic_product_table_id=acoustic_product_table_id,
             metric_service=metric_service,
         )
-        self.logger = logging.getLogger(__name__)
+        self.logger = structlog.get_logger(__name__)
         self.retry_limit = retry_limit
         self.batch_limit = batch_limit
         self.is_acoustic_enabled = is_acoustic_enabled
         self.metric_service = metric_service
-
-    def sync_contact_with_acoustic(
-        self,
-        contact: ContactSchema,
-        main_fields: set[str],
-        newsletters_mapping: dict[str, str],
-    ):
-        """
-
-        :param contact:
-        :return: Boolean value indicating success:True or failure:False
-        """
-        try:
-            # Convert ContactSchema to Acoustic Readable, attempt API call
-            return self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
-                contact, main_fields, newsletters_mapping
-            )
-        except Exception:  # pylint: disable=W0703
-            self.logger.exception("Error executing sync.sync_contact_with_acoustic")
-            return False
 
     def _sync_pending_record(
         self,
@@ -82,21 +63,34 @@ class CTMSToAcousticSync:
     ) -> str:
         state = "unknown"
         try:
+            sync_error = None
             if self.is_acoustic_enabled:
                 contact: ContactSchema = get_acoustic_record_as_contact(
                     db, pending_record
                 )
-                is_success = self.sync_contact_with_acoustic(
-                    contact, main_fields, newsletters_mapping
-                )
+                try:
+                    self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
+                        contact, main_fields, newsletters_mapping
+                    )
+                except AcousticUploadError as exc:
+                    email_domain = (
+                        contact.email.primary_email.split("@")[1]
+                        if "@" in contact.email.primary_email
+                        else "unknown"
+                    )
+                    self.logger.exception(
+                        f"Could not upload contact: {repr(exc)}",
+                        email_id=contact.email.email_id,
+                        primary_email_domain=email_domain,
+                    )
+                    sync_error = exc
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "
                     "dropped from queue at this time."
                 )
-                is_success = True
 
-            if is_success:
+            if sync_error is None:
                 # on success delete pending_record from table
                 delete_acoustic_record(db, pending_record)
                 if self.is_acoustic_enabled:
@@ -107,11 +101,15 @@ class CTMSToAcousticSync:
                     self.metric_service.inc_acoustic_sync_total()
             else:
                 # on failure increment retry of record in table
-                retry_acoustic_record(db, pending_record)
+                retry_acoustic_record(
+                    db, pending_record, error_message=repr(sync_error)
+                )
                 state = "retry"
         except Exception:  # pylint: disable=W0703
             self.logger.exception("Exception occurred when processing acoustic record.")
             state = "exception"
+            # Crash loudly, and alert operators since this isn't related to Acoustic.
+            raise
         return state
 
     def sync_records(self, db, end_time=None) -> Dict[str, Union[int, str]]:
