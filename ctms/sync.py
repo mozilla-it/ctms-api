@@ -74,7 +74,16 @@ class CTMSToAcousticSync:
                     )
                     is_success = True
                 except AcousticUploadError as exc:
-                    self.logger.exception(f"Could not upload contact: {repr(exc)}")
+                    email_domain = (
+                        contact.email.primary_email.split("@")[1]
+                        if "@" in contact.email.primary_email
+                        else "unknown"
+                    )
+                    self.logger.exception(
+                        f"Could not upload contact: {repr(exc)}",
+                        email_id=contact.email.email_id,
+                        primary_email_domain=email_domain,
+                    )
             else:
                 self.logger.debug(
                     "Acoustic is not currently enabled. Records will be classified as successful and "

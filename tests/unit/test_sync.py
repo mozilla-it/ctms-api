@@ -110,6 +110,31 @@ def test_sync_acoustic_record_retry_path(
     )
 
 
+def test_email_domain_is_logged_when_address_is_invalid(
+    dbsession, sync_obj, maximal_contact
+):
+    sync_obj.ctms_to_acoustic = MagicMock(
+        **{
+            "attempt_to_upload_ctms_contact.side_effect": AcousticUploadError(
+                "Email Address Is Invalid"
+            )
+        }
+    )
+    _setup_pending_record(dbsession, email_id=maximal_contact.email.email_id)
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+
+    with capture_logs() as caplog:
+        sync_obj.sync_records(dbsession, end_time=end_time)
+
+    assert len(caplog) == 1
+    assert (
+        caplog[0]["event"]
+        == "Could not upload contact: AcousticUploadError('Email Address Is Invalid')"
+    )
+    assert caplog[0]["email_id"] == maximal_contact.email.email_id
+    assert caplog[0]["primary_email_domain"] == "example.com"
+
+
 def test_sync_acoustic_record_delete_path(
     dbsession,
     sync_obj,
