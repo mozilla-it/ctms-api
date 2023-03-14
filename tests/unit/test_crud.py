@@ -5,10 +5,12 @@ from typing import List
 from uuid import uuid4
 
 import pytest
+import sqlalchemy
 from sqlalchemy.orm import Session
 
 from ctms.crud import (
     create_acoustic_field,
+    create_acoustic_newsletters_mapping,
     create_amo,
     create_email,
     create_fxa,
@@ -21,9 +23,11 @@ from ctms.crud import (
     create_stripe_subscription,
     create_stripe_subscription_item,
     delete_acoustic_field,
+    delete_acoustic_newsletters_mapping,
     delete_acoustic_record,
     get_acoustic_record_as_contact,
     get_all_acoustic_fields,
+    get_all_acoustic_newsletters_mapping,
     get_all_acoustic_records_before,
     get_bulk_contacts,
     get_contact_by_email_id,
@@ -37,7 +41,12 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
-from ctms.models import AcousticField, Email, PendingAcousticRecord
+from ctms.models import (
+    AcousticField,
+    AcousticNewsletterMapping,
+    Email,
+    PendingAcousticRecord,
+)
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -1076,3 +1085,44 @@ def test_get_all_acoustic_fields_filter_by_tablename(dbsession):
     num_fields = dbsession.query(AcousticField).count()
     num_main_fields = len(get_all_acoustic_fields(dbsession, tablename="main"))
     assert num_fields > num_main_fields
+
+
+def test_create_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
+    new_mapping = create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
+    assert (new_mapping.source, new_mapping.destination) == ("test", "sub_test")
+    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
+    assert all_mappings_count > len(acoustic_newsletters_mapping)
+
+
+def test_create_acoustic_newsletters_mapping_duplicate_mapping(dbsession):
+    create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
+    with pytest.raises(sqlalchemy.exc.IntegrityError):
+        create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
+
+
+def test_create_acoustic_newsletters_mapping_source_to_many_dest(dbsession):
+    create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
+    create_acoustic_newsletters_mapping(dbsession, "test2", "sub_test")
+
+
+def test_delete_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
+    dbsession.add(AcousticNewsletterMapping(source="test", destination="sub_test"))
+    dbsession.commit()
+
+    deleted_mapping = delete_acoustic_newsletters_mapping(dbsession, "test")
+
+    assert (deleted_mapping.source, deleted_mapping.destination) == ("test", "sub_test")
+    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
+    assert all_mappings_count == len(acoustic_newsletters_mapping)
+
+
+def test_delete_acoustic_newsletters_mapping_no_mapping(
+    dbsession, acoustic_newsletters_mapping
+):
+    deleted_mapping = delete_acoustic_newsletters_mapping(
+        dbsession, "no_mapping_for_this_source"
+    )
+
+    assert deleted_mapping is None
+    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
+    assert all_mappings_count == len(acoustic_newsletters_mapping)
