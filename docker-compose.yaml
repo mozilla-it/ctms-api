@@ -13,6 +13,7 @@ services:
     init: true
     environment:
       CTMS_DB_URL: postgresql://postgres@postgres/postgres
+      CTMS_SECRET_KEY: some-secret  # used by integration tests.
     env_file: .env
     depends_on:
       - postgres
