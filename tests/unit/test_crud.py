@@ -1105,9 +1105,7 @@ def test_create_acoustic_newsletters_mapping_source_to_many_dest(dbsession):
 
 
 def test_delete_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
-    mappings = [
-        (source, dest) for (source, dest) in acoustic_newsletters_mapping.items()
-    ]
+    mappings = list(acoustic_newsletters_mapping.items())
     (sample_source, sample_destination) = mappings[0]
 
     deleted_mapping = delete_acoustic_newsletters_mapping(dbsession, sample_source)
