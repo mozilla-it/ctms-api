@@ -1,8 +1,8 @@
 """Add delete cascade to Email model
 
 Revision ID: c8ede88755f3
-Revises: 4f6c48142631
-Create Date: 2023-02-15 22:32:16.992629
+Revises: a016433d3e8b
+Create Date: 2023-03-15 22:32:16.992629
 
 """
 # pylint: disable=no-member invalid-name
@@ -15,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "c8ede88755f3"  # pragma: allowlist secret
-down_revision = "4f6c48142631"  # pragma: allowlist secret
+down_revision = "a016433d3e8b"  # pragma: allowlist secret
 branch_labels = None
 depends_on = None
 
