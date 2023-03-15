@@ -1105,14 +1105,19 @@ def test_create_acoustic_newsletters_mapping_source_to_many_dest(dbsession):
 
 
 def test_delete_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
-    dbsession.add(AcousticNewsletterMapping(source="test", destination="sub_test"))
-    dbsession.commit()
+    mappings = [
+        (source, dest) for (source, dest) in acoustic_newsletters_mapping.items()
+    ]
+    (sample_source, sample_destination) = mappings[0]
 
-    deleted_mapping = delete_acoustic_newsletters_mapping(dbsession, "test")
+    deleted_mapping = delete_acoustic_newsletters_mapping(dbsession, sample_source)
 
-    assert (deleted_mapping.source, deleted_mapping.destination) == ("test", "sub_test")
+    assert (deleted_mapping.source, deleted_mapping.destination) == (
+        sample_source,
+        sample_destination,
+    )
     all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count == len(acoustic_newsletters_mapping)
+    assert all_mappings_count < len(acoustic_newsletters_mapping)
 
 
 def test_delete_acoustic_newsletters_mapping_no_mapping(
