@@ -4,7 +4,7 @@ services:
     build:
       context: .
     image: web
-    volumes: 
+    volumes:
       - .:/app
     ports:
       - ${PORT:-8000}:${PORT:-8000}
@@ -38,4 +38,64 @@ services:
           condition: service_healthy
     ports:
       - 8080:8080
-
+  basket:
+    profiles: [integration-test]
+    image: mozmeao/basket
+    environment:
+      - DATABASE_URL=mysql://root@mysql/basket  # psycopg2 not installed
+      - CTMS_ENABLED=True
+      - CTMS_URL=http://web:8000
+      - CTMS_CLIENT_ID=id_integration-test
+      # See `ctms-db-init.sql`
+      - CTMS_CLIENT_SECRET=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - SECRET_KEY=sssssssshhhhhhhhhh
+      - REDIS_URL=redis://redis:6379
+      - CELERY_TASK_ALWAYS_EAGER=False
+      - CELERY_LOG_LEVEL=debug
+      - DJANGO_LOG_LEVEL=DEBUG
+      - OAUTHLIB_INSECURE_TRANSPORT=1
+      - URLWAIT_TIMEOUT=30
+    command:
+      ./bin/run-dev.sh
+    ports:
+      - 9000:8000
+    depends_on:
+      - mysql
+      - redis
+      - basket-worker
+  basket-worker:
+    profiles: [integration-test]
+    image: mozmeao/basket
+    environment:
+      - DATABASE_URL=mysql://root@mysql/basket  # psycopg2 not installed
+      - CTMS_ENABLED=True
+      - CTMS_URL=http://web:8000
+      - CTMS_CLIENT_ID=id_integration-test
+      # See `ctms-db-init.sql`
+      - CTMS_CLIENT_SECRET=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - SECRET_KEY=sssssssshhhhhhhhhh
+      - REDIS_URL=redis://redis:6379
+      - CELERY_TASK_ALWAYS_EAGER=False
+      - CELERY_LOG_LEVEL=debug
+      - DJANGO_LOG_LEVEL=DEBUG
+      - OAUTHLIB_INSECURE_TRANSPORT=1
+      - URLWAIT_TIMEOUT=30
+    command:
+      ./bin/run-worker.sh
+    depends_on:
+      - mysql
+      - redis
+      - web
+  mysql:
+    profiles: [integration-test]
+    image: mariadb
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=basket
+  redis:
+    profiles: [integration-test]
+    image: redis
