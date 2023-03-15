@@ -6,8 +6,10 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy
+from sqlalchemy.orm import Session
 
 from ctms.crud import (
+    create_acoustic_field,
     create_amo,
     create_email,
     create_fxa,
@@ -19,8 +21,10 @@ from ctms.crud import (
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
+    delete_acoustic_field,
     delete_acoustic_record,
     get_acoustic_record_as_contact,
+    get_all_acoustic_fields,
     get_all_acoustic_records_before,
     get_bulk_contacts,
     get_contact_by_email_id,
@@ -35,6 +39,7 @@ from ctms.crud import (
     schedule_acoustic_record,
 )
 from ctms.models import (
+    AcousticField,
     AmoAccount,
     Email,
     FirefoxAccount,
@@ -340,6 +345,19 @@ def test_schedule_then_get_acoustic_records_then_delete(
     )
     dbsession.flush()
     assert len(record_list) == 0
+
+
+def retry_acoustic_record_with_error(dbsession, example_contact):
+    pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
+    retry_acoustic_record(dbsession, pending, error_message="Boom!")
+    dbsession.flush()
+
+    assert (
+        "Boom"
+        in dbsession.query(PendingAcousticRecord)
+        .filter(PendingAcousticRecord.email_id == example_contact.email.email_id)
+        .last_error
+    )
 
 
 def test_get_acoustic_record_no_stripe_customer(dbsession, example_contact):
@@ -1064,3 +1082,55 @@ def test_get_contacts_from_waitlist(dbsession, waitlist_factory):
     contacts = get_contacts_from_waitlist(dbsession, existing_waitlist.name)
     assert len(contacts) == 1
     assert contacts[0].email.email_id == existing_waitlist.email.email_id
+
+
+def test_create_acoustic_field(dbsession: Session):
+    fields = dbsession.query(AcousticField).filter_by(tablename="main")
+    main_fields = {f.field for f in fields}
+    assert "sub_test_field" not in main_fields
+
+    create_acoustic_field(dbsession, "main", "sub_test_field")
+    dbsession.commit()
+
+    main_fields = {f.field for f in fields}
+    assert "sub_test_field" in main_fields
+
+
+def test_create_acoustic_field_same_pkey_does_not_raise(dbsession: Session):
+    # though there is a composite primary key on tablename + field, attempting
+    # to add the same tablename + field does not raise an exception
+    create_acoustic_field(dbsession, "main", "sub_test_field")
+    create_acoustic_field(dbsession, "main", "sub_test_field")
+
+
+def test_delete_acoustic_field(dbsession):
+    fields = dbsession.query(AcousticField)
+    assert ("main", "email") in [(f.tablename, f.field) for f in fields]
+
+    deleted = delete_acoustic_field(dbsession, "main", "email")
+
+    assert (deleted.tablename, deleted.field) == ("main", "email")
+    assert ("main", "email") not in [(f.tablename, f.field) for f in fields]
+
+
+def test_delete_acoustic_field_no_field_present(dbsession):
+    fields = dbsession.query(AcousticField)
+    assert ("foo", "bar") not in [(f.tablename, f.field) for f in fields]
+
+    deleted = delete_acoustic_field(dbsession, "foo", "bar")
+    assert deleted is None
+
+
+def test_get_all_acoustic_fields(dbsession):
+    assert (
+        len(get_all_acoustic_fields(dbsession))
+        == dbsession.query(AcousticField).count()
+    )
+
+
+def test_get_all_acoustic_fields_filter_by_tablename(dbsession):
+    dbsession.add(AcousticField(tablename="test", field="test"))
+    dbsession.flush()
+    num_fields = dbsession.query(AcousticField).count()
+    num_main_fields = len(get_all_acoustic_fields(dbsession, tablename="main"))
+    assert num_fields > num_main_fields

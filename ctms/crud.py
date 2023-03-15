@@ -7,7 +7,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, or_, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -376,6 +376,18 @@ def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
     )
 
 
+def reset_retry_acoustic_records(db: Session):
+    pending_records = (
+        db.query(PendingAcousticRecord).filter(PendingAcousticRecord.retry > 0).all()
+    )
+    count = len(pending_records)
+    db.execute(
+        update(PendingAcousticRecord),
+        [{"id": record.id, "retry": 0} for record in (pending_records)],
+    )
+    return count
+
+
 def schedule_acoustic_record(
     db: Session,
     email_id: UUID4,
@@ -387,10 +399,16 @@ def schedule_acoustic_record(
         metrics["pending_acoustic_sync"].inc()
 
 
-def retry_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
+def retry_acoustic_record(
+    db: Session,
+    pending_record: PendingAcousticRecord,
+    error_message: Optional[str] = None,
+) -> None:
     if pending_record.retry is None:
         pending_record.retry = 0
     pending_record.retry += 1
+    if error_message:
+        pending_record.last_error = error_message
     pending_record.update_timestamp = datetime.now(timezone.utc)
 
 
@@ -889,29 +907,26 @@ def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
     return products
 
 
-def get_all_acoustic_fields(dbsession, tablename=None):
+def get_all_acoustic_fields(dbsession: Session, tablename: Optional[str] = None):
     query = dbsession.query(AcousticField).order_by(
         asc(AcousticField.tablename), asc(AcousticField.field)
     )
     if tablename:
-        query = query.filter(AcousticField.tablename == tablename)
+        query = query.filter_by(tablename=tablename)
     return query.all()
 
 
-def create_acoustic_field(dbsession, tablename, field):
+def create_acoustic_field(dbsession: Session, tablename: str, field: str):
     row = AcousticField(tablename=tablename, field=field)
     dbsession.merge(row)
     dbsession.commit()
     return row
 
 
-def delete_acoustic_field(dbsession, tablename, field):
+def delete_acoustic_field(dbsession: Session, tablename: str, field: str):
     row = (
         dbsession.query(AcousticField)
-        .filter(
-            AcousticField.tablename == tablename,
-            AcousticField.field == field,
-        )
+        .filter_by(tablename=tablename, field=field)
         .one_or_none()
     )
     if row is None:

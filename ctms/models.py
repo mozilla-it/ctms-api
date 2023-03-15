@@ -292,6 +292,7 @@ class PendingAcousticRecord(Base):
         nullable=False,
     )
     retry = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, default="")
     create_timestamp = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

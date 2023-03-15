@@ -3,26 +3,28 @@
 
 import argparse
 import json
-import logging
 from typing import List
 
+import structlog
 from sqlalchemy.orm import Session
 
+from ctms.config import Settings
 from ctms.database import SessionLocal
 from ctms.ingest_stripe import (
     StripeIngestUnknownObjectError,
     StripeToAcousticParseError,
     add_stripe_object_to_acoustic_queue,
 )
+from ctms.log import configure_logging
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def main(db_session: Session, filenames: List[str]) -> None:
     """Load a Stripe object or list of objects from disk."""
 
     for filename in filenames:
-        logger.info("Reading data from %s...", filename)
+        logger.info("Reading data from file...", filename=filename)
         with open(filename, "r", encoding="utf8") as data_file:
             data = json.load(data_file)
 
@@ -40,9 +42,9 @@ def parse_stripe_object(db_session, obj):
     try:
         add_stripe_object_to_acoustic_queue(db_session, obj)
     except (StripeIngestUnknownObjectError, StripeToAcousticParseError):
-        logger.info("Skipping %s %s", obj["object"], obj["id"])
+        logger.info("Skipping object", object=obj["object"], id=obj["id"])
     else:
-        logger.info("Queued %s %s", obj["object"], obj["id"])
+        logger.info("Queued object", object=obj["object"], id=obj["id"])
         db_session.commit()
 
 
@@ -59,6 +61,7 @@ def get_parser():
 if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO)
+    config_settings = Settings()
+    configure_logging(logging_level=config_settings.logging_level.name)
     with SessionLocal() as session:
         main(session, args.filenames)

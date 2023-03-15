@@ -5,7 +5,9 @@ import json
 import logging
 from typing import List
 
-logger = logging.getLogger(__name__)
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 
 def allowlist_extraction(allowlist_file=None):
@@ -18,12 +20,14 @@ def allowlist_extraction(allowlist_file=None):
 
 
 def main(filenames: List[str], env="prod", allowlist_file=None) -> None:
-    logger.info("Running script with params: %s %s %s", filenames, allowlist_file, env)
+    logger.info(
+        "Running script", filenames=filenames, allowlist_file=allowlist_file, env=env
+    )
     allowlist = allowlist_extraction(allowlist_file)
 
     flattened_json = []
     for filename in filenames:
-        logger.info("Reading data from %s...", filename)
+        logger.info("Reading data...", filename=filename)
         with open(filename, "r", encoding="utf8") as data_file:
             data = json.load(data_file)
             customer_collection = data.get(f"fxa-auth-{env}-stripe-customers")
@@ -31,7 +35,7 @@ def main(filenames: List[str], env="prod", allowlist_file=None) -> None:
                 _object = customer.get("object")
                 cus_allowed = not allowlist or customer.get("id") in allowlist
                 if _object and cus_allowed:
-                    logger.info("Customer data allowed %s...", customer.get("id"))
+                    logger.info("Customer data allowed...", id=customer.get("id"))
                     flattened_json.append(customer)
                 subscription_collection = customer.get(
                     f"fxa-auth-{env}-stripe-subscriptions"
@@ -42,8 +46,8 @@ def main(filenames: List[str], env="prod", allowlist_file=None) -> None:
                         _object = subscription.get("object")
                         if _object and sub_allowed:
                             logger.info(
-                                "Subscription data allowed %s...",
-                                subscription.get("id"),
+                                "Subscription data allowed...",
+                                id=subscription.get("id"),
                             )
                             new_items = subscription["items"]["data"]
                             subscription["items"]["data"] = [new_items]
@@ -62,13 +66,13 @@ def main(filenames: List[str], env="prod", allowlist_file=None) -> None:
                                 new_items = [invoice["lines"]["data"]]
                                 invoice["lines"]["data"] = new_items
                                 logger.info(
-                                    "Invoice data allowed %s...", invoice.get("id")
+                                    "Invoice data allowed...", id=invoice.get("id")
                                 )
                                 flattened_json.append(invoice)
         new_filename = filename.replace(".json", "_ctms_parsable.json")
         with open(new_filename, "w", encoding="utf8") as new_data_file:
             json.dump(flattened_json, new_data_file, indent=4)
-            logger.info("Loading data into %s...", new_filename)
+            logger.info("Loading data into file...", filename=new_filename)
 
 
 def get_parser():
