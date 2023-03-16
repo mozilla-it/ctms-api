@@ -17,6 +17,11 @@ services:
     env_file: .env
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/0.0.0.0/8000"]
+      interval: 3s
+      timeout: 1s
+      retries: 10
   postgres:
     image: postgres:12
     ports:
@@ -49,9 +54,17 @@ services:
     ports:
       - 9000:8000
     depends_on:
-      - mysql
-      - redis
-      - basket-worker
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      basket-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/0.0.0.0/9000"]
+      interval: 3s
+      timeout: 1s
+      retries: 10
   basket-worker:
     profiles: [integration-test]
     image: mozmeao/basket
@@ -60,15 +73,34 @@ services:
     command:
       ./bin/run-worker.sh
     depends_on:
-      - mysql
-      - redis
-      - web
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: celery -b redis://redis:6379 -A basket.news inspect ping
+      interval: 3s
+      # This healthcheck takes forever to start/complete!?
+      timeout: 60s
+      retries: 10
   mysql:
     profiles: [integration-test]
     image: mariadb
     environment:
       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=basket
+    healthcheck:
+      test: mysql --user=root --password="" --execute "SHOW DATABASES;"
+      interval: 3s
+      timeout: 1s
+      retries: 5
   redis:
     profiles: [integration-test]
     image: redis
+    healthcheck:
+      test: redis-cli ping
+      interval: 3s
+      timeout: 1s
+      retries: 5
