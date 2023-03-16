@@ -13,7 +13,7 @@ services:
     init: true
     environment:
       CTMS_DB_URL: postgresql://postgres@postgres/postgres
-      CTMS_SECRET_KEY: some-secret  # used by integration tests.
+      CTMS_SECRET_KEY: some-secret  # used by integration tests  # pragma: allowlist secret
     env_file: .env
     depends_on:
       - postgres
@@ -48,7 +48,7 @@ services:
       - CTMS_URL=http://web:8000
       - CTMS_CLIENT_ID=id_integration-test
       # See `ctms-db-init.sql`
-      - CTMS_CLIENT_SECRET=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk
+      - CTMS_CLIENT_SECRET=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk  # pragma: allowlist secret
       - DEBUG=True
       - ALLOWED_HOSTS=*
       - SECRET_KEY=sssssssshhhhhhhhhh
@@ -75,7 +75,7 @@ services:
       - CTMS_URL=http://web:8000
       - CTMS_CLIENT_ID=id_integration-test
       # See `ctms-db-init.sql`
-      - CTMS_CLIENT_SECRET=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk
+      - CTMS_CLIENT_SECRET=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk  # pragma: allowlist secret
       - DEBUG=True
       - ALLOWED_HOSTS=*
       - SECRET_KEY=sssssssshhhhhhhhhh

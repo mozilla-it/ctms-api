@@ -1,6 +1,6 @@
 import os
-from uuid import uuid4
 import time
+from uuid import uuid4
 
 import pytest
 import requests
@@ -12,10 +12,13 @@ class Settings(BaseSettings):
     ctms_url: str = "http://127.0.0.1:8000"
     # See `ctms-db-init.sql`
     ctms_client_id: str = "id_integration-test"
-    ctms_secret: str = "secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk"
+    ctms_secret: str = (
+        "secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk"  # pragma: allowlist secret
+    )
 
 
 settings = Settings()
+
 
 @pytest.fixture
 def ctms_headers():
@@ -28,7 +31,7 @@ def ctms_headers():
     resp = requests.post(
         f"{settings.ctms_url}/token",
         files={
-            'grant_type': (None, 'client_credentials'),
+            "grant_type": (None, "client_credentials"),
         },
         auth=(settings.ctms_client_id, settings.ctms_secret),
     )

@@ -10,9 +10,9 @@ INSERT INTO api_client (
     'master@local.host', -- email
     true, -- enabled
     -- client_id=id_integration-test
-    -- secret=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk
+    -- secret=secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk  pragma: allowlist secret
     -- To generate it, we used:
-    --   $ CTMS_DB_URL="postgresql://ctmsuser:ctmsuser@localhost/ctms" CTMS_SECRET_KEY="some-secret" poetry run ctms/bin/client_credentials.py -e master@local.host integration-test
+    --   $ CTMS_DB_URL="postgresql://ctmsuser:ctmsuser@localhost/ctms" CTMS_SECRET_KEY="some-secret" poetry run ctms/bin/client_credentials.py -e master@local.host integration-test  # pragma: allowlist secret
     -- Use the same secret key when running CTMS, or integration tests authentication won't work.
     '$argon2id$v=19$m=65536,t=3,p=4$onSu9d57T+kdg5CyVgoBAA$ZDXuQvC5siA7XEaT+2I+FKprSb6tUL0mWP6qYGdotOQ', -- hashed_secret
     '2023-03-15 16:52:38.542769+01'::timestamp, -- create_timestamp
