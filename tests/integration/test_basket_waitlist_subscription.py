@@ -6,15 +6,18 @@ import pytest
 import requests
 from pydantic import BaseSettings
 
+TEST_FOLDER = os.path.dirname(os.path.realpath(__file__))
+
 
 class Settings(BaseSettings):
-    basket_url: str = "http://127.0.0.1:9000"
-    ctms_url: str = "http://127.0.0.1:8000"
-    # See `ctms-db-init.sql`
+    basket_server_url: str = "http://127.0.0.1:9000"
+    ctms_server_url: str = "http://127.0.0.1:8000"
+    # We initialize CTMS api client id/secret in `ctms-db-init.sql`
     ctms_client_id: str = "id_integration-test"
-    ctms_secret: str = (
-        "secret_xPS8MJSswx1IYOniwXZUV3vNQ5YnYJz5H1UkOSLKqrk"  # pragma: allowlist secret
-    )
+    ctms_client_secret: str
+
+    class Config:
+        env_file = os.path.join(TEST_FOLDER, "basket.env")
 
 
 settings = Settings()
@@ -29,11 +32,11 @@ def ctms_headers():
     TODO: use context manager with a requests session
     """
     resp = requests.post(
-        f"{settings.ctms_url}/token",
+        f"{settings.ctms_server_url}/token",
         files={
             "grant_type": (None, "client_credentials"),
         },
-        auth=(settings.ctms_client_id, settings.ctms_secret),
+        auth=(settings.ctms_client_id, settings.ctms_client_secret),
     )
     resp.raise_for_status()
     token = resp.json()
@@ -42,13 +45,26 @@ def ctms_headers():
     }
 
 
+@pytest.mark.parametrize(
+    "url",
+    (
+        f"{settings.basket_server_url}/readiness/",
+        f"{settings.basket_server_url}/healthz/",
+        f"{settings.ctms_server_url}/__heartbeat__",
+    ),
+)
+def test_connectivity(url):
+    resp = requests.get(url)
+    resp.raise_for_status()
+
+
 def test_integration(ctms_headers):
     # 1. Subscribe a certain email to a waitlist (eg. `vpn`)
     email = f"stage-test-{uuid4()}@restmail.net"
     waitlist = "guardian-vpn-waitlist"
 
     print(f"Subscribe {email} to {waitlist}", end="...")
-    subscribe_url = f"{settings.basket_url}/news/subscribe/"
+    subscribe_url = f"{settings.basket_server_url}/news/subscribe/"
     form_data = {
         "email": email,
         "newsletters": waitlist,
@@ -68,7 +84,7 @@ def test_integration(ctms_headers):
     # Wait for the worker to have processed the request.
     time.sleep(0.5)
     resp = requests.get(
-        f"{settings.ctms_url}/ctms",
+        f"{settings.ctms_server_url}/ctms",
         params={"primary_email": email},
         headers=ctms_headers,
     )
@@ -98,7 +114,7 @@ def test_integration(ctms_headers):
     # 4. Patch an attribute (eg. change country)
     print("Change country field", end="...")
     resp = requests.patch(
-        f"{settings.ctms_url}/ctms/{email_id}",
+        f"{settings.ctms_server_url}/ctms/{email_id}",
         headers=ctms_headers,
         json={
             "vpn_waitlist": {"geo": "fr", "platform": "linux"},
@@ -107,7 +123,7 @@ def test_integration(ctms_headers):
     resp.raise_for_status()
     # Request the full contact details again.
     resp = requests.get(
-        f"{settings.ctms_url}/ctms",
+        f"{settings.ctms_server_url}/ctms",
         params={"primary_email": email},
         headers=ctms_headers,
     )
@@ -127,7 +143,7 @@ def test_integration(ctms_headers):
     # 5. Unsubscribe from Basket
     print("Unsubscribe from Basket", end="...")
     basket_token = contact_details["email"]["basket_token"]
-    unsubscribe_url = f"{settings.basket_url}/news/unsubscribe/{basket_token}/"
+    unsubscribe_url = f"{settings.basket_server_url}/news/unsubscribe/{basket_token}/"
     resp = requests.post(unsubscribe_url, data={"newsletters": waitlist})
     resp.raise_for_status()
 
@@ -135,7 +151,7 @@ def test_integration(ctms_headers):
     # Wait for the worker to have processed the request.
     time.sleep(0.5)
     resp = requests.get(
-        f"{settings.ctms_url}/ctms",
+        f"{settings.ctms_server_url}/ctms",
         params={"primary_email": email},
         headers=ctms_headers,
     )
