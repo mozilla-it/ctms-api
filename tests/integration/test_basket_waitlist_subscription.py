@@ -58,9 +58,9 @@ def test_connectivity(url):
     resp.raise_for_status()
 
 
-def test_integration(ctms_headers):
-    # 1. Subscribe a certain email to a waitlist (eg. `vpn`)
-    email = f"stage-test-{uuid4()}@restmail.net"
+def test_vpn_waitlist(ctms_headers):
+    # 1. Subscribe a certain email to the `vpn` waitlist
+    email = f"integration-test-{uuid4()}@restmail.net"
     waitlist = "guardian-vpn-waitlist"
 
     print(f"Subscribe {email} to {waitlist}", end="...")
@@ -73,7 +73,7 @@ def test_integration(ctms_headers):
         "format": "html",
         "country": "us",
         "lang": "en",
-        "source_url": "https://relay.firefox.com/vpn-relay/waitlist/",
+        "source_url": "https://www.mozilla.org/es-ES/products/vpn/invite/",
     }
     resp = requests.post(subscribe_url, data=form_data)
     resp.raise_for_status()
@@ -82,23 +82,24 @@ def test_integration(ctms_headers):
 
     # 2. Basket should have set the `vpn_waitlist` field/data.
     # Wait for the worker to have processed the request.
-    time.sleep(0.5)
+    time.sleep(1)
+    print(f"Check CTMS for {email}", end="...")
     resp = requests.get(
         f"{settings.ctms_server_url}/ctms",
         params={"primary_email": email},
         headers=ctms_headers,
     )
     resp.raise_for_status()
+    print("OK")
     results = resp.json()
     assert len(results) == 1, "Contact was saved in CTMS"
     contact_details = results[0]
-    email_id = contact_details["email"]["email_id"]
 
     # 3. CTMS should show both formats (legacy `vpn_waitlist` field, and entry in `waitlists` list)
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
-            "source": None,  # not yet supported in basket
+            "source": None,
             "fields": {
                 "geo": "us",
                 "platform": "ios,android",
@@ -113,6 +114,7 @@ def test_integration(ctms_headers):
 
     # 4. Patch an attribute (eg. change country)
     print("Change country field", end="...")
+    email_id = contact_details["email"]["email_id"]
     resp = requests.patch(
         f"{settings.ctms_server_url}/ctms/{email_id}",
         headers=ctms_headers,
@@ -149,7 +151,7 @@ def test_integration(ctms_headers):
 
     # Request the full contact details again.
     # Wait for the worker to have processed the request.
-    time.sleep(0.5)
+    time.sleep(1)
     resp = requests.get(
         f"{settings.ctms_server_url}/ctms",
         params={"primary_email": email},
@@ -168,9 +170,135 @@ def test_integration(ctms_headers):
     }
     print("OK")
 
-    # TODO: check (or implement) these behaviours with legacy format:
-    # - unsubscribe from "guardian-vpn-waitlist" newsletter also unenrolls from "vpn" waitlist
-    # - unsubscribe from "relay*" newsletters un-enrolls if there is no other relay* subscribed
-    #
-    # The new format once https://github.com/mozmeao/basket/pull/962 is merged should :) manage
-    # these as expected.
+
+def test_relay_waitlists(ctms_headers):
+    email = f"stage-test-{uuid4()}@restmail.net"
+    waitlist = "relay-waitlist"
+
+    print(f"Subscribe {email} to {waitlist}", end="...")
+    subscribe_url = f"{settings.basket_server_url}/news/subscribe/"
+    form_data = {
+        "email": email,
+        "newsletters": waitlist,
+        "relay_country": "es",
+        "format": "html",
+        "country": "us",
+        "lang": "en",
+        "source_url": "https://relay.firefox.com/",
+    }
+    resp = requests.post(subscribe_url, data=form_data)
+    resp.raise_for_status()
+    assert resp.json()["status"] == "ok", resp.text
+    print("OK")
+
+    # 2. Basket should have set the `relay_waitlist` field/data.
+    # Wait for the worker to have processed the request.
+    time.sleep(1)
+    resp = requests.get(
+        f"{settings.ctms_server_url}/ctms",
+        params={"primary_email": email},
+        headers=ctms_headers,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    assert len(results) == 1, "Contact was saved in CTMS"
+    contact_details = results[0]
+
+    # 3. CTMS should show both formats (legacy `relay_waitlist` field, and entry in `waitlists` list)
+    assert contact_details["waitlists"] == [
+        {
+            "name": "relay",
+            "source": None,
+            "fields": {
+                "geo": "es",
+            },
+        }
+    ]
+
+    assert contact_details["relay_waitlist"] == {
+        "geo": "es",
+    }
+
+    # 4. Subscribe to another relay waitlist, from another country.
+    waitlist = "relay-vpn-bundle-waitlist"
+    print(f"Subscribe {email} to {waitlist}", end="...")
+    subscribe_url = f"{settings.basket_server_url}/news/subscribe/"
+    form_data = {
+        "email": email,
+        "newsletters": waitlist,
+        "relay_country": "fr",
+        "format": "html",
+        "country": "us",
+        "lang": "en",
+        "source_url": "https://relay.firefox.com/vpn-relay/waitlist/",
+    }
+    resp = requests.post(subscribe_url, data=form_data)
+    resp.raise_for_status()
+    assert resp.json()["status"] == "ok", resp.text
+    print("OK")
+    time.sleep(1)
+    resp = requests.get(
+        f"{settings.ctms_server_url}/ctms",
+        params={"primary_email": email},
+        headers=ctms_headers,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    contact_details = results[0]
+    # CTMS has both waitlists.
+    assert len(contact_details["waitlists"]) == 2
+    # CTMS has both newsletters.
+    newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
+    assert "relay-waitlist" in newsletters_by_name
+    assert waitlist in newsletters_by_name
+    # Country is taken from one of them.
+    assert contact_details["relay_waitlist"] == {
+        "geo": "fr",
+    }
+
+    # 6. Unsubscribe from one Relay waitlist.
+    basket_token = contact_details["email"]["basket_token"]
+    unsubscribe_url = f"{settings.basket_server_url}/news/unsubscribe/{basket_token}/"
+    resp = requests.post(unsubscribe_url, data={"newsletters": waitlist})
+    resp.raise_for_status()
+    # Wait for the worker to have processed the request.
+    time.sleep(1)
+    resp = requests.get(
+        f"{settings.ctms_server_url}/ctms",
+        params={"primary_email": email},
+        headers=ctms_headers,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    contact_details = results[0]
+    # CTMS has now one waitlist.
+    assert len(contact_details["waitlists"]) == 1
+    newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
+    # And only one subscribed.
+    assert not newsletters_by_name[waitlist]["subscribed"]
+    assert newsletters_by_name["relay-waitlist"]["subscribed"]
+    # Country is taken from the remaining one.
+    assert contact_details["relay_waitlist"] == {
+        "geo": "es",
+    }
+
+    # 6. Unsubscribe from the last Relay waitlist.
+    basket_token = contact_details["email"]["basket_token"]
+    unsubscribe_url = f"{settings.basket_server_url}/news/unsubscribe/{basket_token}/"
+    resp = requests.post(unsubscribe_url, data={"newsletters": "relay-waitlist"})
+    resp.raise_for_status()
+    # Wait for the worker to have processed the request.
+    time.sleep(1)
+    resp = requests.get(
+        f"{settings.ctms_server_url}/ctms",
+        params={"primary_email": email},
+        headers=ctms_headers,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    contact_details = results[0]
+    # CTMS has no more waitlist or newsletter.
+    assert len(contact_details["waitlists"]) == 0
+    assert not any(nl["subscribed"] for nl in contact_details["newsletters"])
+    # Relay attribute is now empty
+    assert contact_details["relay_waitlist"] == {"geo": None}
