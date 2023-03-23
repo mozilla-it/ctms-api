@@ -43,8 +43,13 @@ from ctms.crud import (
 from ctms.models import (
     AcousticField,
     AcousticNewsletterMapping,
+    AmoAccount,
     Email,
+    FirefoxAccount,
+    MozillaFoundationContact,
+    Newsletter,
     PendingAcousticRecord,
+    Waitlist,
 )
 from ctms.schemas import (
     AddOnsInSchema,
@@ -1016,6 +1021,54 @@ def test_relations_on_stripe_subscription_items(
     assert subscription_item.subscription == subscription
     assert subscription_item.price == price
     assert subscription_item.get_email_id() == email_id
+
+
+@pytest.mark.parametrize(
+    "model",
+    (
+        PendingAcousticRecord,
+        AmoAccount,
+        MozillaFoundationContact,
+        Newsletter,
+        Waitlist,
+        FirefoxAccount,
+    ),
+)
+def test_delete_happens_in_cascade_in_db(dbsession, maximal_contact, model):
+    """Verifies that delete happens in cascade"""
+    email_id = maximal_contact.email.email_id
+    schedule_acoustic_record(dbsession, email_id)
+    dbsession.flush()
+
+    dbsession.query(Email).filter(Email.email_id == email_id).delete()
+
+    assert not dbsession.query(model).filter(model.email_id == email_id).all()
+
+
+@pytest.mark.parametrize(
+    "model",
+    (
+        PendingAcousticRecord,
+        AmoAccount,
+        MozillaFoundationContact,
+        Newsletter,
+        Waitlist,
+        FirefoxAccount,
+    ),
+)
+def test_cascade_is_reflected_in_orm(dbsession, maximal_contact, model):
+    email_id = maximal_contact.email.email_id
+    schedule_acoustic_record(dbsession, email_id)
+    dbsession.flush()
+
+    instance = dbsession.query(model).filter(model.email_id == email_id).first()
+    assert instance.email
+
+    dbsession.query(Email).filter(Email.email_id == email_id).delete()
+    dbsession.commit()
+
+    with pytest.raises(sqlalchemy.orm.exc.ObjectDeletedError):
+        assert instance.email
 
 
 def test_get_contacts_from_newsletter(dbsession, newsletter_factory):

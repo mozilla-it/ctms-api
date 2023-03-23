@@ -97,7 +97,11 @@ class Newsletter(Base):
     __tablename__ = "newsletters"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    email_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(Email.email_id, ondelete="CASCADE"),
+        nullable=False,
+    )
     name = Column(String(255), nullable=False)
     subscribed = Column(Boolean)
     format = Column(String(1))
@@ -121,7 +125,11 @@ class Waitlist(Base):
     __tablename__ = "waitlists"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    email_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(Email.email_id, ondelete="CASCADE"),
+        nullable=False,
+    )
     name = Column(String(255), nullable=False)
     source = Column(Text)
     fields = Column(JSON, nullable=False, server_default="'{}'::json")
@@ -144,7 +152,10 @@ class FirefoxAccount(Base):
     id = Column(Integer, primary_key=True)
     fxa_id = Column(String(255), unique=True)
     email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey(Email.email_id, ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     primary_email = Column(String(255), index=True)
     created_date = Column(String(50))
@@ -189,7 +200,10 @@ class AmoAccount(Base):
 
     id = Column(Integer, primary_key=True)
     email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey(Email.email_id, ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     add_on_ids = Column(String(500))
     display_name = Column(String(255))
@@ -256,7 +270,10 @@ class MozillaFoundationContact(Base):
 
     id = Column(Integer, primary_key=True)
     email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+        UUID(as_uuid=True),
+        ForeignKey(Email.email_id, ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
     mofo_email_id = Column(String(255), unique=True)
     mofo_contact_id = Column(String(255), index=True)
@@ -269,7 +286,11 @@ class PendingAcousticRecord(Base):
     __tablename__ = "pending_acoustic"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    email_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(Email.email_id, ondelete="CASCADE"),
+        nullable=False,
+    )
     retry = Column(Integer, nullable=False, default=0)
     last_error = Column(Text, default="")
     create_timestamp = Column(
