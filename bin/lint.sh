@@ -21,7 +21,7 @@ isort () {
   $POETRY_RUN isort ${check:+--check-only} "${BASE_DIR}"
 }
 pylint () {
-  $POETRY_RUN pylint "${BASE_DIR}/ctms" "${BASE_DIR}/tests/unit"
+  $POETRY_RUN pylint "${BASE_DIR}/ctms" "${BASE_DIR}/tests"
 }
 mypy () {
   $POETRY_RUN mypy "${BASE_DIR}/ctms"
