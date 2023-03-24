@@ -2,6 +2,7 @@ import os
 import time
 from uuid import uuid4
 
+import backoff
 import pytest
 import requests
 from pydantic import BaseSettings
@@ -21,6 +22,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+retry_until_pass = backoff.on_exception(backoff.expo, AssertionError)
 
 
 @pytest.fixture
@@ -104,8 +108,12 @@ def test_vpn_waitlist(ctms_headers):
 
     # 2. Basket should have set the `vpn_waitlist` field/data.
     # Wait for the worker to have processed the request.
-    time.sleep(2)
-    contact_details = ctms_fetch(email, ctms_headers)
+    @retry_until_pass
+    def fetch_created():
+        return ctms_fetch(email, ctms_headers)
+
+    contact_details = fetch_created()
+
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
@@ -147,15 +155,18 @@ def test_vpn_waitlist(ctms_headers):
 
     # Request the full contact details again.
     # Wait for the worker to have processed the request.
-    time.sleep(2)
-    contact_details = ctms_fetch(email, ctms_headers)
+    @retry_until_pass
+    def check_updated():
+        contact_details = ctms_fetch(email, ctms_headers)
 
-    newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
-    assert not newsletters_by_name[waitlist]["subscribed"]
-    assert contact_details["vpn_waitlist"] == {
-        "geo": None,
-        "platform": None,
-    }
+        newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
+        assert not newsletters_by_name[waitlist]["subscribed"]
+        assert contact_details["vpn_waitlist"] == {
+            "geo": None,
+            "platform": None,
+        }
+
+    check_updated()
 
 
 def test_relay_waitlists(ctms_headers):
@@ -169,8 +180,11 @@ def test_relay_waitlists(ctms_headers):
 
     # 2. Basket should have set the `relay_waitlist` field/data.
     # Wait for the worker to have processed the request.
-    time.sleep(2)
-    contact_details = ctms_fetch(email, ctms_headers)
+    @retry_until_pass
+    def fetch_created():
+        return ctms_fetch(email, ctms_headers)
+
+    contact_details = fetch_created()
 
     # 3. CTMS should show both formats (legacy `relay_waitlist` field, and entry in `waitlists` list)
     assert contact_details["waitlists"] == [
@@ -194,10 +208,15 @@ def test_relay_waitlists(ctms_headers):
         relay_country="fr",
         source_url="https://relay.firefox.com/vpn-relay/waitlist/",
     )
-    time.sleep(2)
-    contact_details = ctms_fetch(email, ctms_headers)
-    # CTMS has both waitlists.
-    assert len(contact_details["waitlists"]) == 2
+
+    @retry_until_pass
+    def check_subscribed():
+        details = ctms_fetch(email, ctms_headers)
+        # CTMS has both waitlists.
+        assert len(details["waitlists"]) == 2
+        return details
+
+    contact_details = check_subscribed()
     # CTMS has both newsletters.
     newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
     assert "relay-waitlist" in newsletters_by_name
@@ -210,13 +229,18 @@ def test_relay_waitlists(ctms_headers):
     # 5. Unsubscribe from one Relay waitlist.
     basket_token = contact_details["email"]["basket_token"]
     basket_unsubscribe(basket_token, waitlist)
+
     # Wait for the worker to have processed the request.
-    time.sleep(2)
-    contact_details = ctms_fetch(email, ctms_headers)
-    # CTMS has now one waitlist.
-    assert len(contact_details["waitlists"]) == 1
+    @retry_until_pass
+    def check_unsubscribed():
+        details = ctms_fetch(email, ctms_headers)
+        # CTMS has now one waitlist.
+        assert len(details["waitlists"]) == 1
+        return details
+
+    contact_details = check_unsubscribed()
+    # And only one newsletter subscribed.
     newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
-    # And only one subscribed.
     assert not newsletters_by_name[waitlist]["subscribed"]
     assert newsletters_by_name["relay-waitlist"]["subscribed"]
     # Country is taken from the remaining one.
@@ -226,11 +250,16 @@ def test_relay_waitlists(ctms_headers):
 
     # 6. Unsubscribe from the last Relay waitlist.
     basket_unsubscribe(basket_token, "relay-waitlist")
+
     # Wait for the worker to have processed the request.
-    time.sleep(2)
-    contact_details = ctms_fetch(email, ctms_headers)
-    # CTMS has no more waitlist or newsletter.
-    assert len(contact_details["waitlists"]) == 0
+    @retry_until_pass
+    def check_unsubscribed_last():
+        details = ctms_fetch(email, ctms_headers)
+        # CTMS has no more waitlist or newsletter.
+        assert len(details["waitlists"]) == 0
+        return details
+
+    contact_details = check_unsubscribed_last()
     assert not any(nl["subscribed"] for nl in contact_details["newsletters"])
     # Relay attribute is now empty
     assert contact_details["relay_waitlist"] == {"geo": None}
