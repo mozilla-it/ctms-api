@@ -87,7 +87,7 @@ endif
 
 .PHONY: integration-test
 integration-test: .env setup $(INSTALL_STAMP)
-	docker-compose up --wait basket
+	docker-compose up --wait basket basket-worker
 	bin/integration-test.sh
 	ifneq (1, ${MK_KEEP_DOCKER_UP})
 		# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
