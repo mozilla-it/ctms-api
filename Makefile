@@ -61,7 +61,7 @@ db-only: .env
 .PHONY: setup
 setup: .env
 	docker-compose stop postgres-admin
-	docker-compose up -d postgres
+	docker-compose up --wait -d postgres
 	docker-compose exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
 	docker-compose exec postgres dropdb postgres --user postgres
 	docker-compose exec postgres createdb postgres --user postgres
