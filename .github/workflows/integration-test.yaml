@@ -22,9 +22,6 @@ jobs:
         python-version: "3.11.1"
         cache: "poetry"
 
-    - name: Install dependencies
-      run: poetry install
-
     - name: Build containers
       run: make build
 

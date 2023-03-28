@@ -88,7 +88,7 @@ ifneq (1, ${MK_KEEP_DOCKER_UP})
 endif
 
 .PHONY: integration-test
-integration-test: .env setup $(INSTALL_STAMP)
+integration-test: .env setup
 	${DOCKER_COMPOSE} up --wait basket basket-worker
 	bin/integration-test.sh
 	ifneq (1, ${MK_KEEP_DOCKER_UP})
