@@ -2,6 +2,9 @@ name: Integration test
 
 on: pull_request
 
+env:
+  DOCKER_COMPOSE: docker compose
+
 jobs:
   run_test:
     timeout-minutes: 5
