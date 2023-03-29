@@ -18,7 +18,7 @@ services:
     depends_on:
       - postgres
     healthcheck:
-      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/0.0.0.0/8000"]
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/web/8000"]
       interval: 3s
       timeout: 1s
       retries: 10
@@ -61,7 +61,7 @@ services:
       basket-worker:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/0.0.0.0/9000"]
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/basket/8000"]
       interval: 3s
       timeout: 1s
       retries: 10
