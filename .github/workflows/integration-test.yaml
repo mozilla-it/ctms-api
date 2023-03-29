@@ -4,6 +4,7 @@ on: pull_request
 
 env:
   DOCKER_COMPOSE: docker compose
+  POETRY_VIRTUALENVS_IN_PROJECT: 1
 
 jobs:
   run_test:
