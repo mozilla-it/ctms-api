@@ -63,7 +63,7 @@ db-only: .env
 .PHONY: setup
 setup: .env
 	${DOCKER_COMPOSE} stop postgres-admin
-	${DOCKER_COMPOSE} up --wait -d postgres
+	${DOCKER_COMPOSE} up --wait postgres
 	${DOCKER_COMPOSE} exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
 	${DOCKER_COMPOSE} exec postgres dropdb postgres --user postgres
 	${DOCKER_COMPOSE} exec postgres createdb postgres --user postgres
@@ -89,7 +89,7 @@ endif
 
 .PHONY: integration-test
 integration-test: .env setup $(INSTALL_STAMP)
-	${DOCKER_COMPOSE} up --wait basket
+	${DOCKER_COMPOSE} up --profile integration-test --wait basket
 	bin/integration-test.sh
 ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly

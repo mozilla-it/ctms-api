@@ -27,7 +27,7 @@ settings = Settings()
 retry_until_pass = backoff.on_exception(backoff.expo, AssertionError)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def ctms_headers():
     """
     Trade the cliend id + secret for a bearer access token, and
@@ -81,7 +81,7 @@ def ctms_fetch(email, ctms_headers):
     )
     resp.raise_for_status()
     results = resp.json()
-    assert len(results) == 1, "Contact exists in CTMS"
+    assert len(results) == 1, f"Contact {email} does not exist in CTMS"
     contact_details = results[0]
     return contact_details
 
