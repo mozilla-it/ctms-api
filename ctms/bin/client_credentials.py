@@ -2,6 +2,7 @@
 """Generate OAuth2 client credentials."""
 
 import argparse
+import json
 import re
 from secrets import token_urlsafe
 
@@ -99,6 +100,7 @@ def main(db, settings, test_args=None):
     parser = argparse.ArgumentParser(description="Create or update client credentials.")
     parser.add_argument("name", help="short name of the client")
     parser.add_argument("-e", "--email", help="contact email for the client")
+    parser.add_argument("--save-file", help="output credentials into file in JSON format")
     parser.add_argument(
         "--enable", action="store_true", help="enable a disabled client"
     )
@@ -115,6 +117,7 @@ def main(db, settings, test_args=None):
     enable = args.enable
     disable = args.disable
     rotate = args.rotate_secret
+    save_file = args.save_file
 
     if not re.match(r"^[-_.a-zA-Z0-9]*$", name):
         print(
@@ -158,6 +161,13 @@ def main(db, settings, test_args=None):
                 sample_email=email,
                 enabled=enabled,
             )
+            if save_file:
+                with open(save_file, "w") as f:
+                    json.dump({
+                        "client_id": existing.client_id,
+                        "client_secret": new_secret,
+                    }, f)
+                print(f"Credentials saved to {save_file!r}.")
         else:
             print(f"Credentials for {name} are updated.")
     else:
@@ -171,6 +181,13 @@ def main(db, settings, test_args=None):
         print_new_credentials(
             client_id, client_secret, settings, sample_email=email, enabled=enabled
         )
+        if save_file:
+            with open(save_file, "w") as f:
+                json.dump({
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                }, f)
+            print(f"Credentials saved to {save_file!r}.")
     return 0
 
 
