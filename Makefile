@@ -9,6 +9,7 @@ CTMS_UID ?= 10001
 CTMS_GID ?= 10001
 
 VENV := $(shell echo $${VIRTUAL_ENV-.venv})
+DOCKER_COMPOSE := $(shell echo $${DOCKER_COMPOSE-"docker-compose"})
 INSTALL_STAMP = $(VENV)/.install.stamp
 
 .PHONY: help
@@ -17,14 +18,15 @@ help:
 	@echo ""
 	@echo "CTMS make rules:"
 	@echo ""
-	@echo "  build          - build docker containers"
-	@echo "  db-only        - run PostgreSQL server"
-	@echo "  lint           - lint check for code"
-	@echo "  format         - run formatters (black, isort), fix in place"
-	@echo "  setup          - (re)create the database"
-	@echo "  shell          - open a shell in the web container"
-	@echo "  start          - run the API service"
-	@echo "  test           - run test suite"
+	@echo "  build             - build docker containers"
+	@echo "  db-only           - run PostgreSQL server"
+	@echo "  lint              - lint check for code"
+	@echo "  format            - run formatters (black, isort), fix in place"
+	@echo "  setup             - (re)create the database"
+	@echo "  shell             - open a shell in the web container"
+	@echo "  start             - run the API service"
+	@echo "  test              - run test suite"
+	@echo "  integration-test  - run integration test suite"
 	@echo "  update-secrets - scan repository for secrets and update baseline file, if necessary"
 	@echo ""
 	@echo "  help    - see this text"
@@ -42,7 +44,8 @@ $(INSTALL_STAMP): poetry.lock
 
 .PHONY: build
 build: .env
-	docker-compose build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
+	${DOCKER_COMPOSE} --version
+	${DOCKER_COMPOSE} build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
 lint: $(INSTALL_STAMP)
@@ -55,33 +58,43 @@ format: $(INSTALL_STAMP)
 
 .PHONY: db-only
 db-only: .env
-	docker-compose up postgres-admin
+	${DOCKER_COMPOSE} up postgres-admin
 
 .PHONY: setup
 setup: .env
-	docker-compose stop postgres-admin
-	docker-compose up -d postgres
-	docker-compose exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
-	docker-compose exec postgres dropdb postgres --user postgres
-	docker-compose exec postgres createdb postgres --user postgres
-	docker-compose run --rm ${MK_WITH_SERVICE_PORTS} web alembic upgrade head
+	${DOCKER_COMPOSE} stop postgres-admin
+	${DOCKER_COMPOSE} up --wait postgres
+	${DOCKER_COMPOSE} exec postgres bash -c 'while !</dev/tcp/postgres/5432; do sleep 1; done'
+	${DOCKER_COMPOSE} exec postgres dropdb postgres --user postgres
+	${DOCKER_COMPOSE} exec postgres createdb postgres --user postgres
+	${DOCKER_COMPOSE} run --rm ${MK_WITH_SERVICE_PORTS} web alembic upgrade head
 
 .PHONY: shell
 shell: .env
-	docker-compose run ${MK_WITH_SERVICE_PORTS} --rm web bash
+	${DOCKER_COMPOSE} run ${MK_WITH_SERVICE_PORTS} --rm web bash
 
 .PHONY: start
 start: .env
-	docker-compose up
+	${DOCKER_COMPOSE} up
 
 .PHONY: test
 test: .env $(INSTALL_STAMP)
-	docker-compose up --wait postgres
+	${DOCKER_COMPOSE} up --wait postgres
 	bin/test.sh
-ifneq (1, ${MK_KEEP_DOCKER_UP})	
+ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
-	docker-compose down
+	${DOCKER_COMPOSE} down
+endif
+
+.PHONY: integration-test
+integration-test: .env setup $(INSTALL_STAMP)
+	${DOCKER_COMPOSE} --profile integration-test up --wait basket
+	bin/integration-test.sh
+ifneq (1, ${MK_KEEP_DOCKER_UP})
+	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
+	# rm all running containers
+	${DOCKER_COMPOSE} down --remove-orphans
 endif
 
 .PHONY: update-secrets

@@ -1,0 +1,33 @@
+name: Integration test
+
+on: pull_request
+
+env:
+  DOCKER_COMPOSE: docker compose
+  POETRY_VIRTUALENVS_IN_PROJECT: 1
+
+jobs:
+  run_test:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install poetry
+      run: pipx install poetry==1.3.2
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.11.1"
+        cache: "poetry"
+
+    - name: Build containers
+      run: make build
+
+    - name: Start containers
+      run: make setup
+
+    - name: Run tests
+      run: make integration-test
