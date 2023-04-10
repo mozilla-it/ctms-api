@@ -83,5 +83,6 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
 
 __all__ = (
     "NewsletterFactory",
+    "WaitlistFactory",
     "EmailFactory",
 )
