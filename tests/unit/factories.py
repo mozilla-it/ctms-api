@@ -55,8 +55,16 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
         if not create:
             return
         if extracted:
-            for _ in range(extracted):
-                NewsletterFactory(email=self, **kwargs)
+            if isinstance(extracted, list):
+                self.newsletters.extend(extracted)
+            elif isinstance(extracted, int):
+                for _ in range(extracted):
+                    NewsletterFactory(email=self, **kwargs)
+            else:
+                raise ValueError(
+                    "newsletters should be number of newsletters to be created (int) or list of Newsletter objects"
+                )
+
 
 
 __all__ = (
