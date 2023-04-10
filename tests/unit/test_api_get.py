@@ -1,5 +1,6 @@
 """Unit tests for GET /ctms/{email_id}"""
 from uuid import uuid4
+from fastapi.encoders import jsonable_encoder
 
 from structlog.testing import capture_logs
 

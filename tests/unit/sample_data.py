@@ -15,6 +15,12 @@ from ctms.schemas import (
     WaitlistSchema,
 )
 
+MAXIMAL_CONTACT_EMAIL_ID = "67e52c77-950f-4f28-accb-bb3ea1a2c51a"
+MAXIMAL_MOFO_EMAIL_ID = "195207d2-63f2-4c9f-b149-80e9c408477a"
+MAXIMAL_FXA_ID = "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"
+MAXIMAL_MOFO_CONTACT_ID = "5e499cc0-eeb5-4f0e-aae6-a101721874b8"
+MAXIMAL_BASKET_TOKEN = "d9ba6182-f5dd-4728-a477-2cc11bf62b69"
+
 # A contact that only sets primary_email
 SAMPLE_MOST_MINIMAL = ContactSchema(
     email=EmailSchema(
@@ -60,9 +66,9 @@ SAMPLE_MAXIMAL = ContactSchema(
         update_timestamp="2020-01-27T14:25:43+00:00",
     ),
     email=EmailSchema(
-        email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
+        email_id=UUID(MAXIMAL_CONTACT_EMAIL_ID),
         primary_email="mozilla-fan@example.com",
-        basket_token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        basket_token=UUID(MAXIMAL_BASKET_TOKEN),
         first_name="Fan",
         last_name="of Mozilla",
         mailing_country="ca",
@@ -75,14 +81,14 @@ SAMPLE_MAXIMAL = ContactSchema(
     ),
     fxa=FirefoxAccountsSchema(
         created_date="2019-05-22T08:29:31.906094+00:00",
-        fxa_id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+        fxa_id=MAXIMAL_FXA_ID,
         lang="fr,fr-CA",
         primary_email="fxa-firefox-fan@example.com",
         first_service="monitor",
     ),
     mofo=MozillaFoundationSchema(
-        mofo_email_id="195207d2-63f2-4c9f-b149-80e9c408477a",
-        mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+        mofo_email_id=MAXIMAL_MOFO_EMAIL_ID,
+        mofo_contact_id=MAXIMAL_MOFO_CONTACT_ID,
         mofo_relevant=True,
     ),
     newsletters=[

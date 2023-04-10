@@ -41,12 +41,18 @@ from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
+    CTMSSingleResponse,
     StripeCustomerCreateSchema,
     StripePriceCreateSchema,
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
 from tests.unit.sample_data import (
+    MAXIMAL_BASKET_TOKEN,
+    MAXIMAL_CONTACT_EMAIL_ID,
+    MAXIMAL_FXA_ID,
+    MAXIMAL_MOFO_CONTACT_ID,
+    MAXIMAL_MOFO_EMAIL_ID,
     SAMPLE_CONTACTS,
     SAMPLE_MOST_MINIMAL,
     SAMPLE_STRIPE_DATA,
@@ -177,12 +183,152 @@ register(factories.WaitlistFactory)
 
 
 @pytest.fixture
-def maximal_contact(dbsession):
-    email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
-    contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact, get_metrics())
+def _maximal_contact_email(
+    dbsession, email_factory, waitlist_factory, newsletter_factory
+):
+    email = email_factory(
+        basket_token=MAXIMAL_BASKET_TOKEN,
+        create_timestamp="2010-01-01T08:04:00+00:00",
+        double_opt_in=True,
+        email_format="H",
+        email_id=MAXIMAL_CONTACT_EMAIL_ID,
+        email_lang="fr",
+        first_name="Fan",
+        has_opted_out_of_email=False,
+        last_name="of Mozilla",
+        mailing_country="ca",
+        primary_email="mozilla-fan@example.com",
+        sfdc_id="001A000001aMozFan",
+        unsubscribe_reason="done with this mailing list",
+        update_timestamp="2020-01-28T14:50:00+00:00",
+        amo=True,
+        amo__add_on_ids="fanfox,foxfan",
+        amo__create_timestamp="2017-05-12T15:16:00+00:00",
+        amo__display_name="#1 Mozilla Fan",
+        amo__email_opt_in=True,
+        amo__language="fr,en",
+        amo__last_login="2020-01-27",
+        amo__location="The Inter",
+        amo__profile_url="firefox/user/14508209",
+        amo__update_timestamp="2020-01-27T14:25:43+00:00",
+        amo__user=True,
+        amo__user_id="123",
+        amo__username="Mozilla1Fan",
+        fxa=True,
+        fxa__created_date="2019-05-22T08:29:31.906094+00:00",
+        fxa__account_deleted=False,
+        fxa__first_service="monitor",
+        fxa__fxa_id=MAXIMAL_FXA_ID,
+        fxa__lang="fr,fr-CA",
+        fxa__primary_email="fxa-firefox-fan@example.com",
+        mofo=True,
+        mofo__mofo_contact_id=MAXIMAL_MOFO_CONTACT_ID,
+        mofo__mofo_email_id=MAXIMAL_MOFO_EMAIL_ID,
+        mofo__mofo_relevant=True,
+        newsletters=[
+            newsletter_factory.build(
+                format="H",
+                lang="en",
+                name="ambassadors",
+                source="https://www.mozilla.org/en-US/contribute/studentambassadors/",
+                subscribed=False,
+                unsub_reason="Graduated, don't have time for FSA",
+            ),
+            newsletter_factory.build(
+                format="T",
+                lang="fr",
+                name="common-voice",
+                source="https://commonvoice.mozilla.org/fr",
+                subscribed=True,
+                unsub_reason=None,
+            ),
+            newsletter_factory.build(
+                format="H",
+                lang="fr",
+                name="firefox-accounts-journey",
+                source="https://www.mozilla.org/fr/firefox/accounts/",
+                subscribed=False,
+                unsub_reason="done with this mailing list",
+            ),
+            newsletter_factory.build(
+                format="H",
+                lang="en",
+                name="firefox-os",
+                source=None,
+                subscribed=True,
+                unsub_reason=None,
+            ),
+            newsletter_factory.build(
+                format="H",
+                lang="fr",
+                name="hubs",
+                source=None,
+                subscribed=True,
+                unsub_reason=None,
+            ),
+            newsletter_factory.build(
+                format="H",
+                lang="en",
+                name="mozilla-festival",
+                source=None,
+                subscribed=True,
+                unsub_reason=None,
+            ),
+            newsletter_factory.build(
+                format="H",
+                lang="fr",
+                name="mozilla-foundation",
+                source=None,
+                subscribed=True,
+                unsub_reason=None,
+            ),
+        ],
+        waitlists=[
+            waitlist_factory.build(name="relay", fields={"geo": "cn"}, source=None),
+            waitlist_factory.build(
+                name="vpn",
+                fields={"geo": "ca", "platform": "windows,android"},
+                source=None,
+            ),
+            waitlist_factory.build(
+                name="a-software",
+                fields={"geo": "fr"},
+                source="https://a-software.mozilla.org/",
+            ),
+            waitlist_factory.build(
+                fields={"geo": "fr", "platform": "win64"},
+                name="super-product",
+                source="https://super-product.mozilla.org/",
+            ),
+        ],
+    )
+
     dbsession.commit()
-    return contact
+    return email
+
+
+@pytest.fixture
+def maximal_contact(_maximal_contact_email):
+    return ContactSchema(
+        amo=_maximal_contact_email.amo,
+        email=_maximal_contact_email,
+        fxa=_maximal_contact_email.fxa,
+        mofo=_maximal_contact_email.mofo,
+        newsletters=_maximal_contact_email.newsletters,
+        waitlists=_maximal_contact_email.waitlists,
+    )
+
+
+@pytest.fixture
+def maximal_contact_single_response(_maximal_contact_email):
+    return CTMSSingleResponse(
+        amo=_maximal_contact_email.amo,
+        email=_maximal_contact_email,
+        fxa=_maximal_contact_email.fxa,
+        mofo=_maximal_contact_email.mofo,
+        newsletters=_maximal_contact_email.newsletters,
+        waitlists=_maximal_contact_email.waitlists,
+    )
 
 
 @pytest.fixture
