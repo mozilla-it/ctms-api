@@ -65,6 +65,20 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
                     "newsletters should be number of newsletters to be created (int) or list of Newsletter objects"
                 )
 
+    @factory.post_generation
+    def waitlists(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            if isinstance(extracted, list):
+                self.waitlists.extend(extracted)
+            elif isinstance(extracted, int):
+                for _ in range(extracted):
+                    WaitlistFactory(email=self, **kwargs)
+            else:
+                raise ValueError(
+                    "waitlists should be number of waitlists to be created (int) or list of Waitlist objects"
+                )
 
 
 __all__ = (
