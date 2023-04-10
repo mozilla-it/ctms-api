@@ -123,6 +123,9 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
             return
         if extracted:
             if isinstance(extracted, list):
+                # Pylint gets confused here because at this point, `self` is
+                # an Email object, not the factory
+                # pylint: disable-next=no-member
                 self.newsletters.extend(extracted)
             elif isinstance(extracted, int):
                 for _ in range(extracted):
@@ -138,6 +141,9 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
             return
         if extracted:
             if isinstance(extracted, list):
+                # Pylint gets confused here because at this point, `self` is
+                # an Email object, not the factory
+                # pylint: disable-next=no-member
                 self.waitlists.extend(extracted)
             elif isinstance(extracted, int):
                 for _ in range(extracted):
