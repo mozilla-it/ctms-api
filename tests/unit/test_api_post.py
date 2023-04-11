@@ -114,7 +114,7 @@ def test_create_basic_with_email_collision(post_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_create_without_trace(client, dbsession):
+def test_create_without_trace(client):
     """Most contacts are not traced."""
     data = {"email": {"primary_email": "test+no-trace@example.com"}}
     with capture_logs() as cap_logs:
@@ -124,7 +124,7 @@ def test_create_without_trace(client, dbsession):
     assert "trace" not in cap_logs[0]
 
 
-def test_create_with_non_json_is_error(client, dbsession):
+def test_create_with_non_json_is_error(client):
     """When non-JSON is posted /ctms, a 422 is returned"""
     data = "this is not JSON"
     with capture_logs() as cap_logs:
@@ -137,7 +137,7 @@ def test_create_with_non_json_is_error(client, dbsession):
     assert "trace" not in cap_logs[0]
 
 
-def test_create_with_trace(client, dbsession, status_code=201):
+def test_create_with_trace(client, status_code=201):
     """A contact is traced by email."""
     data = {
         "email": {
@@ -153,7 +153,7 @@ def test_create_with_trace(client, dbsession, status_code=201):
     assert cap_logs[0]["trace_json"] == data
 
 
-def test_recreate_with_trace(client, dbsession):
+def test_recreate_with_trace(client):
     """A idempotent re-create is traced by email."""
-    test_create_with_trace(client, dbsession)
-    test_create_with_trace(client, dbsession, 200)
+    test_create_with_trace(client)
+    test_create_with_trace(client, 200)
