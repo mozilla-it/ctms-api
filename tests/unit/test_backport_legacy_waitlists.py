@@ -16,13 +16,12 @@ from ctms.crud import (
 )
 from ctms.schemas import ContactPatchSchema, NewsletterInSchema, WaitlistInSchema
 from tests.unit.conftest import APP_FOLDER
-from tests.unit.sample_data import SAMPLE_MINIMAL
 
 
 @pytest.fixture
-def minimal_contact_with_relay(dbsession):
-    email_id = SAMPLE_MINIMAL.email.email_id
-    contact = SAMPLE_MINIMAL.copy(
+def minimal_contact_with_relay(dbsession, minimal_contact_data):
+    email_id = minimal_contact_data.email.email_id
+    contact = minimal_contact_data.copy(
         update={
             "waitlists": [WaitlistInSchema(name="relay", fields={"geo": "es"})],
         }
@@ -33,9 +32,9 @@ def minimal_contact_with_relay(dbsession):
 
 
 @pytest.fixture
-def minimal_contact_with_relay_phone(dbsession):
-    email_id = SAMPLE_MINIMAL.email.email_id
-    contact = SAMPLE_MINIMAL.copy(
+def minimal_contact_with_relay_phone(dbsession, minimal_contact_data):
+    email_id = minimal_contact_data.email.email_id
+    contact = minimal_contact_data.copy(
         update={
             "waitlists": [
                 WaitlistInSchema(name="relay-vpn", fields={"geo": "es"}),
@@ -48,9 +47,11 @@ def minimal_contact_with_relay_phone(dbsession):
     return contact
 
 
-def test_relay_waitlist_created_on_newsletter_subscribe(dbsession):
-    email_id = SAMPLE_MINIMAL.email.email_id
-    contact = SAMPLE_MINIMAL.copy(
+def test_relay_waitlist_created_on_newsletter_subscribe(
+    dbsession, minimal_contact_data
+):
+    email_id = minimal_contact_data.email.email_id
+    contact = minimal_contact_data.copy(
         update={
             "relay_waitlist": {"geo": "fr"},
             "newsletters": [
@@ -70,11 +71,11 @@ def test_relay_waitlist_created_on_newsletter_subscribe(dbsession):
 
 
 def test_relay_waitlist_created_on_newsletter_updated(
-    dbsession, minimal_contact_with_relay
+    dbsession, minimal_contact_data, minimal_contact_with_relay
 ):
     email_id = minimal_contact_with_relay.email.email_id
 
-    contact = SAMPLE_MINIMAL.copy(
+    contact = minimal_contact_data.copy(
         update={
             "relay_waitlist": {"geo": "es"},
             "newsletters": [
