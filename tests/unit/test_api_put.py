@@ -5,8 +5,12 @@ from uuid import UUID, uuid4
 import pytest
 from structlog.testing import capture_logs
 
-from tests.unit.sample_data import SAMPLE_CONTACTS
+from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 from tests.unit.test_api import _compare_written_contacts
+
+POST_TEST_CASES = pytest.mark.parametrize(
+    "put_contact", SAMPLE_CONTACT_PARAMS, indirect=True
+)
 
 
 def test_create_or_update_basic_id_is_different(client, minimal_contact):
@@ -19,7 +23,7 @@ def test_create_or_update_basic_id_is_different(client, minimal_contact):
     assert resp.status_code == 422, resp.text
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_basic_id_is_none(put_contact):
     """This should fail since we require an email_id to PUT"""
 
@@ -35,14 +39,14 @@ def test_create_or_update_basic_id_is_none(put_contact):
     )
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_basic_empty_db(put_contact):
     """Most straightforward contact creation succeeds when there is no collision"""
     saved_contacts, sample, email_id = put_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_identical(put_contact):
     """Writing the same thing twice works both times"""
     saved_contacts, sample, email_id = put_contact()
@@ -51,7 +55,7 @@ def test_create_or_update_identical(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_change_primary_email(put_contact):
     """We can update a primary_email given a ctms ID"""
     saved_contacts, sample, email_id = put_contact()
@@ -67,7 +71,7 @@ def test_create_or_update_change_primary_email(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_change_basket_token(put_contact):
     """We can update a basket_token given a ctms ID"""
     saved_contacts, sample, email_id = put_contact()
@@ -81,7 +85,7 @@ def test_create_or_update_change_basket_token(put_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_with_basket_collision(put_contact):
     """Updating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
@@ -99,7 +103,7 @@ def test_create_or_update_with_basket_collision(put_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-@pytest.mark.parametrize("put_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_or_update_with_email_collision(put_contact):
     """Updating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.

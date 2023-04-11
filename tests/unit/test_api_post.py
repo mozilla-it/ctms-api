@@ -4,11 +4,15 @@ from uuid import UUID
 import pytest
 from structlog.testing import capture_logs
 
-from tests.unit.sample_data import SAMPLE_CONTACTS
+from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 from tests.unit.test_api import _compare_written_contacts
 
+POST_TEST_CASES = pytest.mark.parametrize(
+    "post_contact", SAMPLE_CONTACT_PARAMS, indirect=True
+)
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+
+@POST_TEST_CASES
 def test_create_basic_no_id(post_contact):
     """Most straightforward contact creation succeeds when email_id is not a key."""
 
@@ -24,7 +28,7 @@ def test_create_basic_no_id(post_contact):
     )
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_basic_id_is_none(post_contact):
     """Most straightforward contact creation succeeds when email_id is None."""
 
@@ -40,14 +44,14 @@ def test_create_basic_id_is_none(post_contact):
     )
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_basic_with_id(post_contact):
     """Most straightforward contact creation succeeds when email_id is specified."""
     saved_contacts, sample, email_id = post_contact()
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_basic_idempotent(post_contact):
     """Creating a contact works across retries."""
     saved_contacts, sample, email_id = post_contact()
@@ -56,7 +60,7 @@ def test_create_basic_idempotent(post_contact):
     _compare_written_contacts(saved_contacts[0], sample, email_id)
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_basic_with_id_collision(post_contact):
     """Creating a contact with the same id but different data fails."""
     _, sample, _ = post_contact()
@@ -74,7 +78,7 @@ def test_create_basic_with_id_collision(post_contact):
     assert saved_contacts[0].email.mailing_country == sample.email.mailing_country
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_basic_with_basket_collision(post_contact):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
@@ -94,7 +98,7 @@ def test_create_basic_with_basket_collision(post_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@POST_TEST_CASES
 def test_create_basic_with_email_collision(post_contact):
     """Creating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.
