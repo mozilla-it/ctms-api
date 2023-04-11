@@ -21,14 +21,14 @@ from ctms.models import AmoAccount, Email, MozillaFoundationContact
         ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
     ],
 )
-def test_get_ctms_by_alt_id(sample_contacts, client, alt_id_name, alt_id_value):
+def test_get_ctms_by_alt_id(maximal_contact, client, alt_id_name, alt_id_value):
     """The desired contact can be fetched by alternate ID."""
-    maximal_id, _ = sample_contacts["maximal"]
+    email_id = maximal_contact.email.email_id
     resp = client.get("/ctms", params={alt_id_name: alt_id_value})
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
-    assert data[0]["email"]["email_id"] == str(maximal_id)
+    assert data[0]["email"]["email_id"] == str(email_id)
 
 
 def test_get_ctms_by_no_ids_is_error(client, dbsession):
