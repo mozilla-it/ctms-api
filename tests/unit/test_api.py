@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
-from tests.unit.sample_data import SAMPLE_CONTACTS
+from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
     ("GET", "/ctms", {"primary_email": "contact@example.com"}),
@@ -139,7 +139,7 @@ def _compare_written_contacts(
     ids_should_be_identical: bool = True,
     new_default_fields: Optional[set] = None,
 ):
-    fields_not_written = new_default_fields or SAMPLE_CONTACTS.get_not_written(email_id)
+    fields_not_written = new_default_fields or set()
 
     saved_contact = ContactInSchema(**contact.dict())
     sample = ContactInSchema(**sample.dict())
@@ -155,7 +155,7 @@ def _compare_written_contacts(
     assert saved_contact.idempotent_equal(sample)
 
 
-@pytest.mark.parametrize("post_contact", SAMPLE_CONTACTS.keys(), indirect=True)
+@pytest.mark.parametrize("post_contact", SAMPLE_CONTACT_PARAMS, indirect=True)
 def test_post_get_put(client, post_contact, put_contact, update_fetched):
     """This encompasses the entire expected flow for basket"""
     saved_contacts, sample, email_id = post_contact()

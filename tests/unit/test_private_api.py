@@ -39,11 +39,14 @@ def identity_response_for_contact(contact):
     }
 
 
-@pytest.mark.parametrize("name", ("minimal", "maximal", "example"))
-def test_get_identity_by_email_id(client, sample_contacts, name):
+@pytest.mark.parametrize(
+    "name", ("minimal_contact", "maximal_contact", "example_contact")
+)
+def test_get_identity_by_email_id(client, name, request):
     """GET /identity/{email_id} returns the identity object."""
-    email_id, contact = sample_contacts[name]
-    resp = client.get(f"/identity/{email_id}")
+
+    contact = request.getfixturevalue(name)
+    resp = client.get(f"/identity/{contact.email.email_id}")
     assert resp.status_code == 200
     assert resp.json() == identity_response_for_contact(contact)
 
@@ -59,20 +62,20 @@ def test_get_identity_not_found(client, dbsession):
 @pytest.mark.parametrize(
     "name,ident",
     (
-        ("example", "email_id"),
-        ("minimal", "primary_email"),
-        ("maximal", "basket_token"),
-        ("minimal", "sfdc_id"),
-        ("maximal", "amo_user_id"),
-        ("maximal", "fxa_id"),
-        ("example", "fxa_primary_email"),
-        ("maximal", "mofo_contact_id"),
-        ("maximal", "mofo_email_id"),
+        ("example_contact", "email_id"),
+        ("minimal_contact", "primary_email"),
+        ("maximal_contact", "basket_token"),
+        ("minimal_contact", "sfdc_id"),
+        ("maximal_contact", "amo_user_id"),
+        ("maximal_contact", "fxa_id"),
+        ("example_contact", "fxa_primary_email"),
+        ("maximal_contact", "mofo_contact_id"),
+        ("maximal_contact", "mofo_email_id"),
     ),
 )
-def test_get_identities_by_alt_id(client, sample_contacts, name, ident):
+def test_get_identities_by_alt_id(client, request, name, ident):
     """GET /identities?alt_id=value returns a one-item identities list."""
-    _, contact = sample_contacts[name]
+    contact = request.getfixturevalue(name)
     identity = identity_response_for_contact(contact)
     assert identity[ident]
     resp = client.get(f"/identities?{ident}={identity[ident]}")

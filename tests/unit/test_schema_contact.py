@@ -1,11 +1,10 @@
 import pytest
 
 from ctms.schemas.contact import ContactInSchema
-from tests.unit.sample_data import SAMPLE_MAXIMAL
 
 
-def test_idempotent_equal():
-    data = SAMPLE_MAXIMAL.dict()
+def test_idempotent_equal(maximal_contact):
+    data = maximal_contact.dict()
     original = ContactInSchema(**data)
     modified = ContactInSchema(**data)
     assert original.idempotent_equal(modified)
@@ -21,8 +20,8 @@ def test_idempotent_equal():
         ("mofo", "mofo_relevant", False),
     ),
 )
-def test_change_field_not_idempotent_equal(group, field, value):
-    data = SAMPLE_MAXIMAL.dict()
+def test_change_field_not_idempotent_equal(maximal_contact, group, field, value):
+    data = maximal_contact.dict()
     original = ContactInSchema(**data)
     assert data[group][field] != value
     data[group][field] = value
@@ -30,8 +29,8 @@ def test_change_field_not_idempotent_equal(group, field, value):
     assert not original.idempotent_equal(modified)
 
 
-def test_unsubscribe_not_idempotent_equal():
-    data = SAMPLE_MAXIMAL.dict()
+def test_unsubscribe_not_idempotent_equal(maximal_contact):
+    data = maximal_contact.dict()
     original = ContactInSchema(**data)
     assert not data["newsletters"][0]["subscribed"]
     data["newsletters"][0]["subscribed"] = True
@@ -39,7 +38,7 @@ def test_unsubscribe_not_idempotent_equal():
     assert not original.idempotent_equal(modified)
 
 
-def test_source_url_supports_localhost():
-    data = SAMPLE_MAXIMAL.dict()
+def test_source_url_supports_localhost(maximal_contact):
+    data = maximal_contact.dict()
     data["newsletters"][0]["source"] = "http://localhost:8888/v1"
     ContactInSchema(**data)

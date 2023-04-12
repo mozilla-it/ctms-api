@@ -24,7 +24,7 @@ def swap_bool(existing):
     return not existing
 
 
-@pytest.mark.parametrize("contact_name", ("minimal", "maximal"))
+@pytest.mark.parametrize("contact_name", ("minimal_contact", "maximal_contact"))
 @pytest.mark.parametrize(
     "group_name,key,value",
     (
@@ -60,11 +60,9 @@ def swap_bool(existing):
         ("mofo", "mofo_relevant", swap_bool),
     ),
 )
-def test_patch_one_new_value(
-    client, sample_contacts, contact_name, group_name, key, value
-):
+def test_patch_one_new_value(client, contact_name, group_name, key, value, request):
     """PATCH can update a single value."""
-    email_id, contact = sample_contacts[contact_name]
+    contact = request.getfixturevalue(contact_name)
     # Add in defaults for unset groups, and convert Python values like
     # datetimes to JSON strings
     expected = json.loads(
@@ -89,7 +87,7 @@ def test_patch_one_new_value(
     expected[group_name][key] = new_value
     assert existing_value != new_value
 
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data)
+    resp = client.patch(f"/ctms/{contact.email.email_id}", json=patch_data)
     assert resp.status_code == 200
     actual = resp.json()
     assert actual["status"] == "ok"

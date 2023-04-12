@@ -16,6 +16,7 @@ from pytest_factoryboy import register
 from sqlalchemy import create_engine, event
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
+from ctms import schemas
 from ctms.app import app, get_api_client, get_db, get_metrics
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
@@ -46,17 +47,34 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import (
-    SAMPLE_CONTACTS,
-    SAMPLE_MOST_MINIMAL,
-    SAMPLE_STRIPE_DATA,
-)
+from tests.unit.sample_data import SAMPLE_STRIPE_DATA
 
 from . import factories
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
 APP_FOLDER = os.path.dirname(TEST_FOLDER)
+
+# Common test cases to use in parameterized tests
+# List of tuples comprised of name fixture name (defined below) and fields to
+# be overwritten, if any
+SAMPLE_CONTACT_PARAMS = [
+    ("minimal_contact_data", set()),
+    ("maximal_contact_data", set()),
+    ("example_contact_data", set()),
+    ("to_add_contact_data", set()),
+    ("simple_default_contact_data", {"amo"}),
+    ("default_newsletter_contact_data", {"newsletters"}),
+]
+
+
+def _gather_examples(schema_class) -> dict[str, str]:
+    """Gather the examples from a schema definition"""
+    examples = {}
+    for key, props in schema_class.schema()["properties"].items():
+        if "example" in props:
+            examples[key] = props["example"]
+    return examples
 
 
 @pytest.fixture(scope="session")
@@ -144,54 +162,268 @@ def dbsession(connection):
     transaction.rollback()
 
 
-@pytest.fixture
-def most_minimal_contact(dbsession):
-    email_id = UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6")
-    contact = SAMPLE_MOST_MINIMAL
-    assert contact.amo is None
-    assert contact.fxa is None
-    assert contact.mofo is None
-    assert len(contact.waitlists) == 0
-    assert contact.email.basket_token is None
-    create_contact(dbsession, email_id, contact, get_metrics())
-    dbsession.commit()
-    return contact
-
-
-@pytest.fixture
-def minimal_contact(dbsession):
-    email_id = UUID("93db83d4-4119-4e0c-af87-a713786fa81d")
-    contact = SAMPLE_CONTACTS[email_id]
-    assert contact.amo is None
-    assert contact.fxa is None
-    assert contact.mofo is None
-    assert len(contact.waitlists) == 0
-    create_contact(dbsession, email_id, contact, get_metrics())
-    dbsession.commit()
-    return contact
-
-
 register(factories.EmailFactory)
 register(factories.NewsletterFactory)
 register(factories.WaitlistFactory)
 
 
 @pytest.fixture
-def maximal_contact(dbsession):
-    email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
-    contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact, get_metrics())
+def most_minimal_contact(dbsession):
+    contact = ContactSchema(
+        email=schemas.EmailSchema(
+            email_id=UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
+            primary_email="ctms-most-minimal-user@example.com",
+        ),
+    )
+    create_contact(dbsession, contact.email.email_id, contact, get_metrics())
     dbsession.commit()
     return contact
 
 
 @pytest.fixture
-def example_contact(dbsession):
-    email_id = UUID("332de237-cab7-4461-bcc3-48e68f42bd5c")
-    contact = SAMPLE_CONTACTS[email_id]
-    create_contact(dbsession, email_id, contact, get_metrics())
+def minimal_contact_data():
+    return ContactSchema(
+        email=schemas.EmailSchema(
+            basket_token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
+            create_timestamp="2014-01-22T15:24:00+00:00",
+            email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
+            mailing_country="us",
+            primary_email="ctms-user@example.com",
+            sfdc_id="001A000001aABcDEFG",
+            update_timestamp="2020-01-22T15:24:00.000+0000",
+        ),
+        newsletters=[
+            {"name": "app-dev"},
+            {"name": "maker-party"},
+            {"name": "mozilla-foundation"},
+            {"name": "mozilla-learning-network"},
+        ],
+    )
+
+
+@pytest.fixture
+def minimal_contact(minimal_contact_data, dbsession):
+    create_contact(
+        dbsession,
+        minimal_contact_data.email.email_id,
+        minimal_contact_data,
+        get_metrics(),
+    )
     dbsession.commit()
+    return minimal_contact_data
+
+
+@pytest.fixture
+def maximal_contact_data():
+    return ContactSchema(
+        amo=schemas.AddOnsSchema(
+            add_on_ids="fanfox,foxfan",
+            display_name="#1 Mozilla Fan",
+            email_opt_in=True,
+            language="fr,en",
+            last_login="2020-01-27",
+            location="The Inter",
+            profile_url="firefox/user/14508209",
+            sfdc_id="001A000001aMozFan",
+            user=True,
+            user_id="123",
+            username="Mozilla1Fan",
+            create_timestamp="2017-05-12T15:16:00+00:00",
+            update_timestamp="2020-01-27T14:25:43+00:00",
+        ),
+        email=schemas.EmailSchema(
+            email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
+            primary_email="mozilla-fan@example.com",
+            basket_token=UUID("d9ba6182-f5dd-4728-a477-2cc11bf62b69"),
+            first_name="Fan",
+            last_name="of Mozilla",
+            mailing_country="ca",
+            email_lang="fr",
+            sfdc_id="001A000001aMozFan",
+            double_opt_in=True,
+            unsubscribe_reason="done with this mailing list",
+            create_timestamp="2010-01-01T08:04:00+00:00",
+            update_timestamp="2020-01-28T14:50:00.000+0000",
+        ),
+        fxa=schemas.FirefoxAccountsSchema(
+            created_date="2019-05-22T08:29:31.906094+00:00",
+            fxa_id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+            lang="fr,fr-CA",
+            primary_email="fxa-firefox-fan@example.com",
+            first_service="monitor",
+        ),
+        mofo=schemas.MozillaFoundationSchema(
+            mofo_email_id="195207d2-63f2-4c9f-b149-80e9c408477a",
+            mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+            mofo_relevant=True,
+        ),
+        newsletters=[
+            schemas.NewsletterSchema(
+                name="ambassadors",
+                source="https://www.mozilla.org/en-US/contribute/studentambassadors/",
+                subscribed=False,
+                unsub_reason="Graduated, don't have time for FSA",
+            ),
+            schemas.NewsletterSchema(
+                name="common-voice",
+                format="T",
+                lang="fr",
+                source="https://commonvoice.mozilla.org/fr",
+            ),
+            schemas.NewsletterSchema(
+                name="firefox-accounts-journey",
+                source="https://www.mozilla.org/fr/firefox/accounts/",
+                lang="fr",
+                subscribed=False,
+                unsub_reason="done with this mailing list",
+            ),
+            schemas.NewsletterSchema(name="firefox-os"),
+            schemas.NewsletterSchema(name="hubs", lang="fr"),
+            schemas.NewsletterSchema(name="mozilla-festival"),
+            schemas.NewsletterSchema(name="mozilla-foundation", lang="fr"),
+        ],
+        waitlists=[
+            schemas.WaitlistSchema(
+                name="a-software",
+                source="https://a-software.mozilla.org/",
+                fields={"geo": "fr"},
+            ),
+            schemas.WaitlistSchema(
+                name="relay",
+                fields={"geo": "cn"},
+            ),
+            schemas.WaitlistSchema(
+                name="super-product",
+                source="https://super-product.mozilla.org/",
+                fields={"geo": "fr", "platform": "win64"},
+            ),
+            schemas.WaitlistSchema(
+                name="vpn",
+                fields={
+                    "geo": "ca",
+                    "platform": "windows,android",
+                },
+            ),
+        ],
+    )
+
+
+@pytest.fixture
+def maximal_contact(dbsession, maximal_contact_data):
+    create_contact(
+        dbsession,
+        maximal_contact_data.email.email_id,
+        maximal_contact_data,
+        get_metrics(),
+    )
+    dbsession.commit()
+    return maximal_contact_data
+
+
+@pytest.fixture
+def example_contact_data():
+    return ContactSchema(
+        amo=schemas.AddOnsSchema(**_gather_examples(schemas.AddOnsSchema)),
+        email=schemas.EmailSchema(**_gather_examples(schemas.EmailSchema)),
+        fxa=schemas.FirefoxAccountsSchema(
+            **_gather_examples(schemas.FirefoxAccountsSchema)
+        ),
+        newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
+        waitlists=[
+            schemas.WaitlistSchema(**example)
+            for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
+        ],
+    )
+
+
+@pytest.fixture
+def example_contact(dbsession, example_contact_data):
+    create_contact(
+        dbsession,
+        example_contact_data.email.email_id,
+        example_contact_data,
+        get_metrics(),
+    )
+    dbsession.commit()
+    return example_contact_data
+
+
+@pytest.fixture
+def to_add_contact_data():
+    return ContactSchema(
+        email=schemas.EmailInSchema(
+            basket_token="21aeb466-4003-4c2b-a27e-e6651c13d231",
+            email_id=UUID("d1da1c99-fe09-44db-9c68-78a75752574d"),
+            mailing_country="us",
+            primary_email="ctms-user-to-be-created@example.com",
+            sfdc_id="002A000001aBAcDEFA",
+        )
+    )
+
+
+@pytest.fixture
+def to_add_contact(dbsession, to_add_contact_data):
+    create_contact(
+        dbsession,
+        to_add_contact_data.email.email_id,
+        to_add_contact_data,
+        get_metrics(),
+    )
+    dbsession.commit()
+    return to_add_contact_data
+
+
+@pytest.fixture
+def simple_default_contact_data():
+    return ContactSchema(
+        email=schemas.EmailInSchema(
+            basket_token="d3a827b5-747c-41c2-8381-59ce9ad63050",
+            email_id=UUID("4f98b303-8863-421f-95d3-847cd4d83c9f"),
+            mailing_country="us",
+            primary_email="with-defaults@example.com",
+            sfdc_id="102A000001aBAcDEFA",
+        ),
+        amo=schemas.AddOnsInSchema(),
+    )
+
+
+@pytest.fixture
+def simple_default_contact(dbsession, simple_default_contact_data):
+    create_contact(
+        dbsession,
+        simple_default_contact_data.email.email_id,
+        simple_default_contact_data,
+        get_metrics(),
+    )
+    dbsession.commit()
+    return simple_default_contact_data
+
+
+@pytest.fixture
+def default_newsletter_contact_data():
+    contact = ContactSchema(
+        email=schemas.EmailInSchema(
+            basket_token="b5487fbf-86ae-44b9-a638-bbb037ce61a6",
+            email_id=UUID("dd2bc52c-49e4-4df9-95a8-197d3a7794cd"),
+            mailing_country="us",
+            primary_email="with-default-newsletter@example.com",
+            sfdc_id="102A000001aBAcDEFA",
+        ),
+        newsletters=[],
+    )
     return contact
+
+
+@pytest.fixture
+def default_newsletter_contact(dbsession, default_newsletter_contact_data):
+    create_contact(
+        dbsession,
+        default_newsletter_contact_data.email.email_id,
+        default_newsletter_contact_data,
+        get_metrics(),
+    )
+    dbsession.commit()
+    return default_newsletter_contact_data
 
 
 @pytest.fixture
@@ -259,15 +491,10 @@ def client_id_and_secret(dbsession):
 
 
 @pytest.fixture
-def post_contact(request, client, dbsession):
-    _id = (
-        request.param
-        if hasattr(request, "param")
-        else "d1da1c99-fe09-44db-9c68-78a75752574d"
-    )
-    email_id = UUID(str(_id))
-    contact = SAMPLE_CONTACTS[email_id]
-    fields_not_written = SAMPLE_CONTACTS.get_not_written(email_id)
+def post_contact(client, dbsession, request):
+    contact_fixture_name, fields_not_written = request.param
+    contact_fixture = request.getfixturevalue(contact_fixture_name)
+    email_id = contact_fixture.email.email_id
 
     def _add(
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
@@ -278,8 +505,8 @@ def post_contact(request, client, dbsession):
         check_written: bool = True,
     ):
         if query_fields is None:
-            query_fields = {"primary_email": contact.email.primary_email}
-        sample = contact.copy(deep=True)
+            query_fields = {"primary_email": contact_fixture.email.primary_email}
+        sample = contact_fixture.copy(deep=True)
         sample = modifier(sample)
         resp = client.post("/ctms", sample.json())
         assert resp.status_code == code, resp.text
@@ -343,15 +570,14 @@ def post_contact(request, client, dbsession):
 
 
 @pytest.fixture
-def put_contact(request, client, dbsession):
-    _id = (
-        request.param
-        if hasattr(request, "param")
-        else "d1da1c99-fe09-44db-9c68-78a75752574d"  # SAMPLE_TO_ADD
-    )
-    sample_email_id = UUID(str(_id))
-    _contact = SAMPLE_CONTACTS[sample_email_id]
-    fields_not_written = SAMPLE_CONTACTS.get_not_written(sample_email_id)
+def put_contact(client, dbsession, request):
+    if hasattr(request, "param"):
+        contact_fixture_name, fields_not_written = request.param
+    else:
+        contact_fixture_name = "to_add_contact_data"
+        fields_not_written = set()
+    contact_fixture = request.getfixturevalue(contact_fixture_name)
+    sample_email_id = contact_fixture.email.email_id
 
     def _add(
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
@@ -365,7 +591,7 @@ def put_contact(request, client, dbsession):
         if record:
             contact = record
         else:
-            contact = _contact
+            contact = contact_fixture
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
         new_default_fields = new_default_fields or set()
