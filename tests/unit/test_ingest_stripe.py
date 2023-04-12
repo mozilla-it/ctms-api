@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from time import mktime
-from typing import Dict, Optional
 from uuid import UUID, uuid4
 
 import pytest
@@ -43,87 +41,39 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA, fake_stripe_id
-
-
-def unix_timestamp(the_time: Optional[datetime] = None) -> int:
-    """Create a UNIX timestamp from a datetime or now"""
-    the_time = the_time or datetime.now(tz=timezone.utc)
-    return int(mktime(the_time.timetuple()))
-
-
-def stripe_customer_data() -> Dict:
-    """Return minimal Stripe customer data."""
-    sample = SAMPLE_STRIPE_DATA["Customer"]
-    return {
-        "id": sample["stripe_id"],
-        "object": "customer",
-        "created": unix_timestamp(sample["stripe_created"]),
-        "description": sample["fxa_id"],
-        "email": "fxa_email@example.com",
-        "default_source": sample["default_source_id"],
-        "invoice_settings": {
-            "default_payment_method": sample[
-                "invoice_settings_default_payment_method_id"
-            ],
-        },
-    }
+from tests.unit.conftest import unix_timestamp
+from tests.unit.sample_data import FAKE_STRIPE_ID, fake_stripe_id
 
 
 @pytest.fixture
-def stripe_customer(dbsession, example_contact):
+def stripe_customer(dbsession, example_contact, stripe_customer_data):
     """Return a Stripe Customer associated with the example contact."""
-    data = SAMPLE_STRIPE_DATA["Customer"]
-    schema = StripeCustomerCreateSchema(**data)
+    schema = StripeCustomerCreateSchema(**stripe_customer_data)
     customer = create_stripe_customer(dbsession, schema)
     dbsession.commit()
     dbsession.refresh(customer)
     return customer
 
 
-def stripe_subscription_data() -> Dict:
-    """Return minimal Stripe subscription data."""
-    data = SAMPLE_STRIPE_DATA["Subscription"]
-    item_data = SAMPLE_STRIPE_DATA["SubscriptionItem"]
-    return {
-        "id": data["stripe_id"],
-        "object": "subscription",
-        "created": unix_timestamp(data["stripe_created"]),
-        "customer": data["stripe_customer_id"],
-        "cancel_at_period_end": data["cancel_at_period_end"],
-        "canceled_at": data["canceled_at"],
-        "current_period_start": unix_timestamp(data["current_period_start"]),
-        "current_period_end": unix_timestamp(data["current_period_end"]),
-        "ended_at": data["ended_at"],
-        "start_date": unix_timestamp(data["start_date"]),
-        "status": data["status"],
-        "default_source": data["default_source_id"],
-        "default_payment_method": data["default_payment_method_id"],
-        "items": {
-            "object": "list",
-            "total_count": 1,
-            "has_more": False,
-            "url": f"/v1/subscription_items?subscription={data['stripe_id']}",
-            "data": [
-                {
-                    "id": item_data["stripe_id"],
-                    "object": "subscription_item",
-                    "created": unix_timestamp(item_data["stripe_created"]),
-                    "subscription": item_data["stripe_subscription_id"],
-                    "price": stripe_price_data(),
-                }
-            ],
-        },
-    }
+@pytest.fixture
+def stripe_price(dbsession, stripe_price_data):
+    price = StripePriceCreateSchema(**stripe_price_data)
+    db_price = create_stripe_price(dbsession, price)
+    assert db_price
+    dbsession.commit()
+    dbsession.refresh(db_price)
+    return db_price
 
 
 @pytest.fixture
-def stripe_subscription(dbsession, stripe_price):
-    data = SAMPLE_STRIPE_DATA["Subscription"]
-    subscription = StripeSubscriptionCreateSchema(**data)
+def stripe_subscription(
+    dbsession, stripe_price, stripe_subscription_data, stripe_subscription_item_data
+):
+    subscription = StripeSubscriptionCreateSchema(**stripe_subscription_data)
     db_subscription = create_stripe_subscription(dbsession, subscription)
-    item_data = SAMPLE_STRIPE_DATA["SubscriptionItem"]
-    subscription_item = StripeSubscriptionItemCreateSchema(**item_data)
+    subscription_item = StripeSubscriptionItemCreateSchema(
+        **stripe_subscription_item_data
+    )
     db_subscription_item = create_stripe_subscription_item(dbsession, subscription_item)
     assert db_subscription_item
 
@@ -132,79 +82,19 @@ def stripe_subscription(dbsession, stripe_price):
     return db_subscription
 
 
-def stripe_price_data() -> Dict:
-    """Return minimal Stripe price data."""
-    data = SAMPLE_STRIPE_DATA["Price"]
-    return {
-        "id": data["stripe_id"],
-        "object": "price",
-        "created": unix_timestamp(data["stripe_created"]),
-        "product": data["stripe_product_id"],
-        "active": data["active"],
-        "currency": data["currency"],
-        "recurring": {
-            "interval": data["recurring_interval"],
-            "interval_count": data["recurring_interval_count"],
-        },
-        "unit_amount": data["unit_amount"],
-    }
-
-
 @pytest.fixture
-def stripe_price(dbsession):
-    data = SAMPLE_STRIPE_DATA["Price"]
-    price = StripePriceCreateSchema(**data)
-    db_price = create_stripe_price(dbsession, price)
-    assert db_price
-    dbsession.commit()
-    dbsession.refresh(db_price)
-    return db_price
-
-
-def stripe_invoice_data() -> Dict:
-    """Return minimal Stripe invoice data."""
-    data = SAMPLE_STRIPE_DATA["Invoice"]
-    item_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"]
-    return {
-        "id": data["stripe_id"],
-        "object": "invoice",
-        "created": unix_timestamp(data["stripe_created"]),
-        "customer": data["stripe_customer_id"],
-        "currency": data["currency"],
-        "total": data["total"],
-        "default_source": data["default_source_id"],
-        "default_payment_method": data["default_payment_method_id"],
-        "status": data["status"],
-        "lines": {
-            "object": "list",
-            "total_count": 1,
-            "has_more": False,
-            "url": f"/v1/invoices/{data['stripe_id']}/lines",
-            "data": [
-                {
-                    "id": item_data["stripe_id"],
-                    "object": "line_item",
-                    "type": item_data["stripe_type"],
-                    "subscription": item_data["stripe_subscription_id"],
-                    "subscription_item": item_data["stripe_subscription_item_id"],
-                    "price": stripe_price_data(),
-                    "amount": item_data["amount"],
-                    "currency": item_data["currency"],
-                }
-            ],
-        },
-    }
-
-
-@pytest.fixture
-def stripe_invoice(dbsession, stripe_customer, stripe_price):
-    data = SAMPLE_STRIPE_DATA["Invoice"]
-    invoice = StripeInvoiceCreateSchema(**data)
+def stripe_invoice(
+    dbsession,
+    stripe_customer,
+    stripe_price,
+    stripe_invoice_data,
+    stripe_invoice_line_item_data,
+):
+    invoice = StripeInvoiceCreateSchema(**stripe_invoice_data)
     db_invoice = create_stripe_invoice(dbsession, invoice)
     assert db_invoice
 
-    item_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"]
-    invoice_item = StripeInvoiceLineItemCreateSchema(**item_data)
+    invoice_item = StripeInvoiceLineItemCreateSchema(**stripe_invoice_line_item_data)
     db_invoice_item = create_stripe_invoice_line_item(dbsession, invoice_item)
     assert db_invoice_item
     dbsession.commit()
@@ -224,9 +114,9 @@ def test_ids():
     assert FAKE_STRIPE_ID["Subscription Item"] == "si_c3Vic2NyaXB0aW9uX2l0ZW0"
 
 
-def test_ingest_existing_contact(dbsession, example_contact):
+def test_ingest_existing_contact(dbsession, example_contact, raw_stripe_customer_data):
     """A Stripe Customer is associated with the existing contact."""
-    data = stripe_customer_data()
+    data = raw_stripe_customer_data
     data["description"] = example_contact.fxa.fxa_id
     data["email"] = example_contact.fxa.primary_email
 
@@ -249,9 +139,9 @@ def test_ingest_existing_contact(dbsession, example_contact):
     }
 
 
-def test_ingest_without_contact(dbsession):
+def test_ingest_without_contact(dbsession, raw_stripe_customer_data):
     """A Stripe Customer can be ingested without a contact."""
-    data = stripe_customer_data()
+    data = raw_stripe_customer_data
     customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
     dbsession.refresh(customer)
@@ -279,9 +169,9 @@ def test_ingest_deleted_customer(dbsession):
     }
 
 
-def test_ingest_update_customer(dbsession, stripe_customer):
+def test_ingest_update_customer(dbsession, stripe_customer, raw_stripe_customer_data):
     """A Stripe Customer can be updated."""
-    data = stripe_customer_data()
+    data = raw_stripe_customer_data
     # Change payment method
     new_source_id = fake_stripe_id("card", "new credit card")
     data["default_source"] = new_source_id
@@ -328,10 +218,10 @@ def test_ingest_existing_but_deleted_customer(
 
 
 def test_ingest_new_customer_duplicate_fxa_id(
-    dbsession, stripe_customer, example_contact
+    dbsession, stripe_customer, example_contact, raw_stripe_customer_data
 ):
     """StripeIngestFxAIdConflict is raised when an existing customer has the same FxA ID."""
-    data = stripe_customer_data()
+    data = raw_stripe_customer_data
     existing_id = data["id"]
     fxa_id = data["description"]
     data["id"] = fake_stripe_id("cust", "duplicate_fxa_id")
@@ -345,9 +235,11 @@ def test_ingest_new_customer_duplicate_fxa_id(
     assert repr(exception) == f"StripeIngestFxAIdConflict('{existing_id}', '{fxa_id}')"
 
 
-def test_ingest_update_customer_duplicate_fxa_id(dbsession, stripe_customer):
+def test_ingest_update_customer_duplicate_fxa_id(
+    dbsession, stripe_customer, stripe_customer_data, raw_stripe_customer_data
+):
     """StripeIngestFxAIdConflict is raised when updating to a different customer's FxA ID."""
-    existing_customer_data = SAMPLE_STRIPE_DATA["Customer"].copy()
+    existing_customer_data = stripe_customer_data
     existing_id = fake_stripe_id("cust", "duplicate_fxa_id")
     fxa_id = str(uuid4())
     existing_customer_data.update({"stripe_id": existing_id, "fxa_id": fxa_id})
@@ -356,7 +248,7 @@ def test_ingest_update_customer_duplicate_fxa_id(dbsession, stripe_customer):
     )
     dbsession.commit()
 
-    data = stripe_customer_data()
+    data = raw_stripe_customer_data
     data["description"] = fxa_id
 
     with pytest.raises(StripeIngestFxAIdConflict) as excinfo:
@@ -367,9 +259,9 @@ def test_ingest_update_customer_duplicate_fxa_id(dbsession, stripe_customer):
     assert exception.fxa_id == fxa_id
 
 
-def test_ingest_new_subscription(dbsession):
+def test_ingest_new_subscription(dbsession, raw_stripe_subscription_data):
     """A new Stripe Subscription is ingested."""
-    data = stripe_subscription_data()
+    data = raw_stripe_subscription_data
 
     subscription, actions = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
@@ -420,9 +312,11 @@ def test_ingest_new_subscription(dbsession):
     }
 
 
-def test_ingest_update_subscription(dbsession, stripe_subscription):
+def test_ingest_update_subscription(
+    dbsession, stripe_subscription, raw_stripe_subscription_data
+):
     """An existing subscription is updated."""
-    data = stripe_subscription_data()
+    data = raw_stripe_subscription_data
     # Change to yearly
     current_period_end = stripe_subscription.current_period_end + timedelta(days=365)
     si_created = stripe_subscription.current_period_start + timedelta(days=15)
@@ -476,10 +370,12 @@ def test_ingest_update_subscription(dbsession, stripe_subscription):
     }
 
 
-def test_ingest_cancelled_subscription(dbsession, stripe_subscription):
+def test_ingest_cancelled_subscription(
+    dbsession, stripe_subscription, raw_stripe_subscription_data
+):
     """A subscription can move to canceled."""
     assert stripe_subscription.status == "active"
-    data = stripe_subscription_data()
+    data = raw_stripe_subscription_data
     data["cancel_at_period_end"] = True
     data["canceled_at"] = unix_timestamp(datetime(2021, 10, 29))
     data["current_period_end"] = unix_timestamp(datetime(2021, 11, 15))
@@ -502,11 +398,13 @@ def test_ingest_cancelled_subscription(dbsession, stripe_subscription):
     }
 
 
-def test_ingest_update_price_via_subscription(dbsession, stripe_subscription):
+def test_ingest_update_price_via_subscription(
+    dbsession, stripe_subscription, raw_stripe_subscription_data
+):
     """A price object can be updated via a subscription update."""
     assert stripe_subscription.subscription_items[0].price.active
 
-    data = stripe_subscription_data()
+    data = raw_stripe_subscription_data
     data["items"]["data"][0]["price"]["active"] = False
     subscription, actions = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
@@ -526,9 +424,11 @@ def test_ingest_update_price_via_subscription(dbsession, stripe_subscription):
     }
 
 
-def test_ingest_update_subscription_item(dbsession, stripe_subscription):
+def test_ingest_update_subscription_item(
+    dbsession, stripe_subscription, raw_stripe_subscription_data
+):
     """A subscription item can be updated."""
-    data = stripe_subscription_data()
+    data = raw_stripe_subscription_data
     new_price_id = fake_stripe_id("price", "monthly special")
     data["items"]["data"][0]["price"] = {
         "id": fake_stripe_id("price", "monthly special"),
@@ -586,9 +486,9 @@ def test_ingest_non_recurring_price(dbsession):
     }
 
 
-def test_ingest_new_invoice(dbsession):
+def test_ingest_new_invoice(dbsession, raw_stripe_invoice_data):
     """A new Stripe Invoice is ingested."""
-    data = stripe_invoice_data()
+    data = raw_stripe_invoice_data
     invoice, actions = ingest_stripe_invoice(dbsession, data)
     dbsession.commit()
 
@@ -636,10 +536,10 @@ def test_ingest_new_invoice(dbsession):
     }
 
 
-def test_ingest_updated_invoice(dbsession, stripe_invoice):
+def test_ingest_updated_invoice(dbsession, stripe_invoice, raw_stripe_invoice_data):
     """An existing Stripe Invoice is updated."""
     assert stripe_invoice.status == "open"
-    data = stripe_invoice_data()
+    data = raw_stripe_invoice_data
     data["status"] = "void"
     invoice, actions = ingest_stripe_invoice(dbsession, data)
     dbsession.commit()
@@ -658,9 +558,11 @@ def test_ingest_updated_invoice(dbsession, stripe_invoice):
     }
 
 
-def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
+def test_ingest_updated_invoice_lines(
+    dbsession, stripe_invoice, raw_stripe_invoice_data, raw_stripe_price_data
+):
     """The Stripe Invoice lines are synced on update."""
-    data = stripe_invoice_data()
+    data = raw_stripe_invoice_data
     old_line_item_id = data["lines"]["data"][0]["id"]
     new_line_item_id = fake_stripe_id("il", "new line item")
     data["lines"]["data"][0] = {
@@ -670,7 +572,7 @@ def test_ingest_updated_invoice_lines(dbsession, stripe_invoice):
         "created": unix_timestamp(datetime(2021, 10, 28, tzinfo=timezone.utc)),
         "subscription": FAKE_STRIPE_ID["Subscription"],
         "subscription_item": FAKE_STRIPE_ID["Subscription Item"],
-        "price": stripe_price_data(),
+        "price": raw_stripe_price_data,
         "amount": 500,
         "currency": "usd",
     }
@@ -736,9 +638,11 @@ def test_get_email_id_subscription(dbsession, contact_with_stripe_subscription):
     assert price.get_email_id() is None
 
 
-def test_get_email_id_invoice(dbsession, contact_with_stripe_customer):
+def test_get_email_id_invoice(
+    dbsession, contact_with_stripe_customer, raw_stripe_invoice_data
+):
     """A Stripe Invoice and related objects can return the related email_id."""
-    invoice, actions = ingest_stripe_invoice(dbsession, stripe_invoice_data())
+    invoice, actions = ingest_stripe_invoice(dbsession, raw_stripe_invoice_data)
     dbsession.commit()
     assert actions
     customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])

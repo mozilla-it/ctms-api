@@ -59,7 +59,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA, fake_stripe_id
+from tests.unit.sample_data import FAKE_STRIPE_ID, fake_stripe_id
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
@@ -412,14 +412,18 @@ def test_get_acoustic_record_one_stripe_subscription(
 
 
 def test_get_acoustic_record_two_stripe_subscriptions(
-    dbsession, contact_with_stripe_subscription
+    dbsession,
+    contact_with_stripe_subscription,
+    stripe_price_data,
+    stripe_subscription_data,
+    stripe_subscription_item_data,
 ):
     """A contact with two Stripe subscriptions to different products has two products."""
     email_id = contact_with_stripe_subscription.email.email_id
     now = datetime.now(tz=timezone.utc)
-    new_subscription = SAMPLE_STRIPE_DATA["Subscription"].copy()
-    new_sub_item = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
-    new_price = SAMPLE_STRIPE_DATA["Price"].copy()
+    new_subscription = stripe_subscription_data
+    new_sub_item = stripe_subscription_item_data
+    new_price = stripe_price_data
     new_subscription["stripe_id"] = "sub_new"
     new_subscription["cancel_at_period_end"] = True
     new_subscription["stripe_created"] = now - timedelta(days=45)
@@ -459,12 +463,15 @@ def test_get_acoustic_record_two_stripe_subscriptions(
 
 
 def test_get_acoustic_record_serial_stripe_subscriptions(
-    dbsession, contact_with_stripe_subscription
+    dbsession,
+    contact_with_stripe_subscription,
+    stripe_subscription_data,
+    stripe_subscription_item_data,
 ):
     """A contact with two Stripe subscriptions to the same product has one product."""
     email_id = contact_with_stripe_subscription.email.email_id
-    old_subscription = SAMPLE_STRIPE_DATA["Subscription"].copy()
-    old_sub_item = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
+    old_subscription = stripe_subscription_data
+    old_sub_item = stripe_subscription_item_data
     old_subscription["stripe_id"] = "sub_old"
     old_subscription["cancel_at_period_end"] = True
     old_subscription["stripe_created"] -= timedelta(days=180)
@@ -781,7 +788,17 @@ def test_get_stripe_customer_by_fxa_id(
 
 
 @pytest.fixture()
-def stripe_objects(dbsession, example_contact, maximal_contact):
+def stripe_objects(
+    dbsession,
+    example_contact,
+    maximal_contact,
+    stripe_customer_data,
+    stripe_price_data,
+    stripe_subscription_data,
+    stripe_subscription_item_data,
+    stripe_invoice_data,
+    stripe_invoice_line_item_data,
+):
     """
     Create two complete trees of Stripe objects.
 
@@ -799,7 +816,7 @@ def stripe_objects(dbsession, example_contact, maximal_contact):
     # Both customers are subscribed to all four, 2 per subscription
     prices = []
     for price_idx in range(4):
-        price_data = SAMPLE_STRIPE_DATA["Price"].copy()
+        price_data = stripe_price_data
         price_data["stripe_id"] = fake_stripe_id("price", f"price_{price_idx}")
         price_data["stripe_product_id"] = fake_stripe_id("prod", f"prod_{price_idx}")
         prices.append(
@@ -820,7 +837,7 @@ def stripe_objects(dbsession, example_contact, maximal_contact):
         objs.append(obj)
 
         # Create Customer data
-        cus_data = SAMPLE_STRIPE_DATA["Customer"].copy()
+        cus_data = stripe_customer_data
         cus_data["stripe_id"] = fake_stripe_id("cus", f"cus_{contact_idx}")
         cus_data["fxa_id"] = contact.fxa.fxa_id
         obj["customer"] = create_stripe_customer(
@@ -829,7 +846,7 @@ def stripe_objects(dbsession, example_contact, maximal_contact):
 
         # Create Subscriptions / Invoices and related items
         for sub_inv_idx in range(2):
-            sub_data = SAMPLE_STRIPE_DATA["Subscription"].copy()
+            sub_data = stripe_subscription_data
             sub_data["stripe_id"] = fake_stripe_id(
                 "sub", f"cus_{contact_idx}_sub_{sub_inv_idx}"
             )
@@ -842,11 +859,11 @@ def stripe_objects(dbsession, example_contact, maximal_contact):
             }
             obj["subscription"].append(sub_obj)
 
-            inv_data = SAMPLE_STRIPE_DATA["Invoice"].copy()
+            inv_data = stripe_invoice_data
             inv_data["stripe_id"] = fake_stripe_id(
                 "sub", f"cus_{contact_idx}_inv_{sub_inv_idx}"
             )
-            inv_data["stripe_customer_id"] = cus_data["stripe_id"]
+            inv_data["stripe_customer_id"] = stripe_customer_data["stripe_id"]
             inv_obj = {
                 "obj": create_stripe_invoice(
                     dbsession, StripeInvoiceCreateSchema(**inv_data)
@@ -858,7 +875,7 @@ def stripe_objects(dbsession, example_contact, maximal_contact):
             for item_idx in range(2):
                 price = prices[sub_inv_idx * 2 + item_idx]
 
-                si_data = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
+                si_data = stripe_subscription_item_data
                 si_data["stripe_id"] = fake_stripe_id(
                     "si", f"cus_{contact_idx}_sub_{sub_inv_idx}_si_{item_idx}"
                 )
@@ -873,7 +890,7 @@ def stripe_objects(dbsession, example_contact, maximal_contact):
                     }
                 )
 
-                li_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"].copy()
+                li_data = stripe_invoice_line_item_data
                 li_data["stripe_id"] = fake_stripe_id(
                     "il", f"cus_{contact_idx}_inv_{sub_inv_idx}_il_{item_idx}"
                 )
