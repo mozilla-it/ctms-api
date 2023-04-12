@@ -13,7 +13,6 @@ from ctms.app import _pubsub_settings, _token_settings, app, get_settings
 from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import get_api_client_by_id
 from tests.unit.test_api_stripe import pubsub_wrap
-from tests.unit.test_ingest_stripe import stripe_customer_data
 
 # Sample token claim from https://cloud.google.com/pubsub/docs/push
 SAMPLE_GCP_JWT_CLAIM = {
@@ -325,7 +324,7 @@ def test_hashed_passwords():
     assert hashed1 != hashed2
 
 
-def test_post_pubsub_token(anon_client, test_pubsub_settings):
+def test_post_pubsub_token(anon_client, test_pubsub_settings, raw_stripe_customer_data):
     """A PubSub client can authenticate."""
 
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
@@ -334,7 +333,7 @@ def test_post_pubsub_token(anon_client, test_pubsub_settings):
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer gcp_generated_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     assert resp.status_code == 200, resp.json()
     assert len(caplog) == 1
@@ -345,7 +344,7 @@ def test_post_pubsub_token(anon_client, test_pubsub_settings):
 
 
 @pytest.mark.parametrize("name", ("pubsub_email", "pubsub_client"))
-def test_post_pubsub_token_checks_settings(anon_client, name):
+def test_post_pubsub_token_checks_settings(anon_client, name, raw_stripe_customer_data):
     """PubSub fails if settings are unset."""
 
     class FakeSettings:
@@ -361,13 +360,15 @@ def test_post_pubsub_token_checks_settings(anon_client, name):
             anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     finally:
         del app.dependency_overrides[get_settings]
 
 
-def test_post_pubsub_token_fail_client(anon_client, test_pubsub_settings):
+def test_post_pubsub_token_fail_client(
+    anon_client, test_pubsub_settings, raw_stripe_customer_data
+):
     """An error is returned if pubsub_client is incorrect."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = Exception("Should not be called.")
@@ -375,7 +376,7 @@ def test_post_pubsub_token_fail_client(anon_client, test_pubsub_settings):
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=the_wrong_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -383,7 +384,9 @@ def test_post_pubsub_token_fail_client(anon_client, test_pubsub_settings):
     assert caplog[0]["auth_fail"] == "Verification mismatch"
 
 
-def test_post_pubsub_token_unknown_key(anon_client, test_pubsub_settings):
+def test_post_pubsub_token_unknown_key(
+    anon_client, test_pubsub_settings, raw_stripe_customer_data
+):
     """An error is returned if the jwt 'kid' doesn't refer to a known cert."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = ValueError(
@@ -393,7 +396,7 @@ def test_post_pubsub_token_unknown_key(anon_client, test_pubsub_settings):
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -401,7 +404,9 @@ def test_post_pubsub_token_unknown_key(anon_client, test_pubsub_settings):
     assert caplog[0]["auth_fail"] == "Unknown key"
 
 
-def test_post_pubsub_token_fail_ssl_fetch(anon_client, test_pubsub_settings):
+def test_post_pubsub_token_fail_ssl_fetch(
+    anon_client, test_pubsub_settings, raw_stripe_customer_data
+):
     """An error is returned if there is an issue fetching certs."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = TransportError(
@@ -411,7 +416,7 @@ def test_post_pubsub_token_fail_ssl_fetch(anon_client, test_pubsub_settings):
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -419,7 +424,9 @@ def test_post_pubsub_token_fail_ssl_fetch(anon_client, test_pubsub_settings):
     assert caplog[0]["auth_fail"] == "Google authentication failure"
 
 
-def test_post_pubsub_token_fail_wrong_email(anon_client, test_pubsub_settings):
+def test_post_pubsub_token_fail_wrong_email(
+    anon_client, test_pubsub_settings, raw_stripe_customer_data
+):
     """An error is returned if the claim email doesn't match."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
     claim["email"] = "different_email@example.com"
@@ -429,7 +436,7 @@ def test_post_pubsub_token_fail_wrong_email(anon_client, test_pubsub_settings):
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -440,7 +447,9 @@ def test_post_pubsub_token_fail_wrong_email(anon_client, test_pubsub_settings):
     assert log["pubsub_email_verified"]
 
 
-def test_post_pubsub_token_fail_unverified_email(anon_client, test_pubsub_settings):
+def test_post_pubsub_token_fail_unverified_email(
+    anon_client, test_pubsub_settings, raw_stripe_customer_data
+):
     """An error is returned if the claim email isn't verified."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
     del claim["email_verified"]
@@ -450,7 +459,7 @@ def test_post_pubsub_token_fail_unverified_email(anon_client, test_pubsub_settin
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data()),
+                json=pubsub_wrap(raw_stripe_customer_data),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
