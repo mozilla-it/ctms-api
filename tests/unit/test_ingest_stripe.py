@@ -460,7 +460,7 @@ def test_ingest_non_recurring_price(dbsession):
         "id": fake_stripe_id("price", "non-recurring"),
         "object": "price",
         "created": unix_timestamp(),
-        "product": FAKE_STRIPE_ID["Product"],
+        "product": fake_stripe_id("prod", "test_product"),
         "active": True,
         "type": "one_time",
         "currency": "usd",
