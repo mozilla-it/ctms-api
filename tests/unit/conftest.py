@@ -1,7 +1,9 @@
 """pytest fixtures for the CTMS app"""
 import json
 import os.path
+from datetime import datetime, timezone
 from glob import glob
+from time import mktime
 from typing import Callable, Optional
 from unittest import mock
 from uuid import UUID
@@ -47,7 +49,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import SAMPLE_STRIPE_DATA
+from tests.unit.sample_data import FAKE_STRIPE_ID
 
 from . import factories
 
@@ -75,6 +77,12 @@ def _gather_examples(schema_class) -> dict[str, str]:
         if "example" in props:
             examples[key] = props["example"]
     return examples
+
+
+def unix_timestamp(the_time: Optional[datetime] = None) -> int:
+    """Create a UNIX timestamp from a datetime or now"""
+    the_time = the_time or datetime.now(tz=timezone.utc)
+    return int(mktime(the_time.timetuple()))
 
 
 @pytest.fixture(scope="session")
@@ -673,26 +681,235 @@ def stripe_test_json(request):
 
 
 @pytest.fixture
-def contact_with_stripe_customer(dbsession, example_contact):
+def stripe_customer_data():
+    return {
+        "stripe_id": FAKE_STRIPE_ID["Customer"],
+        "stripe_created": datetime(2021, 10, 25, 15, 34, tzinfo=timezone.utc),
+        # TODO magic string from fxa schema
+        "fxa_id": "6eb6ed6ac3b64259968aa490c6c0b9df",
+        "default_source_id": None,
+        "invoice_settings_default_payment_method_id": FAKE_STRIPE_ID["Payment Method"],
+    }
+
+
+@pytest.fixture
+def stripe_price_data():
+    return {
+        "stripe_id": FAKE_STRIPE_ID["Price"],
+        "stripe_created": datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc),
+        "stripe_product_id": FAKE_STRIPE_ID["Product"],
+        "active": True,
+        "currency": "usd",
+        "recurring_interval": "month",
+        "recurring_interval_count": 1,
+        "unit_amount": 999,
+    }
+
+
+@pytest.fixture
+def stripe_subscription_data():
+    return {
+        "stripe_id": FAKE_STRIPE_ID["Subscription"],
+        "stripe_created": datetime(2021, 9, 27, tzinfo=timezone.utc),
+        "stripe_customer_id": FAKE_STRIPE_ID["Customer"],
+        "default_source_id": None,
+        "default_payment_method_id": None,
+        "cancel_at_period_end": False,
+        "canceled_at": None,
+        "current_period_start": datetime(2021, 10, 27, tzinfo=timezone.utc),
+        "current_period_end": datetime(2021, 11, 27, tzinfo=timezone.utc),
+        "ended_at": None,
+        "start_date": datetime(2021, 9, 27, tzinfo=timezone.utc),
+        "status": "active",
+    }
+
+
+@pytest.fixture
+def stripe_subscription_item_data():
+    return {
+        "stripe_id": FAKE_STRIPE_ID["Subscription Item"],
+        "stripe_created": datetime(2021, 9, 27, tzinfo=timezone.utc),
+        "stripe_subscription_id": FAKE_STRIPE_ID["Subscription"],
+        "stripe_price_id": FAKE_STRIPE_ID["Price"],
+    }
+
+
+@pytest.fixture
+def stripe_invoice_data():
+    return {
+        "stripe_id": FAKE_STRIPE_ID["Invoice"],
+        "stripe_created": datetime(2021, 10, 28, tzinfo=timezone.utc),
+        "stripe_customer_id": FAKE_STRIPE_ID["Customer"],
+        "default_source_id": None,
+        "default_payment_method_id": None,
+        "currency": "usd",
+        "total": 1000,
+        "status": "open",
+    }
+
+
+@pytest.fixture
+def stripe_invoice_line_item_data():
+    return {
+        "stripe_id": FAKE_STRIPE_ID["(Invoice) Line Item"],
+        "stripe_price_id": FAKE_STRIPE_ID["Price"],
+        "stripe_invoice_id": FAKE_STRIPE_ID["Invoice"],
+        "stripe_subscription_id": FAKE_STRIPE_ID["Subscription"],
+        "stripe_subscription_item_id": FAKE_STRIPE_ID["Subscription Item"],
+        "stripe_type": "subscription",
+        "amount": 1000,
+        "currency": "usd",
+    }
+
+
+@pytest.fixture
+def raw_stripe_customer_data(stripe_customer_data) -> dict:
+    """Return minimal Stripe customer data."""
+    return {
+        "id": stripe_customer_data["stripe_id"],
+        "object": "customer",
+        "created": unix_timestamp(stripe_customer_data["stripe_created"]),
+        "description": stripe_customer_data["fxa_id"],
+        "email": "fxa_email@example.com",
+        "default_source": stripe_customer_data["default_source_id"],
+        "invoice_settings": {
+            "default_payment_method": stripe_customer_data[
+                "invoice_settings_default_payment_method_id"
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def raw_stripe_price_data(stripe_price_data):
+    """Return minimal Stripe price data."""
+    return {
+        "id": stripe_price_data["stripe_id"],
+        "object": "price",
+        "created": unix_timestamp(stripe_price_data["stripe_created"]),
+        "product": stripe_price_data["stripe_product_id"],
+        "active": stripe_price_data["active"],
+        "currency": stripe_price_data["currency"],
+        "recurring": {
+            "interval": stripe_price_data["recurring_interval"],
+            "interval_count": stripe_price_data["recurring_interval_count"],
+        },
+        "unit_amount": stripe_price_data["unit_amount"],
+    }
+
+
+@pytest.fixture
+def raw_stripe_subscription_data(
+    stripe_subscription_data, stripe_subscription_item_data, raw_stripe_price_data
+):
+    """Return minimal Stripe subscription data."""
+    return {
+        "id": stripe_subscription_data["stripe_id"],
+        "object": "subscription",
+        "created": unix_timestamp(stripe_subscription_data["stripe_created"]),
+        "customer": stripe_subscription_data["stripe_customer_id"],
+        "cancel_at_period_end": stripe_subscription_data["cancel_at_period_end"],
+        "canceled_at": stripe_subscription_data["canceled_at"],
+        "current_period_start": unix_timestamp(
+            stripe_subscription_data["current_period_start"]
+        ),
+        "current_period_end": unix_timestamp(
+            stripe_subscription_data["current_period_end"]
+        ),
+        "ended_at": stripe_subscription_data["ended_at"],
+        "start_date": unix_timestamp(stripe_subscription_data["start_date"]),
+        "status": stripe_subscription_data["status"],
+        "default_source": stripe_subscription_data["default_source_id"],
+        "default_payment_method": stripe_subscription_data["default_payment_method_id"],
+        "items": {
+            "object": "list",
+            "total_count": 1,
+            "has_more": False,
+            "url": f"/v1/subscription_items?subscription={stripe_subscription_data['stripe_id']}",
+            "data": [
+                {
+                    "id": stripe_subscription_item_data["stripe_id"],
+                    "object": "subscription_item",
+                    "created": unix_timestamp(
+                        stripe_subscription_item_data["stripe_created"]
+                    ),
+                    "subscription": stripe_subscription_item_data[
+                        "stripe_subscription_id"
+                    ],
+                    "price": raw_stripe_price_data,
+                }
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def raw_stripe_invoice_data(
+    raw_stripe_price_data, stripe_invoice_data, stripe_invoice_line_item_data
+):
+    """Return minimal Stripe invoice data."""
+    return {
+        "id": stripe_invoice_data["stripe_id"],
+        "object": "invoice",
+        "created": unix_timestamp(stripe_invoice_data["stripe_created"]),
+        "customer": stripe_invoice_data["stripe_customer_id"],
+        "currency": stripe_invoice_data["currency"],
+        "total": stripe_invoice_data["total"],
+        "default_source": stripe_invoice_data["default_source_id"],
+        "default_payment_method": stripe_invoice_data["default_payment_method_id"],
+        "status": stripe_invoice_data["status"],
+        "lines": {
+            "object": "list",
+            "total_count": 1,
+            "has_more": False,
+            "url": f"/v1/invoices/{stripe_invoice_data['stripe_id']}/lines",
+            "data": [
+                {
+                    "id": stripe_invoice_line_item_data["stripe_id"],
+                    "object": "line_item",
+                    "type": stripe_invoice_line_item_data["stripe_type"],
+                    "subscription": stripe_invoice_line_item_data[
+                        "stripe_subscription_id"
+                    ],
+                    "subscription_item": stripe_invoice_line_item_data[
+                        "stripe_subscription_item_id"
+                    ],
+                    "price": raw_stripe_price_data,
+                    "amount": stripe_invoice_line_item_data["amount"],
+                    "currency": stripe_invoice_line_item_data["currency"],
+                }
+            ],
+        },
+    }
+
+
+@pytest.fixture
+def contact_with_stripe_customer(dbsession, example_contact, stripe_customer_data):
     """Return the example contact with an associated Stripe Customer account."""
     create_stripe_customer(
-        dbsession, StripeCustomerCreateSchema(**SAMPLE_STRIPE_DATA["Customer"])
+        dbsession, StripeCustomerCreateSchema(**stripe_customer_data)
     )
     dbsession.commit()
     return example_contact
 
 
 @pytest.fixture
-def contact_with_stripe_subscription(dbsession, contact_with_stripe_customer):
-    create_stripe_price(
-        dbsession, StripePriceCreateSchema(**SAMPLE_STRIPE_DATA["Price"])
-    )
+def contact_with_stripe_subscription(
+    dbsession,
+    contact_with_stripe_customer,
+    stripe_price_data,
+    stripe_subscription_data,
+    stripe_subscription_item_data,
+):
+    create_stripe_price(dbsession, StripePriceCreateSchema(**stripe_price_data))
     create_stripe_subscription(
-        dbsession, StripeSubscriptionCreateSchema(**SAMPLE_STRIPE_DATA["Subscription"])
+        dbsession, StripeSubscriptionCreateSchema(**stripe_subscription_data)
     )
     create_stripe_subscription_item(
         dbsession,
-        StripeSubscriptionItemCreateSchema(**SAMPLE_STRIPE_DATA["SubscriptionItem"]),
+        StripeSubscriptionItemCreateSchema(
+            **stripe_subscription_item_data,
+        ),
     )
     dbsession.commit()
     email = get_email(dbsession, contact_with_stripe_customer.email.email_id)
