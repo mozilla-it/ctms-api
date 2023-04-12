@@ -607,22 +607,42 @@ def test_parse_sample_data_acoustic(dbsession, stripe_test_json):
         add_stripe_object_to_acoustic_queue(dbsession, stripe_test_json)
 
 
-def test_get_email_id_customer(dbsession, contact_with_stripe_customer):
-    """A Stripe Customer can return the related email_id."""
-    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+def test_get_email_id_customer(
+    dbsession, stripe_customer_data, contact_with_stripe_customer
+):
+    """A Stripe Customer can return the related email_id.
+    `stripe_customer_data` is used when building `contact_with_stripe_customer`
+    """
+
+    customer = get_stripe_customer_by_stripe_id(
+        dbsession, stripe_customer_data["stripe_id"]
+    )
+
     assert customer.get_email_id() == contact_with_stripe_customer.email.email_id
 
 
-def test_get_email_id_subscription(dbsession, contact_with_stripe_subscription):
-    """A Stripe Subscription and related objects can return the related email_id."""
-    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+def test_get_email_id_subscription(
+    dbsession,
+    contact_with_stripe_subscription,
+    stripe_customer_data,
+    stripe_price_data,
+    stripe_subscription_data,
+    stripe_subscription_item_data,
+):
+    """A Stripe Subscription and related objects can return the related email_id.
+    The `stripe_` fixtures that are included here are used to build the data
+    associated with `contact_with_stripe_subscription`
+    """
+    customer = get_stripe_customer_by_stripe_id(
+        dbsession, stripe_customer_data["stripe_id"]
+    )
     subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription"]
+        dbsession, stripe_subscription_data["stripe_id"]
     )
     subscription_item = get_stripe_subscription_item_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription Item"]
+        dbsession, stripe_subscription_item_data["stripe_id"]
     )
-    price = get_stripe_price_by_stripe_id(dbsession, FAKE_STRIPE_ID["Price"])
+    price = get_stripe_price_by_stripe_id(dbsession, stripe_price_data["stripe_id"])
 
     email_id = contact_with_stripe_subscription.email.email_id
     assert customer.get_email_id() == email_id
