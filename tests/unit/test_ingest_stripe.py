@@ -41,8 +41,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.conftest import unix_timestamp
-from tests.unit.conftest import fake_stripe_id
+from tests.unit.conftest import fake_stripe_id, unix_timestamp
 
 
 @pytest.fixture
