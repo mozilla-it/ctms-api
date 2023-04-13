@@ -51,7 +51,7 @@ from ctms.schemas import (
     StripeSubscriptionItemCreateSchema,
 )
 
-from . import factories
+from tests import factories
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)

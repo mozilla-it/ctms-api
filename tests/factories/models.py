@@ -21,7 +21,7 @@ class NewsletterFactory(BaseSQLAlchemyModelFactory):
     lang = factory.Faker("language_code")
     source = factory.Faker("url")
 
-    email = factory.SubFactory(factory="tests.unit.factories.EmailFactory")
+    email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
 
 
 class WaitlistFactory(BaseSQLAlchemyModelFactory):
@@ -32,7 +32,7 @@ class WaitlistFactory(BaseSQLAlchemyModelFactory):
     source = factory.Faker("url")
     fields = {}
 
-    email = factory.SubFactory(factory="tests.unit.factories.EmailFactory")
+    email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
 
 
 class EmailFactory(BaseSQLAlchemyModelFactory):
@@ -62,4 +62,5 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
 __all__ = (
     "NewsletterFactory",
     "EmailFactory",
+    "WaitlistFactory",
 )
