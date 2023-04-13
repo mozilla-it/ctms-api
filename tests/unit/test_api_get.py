@@ -1,6 +1,7 @@
 """Unit tests for GET /ctms/{email_id}"""
 from uuid import uuid4
 
+import pytest
 from structlog.testing import capture_logs
 
 from ctms.models import Email
@@ -338,3 +339,15 @@ def test_get_ctms_with_tracing(client, dbsession):
     assert len(caplog) == 1
     assert caplog[0]["trace"] == email
     assert "trace_json" not in caplog[0]
+
+
+@pytest.mark.parametrize("waitlist_name", ["vpn", "relay"])
+def test_get_ctms_without_geo_in_waitlist(
+    waitlist_name, client, dbsession, waitlist_factory
+):
+    existing_waitlist = waitlist_factory(name=waitlist_name, fields={})
+    dbsession.flush()
+    email_id = existing_waitlist.email.email_id
+
+    resp = client.get(f"/ctms/{email_id}")
+    assert resp.status_code == 200
