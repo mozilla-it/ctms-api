@@ -1,6 +1,7 @@
 """pytest fixtures for the CTMS app"""
 import json
 import os.path
+from base64 import b64encode
 from datetime import datetime, timezone
 from glob import glob
 from time import mktime
@@ -49,7 +50,6 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import FAKE_STRIPE_ID
 
 from . import factories
 
@@ -68,6 +68,18 @@ SAMPLE_CONTACT_PARAMS = [
     ("simple_default_contact_data", {"amo"}),
     ("default_newsletter_contact_data", {"newsletters"}),
 ]
+
+
+def fake_stripe_id(prefix: str, seed: str, suffix: Optional[str] = None) -> str:
+    """Create a fake Stripe ID for testing"""
+    body = b64encode(seed.encode()).decode().replace("=", "")
+    return f"{prefix}_{body}{suffix if suffix else ''}"
+
+
+FAKE_STRIPE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
+FAKE_STRIPE_INVOICE_ID = fake_stripe_id("in", "invoice")
+FAKE_STRIPE_PRICE_ID = fake_stripe_id("price", "price")
+FAKE_STRIPE_SUBSCRIPTION_ID = fake_stripe_id("sub", "subscription")
 
 
 def _gather_examples(schema_class) -> dict[str, str]:
@@ -683,21 +695,23 @@ def stripe_test_json(request):
 @pytest.fixture
 def stripe_customer_data():
     return {
-        "stripe_id": FAKE_STRIPE_ID["Customer"],
+        "stripe_id": FAKE_STRIPE_CUSTOMER_ID,
         "stripe_created": datetime(2021, 10, 25, 15, 34, tzinfo=timezone.utc),
         # TODO magic string from fxa schema
         "fxa_id": "6eb6ed6ac3b64259968aa490c6c0b9df",
         "default_source_id": None,
-        "invoice_settings_default_payment_method_id": FAKE_STRIPE_ID["Payment Method"],
+        "invoice_settings_default_payment_method_id": fake_stripe_id(
+            "pm", "payment_method"
+        ),
     }
 
 
 @pytest.fixture
 def stripe_price_data():
     return {
-        "stripe_id": FAKE_STRIPE_ID["Price"],
+        "stripe_id": FAKE_STRIPE_PRICE_ID,
         "stripe_created": datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc),
-        "stripe_product_id": FAKE_STRIPE_ID["Product"],
+        "stripe_product_id": fake_stripe_id("prod", "product"),
         "active": True,
         "currency": "usd",
         "recurring_interval": "month",
@@ -709,9 +723,9 @@ def stripe_price_data():
 @pytest.fixture
 def stripe_subscription_data():
     return {
-        "stripe_id": FAKE_STRIPE_ID["Subscription"],
+        "stripe_id": FAKE_STRIPE_SUBSCRIPTION_ID,
         "stripe_created": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "stripe_customer_id": FAKE_STRIPE_ID["Customer"],
+        "stripe_customer_id": FAKE_STRIPE_CUSTOMER_ID,
         "default_source_id": None,
         "default_payment_method_id": None,
         "cancel_at_period_end": False,
@@ -727,19 +741,19 @@ def stripe_subscription_data():
 @pytest.fixture
 def stripe_subscription_item_data():
     return {
-        "stripe_id": FAKE_STRIPE_ID["Subscription Item"],
+        "stripe_id": FAKE_STRIPE_SUBSCRIPTION_ID,
         "stripe_created": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "stripe_subscription_id": FAKE_STRIPE_ID["Subscription"],
-        "stripe_price_id": FAKE_STRIPE_ID["Price"],
+        "stripe_subscription_id": FAKE_STRIPE_SUBSCRIPTION_ID,
+        "stripe_price_id": FAKE_STRIPE_PRICE_ID,
     }
 
 
 @pytest.fixture
 def stripe_invoice_data():
     return {
-        "stripe_id": FAKE_STRIPE_ID["Invoice"],
+        "stripe_id": FAKE_STRIPE_INVOICE_ID,
         "stripe_created": datetime(2021, 10, 28, tzinfo=timezone.utc),
-        "stripe_customer_id": FAKE_STRIPE_ID["Customer"],
+        "stripe_customer_id": FAKE_STRIPE_CUSTOMER_ID,
         "default_source_id": None,
         "default_payment_method_id": None,
         "currency": "usd",
@@ -751,11 +765,11 @@ def stripe_invoice_data():
 @pytest.fixture
 def stripe_invoice_line_item_data():
     return {
-        "stripe_id": FAKE_STRIPE_ID["(Invoice) Line Item"],
-        "stripe_price_id": FAKE_STRIPE_ID["Price"],
-        "stripe_invoice_id": FAKE_STRIPE_ID["Invoice"],
-        "stripe_subscription_id": FAKE_STRIPE_ID["Subscription"],
-        "stripe_subscription_item_id": FAKE_STRIPE_ID["Subscription Item"],
+        "stripe_id": fake_stripe_id("il", "invoice line item"),
+        "stripe_price_id": FAKE_STRIPE_PRICE_ID,
+        "stripe_invoice_id": FAKE_STRIPE_INVOICE_ID,
+        "stripe_subscription_id": FAKE_STRIPE_SUBSCRIPTION_ID,
+        "stripe_subscription_item_id": fake_stripe_id("si", "subscription_item"),
         "stripe_type": "subscription",
         "amount": 1000,
         "currency": "usd",

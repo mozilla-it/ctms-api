@@ -41,8 +41,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.conftest import unix_timestamp
-from tests.unit.sample_data import FAKE_STRIPE_ID, fake_stripe_id
+from tests.unit.conftest import fake_stripe_id, unix_timestamp
 
 
 @pytest.fixture
@@ -102,18 +101,6 @@ def stripe_invoice(
     return db_invoice
 
 
-def test_ids():
-    """Get the fake IDs, to make it easier to copy to schemas."""
-    assert FAKE_STRIPE_ID["Customer"] == "cus_Y3VzdG9tZXI"
-    assert FAKE_STRIPE_ID["Invoice"] == "in_aW52b2ljZQ"
-    assert FAKE_STRIPE_ID["(Invoice) Line Item"] == "il_aW52b2ljZSBsaW5lIGl0ZW0"
-    assert FAKE_STRIPE_ID["Payment Method"] == "pm_cGF5bWVudF9tZXRob2Q"
-    assert FAKE_STRIPE_ID["Price"] == "price_cHJpY2U"
-    assert FAKE_STRIPE_ID["Product"] == "prod_cHJvZHVjdA"
-    assert FAKE_STRIPE_ID["Subscription"] == "sub_c3Vic2NyaXB0aW9u"
-    assert FAKE_STRIPE_ID["Subscription Item"] == "si_c3Vic2NyaXB0aW9uX2l0ZW0"
-
-
 def test_ingest_existing_contact(dbsession, example_contact, raw_stripe_customer_data):
     """A Stripe Customer is associated with the existing contact."""
     data = raw_stripe_customer_data
@@ -123,12 +110,12 @@ def test_ingest_existing_contact(dbsession, example_contact, raw_stripe_customer
     customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
 
-    assert customer.stripe_id == FAKE_STRIPE_ID["Customer"]
+    assert customer.stripe_id == raw_stripe_customer_data["id"]
     assert not customer.deleted
     assert customer.default_source_id is None
     assert (
         customer.invoice_settings_default_payment_method_id
-        == FAKE_STRIPE_ID["Payment Method"]
+        == raw_stripe_customer_data["invoice_settings"]["default_payment_method"]
     )
     assert customer.fxa_id == example_contact.fxa.fxa_id
     assert customer.get_email_id() == example_contact.email.email_id
@@ -157,7 +144,7 @@ def test_ingest_deleted_customer(dbsession):
     """A deleted Stripe Customer is not ingested."""
     data = {
         "deleted": True,
-        "id": FAKE_STRIPE_ID["Customer"],
+        "id": fake_stripe_id("cus", "deleted_customer"),
         "object": "customer",
     }
     customer, actions = ingest_stripe_customer(dbsession, data)
@@ -266,9 +253,9 @@ def test_ingest_new_subscription(dbsession, raw_stripe_subscription_data):
     subscription, actions = ingest_stripe_subscription(dbsession, data)
     dbsession.commit()
 
-    assert subscription.stripe_id == FAKE_STRIPE_ID["Subscription"]
+    assert subscription.stripe_id == raw_stripe_subscription_data["id"]
     assert subscription.stripe_created == datetime(2021, 9, 27, tzinfo=timezone.utc)
-    assert subscription.stripe_customer_id == FAKE_STRIPE_ID["Customer"]
+    assert subscription.stripe_customer_id == raw_stripe_subscription_data["customer"]
     assert not subscription.cancel_at_period_end
     assert subscription.canceled_at is None
     assert subscription.current_period_end == datetime(
@@ -288,14 +275,17 @@ def test_ingest_new_subscription(dbsession, raw_stripe_subscription_data):
 
     assert len(subscription.subscription_items) == 1
     item = subscription.subscription_items[0]
-    assert item.stripe_id == FAKE_STRIPE_ID["Subscription Item"]
+    assert item.stripe_id == raw_stripe_subscription_data["items"]["data"][0]["id"]
     assert item.subscription == subscription
     assert item.get_email_id() is None
 
     price = item.price
-    assert price.stripe_id == FAKE_STRIPE_ID["Price"]
+    assert (
+        price.stripe_id
+        == raw_stripe_subscription_data["items"]["data"][0]["price"]["id"]
+    )
     assert price.stripe_created == datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc)
-    assert price.stripe_product_id == FAKE_STRIPE_ID["Product"]
+    assert price.stripe_product_id == data["items"]["data"][0]["price"]["product"]
     assert price.active
     assert price.currency == "usd"
     assert price.recurring_interval == "month"
@@ -305,9 +295,9 @@ def test_ingest_new_subscription(dbsession, raw_stripe_subscription_data):
 
     assert actions == {
         "created": {
-            f"subscription:{FAKE_STRIPE_ID['Subscription']}",
-            f"subscription_item:{FAKE_STRIPE_ID['Subscription Item']}",
-            f"price:{FAKE_STRIPE_ID['Price']}",
+            f"subscription:{raw_stripe_subscription_data['id']}",
+            f"subscription_item:{raw_stripe_subscription_data['items']['data'][0]['id']}",
+            f"price:{raw_stripe_subscription_data['items']['data'][0]['price']['id']}",
         }
     }
 
@@ -333,7 +323,7 @@ def test_ingest_update_subscription(
             "id": new_price_id,
             "object": "price",
             "created": unix_timestamp(si_created),
-            "product": FAKE_STRIPE_ID["Product"],
+            "product": data["items"]["data"][0]["price"]["product"],
             "active": True,
             "currency": "usd",
             "recurring": {
@@ -434,7 +424,7 @@ def test_ingest_update_subscription_item(
         "id": fake_stripe_id("price", "monthly special"),
         "object": "price",
         "created": unix_timestamp(datetime(2021, 10, 27, tzinfo=timezone.utc)),
-        "product": FAKE_STRIPE_ID["Product"],
+        "product": data["items"]["data"][0]["price"]["product"],
         "active": True,
         "currency": "usd",
         "recurring": {
@@ -469,7 +459,7 @@ def test_ingest_non_recurring_price(dbsession):
         "id": fake_stripe_id("price", "non-recurring"),
         "object": "price",
         "created": unix_timestamp(),
-        "product": FAKE_STRIPE_ID["Product"],
+        "product": fake_stripe_id("prod", "test_product"),
         "active": True,
         "type": "one_time",
         "currency": "usd",
@@ -492,9 +482,9 @@ def test_ingest_new_invoice(dbsession, raw_stripe_invoice_data):
     invoice, actions = ingest_stripe_invoice(dbsession, data)
     dbsession.commit()
 
-    assert invoice.stripe_id == FAKE_STRIPE_ID["Invoice"]
+    assert invoice.stripe_id == data["id"]
     assert invoice.stripe_created == datetime(2021, 10, 28, tzinfo=timezone.utc)
-    assert invoice.stripe_customer_id == FAKE_STRIPE_ID["Customer"]
+    assert invoice.stripe_customer_id == data["customer"]
     assert invoice.currency == "usd"
     assert invoice.total == 1000
     assert invoice.status == "open"
@@ -507,19 +497,22 @@ def test_ingest_new_invoice(dbsession, raw_stripe_invoice_data):
 
     assert len(invoice.line_items) == 1
     item = invoice.line_items[0]
-    assert item.stripe_id == FAKE_STRIPE_ID["(Invoice) Line Item"]
+    assert item.stripe_id == data["lines"]["data"][0]["id"]
     assert item.invoice == invoice
-    assert item.stripe_subscription_id == FAKE_STRIPE_ID["Subscription"]
-    assert item.stripe_subscription_item_id == FAKE_STRIPE_ID["Subscription Item"]
+    assert item.stripe_subscription_id == data["lines"]["data"][0]["subscription"]
+    assert (
+        item.stripe_subscription_item_id
+        == data["lines"]["data"][0]["subscription_item"]
+    )
     assert item.stripe_invoice_item_id is None
     assert item.amount == 1000
     assert item.currency == "usd"
     assert item.get_email_id() is None
 
     price = item.price
-    assert price.stripe_id == FAKE_STRIPE_ID["Price"]
+    assert price.stripe_id == data["lines"]["data"][0]["price"]["id"]
     assert price.stripe_created == datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc)
-    assert price.stripe_product_id == FAKE_STRIPE_ID["Product"]
+    assert price.stripe_product_id == data["lines"]["data"][0]["price"]["product"]
     assert price.active
     assert price.currency == "usd"
     assert price.recurring_interval == "month"
@@ -570,8 +563,8 @@ def test_ingest_updated_invoice_lines(
         "object": "line_item",
         "type": "subscription",
         "created": unix_timestamp(datetime(2021, 10, 28, tzinfo=timezone.utc)),
-        "subscription": FAKE_STRIPE_ID["Subscription"],
-        "subscription_item": FAKE_STRIPE_ID["Subscription Item"],
+        "subscription": data["lines"]["data"][0]["subscription"],
+        "subscription_item": data["lines"]["data"][0]["subscription_item"],
         "price": raw_stripe_price_data,
         "amount": 500,
         "currency": "usd",
@@ -613,22 +606,42 @@ def test_parse_sample_data_acoustic(dbsession, stripe_test_json):
         add_stripe_object_to_acoustic_queue(dbsession, stripe_test_json)
 
 
-def test_get_email_id_customer(dbsession, contact_with_stripe_customer):
-    """A Stripe Customer can return the related email_id."""
-    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+def test_get_email_id_customer(
+    dbsession, stripe_customer_data, contact_with_stripe_customer
+):
+    """A Stripe Customer can return the related email_id.
+    `stripe_customer_data` is used when building `contact_with_stripe_customer`
+    """
+
+    customer = get_stripe_customer_by_stripe_id(
+        dbsession, stripe_customer_data["stripe_id"]
+    )
+
     assert customer.get_email_id() == contact_with_stripe_customer.email.email_id
 
 
-def test_get_email_id_subscription(dbsession, contact_with_stripe_subscription):
-    """A Stripe Subscription and related objects can return the related email_id."""
-    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
+def test_get_email_id_subscription(
+    dbsession,
+    contact_with_stripe_subscription,
+    stripe_customer_data,
+    stripe_price_data,
+    stripe_subscription_data,
+    stripe_subscription_item_data,
+):
+    """A Stripe Subscription and related objects can return the related email_id.
+    The `stripe_` fixtures that are included here are used to build the data
+    associated with `contact_with_stripe_subscription`
+    """
+    customer = get_stripe_customer_by_stripe_id(
+        dbsession, stripe_customer_data["stripe_id"]
+    )
     subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription"]
+        dbsession, stripe_subscription_data["stripe_id"]
     )
     subscription_item = get_stripe_subscription_item_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription Item"]
+        dbsession, stripe_subscription_item_data["stripe_id"]
     )
-    price = get_stripe_price_by_stripe_id(dbsession, FAKE_STRIPE_ID["Price"])
+    price = get_stripe_price_by_stripe_id(dbsession, stripe_price_data["stripe_id"])
 
     email_id = contact_with_stripe_subscription.email.email_id
     assert customer.get_email_id() == email_id
@@ -645,12 +658,16 @@ def test_get_email_id_invoice(
     invoice, actions = ingest_stripe_invoice(dbsession, raw_stripe_invoice_data)
     dbsession.commit()
     assert actions
-    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_ID["Customer"])
-    invoice = get_stripe_invoice_by_stripe_id(dbsession, FAKE_STRIPE_ID["Invoice"])
-    line_item = get_stripe_invoice_line_item_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["(Invoice) Line Item"]
+    customer = get_stripe_customer_by_stripe_id(
+        dbsession, raw_stripe_invoice_data["customer"]
     )
-    price = get_stripe_price_by_stripe_id(dbsession, FAKE_STRIPE_ID["Price"])
+    invoice = get_stripe_invoice_by_stripe_id(dbsession, raw_stripe_invoice_data["id"])
+    line_item = get_stripe_invoice_line_item_by_stripe_id(
+        dbsession, raw_stripe_invoice_data["lines"]["data"][0]["id"]
+    )
+    price = get_stripe_price_by_stripe_id(
+        dbsession, raw_stripe_invoice_data["lines"]["data"][0]["price"]["id"]
+    )
 
     email_id = contact_with_stripe_customer.email.email_id
     assert customer.get_email_id() == email_id

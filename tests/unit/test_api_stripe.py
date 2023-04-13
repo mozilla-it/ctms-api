@@ -11,7 +11,7 @@ from structlog.testing import capture_logs
 
 from ctms.app import app, get_pubsub_claim
 from ctms.models import PendingAcousticRecord
-from tests.unit.sample_data import fake_stripe_id
+from tests.unit.conftest import fake_stripe_id
 
 
 def pubsub_wrap(data):

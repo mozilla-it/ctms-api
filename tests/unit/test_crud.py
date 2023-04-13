@@ -59,7 +59,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import FAKE_STRIPE_ID, fake_stripe_id
+from tests.unit.conftest import fake_stripe_id
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
@@ -79,7 +79,10 @@ def test_get_email(dbsession, example_contact):
     assert sorted(waitlists_names) == waitlists_names
 
 
-def test_get_email_with_stripe_customer(dbsession, contact_with_stripe_customer):
+def test_get_email_with_stripe_customer(
+    dbsession, stripe_customer_data, contact_with_stripe_customer
+):
+    """`stripe_customer_data` is used when building `contact_with_stripe_customer`"""
     email_id = contact_with_stripe_customer.email.email_id
     email = get_email(dbsession, email_id)
     assert email.email_id == email_id
@@ -87,13 +90,15 @@ def test_get_email_with_stripe_customer(dbsession, contact_with_stripe_customer)
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
     assert sorted(newsletter_names) == newsletter_names
 
-    assert email.stripe_customer.stripe_id == FAKE_STRIPE_ID["Customer"]
+    assert email.stripe_customer.stripe_id == stripe_customer_data["stripe_id"]
     assert len(email.stripe_customer.subscriptions) == 0
 
 
 def test_get_email_with_stripe_subscription(
-    dbsession, contact_with_stripe_subscription
+    dbsession, contact_with_stripe_subscription, stripe_customer_data, stripe_price_data
 ):
+    """`stripe_customer_data` and `stripe_price_data` is used when building
+    `contact_with_stripe_subscription`"""
     email_id = contact_with_stripe_subscription.email.email_id
     email = get_email(dbsession, email_id)
     assert email.email_id == email_id
@@ -102,12 +107,12 @@ def test_get_email_with_stripe_subscription(
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
     assert sorted(newsletter_names) == newsletter_names
 
-    assert email.stripe_customer.stripe_id == FAKE_STRIPE_ID["Customer"]
+    assert email.stripe_customer.stripe_id == stripe_customer_data["stripe_id"]
     assert len(email.stripe_customer.subscriptions) == 1
     assert len(email.stripe_customer.subscriptions[0].subscription_items) == 1
     assert (
         email.stripe_customer.subscriptions[0].subscription_items[0].price.stripe_id
-        == FAKE_STRIPE_ID["Price"]
+        == stripe_price_data["stripe_id"]
     )
 
 
@@ -504,11 +509,11 @@ def test_get_acoustic_record_serial_stripe_subscriptions(
 
 
 def test_get_acoustic_record_stripe_subscription_cancelled(
-    dbsession, contact_with_stripe_subscription
+    dbsession, contact_with_stripe_subscription, stripe_subscription_data
 ):
     """A contact with a canceled Stripe subscription is in the canceled segement."""
     subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription"]
+        dbsession, stripe_subscription_data["stripe_id"]
     )
     subscription.status = "canceled"
     subscription.ended_at = subscription.current_period_end
@@ -523,11 +528,11 @@ def test_get_acoustic_record_stripe_subscription_cancelled(
 
 
 def test_get_acoustic_record_stripe_subscription_other(
-    dbsession, contact_with_stripe_subscription
+    dbsession, contact_with_stripe_subscription, stripe_subscription_data
 ):
     """A contact with a canceled Stripe subscription is in the canceled segement."""
     subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription"]
+        dbsession, stripe_subscription_data["stripe_id"]
     )
     subscription.status = "unpaid"
     dbsession.commit()
