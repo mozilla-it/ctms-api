@@ -107,7 +107,8 @@ def validate_waitlist_fields(name: str, fields: dict):
     if name == "relay":
 
         class RelayFieldsSchema(ComparableBase):
-            geo: str = Field(
+            geo: Optional[str] = Field(
+                default=None,
                 max_length=100,
                 description="Waitlist country",
                 example="fr",
@@ -121,7 +122,8 @@ def validate_waitlist_fields(name: str, fields: dict):
     elif name == "vpn":
 
         class VPNFieldsSchema(ComparableBase):
-            geo: str = Field(
+            geo: Optional[str] = Field(
+                default=None,
                 max_length=100,
                 description="Waitlist country",
                 example="fr",
