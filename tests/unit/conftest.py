@@ -175,9 +175,13 @@ def dbsession(connection):
     transaction.rollback()
 
 
-register(factories.EmailFactory)
-register(factories.NewsletterFactory)
-register(factories.WaitlistFactory)
+# Database models
+register(factories.models.EmailFactory)
+register(factories.models.NewsletterFactory)
+register(factories.models.StripeCustomerFactory)
+register(factories.models.WaitlistFactory)
+# Stripe REST API payloads
+register(factories.stripe.StripeCustomerDataFactory)
 
 
 @pytest.fixture
