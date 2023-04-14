@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
 from ctms.crud import (
-    create_stripe_customer,
     create_stripe_invoice,
     create_stripe_invoice_line_item,
     create_stripe_price,
@@ -34,7 +33,6 @@ from ctms.ingest_stripe import (
     ingest_stripe_subscription,
 )
 from ctms.schemas import (
-    StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
     StripePriceCreateSchema,
@@ -42,14 +40,13 @@ from ctms.schemas import (
     StripeSubscriptionItemCreateSchema,
 )
 from tests.data import fake_stripe_id
-from tests.unit.conftest import unix_timestamp
+from tests.unit.conftest import FAKE_STRIPE_CUSTOMER_ID, unix_timestamp
 
 
 @pytest.fixture
-def stripe_customer(dbsession, example_contact, stripe_customer_data):
+def stripe_customer(dbsession, example_contact, stripe_customer_factory):
     """Return a Stripe Customer associated with the example contact."""
-    schema = StripeCustomerCreateSchema(**stripe_customer_data)
-    customer = create_stripe_customer(dbsession, schema)
+    customer = stripe_customer_factory(fxa=example_contact.fxa)
     dbsession.commit()
     dbsession.refresh(customer)
     return customer
@@ -102,34 +99,39 @@ def stripe_invoice(
     return db_invoice
 
 
-def test_ingest_existing_contact(dbsession, example_contact, raw_stripe_customer_data):
+def test_ingest_existing_contact(
+    dbsession, email_factory, stripe_customer_data_factory
+):
     """A Stripe Customer is associated with the existing contact."""
-    data = raw_stripe_customer_data
-    data["description"] = example_contact.fxa.fxa_id
-    data["email"] = example_contact.fxa.primary_email
+    contact = email_factory(fxa=True)
+    dbsession.commit()
+
+    data = stripe_customer_data_factory(
+        email=contact.fxa.primary_email, fxa_id=contact.fxa.fxa_id
+    )
 
     customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
 
-    assert customer.stripe_id == raw_stripe_customer_data["id"]
+    assert customer.stripe_id == data["id"]
     assert not customer.deleted
     assert customer.default_source_id is None
     assert (
         customer.invoice_settings_default_payment_method_id
-        == raw_stripe_customer_data["invoice_settings"]["default_payment_method"]
+        == data["invoice_settings"]["default_payment_method"]
     )
-    assert customer.fxa_id == example_contact.fxa.fxa_id
-    assert customer.get_email_id() == example_contact.email.email_id
+    assert customer.fxa_id == contact.fxa.fxa_id
+    assert customer.get_email_id() == contact.email_id
     assert actions == {
         "created": {
-            f"customer:{customer.stripe_id}",
+            f"customer:{contact.stripe_customer.stripe_id}",
         }
     }
 
 
-def test_ingest_without_contact(dbsession, raw_stripe_customer_data):
+def test_ingest_without_contact(dbsession, stripe_customer_data_factory):
     """A Stripe Customer can be ingested without a contact."""
-    data = raw_stripe_customer_data
+    data = stripe_customer_data_factory()
     customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
     dbsession.refresh(customer)
@@ -157,18 +159,25 @@ def test_ingest_deleted_customer(dbsession):
     }
 
 
-def test_ingest_update_customer(dbsession, stripe_customer, raw_stripe_customer_data):
+def test_ingest_update_customer(
+    dbsession, stripe_customer_factory, stripe_customer_data_factory
+):
     """A Stripe Customer can be updated."""
-    data = raw_stripe_customer_data
+    customer = stripe_customer_factory(
+        default_source_id=fake_stripe_id("card", "old credit card")
+    )
+    dbsession.commit()
+
     # Change payment method
-    new_source_id = fake_stripe_id("card", "new credit card")
-    data["default_source"] = new_source_id
+    data = stripe_customer_data_factory(
+        default_source=fake_stripe_id("card", "new credit card")
+    )
     data["invoice_settings"]["default_payment_method"] = None
 
     customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
 
-    assert customer.default_source_id == new_source_id
+    assert customer.default_source_id == data["default_source"]
     assert customer.invoice_settings_default_payment_method_id is None
     assert actions == {
         "updated": {
@@ -177,27 +186,24 @@ def test_ingest_update_customer(dbsession, stripe_customer, raw_stripe_customer_
     }
 
 
-def test_ingest_existing_but_deleted_customer(
-    dbsession, stripe_customer, example_contact
-):
+def test_ingest_existing_but_deleted_customer(dbsession, stripe_customer):
     """A deleted Stripe Customer is noted for later deletion."""
     assert not stripe_customer.deleted
-
     data = {
         "deleted": True,
         "id": stripe_customer.stripe_id,
         "object": "customer",
     }
-    customer, actions = ingest_stripe_customer(dbsession, data)
+    deleted_customer, actions = ingest_stripe_customer(dbsession, data)
     dbsession.commit()
-    dbsession.refresh(customer)
-    assert customer.deleted
-    assert customer.default_source_id == stripe_customer.default_source_id
+    dbsession.refresh(deleted_customer)
+    assert deleted_customer.deleted
+    assert deleted_customer.default_source_id == stripe_customer.default_source_id
     assert (
-        customer.invoice_settings_default_payment_method_id
+        deleted_customer.invoice_settings_default_payment_method_id
         == stripe_customer.invoice_settings_default_payment_method_id
     )
-    assert customer.get_email_id() == example_contact.email.email_id
+    assert deleted_customer.get_email_id() == stripe_customer.email.email_id
     assert actions == {
         "updated": {
             f"customer:{data['id']}",
@@ -206,45 +212,48 @@ def test_ingest_existing_but_deleted_customer(
 
 
 def test_ingest_new_customer_duplicate_fxa_id(
-    dbsession, stripe_customer, example_contact, raw_stripe_customer_data
+    dbsession, stripe_customer_factory, stripe_customer_data_factory
 ):
     """StripeIngestFxAIdConflict is raised when an existing customer has the same FxA ID."""
-    data = raw_stripe_customer_data
-    existing_id = data["id"]
-    fxa_id = data["description"]
-    data["id"] = fake_stripe_id("cust", "duplicate_fxa_id")
-    with pytest.raises(StripeIngestFxAIdConflict) as excinfo:
-        ingest_stripe_customer(dbsession, data)
-    exception = excinfo.value
-    assert (
-        str(exception)
-        == f"Existing StripeCustomer '{existing_id}' has FxA ID '{fxa_id}'."
-    )
-    assert repr(exception) == f"StripeIngestFxAIdConflict('{existing_id}', '{fxa_id}')"
-
-
-def test_ingest_update_customer_duplicate_fxa_id(
-    dbsession, stripe_customer, stripe_customer_data, raw_stripe_customer_data
-):
-    """StripeIngestFxAIdConflict is raised when updating to a different customer's FxA ID."""
-    existing_customer_data = stripe_customer_data
-    existing_id = fake_stripe_id("cust", "duplicate_fxa_id")
-    fxa_id = str(uuid4())
-    existing_customer_data.update({"stripe_id": existing_id, "fxa_id": fxa_id})
-    create_stripe_customer(
-        dbsession, StripeCustomerCreateSchema(**existing_customer_data)
+    existing_stripe_customer = stripe_customer_factory(
+        stripe_id=fake_stripe_id("cus", "existing_customer")
     )
     dbsession.commit()
 
-    data = raw_stripe_customer_data
-    data["description"] = fxa_id
+    incoming_stripe_data = stripe_customer_data_factory(
+        id=fake_stripe_id("cus", "new_customer"),
+        fxa_id=existing_stripe_customer.fxa_id,
+    )
 
     with pytest.raises(StripeIngestFxAIdConflict) as excinfo:
-        ingest_stripe_customer(dbsession, data)
+        ingest_stripe_customer(dbsession, incoming_stripe_data)
+    exception = excinfo.value
+    assert (
+        str(exception)
+        == f"Existing StripeCustomer '{existing_stripe_customer.stripe_id}' has FxA ID '{existing_stripe_customer.fxa_id}'."
+    )
+    assert (
+        repr(exception)
+        == f"StripeIngestFxAIdConflict('{existing_stripe_customer.stripe_id}', '{existing_stripe_customer.fxa_id}')"
+    )
+
+
+def test_ingest_update_customer_duplicate_fxa_id(
+    dbsession, stripe_customer_factory, stripe_customer_data_factory
+):
+    """StripeIngestFxAIdConflict is raised when updating to a different customer's FxA ID."""
+    stripe_customer_a = stripe_customer_factory(stripe_id=fake_stripe_id("cus", "a"))
+    stripe_customer_b = stripe_customer_factory(stripe_id=fake_stripe_id("cus", "b"))
+    dbsession.commit()
+    incoming_data = stripe_customer_data_factory(
+        id=stripe_customer_b.stripe_id, fxa_id=stripe_customer_a.fxa_id
+    )
+    with pytest.raises(StripeIngestFxAIdConflict) as excinfo:
+        ingest_stripe_customer(dbsession, incoming_data)
 
     exception = excinfo.value
-    assert exception.stripe_id == existing_id
-    assert exception.fxa_id == fxa_id
+    assert exception.stripe_id == stripe_customer_a.stripe_id
+    assert exception.fxa_id == stripe_customer_a.fxa_id
 
 
 def test_ingest_new_subscription(dbsession, raw_stripe_subscription_data):
@@ -607,24 +616,14 @@ def test_parse_sample_data_acoustic(dbsession, stripe_test_json):
         add_stripe_object_to_acoustic_queue(dbsession, stripe_test_json)
 
 
-def test_get_email_id_customer(
-    dbsession, stripe_customer_data, contact_with_stripe_customer
-):
-    """A Stripe Customer can return the related email_id.
-    `stripe_customer_data` is used when building `contact_with_stripe_customer`
-    """
-
-    customer = get_stripe_customer_by_stripe_id(
-        dbsession, stripe_customer_data["stripe_id"]
-    )
-
-    assert customer.get_email_id() == contact_with_stripe_customer.email.email_id
+def test_get_email_id_customer(dbsession, stripe_customer):
+    customer = get_stripe_customer_by_stripe_id(dbsession, stripe_customer.stripe_id)
+    assert customer.get_email_id() == stripe_customer.email.email_id
 
 
 def test_get_email_id_subscription(
     dbsession,
     contact_with_stripe_subscription,
-    stripe_customer_data,
     stripe_price_data,
     stripe_subscription_data,
     stripe_subscription_item_data,
@@ -633,9 +632,7 @@ def test_get_email_id_subscription(
     The `stripe_` fixtures that are included here are used to build the data
     associated with `contact_with_stripe_subscription`
     """
-    customer = get_stripe_customer_by_stripe_id(
-        dbsession, stripe_customer_data["stripe_id"]
-    )
+    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_CUSTOMER_ID)
     subscription = get_stripe_subscription_by_stripe_id(
         dbsession, stripe_subscription_data["stripe_id"]
     )
@@ -653,9 +650,10 @@ def test_get_email_id_subscription(
 
 
 def test_get_email_id_invoice(
-    dbsession, contact_with_stripe_customer, raw_stripe_invoice_data
+    dbsession, stripe_customer_factory, raw_stripe_invoice_data
 ):
     """A Stripe Invoice and related objects can return the related email_id."""
+    customer = stripe_customer_factory(stripe_id=FAKE_STRIPE_CUSTOMER_ID)
     invoice, actions = ingest_stripe_invoice(dbsession, raw_stripe_invoice_data)
     dbsession.commit()
     assert actions
@@ -670,7 +668,7 @@ def test_get_email_id_invoice(
         dbsession, raw_stripe_invoice_data["lines"]["data"][0]["price"]["id"]
     )
 
-    email_id = contact_with_stripe_customer.email.email_id
+    email_id = customer.email.email_id
     assert customer.get_email_id() == email_id
     assert invoice.get_email_id() == email_id
     assert line_item.get_email_id() == email_id
