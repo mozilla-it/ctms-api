@@ -59,7 +59,7 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.conftest import fake_stripe_id
+from tests.data import fake_stripe_id
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")

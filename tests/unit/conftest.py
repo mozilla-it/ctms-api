@@ -50,8 +50,8 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-
 from tests import factories
+from tests.data import fake_stripe_id
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -68,13 +68,6 @@ SAMPLE_CONTACT_PARAMS = [
     ("simple_default_contact_data", {"amo"}),
     ("default_newsletter_contact_data", {"newsletters"}),
 ]
-
-
-def fake_stripe_id(prefix: str, seed: str, suffix: Optional[str] = None) -> str:
-    """Create a fake Stripe ID for testing"""
-    body = b64encode(seed.encode()).decode().replace("=", "")
-    return f"{prefix}_{body}{suffix if suffix else ''}"
-
 
 FAKE_STRIPE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
 FAKE_STRIPE_INVOICE_ID = fake_stripe_id("in", "invoice")
