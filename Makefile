@@ -94,7 +94,7 @@ integration-test: .env setup $(INSTALL_STAMP)
 ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
-	${DOCKER_COMPOSE} down --remove-orphans
+	${DOCKER_COMPOSE} --profile integration-test down --remove-orphans
 endif
 
 .PHONY: update-secrets
