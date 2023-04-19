@@ -47,8 +47,8 @@ class FirefoxAccountFactory(BaseSQLAlchemyModelFactory):
     primary_email = factory.SelfAttribute("email.primary_email")
     created_date = factory.Faker("date")
     lang = factory.Faker("language_code")
-    first_service = factory.Faker("random_element", elements=["Firefox"])
-    account_deleted = factory.Faker("boolean", chance_of_getting_true=30)
+    first_service = None
+    account_deleted = False
 
     email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
 
