@@ -112,6 +112,17 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             registry=registry,
         )
 
+        self.token_rotation_gauge = Gauge(
+            name=metric_prefix + "token_rotation_gauge",
+            documentation="Gauge of the number of contacts to be updated.",
+            labelnames=[
+                "app_kubernetes_io_component",
+                "app_kubernetes_io_instance",
+                "app_kubernetes_io_name",
+            ],
+            registry=registry,
+        )
+
     def inc_acoustic_request_total(self, method, status, table):
         self.requests.labels(
             method=method,
@@ -176,3 +187,10 @@ class BackgroundMetricService:  # pylint: disable=too-many-instance-attributes
             app_kubernetes_io_instance=self.app_kubernetes_io_instance,
             app_kubernetes_io_name=self.app_kubernetes_io_name,
         ).set(duration_seconds)
+
+    def gauge_token_rotation(self, value):
+        self.token_rotation_gauge.labels(
+            app_kubernetes_io_component=self.app_kubernetes_io_component,
+            app_kubernetes_io_instance=self.app_kubernetes_io_instance,
+            app_kubernetes_io_name=self.app_kubernetes_io_name,
+        ).set(value)

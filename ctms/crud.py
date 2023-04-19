@@ -990,3 +990,8 @@ def get_contacts_from_waitlist(dbsession, waitlist_name):
         .all()
     )
     return entries
+
+
+def get_all_contacts_with_basket_tokens(dbsession):
+    entries = dbsession.query(Email).filter(Email.basket_token != None).all()
+    return entries
