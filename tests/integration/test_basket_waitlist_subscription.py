@@ -1,5 +1,4 @@
 import os
-import time
 from uuid import uuid4
 
 import backoff
@@ -102,9 +101,11 @@ def test_connectivity(url):
 def test_vpn_waitlist(ctms_headers):
     # 1. Subscribe a certain email to the `vpn` waitlist
     email = f"integration-test-{uuid4()}@restmail.net"
-    waitlist = "guardian-vpn-waitlist"
+    vpn_waitlist_slug = "guardian-vpn-waitlist"
 
-    basket_subscribe(email, waitlist, fpn_country="us", fpn_platform="ios,android")
+    basket_subscribe(
+        email, vpn_waitlist_slug, fpn_country="us", fpn_platform="ios,android"
+    )
 
     # 2. Basket should have set the `vpn_waitlist` field/data.
     # Wait for the worker to have processed the request.
@@ -113,11 +114,11 @@ def test_vpn_waitlist(ctms_headers):
         return ctms_fetch(email, ctms_headers)
 
     contact_details = fetch_created()
-
+    assert contact_details["newsletters"] == []
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
-            "source": None,
+            "source": "https://www.mozilla.org/es-ES/products/vpn/invite/",
             "fields": {
                 "geo": "us",
                 "platform": "ios,android",
@@ -141,17 +142,25 @@ def test_vpn_waitlist(ctms_headers):
     resp.raise_for_status()
     # Request the full contact details again.
     contact_details = ctms_fetch(email, ctms_headers)
+    assert contact_details["newsletters"] == []
     assert contact_details["vpn_waitlist"] == {
         "geo": "fr",
         "platform": "linux",
     }
+    assert contact_details["waitlists"] == [
+        {
+            "name": "vpn",
+            "source": "https://www.mozilla.org/es-ES/products/vpn/invite/",
+            "fields": {
+                "geo": "fr",
+                "platform": "linux",
+            },
+        }
+    ]
 
-    newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
-    assert newsletters_by_name[waitlist]["subscribed"]
-
-    # 4. Unsubscribe from Basket
+    # 4. Unsubscribe via Basket
     basket_token = contact_details["email"]["basket_token"]
-    basket_unsubscribe(basket_token, waitlist)
+    basket_unsubscribe(basket_token, vpn_waitlist_slug)
 
     # Request the full contact details again.
     # Wait for the worker to have processed the request.
@@ -159,8 +168,8 @@ def test_vpn_waitlist(ctms_headers):
     def check_updated():
         contact_details = ctms_fetch(email, ctms_headers)
 
-        newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
-        assert not newsletters_by_name[waitlist]["subscribed"]
+        assert contact_details["newsletters"] == []
+        assert contact_details["waitlists"] == []
         assert contact_details["vpn_waitlist"] == {
             "geo": None,
             "platform": None,
@@ -171,11 +180,14 @@ def test_vpn_waitlist(ctms_headers):
 
 def test_relay_waitlists(ctms_headers):
     email = f"stage-test-{uuid4()}@restmail.net"
-    waitlist = "relay-waitlist"
+    relay_waitlist_slug = "relay-waitlist"
 
     # 1. Subscribe a certain email to the `relay` waitlist
     basket_subscribe(
-        email, waitlist, relay_country="es", source_url="https://relay.firefox.com/"
+        email,
+        relay_waitlist_slug,
+        relay_country="es",
+        source_url="https://relay.firefox.com/",
     )
 
     # 2. Basket should have set the `relay_waitlist` field/data.
@@ -190,7 +202,7 @@ def test_relay_waitlists(ctms_headers):
     assert contact_details["waitlists"] == [
         {
             "name": "relay",
-            "source": None,
+            "source": "https://relay.firefox.com/",
             "fields": {
                 "geo": "es",
             },
@@ -201,10 +213,10 @@ def test_relay_waitlists(ctms_headers):
     }
 
     # 4. Subscribe to another relay waitlist, from another country.
-    waitlist = "relay-vpn-bundle-waitlist"
+    relay_vpn_bundle_waitlist_slug = "relay-vpn-bundle-waitlist"
     basket_subscribe(
         email,
-        waitlist,
+        relay_vpn_bundle_waitlist_slug,
         relay_country="fr",
         source_url="https://relay.firefox.com/vpn-relay/waitlist/",
     )
@@ -217,18 +229,30 @@ def test_relay_waitlists(ctms_headers):
         return details
 
     contact_details = check_subscribed()
-    # CTMS has both newsletters.
-    newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
-    assert "relay-waitlist" in newsletters_by_name
-    assert waitlist in newsletters_by_name
-    # Country is taken from one of them.
+    assert contact_details["newsletters"] == []
+    assert contact_details["waitlists"] == [
+        {
+            "name": "relay",
+            "source": "https://relay.firefox.com/",
+            "fields": {
+                "geo": "es",
+            },
+        },
+        {
+            "name": "relay-vpn-bundle",
+            "source": "https://relay.firefox.com/vpn-relay/waitlist/",
+            "fields": {
+                "geo": "fr",
+            },
+        },
+    ]
     assert contact_details["relay_waitlist"] == {
-        "geo": "fr",
+        "geo": "es",
     }
 
     # 5. Unsubscribe from one Relay waitlist.
     basket_token = contact_details["email"]["basket_token"]
-    basket_unsubscribe(basket_token, waitlist)
+    basket_unsubscribe(basket_token, relay_waitlist_slug)
 
     # Wait for the worker to have processed the request.
     @retry_until_pass
@@ -240,16 +264,23 @@ def test_relay_waitlists(ctms_headers):
 
     contact_details = check_unsubscribed()
     # And only one newsletter subscribed.
-    newsletters_by_name = {nl["name"]: nl for nl in contact_details["newsletters"]}
-    assert not newsletters_by_name[waitlist]["subscribed"]
-    assert newsletters_by_name["relay-waitlist"]["subscribed"]
-    # Country is taken from the remaining one.
+    assert contact_details["newsletters"] == []
+    assert contact_details["waitlists"] == [
+        {
+            "name": "relay-vpn-bundle",
+            "source": "https://relay.firefox.com/vpn-relay/waitlist/",
+            "fields": {
+                "geo": "fr",
+            },
+        },
+    ]
+    # relay_waitlist geo is pulled from the remaining waitlist.
     assert contact_details["relay_waitlist"] == {
-        "geo": "es",
+        "geo": "fr",
     }
 
     # 6. Unsubscribe from the last Relay waitlist.
-    basket_unsubscribe(basket_token, "relay-waitlist")
+    basket_unsubscribe(basket_token, relay_vpn_bundle_waitlist_slug)
 
     # Wait for the worker to have processed the request.
     @retry_until_pass
@@ -260,6 +291,6 @@ def test_relay_waitlists(ctms_headers):
         return details
 
     contact_details = check_unsubscribed_last()
-    assert not any(nl["subscribed"] for nl in contact_details["newsletters"])
+    assert contact_details["newsletters"] == []
     # Relay attribute is now empty
     assert contact_details["relay_waitlist"] == {"geo": None}
