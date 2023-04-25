@@ -1,5 +1,4 @@
-import os
-import time
+from pathlib import Path
 from uuid import uuid4
 
 import backoff
@@ -7,18 +6,17 @@ import pytest
 import requests
 from pydantic import BaseSettings
 
-TEST_FOLDER = os.path.dirname(os.path.realpath(__file__))
+ROOT_FOLDER = Path(__file__).parent.parent
 
 
 class Settings(BaseSettings):
     basket_server_url: str = "http://127.0.0.1:9000"
     ctms_server_url: str = "http://127.0.0.1:8000"
-    # We initialize CTMS api client id/secret in `ctms-db-init.sql`
-    ctms_client_id: str = "id_integration-test"
+    ctms_client_id: str
     ctms_client_secret: str
 
     class Config:
-        env_file = os.path.join(TEST_FOLDER, "basket.env")
+        env_file = str(ROOT_FOLDER / ".env.tests")
 
 
 settings = Settings()

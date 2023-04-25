@@ -3,6 +3,7 @@
 .coverage
 .DS_STORE
 .env
+.env.tests
 .idea/
 .mypy_cache/
 .tox/

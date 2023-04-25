@@ -14,8 +14,5 @@ export TZ=UTC
 # Create newsletters in basket
 cat tests/integration/basket-db-init.sql | $DOCKER_COMPOSE exec -T mysql mysql -u root -h mysql basket
 
-# Create token in CTMS (will only work with specific CTMS_SECRET, see .sql source)
-cat tests/integration/ctms-db-init.sql | $DOCKER_COMPOSE exec -T postgres psql --user postgres -d postgres
-
 # docker-compose run basket django-admin loaddata ./basket/news/fixtures/newsletters.json
 $POETRY_RUN pytest tests/integration/
