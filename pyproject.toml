@@ -121,6 +121,7 @@ profile = "black"
 python_version = "3.11"
 # Look for errors in this file
 warn_unused_configs = true
+plugins = ["pydantic.mypy"]
 
 # TODO: Get stricter for these options
 # None is compatible with all types (pre-mypy 0.6 behaviour)
