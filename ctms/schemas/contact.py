@@ -227,12 +227,12 @@ class CTMSResponse(BaseModel):
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
 
-    def __init__(self, *args, **kwargs) -> None:
+    @root_validator(pre=True)
+    def legacy_waitlists(cls, values):  # pylint: disable=no-self-argument
         # Show computed fields in response for retro-compatibility.
-        kwargs["vpn_waitlist"] = VpnWaitlistSchema()
-        kwargs["relay_waitlist"] = RelayWaitlistSchema()
-
-        for waitlist in kwargs.get("waitlists", []):
+        values["vpn_waitlist"] = VpnWaitlistSchema()
+        values["relay_waitlist"] = RelayWaitlistSchema()
+        for waitlist in values.get("waitlists", []):
             if isinstance(waitlist, dict):
                 # TODO: figure out why dict from `response_model` decorators param in app.py)
                 waitlist = WaitlistSchema(**waitlist)
@@ -240,7 +240,7 @@ class CTMSResponse(BaseModel):
                 # Many tests instantiates CTMSResponse with `WaitlistInSchema` (input schema).
                 waitlist = WaitlistSchema(**waitlist.dict())
             if waitlist.name == "vpn":
-                kwargs["vpn_waitlist"] = VpnWaitlistSchema(
+                values["vpn_waitlist"] = VpnWaitlistSchema(
                     geo=waitlist.fields.get("geo"),
                     platform=waitlist.fields.get("platform"),
                 )
@@ -250,12 +250,13 @@ class CTMSResponse(BaseModel):
             # `waitlists` property of the contact schema
             if (
                 waitlist.name.startswith("relay")
-                and kwargs["relay_waitlist"].geo is None
+                and values["relay_waitlist"].geo is None
             ):
-                kwargs["relay_waitlist"] = RelayWaitlistSchema(
+                values["relay_waitlist"] = RelayWaitlistSchema(
                     geo=waitlist.fields.get("geo")
                 )
-        super().__init__(*args, **kwargs)
+
+        return values
 
 
 class CTMSSingleResponse(CTMSResponse):
