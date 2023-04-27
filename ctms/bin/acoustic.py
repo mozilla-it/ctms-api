@@ -193,8 +193,8 @@ def do_resync(
     print(f"Force resync of {resetted + len(to_resync)} contacts")
     if to_resync and (assume_yes or confirm("Continue?")):
         bulk_schedule_acoustic_records(dbsession, to_resync)
-        dbsession.commit()
-        print("Done.")
+    dbsession.commit()
+    print("Done.")
     return os.EX_OK
 
 
