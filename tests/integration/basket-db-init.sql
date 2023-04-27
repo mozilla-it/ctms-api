@@ -11,7 +11,8 @@ INSERT IGNORE INTO news_newsletter (
     `private`,
     indent,
     firefox_confirm,
-    is_mofo
+    is_mofo,
+    is_waitlist
 ) VALUES (
     'relay-waitlist', -- slug
     'relay', -- title
@@ -25,7 +26,8 @@ INSERT IGNORE INTO news_newsletter (
     false, -- private
     false, -- indent
     false, -- firefox_confirm
-    false -- is_mofo
+    false, -- is_mofo
+    true -- is_waitlist
 );
 INSERT IGNORE INTO news_newsletter (
     slug,
@@ -40,7 +42,8 @@ INSERT IGNORE INTO news_newsletter (
     `private`,
     indent,
     firefox_confirm,
-    is_mofo
+    is_mofo,
+    is_waitlist
 ) VALUES (
     'relay-phone-masking-waitlist', -- slug
     'relay phone', -- title
@@ -54,7 +57,8 @@ INSERT IGNORE INTO news_newsletter (
     false, -- private
     false, -- indent
     false, -- firefox_confirm
-    false -- is_mofo
+    false, -- is_mofo
+    true -- is_waitlist
 );
 INSERT IGNORE INTO news_newsletter (
     slug,
@@ -69,7 +73,8 @@ INSERT IGNORE INTO news_newsletter (
     `private`,
     indent,
     firefox_confirm,
-    is_mofo
+    is_mofo,
+    is_waitlist
 ) VALUES (
     'relay-vpn-bundle-waitlist', -- slug
     'relay bundle', -- title
@@ -83,7 +88,8 @@ INSERT IGNORE INTO news_newsletter (
     false, -- private
     false, -- indent
     false, -- firefox_confirm
-    false -- is_mofo
+    false, -- is_mofo
+    true -- is_waitlist
 );
 INSERT IGNORE INTO news_newsletter (
     slug,
@@ -98,7 +104,8 @@ INSERT IGNORE INTO news_newsletter (
     `private`,
     indent,
     firefox_confirm,
-    is_mofo
+    is_mofo,
+    is_waitlist
 ) VALUES (
     'graceland-waitlist', -- slug
     'graceland', -- title
@@ -112,7 +119,8 @@ INSERT IGNORE INTO news_newsletter (
     false, -- private
     false, -- indent
     false, -- firefox_confirm
-    false -- is_mofo
+    false, -- is_mofo
+    true -- is_waitlist
 );
 INSERT IGNORE INTO news_newsletter (
     slug,
@@ -127,7 +135,8 @@ INSERT IGNORE INTO news_newsletter (
     `private`,
     indent,
     firefox_confirm,
-    is_mofo
+    is_mofo,
+    is_waitlist
 ) VALUES (
     'guardian-vpn-waitlist', -- slug
     'vpn', -- title
@@ -141,5 +150,6 @@ INSERT IGNORE INTO news_newsletter (
     false, -- private
     false, -- indent
     false, -- firefox_confirm
-    false -- is_mofo
+    false, -- is_mofo
+    true -- is_waitlist
 );
