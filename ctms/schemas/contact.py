@@ -244,7 +244,10 @@ class CTMSResponse(BaseModel):
                     geo=waitlist.fields.get("geo"),
                     platform=waitlist.fields.get("platform"),
                 )
-            if waitlist.name.startswith("relay"):
+            if (
+                waitlist.name.startswith("relay")
+                and kwargs["relay_waitlist"].geo is None
+            ):
                 kwargs["relay_waitlist"] = RelayWaitlistSchema(
                     geo=waitlist.fields.get("geo")
                 )
