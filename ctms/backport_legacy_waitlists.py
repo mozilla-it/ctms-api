@@ -68,6 +68,7 @@ def format_legacy_vpn_relay_waitlist_input(
                 to_update.append(
                     WaitlistInSchema(
                         name="vpn",
+                        source=existing_waitlists["vpn"].source if has_vpn else None,
                         fields={"geo": parsed_vpn.geo, "platform": parsed_vpn.platform},
                     )
                 )
@@ -121,7 +122,9 @@ def format_legacy_vpn_relay_waitlist_input(
                     for waitlist in relay_waitlists:
                         to_update.append(
                             WaitlistInSchema(
-                                name=waitlist.name, fields={"geo": parsed_relay.geo}
+                                name=waitlist.name,
+                                source=waitlist.source,
+                                fields={"geo": parsed_relay.geo},
                             )
                         )
 

@@ -244,7 +244,14 @@ class CTMSResponse(BaseModel):
                     geo=waitlist.fields.get("geo"),
                     platform=waitlist.fields.get("platform"),
                 )
-            if waitlist.name.startswith("relay"):
+            # If multiple `relay-` waitlists are present, the `geo` field of the
+            # first waitlist is set as the value of `relay_waitlist["geo"]`. This
+            # property is intended for legacy consumers. New consumers should prefer the
+            # `waitlists` property of the contact schema
+            if (
+                waitlist.name.startswith("relay")
+                and kwargs["relay_waitlist"].geo is None
+            ):
                 kwargs["relay_waitlist"] = RelayWaitlistSchema(
                     geo=waitlist.fields.get("geo")
                 )

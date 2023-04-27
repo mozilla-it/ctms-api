@@ -59,7 +59,8 @@ from ctms.schemas import (
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.conftest import fake_stripe_id
+from tests.data import fake_stripe_id
+from tests.unit.conftest import FAKE_STRIPE_CUSTOMER_ID
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
@@ -79,26 +80,19 @@ def test_get_email(dbsession, example_contact):
     assert sorted(waitlists_names) == waitlists_names
 
 
-def test_get_email_with_stripe_customer(
-    dbsession, stripe_customer_data, contact_with_stripe_customer
-):
-    """`stripe_customer_data` is used when building `contact_with_stripe_customer`"""
-    email_id = contact_with_stripe_customer.email.email_id
-    email = get_email(dbsession, email_id)
-    assert email.email_id == email_id
-    newsletter_names = [newsletter.name for newsletter in email.newsletters]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
+def test_get_email_with_stripe_customer(dbsession, stripe_customer_factory):
+    stripe_customer = stripe_customer_factory()
+    dbsession.commit()
 
-    assert email.stripe_customer.stripe_id == stripe_customer_data["stripe_id"]
-    assert len(email.stripe_customer.subscriptions) == 0
+    email = get_email(dbsession, stripe_customer.email.email_id)
+    assert email.email_id == stripe_customer.email.email_id
+    assert email.stripe_customer.stripe_id == stripe_customer.stripe_id
 
 
 def test_get_email_with_stripe_subscription(
-    dbsession, contact_with_stripe_subscription, stripe_customer_data, stripe_price_data
+    dbsession, contact_with_stripe_subscription, stripe_price_data
 ):
-    """`stripe_customer_data` and `stripe_price_data` is used when building
-    `contact_with_stripe_subscription`"""
+    """`stripe_price_data` is used when building `contact_with_stripe_subscription`"""
     email_id = contact_with_stripe_subscription.email.email_id
     email = get_email(dbsession, email_id)
     assert email.email_id == email_id
@@ -107,7 +101,7 @@ def test_get_email_with_stripe_subscription(
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
     assert sorted(newsletter_names) == newsletter_names
 
-    assert email.stripe_customer.stripe_id == stripe_customer_data["stripe_id"]
+    assert email.stripe_customer.stripe_id == FAKE_STRIPE_CUSTOMER_ID
     assert len(email.stripe_customer.subscriptions) == 1
     assert len(email.stripe_customer.subscriptions[0].subscription_items) == 1
     assert (
@@ -371,10 +365,13 @@ def test_get_acoustic_record_no_stripe_customer(dbsession, example_contact):
 
 
 def test_get_acoustic_record_no_stripe_subscriptions(
-    dbsession, contact_with_stripe_customer
+    dbsession, stripe_customer_factory
 ):
     """A contact with no Stripe subscriptions has no subscriptions."""
-    email_id = contact_with_stripe_customer.email.email_id
+    stripe_customer = stripe_customer_factory()
+    dbsession.commit()
+
+    email_id = stripe_customer.email.email_id
     pending = PendingAcousticRecord(email_id=email_id)
     contact = get_acoustic_record_as_contact(dbsession, pending)
     assert not contact.products
@@ -773,23 +770,31 @@ def test_get_multiple_contacts_by_any_id(
         assert sorted(newsletter_names) == newsletter_names
 
 
-@pytest.mark.parametrize("with_lock", ("for_update", "no_lock"))
-@pytest.mark.parametrize("fxa_id_source", ("existing", "new"))
-def test_get_stripe_customer_by_fxa_id(
-    dbsession, contact_with_stripe_customer, fxa_id_source, with_lock
+@pytest.mark.parametrize("with_lock", (True, False))
+def test_get_stripe_customer_by_existing_fxa_id(
+    dbsession, with_lock, stripe_customer_factory
 ):
-    """A StripeCustomer can be fetched by fxa_id."""
-    if fxa_id_source == "existing":
-        fxa_id = contact_with_stripe_customer.fxa.fxa_id
-    else:
-        fxa_id = str(uuid4())
-    customer = get_stripe_customer_by_fxa_id(
-        dbsession, fxa_id, for_update=(with_lock == "for_update")
-    )
-    if fxa_id_source == "existing":
-        assert customer.fxa_id == fxa_id
-    else:
-        assert customer is None
+    """A StripeCustomer can be fetched by an existing fxa_id."""
+    stripe_customer = stripe_customer_factory()
+    dbsession.commit()
+
+    fxa_id = stripe_customer.fxa.fxa_id
+    customer = get_stripe_customer_by_fxa_id(dbsession, fxa_id, for_update=with_lock)
+    assert customer.fxa_id == fxa_id
+
+
+@pytest.mark.parametrize("with_lock", (True, False))
+def test_get_stripe_customer_by_nonexistent_fxa_id(
+    dbsession, with_lock, stripe_customer_factory
+):
+    """A StripeCustomer with a nonexistent fx_id should not exist."""
+    # So we know that there's at least some stripe customer data
+    stripe_customer_factory()
+    dbsession.commit()
+
+    fxa_id = str(uuid4().hex)
+    customer = get_stripe_customer_by_fxa_id(dbsession, fxa_id, for_update=with_lock)
+    assert customer is None
 
 
 @pytest.fixture()
@@ -797,7 +802,6 @@ def stripe_objects(
     dbsession,
     example_contact,
     maximal_contact,
-    stripe_customer_data,
     stripe_price_data,
     stripe_subscription_data,
     stripe_subscription_item_data,
@@ -842,11 +846,18 @@ def stripe_objects(
         objs.append(obj)
 
         # Create Customer data
-        cus_data = stripe_customer_data
-        cus_data["stripe_id"] = fake_stripe_id("cus", f"cus_{contact_idx}")
-        cus_data["fxa_id"] = contact.fxa.fxa_id
+        customer_stripe_id = fake_stripe_id("cus", f"cus_{contact_idx}")
         obj["customer"] = create_stripe_customer(
-            dbsession, StripeCustomerCreateSchema(**cus_data)
+            dbsession,
+            StripeCustomerCreateSchema(
+                stripe_id=customer_stripe_id,
+                stripe_created=datetime.now(timezone.utc),
+                fxa_id=contact.fxa.fxa_id,
+                default_source_id=None,
+                invoice_settings_default_payment_method_id=fake_stripe_id(
+                    "pm", "payment_method"
+                ),
+            ),
         )
 
         # Create Subscriptions / Invoices and related items
@@ -855,7 +866,7 @@ def stripe_objects(
             sub_data["stripe_id"] = fake_stripe_id(
                 "sub", f"cus_{contact_idx}_sub_{sub_inv_idx}"
             )
-            sub_data["stripe_customer_id"] = cus_data["stripe_id"]
+            sub_data["stripe_customer_id"] = customer_stripe_id
             sub_obj = {
                 "obj": create_stripe_subscription(
                     dbsession, StripeSubscriptionCreateSchema(**sub_data)
@@ -868,7 +879,7 @@ def stripe_objects(
             inv_data["stripe_id"] = fake_stripe_id(
                 "sub", f"cus_{contact_idx}_inv_{sub_inv_idx}"
             )
-            inv_data["stripe_customer_id"] = stripe_customer_data["stripe_id"]
+            inv_data["stripe_customer_id"] = customer_stripe_id
             inv_obj = {
                 "obj": create_stripe_invoice(
                     dbsession, StripeInvoiceCreateSchema(**inv_data)
