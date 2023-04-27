@@ -7,7 +7,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_, update
+from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -381,8 +381,8 @@ def reset_retry_acoustic_records(db: Session):
         db.query(PendingAcousticRecord).filter(PendingAcousticRecord.retry > 0).all()
     )
     count = len(pending_records)
-    db.execute(
-        update(PendingAcousticRecord),
+    db.bulk_update_mappings(
+        PendingAcousticRecord,
         [{"id": record.id, "retry": 0} for record in (pending_records)],
     )
     return count
