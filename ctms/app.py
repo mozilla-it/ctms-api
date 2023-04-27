@@ -64,7 +64,6 @@ from .metrics import emit_response_metrics, init_metrics, init_metrics_labels
 from .models import Email, StripeCustomer
 from .monitor import check_database, get_version
 from .schemas import (
-    AddOnsSchema,
     ApiClientSchema,
     BadRequestResponse,
     BulkRequestSchema,
@@ -75,10 +74,7 @@ from .schemas import (
     CTMSBulkResponse,
     CTMSResponse,
     CTMSSingleResponse,
-    EmailSchema,
-    FirefoxAccountsSchema,
     IdentityResponse,
-    MozillaFoundationSchema,
     NotFoundResponse,
     TokenResponse,
     UnauthorizedResponse,
@@ -264,17 +260,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
     page_length = len(results)
     last_page = page_length < limit
     if page_length > 0:
-        results = [
-            CTMSResponse(
-                amo=contact.amo or AddOnsSchema(),
-                email=contact.email or EmailSchema(),
-                fxa=contact.fxa or FirefoxAccountsSchema(),
-                mofo=contact.mofo or MozillaFoundationSchema(),
-                newsletters=contact.newsletters or [],
-                waitlists=contact.waitlists or [],
-            )
-            for contact in results
-        ]
+        results = [CTMSResponse(**contact.dict()) for contact in results]
 
     if last_page:
         # No results/end
@@ -503,17 +489,7 @@ def read_ctms_by_any_id(
             traced.add(email)
     if traced:
         request.state.log_context["trace"] = ",".join(sorted(traced))
-    return [
-        CTMSResponse(
-            amo=contact.amo or AddOnsSchema(),
-            email=contact.email or EmailSchema(),
-            fxa=contact.fxa or FirefoxAccountsSchema(),
-            mofo=contact.mofo or MozillaFoundationSchema(),
-            newsletters=contact.newsletters or [],
-            waitlists=contact.waitlists or [],
-        )
-        for contact in contacts
-    ]
+    return [CTMSResponse(**contact.dict()) for contact in contacts]
 
 
 @app.get(
@@ -541,15 +517,7 @@ def read_ctms_by_email_id(
 
 def get_ctms_response_or_404(db, email_id):
     contact = get_contact_or_404(db, email_id)
-    return CTMSSingleResponse(
-        amo=contact.amo or AddOnsSchema(),
-        email=contact.email or EmailSchema(),
-        fxa=contact.fxa or FirefoxAccountsSchema(),
-        mofo=contact.mofo or MozillaFoundationSchema(),
-        newsletters=contact.newsletters or [],
-        waitlists=contact.waitlists or [],
-        status="ok",
-    )
+    return CTMSSingleResponse(**contact.dict(), status="ok")
 
 
 @app.post(

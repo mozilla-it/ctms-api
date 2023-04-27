@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Literal, Optional, Set, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, Field, root_validator
+from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -226,6 +226,18 @@ class CTMSResponse(BaseModel):
     # Retro-compat fields
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
+
+    @validator("amo", pre=True, always=True)
+    def set_default_amo(cls, value):  # pylint: disable=no-self-argument
+        return value or AddOnsSchema()
+
+    @validator("fxa", pre=True, always=True)
+    def set_default_fxa(cls, value):  # pylint: disable=no-self-argument
+        return value or FirefoxAccountsSchema()
+
+    @validator("mofo", pre=True, always=True)
+    def set_default_mofo(cls, value):  # pylint: disable=no-self-argument
+        return value or MozillaFoundationSchema()
 
     @root_validator(pre=True)
     def legacy_waitlists(cls, values):  # pylint: disable=no-self-argument

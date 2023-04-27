@@ -63,18 +63,7 @@ def swap_bool(existing):
 def test_patch_one_new_value(client, contact_name, group_name, key, value, request):
     """PATCH can update a single value."""
     contact = request.getfixturevalue(contact_name)
-    # Add in defaults for unset groups, and convert Python values like
-    # datetimes to JSON strings
-    expected = json.loads(
-        CTMSResponse(
-            amo=contact.amo or AddOnsSchema(),
-            email=contact.email,
-            fxa=contact.fxa or FirefoxAccountsSchema(),
-            mofo=contact.mofo or MozillaFoundationSchema(),
-            newsletters=contact.newsletters or [],
-            waitlists=contact.waitlists or [],
-        ).json()
-    )
+    expected = json.loads(CTMSResponse(**contact.dict()).json())
     existing_value = expected[group_name][key]
 
     # Set dynamic test values
@@ -140,18 +129,7 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
 def test_patch_to_default(client, maximal_contact, group_name, key):
     """PATCH can set a field to the default value."""
     email_id = maximal_contact.email.email_id
-    # Add in defaults for unset groups, and convert Python values like
-    # datetimes to JSON strings
-    expected = json.loads(
-        CTMSResponse(
-            amo=maximal_contact.amo or AddOnsSchema(),
-            email=maximal_contact.email,
-            fxa=maximal_contact.fxa or FirefoxAccountsSchema(),
-            mofo=maximal_contact.mofo or MozillaFoundationSchema(),
-            newsletters=maximal_contact.newsletters or [],
-            waitlists=maximal_contact.waitlists or [],
-        ).json()
-    )
+    expected = json.loads(CTMSResponse(**maximal_contact.dict()).json())
     existing_value = expected[group_name][key]
 
     # Load the default value from the schema
