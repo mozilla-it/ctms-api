@@ -324,7 +324,9 @@ def test_hashed_passwords():
     assert hashed1 != hashed2
 
 
-def test_post_pubsub_token(anon_client, test_pubsub_settings, raw_stripe_customer_data):
+def test_post_pubsub_token(
+    anon_client, test_pubsub_settings, stripe_customer_data_factory
+):
     """A PubSub client can authenticate."""
 
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
@@ -333,7 +335,7 @@ def test_post_pubsub_token(anon_client, test_pubsub_settings, raw_stripe_custome
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer gcp_generated_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     assert resp.status_code == 200, resp.json()
     assert len(caplog) == 1
@@ -344,7 +346,9 @@ def test_post_pubsub_token(anon_client, test_pubsub_settings, raw_stripe_custome
 
 
 @pytest.mark.parametrize("name", ("pubsub_email", "pubsub_client"))
-def test_post_pubsub_token_checks_settings(anon_client, name, raw_stripe_customer_data):
+def test_post_pubsub_token_checks_settings(
+    anon_client, name, stripe_customer_data_factory
+):
     """PubSub fails if settings are unset."""
 
     class FakeSettings:
@@ -360,14 +364,14 @@ def test_post_pubsub_token_checks_settings(anon_client, name, raw_stripe_custome
             anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     finally:
         del app.dependency_overrides[get_settings]
 
 
 def test_post_pubsub_token_fail_client(
-    anon_client, test_pubsub_settings, raw_stripe_customer_data
+    anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if pubsub_client is incorrect."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
@@ -376,7 +380,7 @@ def test_post_pubsub_token_fail_client(
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=the_wrong_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -385,7 +389,7 @@ def test_post_pubsub_token_fail_client(
 
 
 def test_post_pubsub_token_unknown_key(
-    anon_client, test_pubsub_settings, raw_stripe_customer_data
+    anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if the jwt 'kid' doesn't refer to a known cert."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
@@ -396,7 +400,7 @@ def test_post_pubsub_token_unknown_key(
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -405,7 +409,7 @@ def test_post_pubsub_token_unknown_key(
 
 
 def test_post_pubsub_token_fail_ssl_fetch(
-    anon_client, test_pubsub_settings, raw_stripe_customer_data
+    anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if there is an issue fetching certs."""
     with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
@@ -416,7 +420,7 @@ def test_post_pubsub_token_fail_ssl_fetch(
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -425,7 +429,7 @@ def test_post_pubsub_token_fail_ssl_fetch(
 
 
 def test_post_pubsub_token_fail_wrong_email(
-    anon_client, test_pubsub_settings, raw_stripe_customer_data
+    anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if the claim email doesn't match."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
@@ -436,7 +440,7 @@ def test_post_pubsub_token_fail_wrong_email(
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}
@@ -448,7 +452,7 @@ def test_post_pubsub_token_fail_wrong_email(
 
 
 def test_post_pubsub_token_fail_unverified_email(
-    anon_client, test_pubsub_settings, raw_stripe_customer_data
+    anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if the claim email isn't verified."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
@@ -459,7 +463,7 @@ def test_post_pubsub_token_fail_unverified_email(
             resp = anon_client.post(
                 "/stripe_from_pubsub?pubsub_client=a_shared_secret",
                 headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(raw_stripe_customer_data),
+                json=pubsub_wrap(stripe_customer_data_factory()),
             )
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Could not validate credentials"}

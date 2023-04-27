@@ -1,7 +1,6 @@
 """pytest fixtures for the CTMS app"""
 import json
 import os.path
-from base64 import b64encode
 from datetime import datetime, timezone
 from glob import glob
 from time import mktime
@@ -26,32 +25,29 @@ from ctms.config import Settings
 from ctms.crud import (
     create_api_client,
     create_contact,
-    create_stripe_customer,
     create_stripe_price,
     create_stripe_subscription,
     create_stripe_subscription_item,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
+    get_contact_by_email_id,
     get_contacts_by_any_id,
-    get_email,
     get_fxa_by_email_id,
     get_mofo_by_email_id,
     get_newsletters_by_email_id,
-    get_stripe_products,
     get_waitlists_by_email_id,
 )
 from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.schemas import (
     ApiClientSchema,
     ContactSchema,
-    StripeCustomerCreateSchema,
     StripePriceCreateSchema,
     StripeSubscriptionCreateSchema,
     StripeSubscriptionItemCreateSchema,
 )
-
-from . import factories
+from tests import factories
+from tests.data import fake_stripe_id
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -68,13 +64,6 @@ SAMPLE_CONTACT_PARAMS = [
     ("simple_default_contact_data", {"amo"}),
     ("default_newsletter_contact_data", {"newsletters"}),
 ]
-
-
-def fake_stripe_id(prefix: str, seed: str, suffix: Optional[str] = None) -> str:
-    """Create a fake Stripe ID for testing"""
-    body = b64encode(seed.encode()).decode().replace("=", "")
-    return f"{prefix}_{body}{suffix if suffix else ''}"
-
 
 FAKE_STRIPE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
 FAKE_STRIPE_INVOICE_ID = fake_stripe_id("in", "invoice")
@@ -182,9 +171,13 @@ def dbsession(connection):
     transaction.rollback()
 
 
-register(factories.EmailFactory)
-register(factories.NewsletterFactory)
-register(factories.WaitlistFactory)
+# Database models
+register(factories.models.EmailFactory)
+register(factories.models.NewsletterFactory)
+register(factories.models.StripeCustomerFactory)
+register(factories.models.WaitlistFactory)
+# Stripe REST API payloads
+register(factories.stripe.StripeCustomerDataFactory)
 
 
 @pytest.fixture
@@ -693,20 +686,6 @@ def stripe_test_json(request):
 
 
 @pytest.fixture
-def stripe_customer_data():
-    return {
-        "stripe_id": FAKE_STRIPE_CUSTOMER_ID,
-        "stripe_created": datetime(2021, 10, 25, 15, 34, tzinfo=timezone.utc),
-        # TODO magic string from fxa schema
-        "fxa_id": "6eb6ed6ac3b64259968aa490c6c0b9df",
-        "default_source_id": None,
-        "invoice_settings_default_payment_method_id": fake_stripe_id(
-            "pm", "payment_method"
-        ),
-    }
-
-
-@pytest.fixture
 def stripe_price_data():
     return {
         "stripe_id": FAKE_STRIPE_PRICE_ID,
@@ -773,24 +752,6 @@ def stripe_invoice_line_item_data():
         "stripe_type": "subscription",
         "amount": 1000,
         "currency": "usd",
-    }
-
-
-@pytest.fixture
-def raw_stripe_customer_data(stripe_customer_data) -> dict:
-    """Return minimal Stripe customer data."""
-    return {
-        "id": stripe_customer_data["stripe_id"],
-        "object": "customer",
-        "created": unix_timestamp(stripe_customer_data["stripe_created"]),
-        "description": stripe_customer_data["fxa_id"],
-        "email": "fxa_email@example.com",
-        "default_source": stripe_customer_data["default_source_id"],
-        "invoice_settings": {
-            "default_payment_method": stripe_customer_data[
-                "invoice_settings_default_payment_method_id"
-            ],
-        },
     }
 
 
@@ -898,23 +859,17 @@ def raw_stripe_invoice_data(
 
 
 @pytest.fixture
-def contact_with_stripe_customer(dbsession, example_contact, stripe_customer_data):
-    """Return the example contact with an associated Stripe Customer account."""
-    create_stripe_customer(
-        dbsession, StripeCustomerCreateSchema(**stripe_customer_data)
-    )
-    dbsession.commit()
-    return example_contact
-
-
-@pytest.fixture
 def contact_with_stripe_subscription(
     dbsession,
-    contact_with_stripe_customer,
+    example_contact,
+    stripe_customer_factory,
     stripe_price_data,
     stripe_subscription_data,
     stripe_subscription_item_data,
 ):
+    stripe_customer = stripe_customer_factory(
+        stripe_id=FAKE_STRIPE_CUSTOMER_ID, fxa_id=example_contact.fxa.fxa_id
+    )
     create_stripe_price(dbsession, StripePriceCreateSchema(**stripe_price_data))
     create_stripe_subscription(
         dbsession, StripeSubscriptionCreateSchema(**stripe_subscription_data)
@@ -926,9 +881,9 @@ def contact_with_stripe_subscription(
         ),
     )
     dbsession.commit()
-    email = get_email(dbsession, contact_with_stripe_customer.email.email_id)
-    contact_with_stripe_customer.products = get_stripe_products(email)
-    return contact_with_stripe_customer
+
+    contact = get_contact_by_email_id(dbsession, stripe_customer.email.email_id)
+    return ContactSchema(**contact)
 
 
 @pytest.fixture

@@ -11,7 +11,8 @@ from structlog.testing import capture_logs
 
 from ctms.app import app, get_pubsub_claim
 from ctms.models import PendingAcousticRecord
-from tests.unit.conftest import fake_stripe_id
+from tests.data import fake_stripe_id
+from tests.unit.conftest import FAKE_STRIPE_CUSTOMER_ID
 
 
 def pubsub_wrap(data):
@@ -57,10 +58,14 @@ def pubsub_client(anon_client):
 
 
 def test_api_post_stripe_customer(
-    client, dbsession, example_contact, raw_stripe_customer_data
+    client, dbsession, email_factory, stripe_customer_data_factory
 ):
     """Stripe customer data can be imported."""
-    data = raw_stripe_customer_data
+    email = email_factory(fxa=True)
+    dbsession.commit()
+    data = stripe_customer_data_factory(
+        email=email.primary_email, fxa_id=email.fxa.fxa_id
+    )
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
     par = dbsession.query(PendingAcousticRecord).one_or_none()
@@ -68,10 +73,10 @@ def test_api_post_stripe_customer(
 
 
 def test_api_post_stripe_customer_without_contact(
-    client, dbsession, raw_stripe_customer_data
+    client, dbsession, stripe_customer_data_factory
 ):
     """Stripe customer data without a related contact can be imported."""
-    data = raw_stripe_customer_data
+    data = stripe_customer_data_factory()
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
     par = dbsession.query(PendingAcousticRecord).one_or_none()
@@ -87,29 +92,30 @@ def test_api_post_stripe_customer_bad_data(client, dbsession):
     assert dbsession.query(PendingAcousticRecord).one_or_none() is None
 
 
-def test_api_post_stripe_customer_missing_data(
-    client, dbsession, raw_stripe_customer_data
-):
+def test_api_post_stripe_customer_missing_data(client, stripe_customer_data_factory):
     """Missing data from customer data is a 400 error."""
-    data = raw_stripe_customer_data
-    del data["description"]  # The FxA ID
-    resp = client.post("/stripe", json=data)
+    resp = client.post("/stripe", json=stripe_customer_data_factory(fxa_id=None))
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Unable to process Stripe object."}
 
 
-def test_api_post_sample_data(dbsession, client, stripe_test_json):
+def test_api_post_sample_data(client, stripe_test_json):
     """Stripe sample data can be POSTed directly."""
     resp = client.post("/stripe", json=stripe_test_json)
     assert resp.status_code == 200
 
 
 def test_api_post_stripe_trace_customer(
-    client, dbsession, example_contact, raw_stripe_customer_data
+    client, dbsession, email_factory, stripe_customer_data_factory
 ):
     """Stripe customer data can be traced via email."""
-    data = raw_stripe_customer_data
-    email = data["email"] = "customer+trace-me-mozilla-123@example.com"
+    email = email_factory(
+        primary_email="customer+trace-me-mozilla-123@example.com", fxa=True
+    )
+    dbsession.commit()
+    data = stripe_customer_data_factory(
+        email=email.primary_email, fxa_id=email.fxa.fxa_id
+    )
     with capture_logs() as caplog:
         resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
@@ -117,19 +123,20 @@ def test_api_post_stripe_trace_customer(
     assert par.email.stripe_customer.stripe_id == data["id"]
     assert len(caplog) == 1
     log = caplog[0]
-    assert log["trace"] == email
+    assert log["trace"] == data["email"]
     assert log["trace_json"] == data
     assert log["ingest_actions"] == {"created": [f"customer:{data['id']}"]}
 
 
 def test_api_post_conflicting_fxa_id(
-    dbsession, client, contact_with_stripe_customer, raw_stripe_customer_data
+    dbsession, client, stripe_customer_factory, stripe_customer_data_factory
 ):
     """An existing customer with an FxA ID conflict is deleted."""
-    data = raw_stripe_customer_data
-    old_id = data["id"]
-    new_id = old_id + "_new"
-    data["id"] = new_id
+    existing = stripe_customer_factory(stripe_id=fake_stripe_id("cus", "old"))
+    old_id = existing.stripe_id
+    dbsession.commit()
+    new_id = fake_stripe_id("cus", "new")
+    data = stripe_customer_data_factory(id=new_id, fxa_id=existing.fxa_id)
     with capture_logs() as caplog:
         resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
@@ -143,7 +150,7 @@ def test_api_post_conflicting_fxa_id(
     assert log["fxa_id_conflict"] == data["description"]
 
 
-def test_api_post_deleted_new_customer(dbsession, client):
+def test_api_post_deleted_new_customer(client):
     """A new customer who starts out deleted is skipped."""
     stripe_id = fake_stripe_id("cus", "new_but_deleted")
     data = {"deleted": True, "id": stripe_id, "object": "customer"}
@@ -159,10 +166,14 @@ def test_api_post_deleted_new_customer(dbsession, client):
 
 
 def test_api_post_stripe_from_pubsub_customer(
-    dbsession, pubsub_client, example_contact, raw_stripe_customer_data
+    dbsession, pubsub_client, email_factory, stripe_customer_data_factory
 ):
     """Stripe customer data as a PubSub push can be imported."""
-    data = raw_stripe_customer_data
+    email = email_factory(fxa=True)
+    dbsession.commit()
+    data = stripe_customer_data_factory(
+        email=email.primary_email, fxa_id=email.fxa.fxa_id
+    )
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
@@ -171,12 +182,11 @@ def test_api_post_stripe_from_pubsub_customer(
 
 
 def test_api_post_stripe_from_pubsub_without_contact(
-    pubsub_client, dbsession, raw_stripe_customer_data
+    pubsub_client, dbsession, stripe_customer_data_factory
 ):
     """Stripe customer data without a related contact can be imported from pubsub."""
-    resp = pubsub_client.post(
-        "/stripe_from_pubsub", json=pubsub_wrap(raw_stripe_customer_data)
-    )
+    data = stripe_customer_data_factory()
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
     par = dbsession.query(PendingAcousticRecord).one_or_none()
@@ -187,12 +197,14 @@ def test_api_post_stripe_from_pubsub_item_dict(
     dbsession,
     pubsub_client,
     example_contact,
-    raw_stripe_customer_data,
+    stripe_customer_data_factory,
     raw_stripe_subscription_data,
     raw_stripe_invoice_data,
 ):
     """A PubSub push of multiple items, keyed by table:id, can be imported."""
-    customer_data = raw_stripe_customer_data
+    customer_data = stripe_customer_data_factory(
+        id=FAKE_STRIPE_CUSTOMER_ID, fxa_id=example_contact.fxa.fxa_id
+    )
     subscription_data = raw_stripe_subscription_data
     invoice_data = raw_stripe_invoice_data
     item_dict = {
@@ -207,30 +219,24 @@ def test_api_post_stripe_from_pubsub_item_dict(
     assert par.email.stripe_customer.stripe_id == customer_data["id"]
 
 
-def test_api_post_stripe_from_pubsub_none_without_exceptions(
-    dbsession, pubsub_client, example_contact
-):
+def test_api_post_stripe_from_pubsub_none_without_exceptions(pubsub_client):
     """A PubSub push of multiple items, keyed by table:id with no value associated."""
-    try:
-        item_dict = {
-            "from_customer_table:stripe_id": None,
-            "from_subscription_table:subscription_id": None,
-            "from_invoice_table:invoice_id": None,
-        }
-        resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(item_dict))
-    except Exception as e:  # pylint: disable=broad-except
-        assert False, e
+    item_dict = {
+        "from_customer_table:stripe_id": None,
+        "from_subscription_table:subscription_id": None,
+        "from_invoice_table:invoice_id": None,
+    }
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(item_dict))
 
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 0}
 
 
 def test_api_post_stripe_from_pubsub_customer_missing_data(
-    dbsession, pubsub_client, raw_stripe_customer_data
+    dbsession, pubsub_client, stripe_customer_data_factory
 ):
     """Missing data from PubSub push is a 202, so it doesn't resend."""
-    data = raw_stripe_customer_data
-    del data["description"]  # The FxA ID
+    data = stripe_customer_data_factory(fxa_id=None)
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 202  # Accepted
     assert resp.json() == {
@@ -240,11 +246,9 @@ def test_api_post_stripe_from_pubsub_customer_missing_data(
     assert dbsession.query(PendingAcousticRecord).one_or_none() is None
 
 
-def test_api_post_stripe_from_pubsub_bad_data(
-    dbsession, pubsub_client, raw_stripe_customer_data
-):
+def test_api_post_stripe_from_pubsub_bad_data(pubsub_client):
     """Bad data from PubSub push is a 202, so it doesn't resend."""
-    resp = pubsub_client.post("/stripe_from_pubsub", json=raw_stripe_customer_data)
+    resp = pubsub_client.post("/stripe_from_pubsub", json={"foo": "bar"})
     assert resp.status_code == 202  # Accepted
     assert resp.json() == {
         "status": "Accepted but not processed",
@@ -252,13 +256,10 @@ def test_api_post_stripe_from_pubsub_bad_data(
     }
 
 
-def test_api_post_stripe_from_pubsub_list(
-    dbsession, pubsub_client, raw_stripe_customer_data
-):
+def test_api_post_stripe_from_pubsub_list(pubsub_client, stripe_customer_data_factory):
     """A list from a PubSub push is a 202, accepted but not processed."""
-    resp = pubsub_client.post(
-        "/stripe_from_pubsub", json=pubsub_wrap([raw_stripe_customer_data])
-    )
+    data = stripe_customer_data_factory()
+    resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap([data]))
     assert resp.status_code == 202
     assert resp.json() == {
         "status": "Accepted but not processed",
@@ -266,14 +267,14 @@ def test_api_post_stripe_from_pubsub_list(
     }
 
 
-def test_api_post_pubsub_sample_data(dbsession, pubsub_client, stripe_test_json):
+def test_api_post_pubsub_sample_data(pubsub_client, stripe_test_json):
     """Stripe sample data can be POSTed from PubSub."""
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(stripe_test_json))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
 
 
-def test_api_post_pubsub_unknown_stripe_object(dbsession, pubsub_client):
+def test_api_post_pubsub_unknown_stripe_object(pubsub_client):
     """An unknown Stripe object is silently ignored."""
     data = {"object": "payment_method", "id": "pm_ABC123"}
     with capture_logs() as cap_logs:
@@ -285,26 +286,33 @@ def test_api_post_pubsub_unknown_stripe_object(dbsession, pubsub_client):
 
 
 def test_api_post_pubsub_trace_customer(
-    dbsession, pubsub_client, raw_stripe_customer_data
+    dbsession, pubsub_client, email_factory, stripe_customer_data_factory
 ):
     """Stripe customer data from PubSub can be traced via email."""
-    data = raw_stripe_customer_data
-    email = data["email"] = "customer+trace-me-mozilla-123@example.com"
+    email = email_factory(
+        primary_email="customer+trace-me-mozilla-123@example.com", fxa=True
+    )
+    dbsession.commit()
+
+    data = stripe_customer_data_factory(
+        email=email.primary_email, fxa_id=email.fxa.fxa_id
+    )
     with capture_logs() as caplog:
         resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
+
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
     assert len(caplog) == 1
-    assert caplog[0]["trace"] == email
+    assert caplog[0]["trace"] == email.primary_email
     assert caplog[0]["trace_json"] == data
     assert caplog[0]["ingest_actions"] == {"created": [f"customer:{data['id']}"]}
 
 
 def test_api_post_pubsub_integrity_error_is_409(
-    dbsession, pubsub_client, raw_stripe_customer_data
+    dbsession, pubsub_client, stripe_customer_data_factory
 ):
     """An integrity error is turned into a 409 Conflict"""
-    data = raw_stripe_customer_data
+    data = stripe_customer_data_factory()
     err = IntegrityError(
         "INSERT INTO...", {"stripe_id": data["id"]}, "Duplicate key value"
     )
@@ -324,10 +332,10 @@ def test_api_post_pubsub_integrity_error_is_409(
 
 
 def test_api_post_pubsub_deadlock_is_409(
-    dbsession, pubsub_client, raw_stripe_customer_data
+    dbsession, pubsub_client, stripe_customer_data_factory
 ):
     """A deadlock is turned into a 409 Conflict"""
-    data = raw_stripe_customer_data
+    data = stripe_customer_data_factory()
     err = OperationalError("INSERT INTO...", {"stripe_id": data["id"]}, "Deadlock")
     with capture_logs() as caplog, mock.patch.object(
         dbsession, "commit", side_effect=err
@@ -345,13 +353,14 @@ def test_api_post_pubsub_deadlock_is_409(
 
 
 def test_api_post_pubsub_conflicting_fxa_id(
-    dbsession, pubsub_client, contact_with_stripe_customer, raw_stripe_customer_data
+    dbsession, pubsub_client, stripe_customer_factory, stripe_customer_data_factory
 ):
     """An existing customer with an FxA ID conflict is deleted."""
-    data = raw_stripe_customer_data
-    old_id = data["id"]
-    new_id = old_id + "_new"
-    data["id"] = new_id
+    existing = stripe_customer_factory(stripe_id=fake_stripe_id("cus", "old"))
+    old_id = existing.stripe_id
+    dbsession.commit()
+    new_id = fake_stripe_id("cus", "new")
+    data = stripe_customer_data_factory(id=new_id, fxa_id=existing.fxa_id)
     with capture_logs() as caplog:
         resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 200
