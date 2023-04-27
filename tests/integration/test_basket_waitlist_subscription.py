@@ -246,6 +246,9 @@ def test_relay_waitlists(ctms_headers):
             },
         },
     ]
+    # If multiple `relay-` waitlists are present, the `geo` field of the
+    # first waitlist is set as the value of `relay_waitlist["geo"]`. This
+    # property is intended for legacy consumers
     assert contact_details["relay_waitlist"] == {
         "geo": "es",
     }
