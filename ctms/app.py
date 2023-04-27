@@ -75,7 +75,6 @@ from .schemas import (
     CTMSBulkResponse,
     CTMSResponse,
     CTMSSingleResponse,
-    EmailSchema,
     FirefoxAccountsSchema,
     IdentityResponse,
     MozillaFoundationSchema,
@@ -267,7 +266,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
         results = [
             CTMSResponse(
                 amo=contact.amo or AddOnsSchema(),
-                email=contact.email or EmailSchema(),
+                email=contact.email,
                 fxa=contact.fxa or FirefoxAccountsSchema(),
                 mofo=contact.mofo or MozillaFoundationSchema(),
                 newsletters=contact.newsletters or [],
@@ -506,7 +505,7 @@ def read_ctms_by_any_id(
     return [
         CTMSResponse(
             amo=contact.amo or AddOnsSchema(),
-            email=contact.email or EmailSchema(),
+            email=contact.email,
             fxa=contact.fxa or FirefoxAccountsSchema(),
             mofo=contact.mofo or MozillaFoundationSchema(),
             newsletters=contact.newsletters or [],
@@ -543,7 +542,7 @@ def get_ctms_response_or_404(db, email_id):
     contact = get_contact_or_404(db, email_id)
     return CTMSSingleResponse(
         amo=contact.amo or AddOnsSchema(),
-        email=contact.email or EmailSchema(),
+        email=contact.email,
         fxa=contact.fxa or FirefoxAccountsSchema(),
         mofo=contact.mofo or MozillaFoundationSchema(),
         newsletters=contact.newsletters or [],
