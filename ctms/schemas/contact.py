@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Literal, Optional, Set, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, Field, root_validator
+from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -227,12 +227,24 @@ class CTMSResponse(BaseModel):
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
 
-    def __init__(self, *args, **kwargs) -> None:
-        # Show computed fields in response for retro-compatibility.
-        kwargs["vpn_waitlist"] = VpnWaitlistSchema()
-        kwargs["relay_waitlist"] = RelayWaitlistSchema()
+    @validator("amo", pre=True, always=True)
+    def set_default_amo(cls, value):  # pylint: disable=no-self-argument
+        return value or AddOnsSchema()
 
-        for waitlist in kwargs.get("waitlists", []):
+    @validator("fxa", pre=True, always=True)
+    def set_default_fxa(cls, value):  # pylint: disable=no-self-argument
+        return value or FirefoxAccountsSchema()
+
+    @validator("mofo", pre=True, always=True)
+    def set_default_mofo(cls, value):  # pylint: disable=no-self-argument
+        return value or MozillaFoundationSchema()
+
+    @root_validator(pre=True)
+    def legacy_waitlists(cls, values):  # pylint: disable=no-self-argument
+        # Show computed fields in response for retro-compatibility.
+        values["vpn_waitlist"] = VpnWaitlistSchema()
+        values["relay_waitlist"] = RelayWaitlistSchema()
+        for waitlist in values.get("waitlists", []):
             if isinstance(waitlist, dict):
                 # TODO: figure out why dict from `response_model` decorators param in app.py)
                 waitlist = WaitlistSchema(**waitlist)
@@ -240,7 +252,7 @@ class CTMSResponse(BaseModel):
                 # Many tests instantiates CTMSResponse with `WaitlistInSchema` (input schema).
                 waitlist = WaitlistSchema(**waitlist.dict())
             if waitlist.name == "vpn":
-                kwargs["vpn_waitlist"] = VpnWaitlistSchema(
+                values["vpn_waitlist"] = VpnWaitlistSchema(
                     geo=waitlist.fields.get("geo"),
                     platform=waitlist.fields.get("platform"),
                 )
@@ -250,12 +262,13 @@ class CTMSResponse(BaseModel):
             # `waitlists` property of the contact schema
             if (
                 waitlist.name.startswith("relay")
-                and kwargs["relay_waitlist"].geo is None
+                and values["relay_waitlist"].geo is None
             ):
-                kwargs["relay_waitlist"] = RelayWaitlistSchema(
+                values["relay_waitlist"] = RelayWaitlistSchema(
                     geo=waitlist.fields.get("geo")
                 )
-        super().__init__(*args, **kwargs)
+
+        return values
 
 
 class CTMSSingleResponse(CTMSResponse):
