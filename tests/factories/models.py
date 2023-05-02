@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from uuid import uuid4
 
 import factory
@@ -102,10 +102,74 @@ class StripeCustomerFactory(BaseSQLAlchemyModelFactory):
     fxa = factory.SubFactory(factory=FirefoxAccountFactory)
 
 
+class StripePriceFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripePrice
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("price", "price", n))
+    stripe_product_id = factory.Sequence(
+        lambda n: fake_stripe_id("prod", "test_product", n)
+    )
+    stripe_created = factory.LazyFunction(lambda: datetime.now(UTC))
+    active = True
+    currency = "usd"
+    recurring_interval = "month"
+    recurring_interval_count = 1
+    unit_amount = 1000
+
+
+class StripeSubscriptionItemFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripeSubscriptionItem
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("si", "subscription_item", n))
+    stripe_subscription_id = factory.SelfAttribute("subscription.stripe_id")
+    stripe_created = factory.LazyFunction(lambda: datetime.now(UTC))
+    stripe_price_id = factory.SelfAttribute("price.stripe_id")
+    subscription = factory.SubFactory(
+        factory="tests.factories.models.StripeSubscriptionFactory"
+    )
+    price = factory.SubFactory(factory=StripePriceFactory)
+
+
+class StripeSubscriptionFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripeSubscription
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("sub", "subscription", n))
+    stripe_customer_id = factory.LazyAttribute(
+        lambda obj: obj.customer.stripe_id
+        if obj.customer
+        else fake_stripe_id("cus", "customer")
+    )
+    default_payment_method_id = None
+    default_source_id = None
+    stripe_created = factory.LazyFunction(lambda: datetime.now(tz=UTC))
+    cancel_at_period_end = False
+    canceled_at = None
+    current_period_start = factory.SelfAttribute("stripe_created")
+    current_period_end = factory.LazyAttribute(
+        lambda obj: obj.current_period_start + timedelta(days=30)
+    )
+    ended_at = None
+    start_date = factory.SelfAttribute("stripe_created")
+    status = "active"
+
+    customer = factory.SubFactory(factory=StripeCustomerFactory)
+    subscription_items = factory.RelatedFactoryList(
+        StripeSubscriptionItemFactory,
+        factory_related_name="subscription",
+        size=1,
+    )
+
+
 __all__ = (
     "EmailFactory",
     "FirefoxAccountFactory",
     "NewsletterFactory",
     "StripeCustomerFactory",
+    "StripePriceFactory",
+    "StripeSubscriptionFactory",
+    "StripeSubscriptionItemFactory",
     "WaitlistFactory",
 )
