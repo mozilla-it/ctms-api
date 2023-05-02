@@ -175,6 +175,9 @@ def dbsession(connection):
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
 register(factories.models.StripeCustomerFactory)
+register(factories.models.StripePriceFactory)
+register(factories.models.StripeSubscriptionFactory)
+register(factories.models.StripeSubscriptionItemFactory)
 register(factories.models.WaitlistFactory)
 # Stripe REST API payloads
 register(factories.stripe.StripeCustomerDataFactory)
