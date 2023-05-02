@@ -7,6 +7,8 @@ from structlog.testing import capture_logs
 
 from ctms import acoustic_service
 from ctms.acoustic_service import CTMSToAcousticService
+from ctms.crud import get_contact_by_email_id
+from ctms.schemas.contact import ContactSchema
 
 CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
 CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
@@ -226,15 +228,22 @@ def test_ctms_to_acoustic_mocked(
 
 
 def test_ctms_to_acoustic_with_subscription(
+    dbsession,
+    stripe_subscription_factory,
     base_ctms_acoustic_service,
-    contact_with_stripe_subscription,
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
+    subscription = stripe_subscription_factory()
+    dbsession.commit()
+
+    contact = get_contact_by_email_id(dbsession, email_id=subscription.get_email_id())
+    contact = ContactSchema.parse_obj(contact)
+
     acoustic_mock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
     _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        contact_with_stripe_subscription,
+        contact,
         main_acoustic_fields,
         acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
@@ -243,7 +252,7 @@ def test_ctms_to_acoustic_with_subscription(
     assert len(_product) == 1
     with capture_logs() as caplog:
         base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
-            contact_with_stripe_subscription,
+            contact,
             main_acoustic_fields,
             acoustic_newsletters_mapping,
         )
@@ -258,8 +267,7 @@ def test_ctms_to_acoustic_with_subscription(
     expected_log = EXPECTED_LOG.copy()
     expected_log.update(
         {
-            "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
-            "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
+            "email_id": str(contact.email.email_id),
             "product_count": 1,
         }
     )
@@ -267,16 +275,31 @@ def test_ctms_to_acoustic_with_subscription(
 
 
 def test_ctms_to_acoustic_with_subscription_and_metrics(
+    dbsession,
     metrics_ctms_acoustic_service,
-    contact_with_stripe_subscription,
+    stripe_subscription_factory,
+    stripe_price_factory,
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
+    price = stripe_price_factory(stripe_id="price_test", stripe_product_id="prod_test")
+    subscription = stripe_subscription_factory(
+        stripe_created=datetime.datetime(2021, 9, 27, 0, 0, 0),
+        current_period_end=datetime.datetime(2021, 11, 27, 0, 0, 0),
+        current_period_start=datetime.datetime(2021, 10, 27, 0, 0, 0),
+        start_date=datetime.datetime(2021, 9, 27, 0, 0, 0),
+        subscription_items__price=price,
+    )
+    dbsession.commit()
+
+    contact = get_contact_by_email_id(dbsession, email_id=subscription.get_email_id())
+    contact = ContactSchema.parse_obj(contact)
+
     acoustic_mock = MagicMock()
     acoustic_svc = metrics_ctms_acoustic_service
     acoustic_svc.acoustic = acoustic_mock
     _main, _newsletter, _product = acoustic_svc.convert_ctms_to_acoustic(
-        contact_with_stripe_subscription,
+        contact,
         main_acoustic_fields,
         acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
@@ -286,7 +309,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
 
     # Alpha-sorted, to ease cross-check with Acoustic table displays
     expected_product = {
-        "amount": "999",
+        "amount": "1000",
         "billing_country": "",
         "cancel_at_period_end": "No",
         "canceled_at": "",
@@ -297,14 +320,14 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
         "currency": "usd",
         "current_period_end": "11/27/2021 00:00:00",
         "current_period_start": "10/27/2021 00:00:00",
-        "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+        "email_id": str(subscription.get_email_id()),
         "ended_at": "",
         "interval": "month",
         "interval_count": "1",
         "payment_service": "stripe",
         "payment_type": "",
-        "price_id": "price_cHJpY2U",
-        "product_id": "prod_cHJvZHVjdA",
+        "price_id": "price_test",
+        "product_id": "prod_test",
         "product_name": "",
         "segment": "active",
         "start": "09/27/2021 00:00:00",
@@ -315,7 +338,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
 
     with capture_logs() as caplog:
         acoustic_svc.attempt_to_upload_ctms_contact(
-            contact_with_stripe_subscription,
+            contact,
             main_acoustic_fields,
             acoustic_newsletters_mapping,
         )
@@ -348,8 +371,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     expected_log = EXPECTED_LOG.copy()
     expected_log.update(
         {
-            "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
-            "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
+            "email_id": str(contact.email.email_id),
             "product_count": 1,
             "main_status": "success",
             "product_status": "success",

@@ -17,8 +17,6 @@ from ctms.crud import (
     get_stripe_invoice_by_stripe_id,
     get_stripe_invoice_line_item_by_stripe_id,
     get_stripe_price_by_stripe_id,
-    get_stripe_subscription_by_stripe_id,
-    get_stripe_subscription_item_by_stripe_id,
 )
 from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
@@ -623,28 +621,22 @@ def test_get_email_id_customer(dbsession, stripe_customer):
 
 def test_get_email_id_subscription(
     dbsession,
-    contact_with_stripe_subscription,
-    stripe_price_data,
-    stripe_subscription_data,
-    stripe_subscription_item_data,
+    email_factory,
+    stripe_customer_factory,
+    stripe_subscription_factory,
+    stripe_subscription_item_factory,
+    stripe_price_factory,
 ):
-    """A Stripe Subscription and related objects can return the related email_id.
-    The `stripe_` fixtures that are included here are used to build the data
-    associated with `contact_with_stripe_subscription`
-    """
-    customer = get_stripe_customer_by_stripe_id(dbsession, FAKE_STRIPE_CUSTOMER_ID)
-    subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, stripe_subscription_data["stripe_id"]
-    )
-    subscription_item = get_stripe_subscription_item_by_stripe_id(
-        dbsession, stripe_subscription_item_data["stripe_id"]
-    )
-    price = get_stripe_price_by_stripe_id(dbsession, stripe_price_data["stripe_id"])
+    email = email_factory(fxa=True)
+    customer = stripe_customer_factory(fxa=email.fxa)
+    subscription = stripe_subscription_factory(customer=customer)
+    subscription_item = stripe_subscription_item_factory(subscription=subscription)
+    price = stripe_price_factory(subscription_items=[subscription_item])
+    dbsession.commit()
 
-    email_id = contact_with_stripe_subscription.email.email_id
-    assert customer.get_email_id() == email_id
-    assert subscription.get_email_id() == email_id
-    assert subscription_item.get_email_id() == email_id
+    assert customer.get_email_id() == email.email_id
+    assert subscription.get_email_id() == email.email_id
+    assert subscription_item.get_email_id() == email.email_id
     # Prices always return None since they can relate to multiple contacts.
     assert price.get_email_id() is None
 

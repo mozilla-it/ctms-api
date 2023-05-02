@@ -25,13 +25,9 @@ from ctms.config import Settings
 from ctms.crud import (
     create_api_client,
     create_contact,
-    create_stripe_price,
-    create_stripe_subscription,
-    create_stripe_subscription_item,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
-    get_contact_by_email_id,
     get_contacts_by_any_id,
     get_fxa_by_email_id,
     get_mofo_by_email_id,
@@ -39,13 +35,7 @@ from ctms.crud import (
     get_waitlists_by_email_id,
 )
 from ctms.database import ScopedSessionLocal, SessionLocal
-from ctms.schemas import (
-    ApiClientSchema,
-    ContactSchema,
-    StripePriceCreateSchema,
-    StripeSubscriptionCreateSchema,
-    StripeSubscriptionItemCreateSchema,
-)
+from ctms.schemas import ApiClientSchema, ContactSchema
 from tests import factories
 from tests.data import fake_stripe_id
 
@@ -859,34 +849,6 @@ def raw_stripe_invoice_data(
             ],
         },
     }
-
-
-@pytest.fixture
-def contact_with_stripe_subscription(
-    dbsession,
-    example_contact,
-    stripe_customer_factory,
-    stripe_price_data,
-    stripe_subscription_data,
-    stripe_subscription_item_data,
-):
-    stripe_customer = stripe_customer_factory(
-        stripe_id=FAKE_STRIPE_CUSTOMER_ID, fxa_id=example_contact.fxa.fxa_id
-    )
-    create_stripe_price(dbsession, StripePriceCreateSchema(**stripe_price_data))
-    create_stripe_subscription(
-        dbsession, StripeSubscriptionCreateSchema(**stripe_subscription_data)
-    )
-    create_stripe_subscription_item(
-        dbsession,
-        StripeSubscriptionItemCreateSchema(
-            **stripe_subscription_item_data,
-        ),
-    )
-    dbsession.commit()
-
-    contact = get_contact_by_email_id(dbsession, stripe_customer.email.email_id)
-    return ContactSchema(**contact)
 
 
 @pytest.fixture
