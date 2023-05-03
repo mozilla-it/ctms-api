@@ -33,7 +33,6 @@ from ctms.crud import (
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
     get_email,
-    get_emails_by_any_id,
     get_stripe_customer_by_fxa_id,
     get_stripe_subscription_by_stripe_id,
     retry_acoustic_record,
@@ -112,82 +111,6 @@ def test_get_email_with_stripe_subscription(
 def test_get_email_miss(dbsession):
     email = get_email(dbsession, str(uuid4()))
     assert email is None
-
-
-@pytest.mark.parametrize(
-    "alt_id_name,alt_id_value",
-    [
-        ("email_id", "67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
-        ("primary_email", "mozilla-fan@example.com"),
-        ("amo_user_id", "123"),
-        ("basket_token", "d9ba6182-f5dd-4728-a477-2cc11bf62b69"),
-        ("fxa_id", "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"),
-        ("fxa_primary_email", "fxa-firefox-fan@example.com"),
-        ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
-        ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
-    ],
-)
-def test_get_emails_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
-    emails = get_emails_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(emails) == 1
-    newsletter_names = [newsletter.name for newsletter in emails[0].newsletters]
-    assert sorted(newsletter_names) == newsletter_names
-
-
-def test_get_emails_by_any_id_missing(dbsession):
-    emails = get_emails_by_any_id(dbsession, basket_token=str(uuid4()))
-    assert len(emails) == 0
-
-
-@pytest.mark.parametrize(
-    "alt_id_name,alt_id_value",
-    [
-        ("amo_user_id", "123"),
-        ("fxa_primary_email", "fxa-firefox-fan@example.com"),
-        ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
-    ],
-)
-def test_get_multiple_emails_by_any_id(
-    dbsession, sample_contacts, alt_id_name, alt_id_value
-):
-    dupe_id = str(uuid4())
-    create_email(
-        dbsession,
-        EmailInSchema(
-            email_id=dupe_id,
-            primary_email="dupe@example.com",
-            basket_token=str(uuid4()),
-            sfdc_id=alt_id_value
-            if alt_id_name == "sfdc_id"
-            else "other_sdfc_alt_id_value",
-        ),
-    )
-    if alt_id_name == "amo_user_id":
-        create_amo(dbsession, dupe_id, AddOnsInSchema(user_id=alt_id_value))
-    if alt_id_name == "fxa_primary_email":
-        create_fxa(
-            dbsession, dupe_id, FirefoxAccountsInSchema(primary_email=alt_id_value)
-        )
-    if alt_id_name == "mofo_contact_id":
-        create_mofo(
-            dbsession,
-            dupe_id,
-            MozillaFoundationInSchema(
-                mofo_email_id=str(uuid4()), mofo_contact_id=alt_id_value
-            ),
-        )
-
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="zzz_sleepy_news"))
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="aaa_game_news"))
-    dbsession.flush()
-
-    emails = get_emails_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(emails) == 2
-    for email in emails:
-        newsletter_names = [newsletter.name for newsletter in email.newsletters]
-        assert sorted(newsletter_names) == newsletter_names
 
 
 def test_get_contact_by_email_id_found(dbsession, example_contact):
@@ -712,7 +635,7 @@ def test_get_bulk_contacts_none(dbsession):
 def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
     contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
     assert len(contacts) == 1
-    newsletter_names = [nl.name for nl in contacts[0]["newsletters"]]
+    newsletter_names = [nl.name for nl in contacts[0].newsletters]
     assert sorted(newsletter_names) == newsletter_names
 
 
@@ -767,7 +690,7 @@ def test_get_multiple_contacts_by_any_id(
     contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
     assert len(contacts) == 2
     for contact in contacts:
-        newsletter_names = [nl.name for nl in contact["newsletters"]]
+        newsletter_names = [nl.name for nl in contact.newsletters]
         assert sorted(newsletter_names) == newsletter_names
 
 
