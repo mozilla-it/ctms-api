@@ -25,7 +25,6 @@ from ctms.crud import (
     delete_acoustic_field,
     delete_acoustic_newsletters_mapping,
     delete_acoustic_record,
-    get_acoustic_record_as_contact,
     get_all_acoustic_fields,
     get_all_acoustic_records_before,
     get_bulk_contacts,
@@ -194,11 +193,13 @@ def test_get_multiple_emails_by_any_id(
 def test_get_contact_by_email_id_found(dbsession, example_contact):
     email_id = example_contact.email.email_id
     contact = get_contact_by_email_id(dbsession, email_id)
-    assert contact["email"].email_id == email_id
-    newsletter_names = [nl.name for nl in contact["newsletters"]]
+    assert contact.email.email_id == email_id
+    newsletter_names = [nl.name for nl in contact.newsletters]
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
     assert sorted(newsletter_names) == newsletter_names
-    assert contact["products"] == []
+    # We want to ensure we return an empty list specifically
+    # pylint: disable-next=use-implicit-booleaness-not-comparison
+    assert contact.products == []
 
 
 def test_get_contact_by_email_id_miss(dbsession):
@@ -246,7 +247,7 @@ def test_schedule_then_get_acoustic_records_as_contacts(
     )
     dbsession.flush()
     contact_record_list = [
-        get_acoustic_record_as_contact(dbsession, record) for record in record_list
+        get_contact_by_email_id(dbsession, record.email_id) for record in record_list
     ]
     assert len(contact_record_list) == 3
     for record in contact_record_list:
@@ -360,7 +361,7 @@ def retry_acoustic_record_with_error(dbsession, example_contact):
 def test_get_acoustic_record_no_stripe_customer(dbsession, example_contact):
     """A contact with no associated Stripe customer has no subscriptions."""
     pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert not contact.products
 
 
@@ -373,7 +374,7 @@ def test_get_acoustic_record_no_stripe_subscriptions(
 
     email_id = stripe_customer.email.email_id
     pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert not contact.products
 
 
@@ -383,7 +384,7 @@ def test_get_acoustic_record_one_stripe_subscription(
     """A contact with one Stripe subscription has one product."""
     email_id = contact_with_stripe_subscription.email.email_id
     pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert len(contact.products) == 1
     product = contact.products[0]
     assert product.dict() == {
@@ -451,7 +452,7 @@ def test_get_acoustic_record_two_stripe_subscriptions(
     dbsession.commit()
 
     pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert len(contact.products) == 2
     product1 = contact.products[0]
     assert product1.product_id == "prod_cHJvZHVjdA"
@@ -497,7 +498,7 @@ def test_get_acoustic_record_serial_stripe_subscriptions(
     dbsession.commit()
 
     pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert len(contact.products) == 1
     product = contact.products[0]
     assert product.product_id == "prod_cHJvZHVjdA"
@@ -517,7 +518,7 @@ def test_get_acoustic_record_stripe_subscription_cancelled(
     dbsession.commit()
     email_id = contact_with_stripe_subscription.email.email_id
     pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert len(contact.products) == 1
     product = contact.products[0]
     assert product.segment == "canceled"
@@ -535,7 +536,7 @@ def test_get_acoustic_record_stripe_subscription_other(
     dbsession.commit()
     email_id = contact_with_stripe_subscription.email.email_id
     pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
+    contact = get_contact_by_email_id(dbsession, pending.email_id)
     assert len(contact.products) == 1
     product = contact.products[0]
     assert product.segment == "other"

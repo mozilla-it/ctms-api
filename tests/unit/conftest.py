@@ -883,7 +883,7 @@ def contact_with_stripe_subscription(
     dbsession.commit()
 
     contact = get_contact_by_email_id(dbsession, stripe_customer.email.email_id)
-    return ContactSchema(**contact)
+    return contact
 
 
 @pytest.fixture

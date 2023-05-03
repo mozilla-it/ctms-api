@@ -176,22 +176,21 @@ def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
     )
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
-    """Get all the data for a contact, as a dict."""
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[ContactSchema]:
+    """Return a Contact object for a given email id"""
     email = get_email(db, email_id)
     if email is None:
         return None
-    products = []
-    products.extend(get_stripe_products(email))
-    return {
-        "amo": email.amo,
-        "email": email,
-        "fxa": email.fxa,
-        "mofo": email.mofo,
-        "newsletters": email.newsletters,
-        "products": products,
-        "waitlists": email.waitlists,
-    }
+    products = get_stripe_products(email)
+    return ContactSchema(
+        amo=email.amo,
+        email=email,
+        fxa=email.fxa,
+        mofo=email.mofo,
+        newsletters=email.newsletters,
+        products=products,
+        waitlists=email.waitlists,
+    )
 
 
 def get_emails_by_any_id(
@@ -357,15 +356,6 @@ def get_all_acoustic_records_count(
     query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
     pending_records_count: int = query.count()
     return pending_records_count
-
-
-def get_acoustic_record_as_contact(
-    db: Session,
-    record: PendingAcousticRecord,
-) -> ContactSchema:
-    contact = get_contact_by_email_id(db, record.email_id)
-    contact_schema: ContactSchema = ContactSchema.parse_obj(contact)
-    return contact_schema
 
 
 def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):

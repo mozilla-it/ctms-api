@@ -539,11 +539,11 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
-        email = existing["email"].primary_email
+        email = existing.email.primary_email
         if re_trace_email.match(email):
             request.state.log_context["trace"] = email
             request.state.log_context["trace_json"] = content_json
-        if ContactInSchema(**existing).idempotent_equal(contact):
+        if ContactInSchema(**existing.dict()).idempotent_equal(contact):
             response.headers["Location"] = f"/ctms/{email_id}"
             response.status_code = 200
             return get_ctms_response_or_404(db=db, email_id=email_id)

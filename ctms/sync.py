@@ -8,14 +8,13 @@ from ctms.acoustic_service import Acoustic, AcousticUploadError, CTMSToAcousticS
 from ctms.background_metrics import BackgroundMetricService
 from ctms.crud import (
     delete_acoustic_record,
-    get_acoustic_record_as_contact,
     get_all_acoustic_records_before,
     get_all_acoustic_records_count,
     get_all_acoustic_retries_count,
+    get_contact_by_email_id,
     retry_acoustic_record,
 )
 from ctms.models import AcousticField, AcousticNewsletterMapping, PendingAcousticRecord
-from ctms.schemas import ContactSchema
 
 
 class CTMSToAcousticSync:
@@ -65,9 +64,7 @@ class CTMSToAcousticSync:
         try:
             sync_error = None
             if self.is_acoustic_enabled:
-                contact: ContactSchema = get_acoustic_record_as_contact(
-                    db, pending_record
-                )
+                contact = get_contact_by_email_id(db, pending_record.email_id)
                 try:
                     self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
                         contact, main_fields, newsletters_mapping
