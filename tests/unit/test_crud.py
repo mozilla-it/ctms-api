@@ -275,6 +275,7 @@ def test_get_contact_by_email_id_stripe_customer_no_subscriptions(
     dbsession.commit()
 
     contact = get_contact_by_email_id(dbsession, customer.get_email_id())
+    # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert contact.products == []
 
 
@@ -328,6 +329,7 @@ def test_get_contact_by_email_id_two_stripe_subscriptions(
 
     contact = get_contact_by_email_id(dbsession, customer.get_email_id())
     assert len(contact.products) == 2
+    # pylint: disable-next=unbalanced-tuple-unpacking
     product1, product2 = contact.products
     assert product1 != product2
 
