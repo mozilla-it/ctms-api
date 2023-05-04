@@ -1,5 +1,6 @@
+from collections import defaultdict
 from datetime import datetime
-from typing import List, Literal, Optional, Set, Union
+from typing import TYPE_CHECKING, List, Literal, Optional, Set, Union, cast
 from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
@@ -27,6 +28,94 @@ from .waitlist import (
     validate_waitlist_newsletters,
 )
 
+if TYPE_CHECKING:
+    from models import Email
+
+
+def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
+    """Return a list of Stripe products for the contact, if any."""
+    if not email.stripe_customer:
+        return []
+
+    base_data: dict[str, Any] = {
+        "payment_service": "stripe",
+        # These come from the Payment Method, not imported from Stripe.
+        "payment_type": None,
+        "card_brand": None,
+        "card_last4": None,
+        "billing_country": None,
+    }
+    by_product = defaultdict(list)
+
+    for subscription in email.stripe_customer.subscriptions:
+        subscription_data = base_data.copy()
+        subscription_data.update(
+            {
+                "status": subscription.status,
+                "created": subscription.stripe_created,
+                "start": subscription.start_date,
+                "current_period_start": subscription.current_period_start,
+                "current_period_end": subscription.current_period_end,
+                "canceled_at": subscription.canceled_at,
+                "cancel_at_period_end": subscription.cancel_at_period_end,
+                "ended_at": subscription.ended_at,
+            }
+        )
+        for item in subscription.subscription_items:
+            product_data = subscription_data.copy()
+            price = item.price
+            product_data.update(
+                {
+                    "product_id": price.stripe_product_id,
+                    "product_name": None,  # Products are not imported
+                    "price_id": price.stripe_id,
+                    "currency": price.currency,
+                    "amount": price.unit_amount,
+                    "interval_count": price.recurring_interval_count,
+                    "interval": price.recurring_interval,
+                }
+            )
+            by_product[price.stripe_product_id].append(product_data)
+
+    products = []
+    for subscriptions in by_product.values():
+        subscriptions.sort(
+            key=lambda sub: cast(datetime, sub["current_period_end"]), reverse=True
+        )
+        latest = subscriptions[0]
+        data = latest.copy()
+        if len(subscriptions) == 1:
+            segment_prefix = ""
+        else:
+            segment_prefix = "re-"
+        if latest["status"] == "active":
+            if latest["canceled_at"]:
+                segment = "cancelling"
+                changed = latest["canceled_at"]
+            else:
+                segment = "active"
+                changed = latest["start"]
+        elif latest["status"] == "canceled":
+            segment = "canceled"
+            changed = latest["ended_at"]
+        else:
+            segment_prefix = ""
+            segment = "other"
+            changed = latest["created"]
+
+        assert changed
+        data.update(
+            {
+                "sub_count": len(subscriptions),
+                "segment": f"{segment_prefix}{segment}",
+                "changed": changed,
+            }
+        )
+        products.append(ProductBaseSchema(**data))
+
+    products.sort(key=lambda prod: prod.product_id or "")
+    return products
+
 
 class ContactSchema(ComparableBase):
     """A complete contact."""
@@ -38,6 +127,18 @@ class ContactSchema(ComparableBase):
     newsletters: List[NewsletterSchema] = []
     waitlists: List[WaitlistSchema] = []
     products: List[ProductBaseSchema] = []
+
+    @classmethod
+    def from_email(cls, email: "Email") -> "ContactSchema":
+        return cls(
+            amo=email.amo,
+            email=email,
+            fxa=email.fxa,
+            mofo=email.mofo,
+            newsletters=email.newsletters,
+            waitlists=email.waitlists,
+            products=get_stripe_products(email),
+        )
 
     class Config:
         fields = {

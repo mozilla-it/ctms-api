@@ -155,14 +155,7 @@ def get_email_or_404(db: Session, email_id) -> Email:
 def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     """Get a contact by email_ID, or raise a 404 exception."""
     email = get_email_or_404(db, email_id)
-    return ContactSchema(
-        amo=email.amo,
-        email=email,
-        fxa=email.fxa,
-        mofo=email.mofo,
-        newsletters=email.newsletters,
-        waitlists=email.waitlists,
-    )
+    return ContactSchema.from_email(email)
 
 
 def all_ids(
