@@ -176,25 +176,24 @@ def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
     )
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
-    """Get all the data for a contact, as a dict."""
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[ContactSchema]:
+    """Return a Contact object for a given email id"""
     email = get_email(db, email_id)
     if email is None:
         return None
-    products = []
-    products.extend(get_stripe_products(email))
-    return {
-        "amo": email.amo,
-        "email": email,
-        "fxa": email.fxa,
-        "mofo": email.mofo,
-        "newsletters": email.newsletters,
-        "products": products,
-        "waitlists": email.waitlists,
-    }
+    products = get_stripe_products(email)
+    return ContactSchema(
+        amo=email.amo,
+        email=email,
+        fxa=email.fxa,
+        mofo=email.mofo,
+        newsletters=email.newsletters,
+        products=products,
+        waitlists=email.waitlists,
+    )
 
 
-def get_emails_by_any_id(
+def get_contacts_by_any_id(
     db: Session,
     email_id: Optional[UUID4] = None,
     primary_email: Optional[str] = None,
@@ -205,9 +204,9 @@ def get_emails_by_any_id(
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[str] = None,
-) -> List[Email]:
+) -> List[ContactSchema]:
     """
-    Get all the data for multiple contacts by IDs as a list of Email instances.
+    Get all the data for multiple contacts by ID as a list of Contacts.
 
     Newsletters are retrieved in batches of 500 email_ids, so it will be two
     queries for most calls.
@@ -252,52 +251,18 @@ def get_emails_by_any_id(
         statement = statement.join(Email.fxa).filter_by(
             fxa_primary_email_insensitive_comparator=fxa_primary_email
         )
-    return cast(List[Email], statement.all())
-
-
-def get_contacts_by_any_id(
-    db: Session,
-    email_id: Optional[UUID4] = None,
-    primary_email: Optional[str] = None,
-    basket_token: Optional[UUID4] = None,
-    sfdc_id: Optional[str] = None,
-    mofo_contact_id: Optional[str] = None,
-    mofo_email_id: Optional[str] = None,
-    amo_user_id: Optional[str] = None,
-    fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[str] = None,
-) -> List[Dict]:
-    """
-    Get all the data for multiple contacts by ID as a list of dicts.
-
-    Newsletters are retrieved in batches of 500 email_ids, so it will be two
-    queries for most calls.
-    """
-    emails = get_emails_by_any_id(
-        db,
-        email_id,
-        primary_email,
-        basket_token,
-        sfdc_id,
-        mofo_contact_id,
-        mofo_email_id,
-        amo_user_id,
-        fxa_id,
-        fxa_primary_email,
-    )
-    data = []
-    for email in emails:
-        data.append(
-            {
-                "amo": email.amo,
-                "email": email,
-                "fxa": email.fxa,
-                "mofo": email.mofo,
-                "newsletters": email.newsletters,
-                "waitlists": email.waitlists,
-            }
+    emails = cast(List[Email], statement.all())
+    return [
+        ContactSchema(
+            amo=email.amo,
+            email=email,
+            fxa=email.fxa,
+            mofo=email.mofo,
+            newsletters=email.newsletters,
+            waitlists=email.waitlists,
         )
-    return data
+        for email in emails
+    ]
 
 
 def _acoustic_sync_retry_query(db: Session):
@@ -357,15 +322,6 @@ def get_all_acoustic_records_count(
     query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
     pending_records_count: int = query.count()
     return pending_records_count
-
-
-def get_acoustic_record_as_contact(
-    db: Session,
-    record: PendingAcousticRecord,
-) -> ContactSchema:
-    contact = get_contact_by_email_id(db, record.email_id)
-    contact_schema: ContactSchema = ContactSchema.parse_obj(contact)
-    return contact_schema
 
 
 def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):

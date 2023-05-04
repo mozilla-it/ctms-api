@@ -518,10 +518,7 @@ def post_contact(client, dbsession, request):
         assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
-        saved = [
-            ContactSchema(**c)
-            for c in get_contacts_by_any_id(dbsession, **query_fields)
-        ]
+        saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
 
         # Now make sure that we skip writing default models
@@ -605,10 +602,7 @@ def put_contact(client, dbsession, request):
         sample = modifier(sample)
         resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
         assert resp.status_code == code, resp.text
-        saved = [
-            ContactSchema(**c)
-            for c in get_contacts_by_any_id(dbsession, **query_fields)
-        ]
+        saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
 
         # Now make sure that we skip writing default models
