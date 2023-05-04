@@ -525,10 +525,7 @@ def post_contact(client, dbsession, request):
         assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
-        saved = [
-            ContactSchema(**c)
-            for c in get_contacts_by_any_id(dbsession, **query_fields)
-        ]
+        saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
 
         # Now make sure that we skip writing default models
@@ -612,10 +609,7 @@ def put_contact(client, dbsession, request):
         sample = modifier(sample)
         resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
         assert resp.status_code == code, resp.text
-        saved = [
-            ContactSchema(**c)
-            for c in get_contacts_by_any_id(dbsession, **query_fields)
-        ]
+        saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
 
         # Now make sure that we skip writing default models
@@ -883,7 +877,7 @@ def contact_with_stripe_subscription(
     dbsession.commit()
 
     contact = get_contact_by_email_id(dbsession, stripe_customer.email.email_id)
-    return ContactSchema(**contact)
+    return contact
 
 
 @pytest.fixture

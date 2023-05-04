@@ -46,8 +46,8 @@ from .crud import (
     get_api_client_by_id,
     get_bulk_contacts,
     get_contact_by_email_id,
+    get_contacts_by_any_id,
     get_email,
-    get_emails_by_any_id,
     schedule_acoustic_record,
     update_contact,
 )
@@ -188,48 +188,6 @@ def all_ids(
         "fxa_id": fxa_id,
         "fxa_primary_email": fxa_primary_email,
     }
-
-
-def get_contacts_by_ids(
-    db: Session,
-    email_id: Optional[UUID] = None,
-    primary_email: Optional[str] = None,
-    basket_token: Optional[UUID] = None,
-    sfdc_id: Optional[str] = None,
-    mofo_contact_id: Optional[str] = None,
-    mofo_email_id: Optional[str] = None,
-    amo_user_id: Optional[str] = None,
-    fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[str] = None,
-) -> List[ContactSchema]:
-    """Get contacts by any ID.
-
-    Callers are expected to set just one ID, but if multiple are set, a contact
-    must match all IDs.
-    """
-    rows = get_emails_by_any_id(
-        db,
-        email_id,
-        primary_email,
-        basket_token,
-        sfdc_id,
-        mofo_contact_id,
-        mofo_email_id,
-        amo_user_id,
-        fxa_id,
-        fxa_primary_email,
-    )
-    return [
-        ContactSchema(
-            amo=email.amo,
-            email=email,
-            fxa=email.fxa,
-            mofo=email.mofo,
-            newsletters=email.newsletters,
-            waitlists=email.waitlists,
-        )
-        for email in rows
-    ]
 
 
 def get_bulk_contacts_by_timestamp_or_4xx(
@@ -481,7 +439,7 @@ def read_ctms_by_any_id(
             f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
         )
         raise HTTPException(status_code=400, detail=detail)
-    contacts = get_contacts_by_ids(db, **ids)
+    contacts = get_contacts_by_any_id(db, **ids)
     traced = set()
     for contact in contacts:
         email = contact.email.primary_email
@@ -539,11 +497,11 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
-        email = existing["email"].primary_email
+        email = existing.email.primary_email
         if re_trace_email.match(email):
             request.state.log_context["trace"] = email
             request.state.log_context["trace_json"] = content_json
-        if ContactInSchema(**existing).idempotent_equal(contact):
+        if ContactInSchema(**existing.dict()).idempotent_equal(contact):
             response.headers["Location"] = f"/ctms/{email_id}"
             response.status_code = 200
             return get_ctms_response_or_404(db=db, email_id=email_id)
@@ -683,7 +641,7 @@ def delete_contact_by_primary_email(
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     ids = all_ids(primary_email=primary_email.lower())
-    contacts = get_contacts_by_ids(db, **ids)
+    contacts = get_contacts_by_any_id(db, **ids)
 
     if not contacts:
         raise HTTPException(status_code=404, detail=f"email {primary_email} not found!")
@@ -749,7 +707,7 @@ def read_identities(
             f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
         )
         raise HTTPException(status_code=400, detail=detail)
-    contacts = get_contacts_by_ids(db, **ids)
+    contacts = get_contacts_by_any_id(db, **ids)
     return [contact.as_identity_response() for contact in contacts]
 
 
