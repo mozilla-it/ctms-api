@@ -32,25 +32,21 @@ if TYPE_CHECKING:
     from models import Email
 
 
-def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
-    """Return a list of Stripe products for the contact, if any."""
-    if not email.stripe_customer:
-        return []
-
-    base_data: dict[str, Any] = {
-        "payment_service": "stripe",
-        # These come from the Payment Method, not imported from Stripe.
-        "payment_type": None,
-        "card_brand": None,
-        "card_last4": None,
-        "billing_country": None,
-    }
+def _subscriptions_by_product(subscriptions):
     by_product = defaultdict(list)
 
-    for subscription in email.stripe_customer.subscriptions:
-        subscription_data = base_data.copy()
-        subscription_data.update(
-            {
+    for subscription in subscriptions:
+        for item in subscription.subscription_items:
+            price = item.price
+            product_data = {
+                "payment_service": "stripe",
+                ###
+                # These come from the Payment Method, not imported from Stripe.
+                "payment_type": None,
+                "card_brand": None,
+                "card_last4": None,
+                "billing_country": None,
+                ###
                 "status": subscription.status,
                 "created": subscription.stripe_created,
                 "start": subscription.start_date,
@@ -59,60 +55,64 @@ def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
                 "canceled_at": subscription.canceled_at,
                 "cancel_at_period_end": subscription.cancel_at_period_end,
                 "ended_at": subscription.ended_at,
+                "product_id": price.stripe_product_id,
+                "product_name": None,  # Products are not imported
+                "price_id": price.stripe_id,
+                "currency": price.currency,
+                "amount": price.unit_amount,
+                "interval_count": price.recurring_interval_count,
+                "interval": price.recurring_interval,
             }
-        )
-        for item in subscription.subscription_items:
-            product_data = subscription_data.copy()
-            price = item.price
-            product_data.update(
-                {
-                    "product_id": price.stripe_product_id,
-                    "product_name": None,  # Products are not imported
-                    "price_id": price.stripe_id,
-                    "currency": price.currency,
-                    "amount": price.unit_amount,
-                    "interval_count": price.recurring_interval_count,
-                    "interval": price.recurring_interval,
-                }
-            )
             by_product[price.stripe_product_id].append(product_data)
+    return by_product
 
-    products = []
-    for subscriptions in by_product.values():
-        subscriptions.sort(
-            key=lambda sub: cast(datetime, sub["current_period_end"]), reverse=True
-        )
-        latest = subscriptions[0]
-        data = latest.copy()
-        if len(subscriptions) == 1:
-            segment_prefix = ""
+
+def _product_metadata(subscriptions_by_product):
+    latest = max(
+        subscriptions_by_product,
+        key=lambda sub: cast(datetime, sub["current_period_end"]),
+    )
+    if len(subscriptions_by_product) == 1:
+        segment_prefix = ""
+    else:
+        segment_prefix = "re-"
+    if latest["status"] == "active":
+        if latest["canceled_at"]:
+            segment = "cancelling"
+            changed = latest["canceled_at"]
         else:
-            segment_prefix = "re-"
-        if latest["status"] == "active":
-            if latest["canceled_at"]:
-                segment = "cancelling"
-                changed = latest["canceled_at"]
-            else:
-                segment = "active"
-                changed = latest["start"]
-        elif latest["status"] == "canceled":
-            segment = "canceled"
-            changed = latest["ended_at"]
-        else:
-            segment_prefix = ""
-            segment = "other"
-            changed = latest["created"]
+            segment = "active"
+            changed = latest["start"]
+    elif latest["status"] == "canceled":
+        segment = "canceled"
+        changed = latest["ended_at"]
+    else:
+        segment_prefix = ""
+        segment = "other"
+        changed = latest["created"]
 
-        assert changed
-        data.update(
-            {
-                "sub_count": len(subscriptions),
-                "segment": f"{segment_prefix}{segment}",
-                "changed": changed,
-            }
-        )
-        products.append(ProductBaseSchema(**data))
+    assert changed
+    latest.update(
+        {
+            "sub_count": len(subscriptions_by_product),
+            "segment": f"{segment_prefix}{segment}",
+            "changed": changed,
+        }
+    )
+    return ProductBaseSchema(**latest)
 
+
+def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
+    """Return a list of Stripe products for the contact, if any."""
+    if not email.stripe_customer:
+        return []
+    subscription_metadata_by_product = _subscriptions_by_product(
+        email.stripe_customer.subscriptions
+    )
+    products = [
+        _product_metadata(subscriptions)
+        for subscriptions in subscription_metadata_by_product.values()
+    ]
     products.sort(key=lambda prod: prod.product_id or "")
     return products
 
