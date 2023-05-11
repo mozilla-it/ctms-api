@@ -163,11 +163,71 @@ class StripeSubscriptionFactory(BaseSQLAlchemyModelFactory):
     )
 
 
+class StripeInvoiceLineItemFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripeInvoiceLineItem
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("il", "invoice line item", n))
+    stripe_invoice_id = factory.SelfAttribute("invoice.stripe_id")
+    stripe_type = "subscription"
+    stripe_price_id = factory.SelfAttribute("price.stripe_id")
+    stripe_invoice_item_id = None
+    stripe_subscription_id = factory.SelfAttribute(
+        "subscription_item.subscription.stripe_id"
+    )
+    stripe_subscription_item_id = factory.SelfAttribute("subscription_item.stripe_id")
+    amount = 1000
+    currency = "usd"
+
+    invoice = factory.SubFactory(
+        factory="tests.factories.models.StripeInvoiceFactory", line_items=None
+    )
+    price = factory.SubFactory(factory=StripePriceFactory)
+    subscription_item = factory.SubFactory(
+        factory=StripeSubscriptionItemFactory, price=factory.SelfAttribute("..price")
+    )
+
+    class Params:
+        invoiceitem_type = factory.Trait(
+            stripe_type="invoiceitem",
+            invoice_item_id=factory.Sequence(
+                lambda n: fake_stripe_id("ii", "invoice_item", n)
+            ),
+            subscription_id=None,
+            subscription_item_id=None,
+            subscription=None,
+            subscription_item=None,
+        )
+
+
+class StripeInvoiceFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripeInvoice
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("inv", "invoice", n))
+    stripe_customer_id = factory.SelfAttribute("customer.stripe_id")
+    default_payment_method_id = None
+    default_source_id = None
+    stripe_created = factory.LazyFunction(lambda: datetime.now(UTC))
+    currency = "usd"
+    total = 1000
+    status = "open"
+    customer = factory.SubFactory(factory=StripeCustomerFactory)
+
+    line_items = factory.RelatedFactoryList(
+        StripeInvoiceLineItemFactory,
+        factory_related_name="invoice",
+        size=1,
+    )
+
+
 __all__ = (
     "EmailFactory",
     "FirefoxAccountFactory",
     "NewsletterFactory",
     "StripeCustomerFactory",
+    "StripeInvoiceFactory",
+    "StripeInvoiceLineItemFactory",
     "StripePriceFactory",
     "StripeSubscriptionFactory",
     "StripeSubscriptionItemFactory",
