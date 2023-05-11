@@ -57,8 +57,11 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.Email
 
-    email_id = factory.Faker("uuid4")
+    # Actual Python UUID objects, not just their string representation
+    email_id = factory.LazyFunction(uuid4)
     primary_email = factory.Faker("email")
+    # though this column is full of UUIDs, they're stored as strings, which is
+    # what Faker generates
     basket_token = factory.Faker("uuid4")
     first_name = factory.Faker("first_name")
     last_name = factory.Faker("last_name")
@@ -88,7 +91,7 @@ class StripeCustomerFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.StripeCustomer
 
-    stripe_id = factory.LazyFunction(lambda: fake_stripe_id("cus", "customer"))
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("cus", "customer", n))
     fxa_id = factory.SelfAttribute("fxa.fxa_id")
     default_source_id = factory.LazyFunction(
         lambda: fake_stripe_id("card", "default_payment")
@@ -127,7 +130,8 @@ class StripeSubscriptionItemFactory(BaseSQLAlchemyModelFactory):
     stripe_created = factory.LazyFunction(lambda: datetime.now(UTC))
     stripe_price_id = factory.SelfAttribute("price.stripe_id")
     subscription = factory.SubFactory(
-        factory="tests.factories.models.StripeSubscriptionFactory"
+        factory="tests.factories.models.StripeSubscriptionFactory",
+        subscription_items=None,
     )
     price = factory.SubFactory(factory=StripePriceFactory)
 
@@ -137,8 +141,8 @@ class StripeSubscriptionFactory(BaseSQLAlchemyModelFactory):
         model = models.StripeSubscription
 
     stripe_id = factory.Sequence(lambda n: fake_stripe_id("sub", "subscription", n))
-    stripe_customer_id = factory.LazyAttribute(
-        lambda obj: obj.customer.stripe_id
+    stripe_customer_id = factory.LazyAttributeSequence(
+        lambda obj, n: obj.customer.stripe_id
         if obj.customer
         else fake_stripe_id("cus", "customer")
     )

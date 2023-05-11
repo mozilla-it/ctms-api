@@ -162,13 +162,15 @@ def test_ingest_update_customer(
 ):
     """A Stripe Customer can be updated."""
     customer = stripe_customer_factory(
-        default_source_id=fake_stripe_id("card", "old credit card")
+        stripe_id=fake_stripe_id("cus", "customer"),
+        default_source_id=fake_stripe_id("card", "old credit card"),
     )
     dbsession.commit()
 
     # Change payment method
     data = stripe_customer_data_factory(
-        default_source=fake_stripe_id("card", "new credit card")
+        id=fake_stripe_id("cus", "customer"),
+        default_source=fake_stripe_id("card", "new credit card"),
     )
     data["invoice_settings"]["default_payment_method"] = None
 
