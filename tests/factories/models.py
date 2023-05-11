@@ -205,8 +205,16 @@ class StripeInvoiceLineItemFactory(BaseSQLAlchemyModelFactory):
         factory="tests.factories.models.StripeInvoiceFactory", line_items=None
     )
     price = factory.SubFactory(factory=StripePriceFactory)
+
+    # For the subscription item the subfactory below generates:
+    # - set the price to the same price that's generated here.
+    # - for the subscription that contains the subscription item, set the
+    #   customer to the same customer that's associated with this line_item's
+    #   containing invoice
     subscription_item = factory.SubFactory(
-        factory=StripeSubscriptionItemFactory, price=factory.SelfAttribute("..price")
+        factory=StripeSubscriptionItemFactory,
+        price=factory.SelfAttribute("..price"),
+        subscription__customer=factory.SelfAttribute("...invoice.customer"),
     )
 
     class Params:
