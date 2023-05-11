@@ -9,6 +9,24 @@ from ctms.database import ScopedSessionLocal
 from tests.data import fake_stripe_id
 
 
+# Pylint complains that we don't override `evaluate` in the class below, but
+# neither does the class that we're subclassing from, hence the disable.
+# pylint: disable-next=abstract-method
+class RelatedFactoryVariableList(factory.RelatedFactoryList):
+    """allows overriding ``size`` during factory usage, e.g. ParentFactory(list_factory__size=4)
+
+    Adapted from: https://github.com/FactoryBoy/factory_boy/issues/767#issuecomment-1139185137
+    """
+
+    def call(self, instance, step, context):
+        size = context.extra.pop("size", self.size)
+        assert isinstance(size, int)
+        return [
+            super(factory.RelatedFactoryList, self).call(instance, step, context)
+            for _ in range(size)
+        ]
+
+
 class BaseSQLAlchemyModelFactory(SQLAlchemyModelFactory):
     class Meta:
         abstract = True
@@ -160,7 +178,7 @@ class StripeSubscriptionFactory(BaseSQLAlchemyModelFactory):
     status = "active"
 
     customer = factory.SubFactory(factory=StripeCustomerFactory)
-    subscription_items = factory.RelatedFactoryList(
+    subscription_items = RelatedFactoryVariableList(
         StripeSubscriptionItemFactory,
         factory_related_name="subscription",
         size=1,
@@ -218,7 +236,7 @@ class StripeInvoiceFactory(BaseSQLAlchemyModelFactory):
     status = "open"
     customer = factory.SubFactory(factory=StripeCustomerFactory)
 
-    line_items = factory.RelatedFactoryList(
+    line_items = RelatedFactoryVariableList(
         StripeInvoiceLineItemFactory,
         factory_related_name="invoice",
         size=1,
