@@ -165,6 +165,8 @@ def dbsession(connection):
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
 register(factories.models.StripeCustomerFactory)
+register(factories.models.StripeInvoiceFactory)
+register(factories.models.StripeInvoiceLineItemFactory)
 register(factories.models.StripePriceFactory)
 register(factories.models.StripeSubscriptionFactory)
 register(factories.models.StripeSubscriptionItemFactory)

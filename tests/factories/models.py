@@ -9,6 +9,24 @@ from ctms.database import ScopedSessionLocal
 from tests.data import fake_stripe_id
 
 
+# Pylint complains that we don't override `evaluate` in the class below, but
+# neither does the class that we're subclassing from, hence the disable.
+# pylint: disable-next=abstract-method
+class RelatedFactoryVariableList(factory.RelatedFactoryList):
+    """allows overriding ``size`` during factory usage, e.g. ParentFactory(list_factory__size=4)
+
+    Adapted from: https://github.com/FactoryBoy/factory_boy/issues/767#issuecomment-1139185137
+    """
+
+    def call(self, instance, step, context):
+        size = context.extra.pop("size", self.size)
+        assert isinstance(size, int)
+        return [
+            super(factory.RelatedFactoryList, self).call(instance, step, context)
+            for _ in range(size)
+        ]
+
+
 class BaseSQLAlchemyModelFactory(SQLAlchemyModelFactory):
     class Meta:
         abstract = True
@@ -57,8 +75,11 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.Email
 
-    email_id = factory.Faker("uuid4")
+    # Actual Python UUID objects, not just their string representation
+    email_id = factory.LazyFunction(uuid4)
     primary_email = factory.Faker("email")
+    # though this column is full of UUIDs, they're stored as strings, which is
+    # what Faker generates
     basket_token = factory.Faker("uuid4")
     first_name = factory.Faker("first_name")
     last_name = factory.Faker("last_name")
@@ -88,7 +109,7 @@ class StripeCustomerFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.StripeCustomer
 
-    stripe_id = factory.LazyFunction(lambda: fake_stripe_id("cus", "customer"))
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("cus", "customer", n))
     fxa_id = factory.SelfAttribute("fxa.fxa_id")
     default_source_id = factory.LazyFunction(
         lambda: fake_stripe_id("card", "default_payment")
@@ -127,7 +148,8 @@ class StripeSubscriptionItemFactory(BaseSQLAlchemyModelFactory):
     stripe_created = factory.LazyFunction(lambda: datetime.now(UTC))
     stripe_price_id = factory.SelfAttribute("price.stripe_id")
     subscription = factory.SubFactory(
-        factory="tests.factories.models.StripeSubscriptionFactory"
+        factory="tests.factories.models.StripeSubscriptionFactory",
+        subscription_items=None,
     )
     price = factory.SubFactory(factory=StripePriceFactory)
 
@@ -137,8 +159,8 @@ class StripeSubscriptionFactory(BaseSQLAlchemyModelFactory):
         model = models.StripeSubscription
 
     stripe_id = factory.Sequence(lambda n: fake_stripe_id("sub", "subscription", n))
-    stripe_customer_id = factory.LazyAttribute(
-        lambda obj: obj.customer.stripe_id
+    stripe_customer_id = factory.LazyAttributeSequence(
+        lambda obj, n: obj.customer.stripe_id
         if obj.customer
         else fake_stripe_id("cus", "customer")
     )
@@ -156,9 +178,75 @@ class StripeSubscriptionFactory(BaseSQLAlchemyModelFactory):
     status = "active"
 
     customer = factory.SubFactory(factory=StripeCustomerFactory)
-    subscription_items = factory.RelatedFactoryList(
+    subscription_items = RelatedFactoryVariableList(
         StripeSubscriptionItemFactory,
         factory_related_name="subscription",
+        size=1,
+    )
+
+
+class StripeInvoiceLineItemFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripeInvoiceLineItem
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("il", "invoice line item", n))
+    stripe_invoice_id = factory.SelfAttribute("invoice.stripe_id")
+    stripe_type = "subscription"
+    stripe_price_id = factory.SelfAttribute("price.stripe_id")
+    stripe_invoice_item_id = None
+    stripe_subscription_id = factory.SelfAttribute(
+        "subscription_item.subscription.stripe_id"
+    )
+    stripe_subscription_item_id = factory.SelfAttribute("subscription_item.stripe_id")
+    amount = 1000
+    currency = "usd"
+
+    invoice = factory.SubFactory(
+        factory="tests.factories.models.StripeInvoiceFactory", line_items=None
+    )
+    price = factory.SubFactory(factory=StripePriceFactory)
+
+    # For the subscription item the subfactory below generates:
+    # - set the price to the same price that's generated here.
+    # - for the subscription that contains the subscription item, set the
+    #   customer to the same customer that's associated with this line_item's
+    #   containing invoice
+    subscription_item = factory.SubFactory(
+        factory=StripeSubscriptionItemFactory,
+        price=factory.SelfAttribute("..price"),
+        subscription__customer=factory.SelfAttribute("...invoice.customer"),
+    )
+
+    class Params:
+        invoiceitem_type = factory.Trait(
+            stripe_type="invoiceitem",
+            invoice_item_id=factory.Sequence(
+                lambda n: fake_stripe_id("ii", "invoice_item", n)
+            ),
+            subscription_id=None,
+            subscription_item_id=None,
+            subscription=None,
+            subscription_item=None,
+        )
+
+
+class StripeInvoiceFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.StripeInvoice
+
+    stripe_id = factory.Sequence(lambda n: fake_stripe_id("inv", "invoice", n))
+    stripe_customer_id = factory.SelfAttribute("customer.stripe_id")
+    default_payment_method_id = None
+    default_source_id = None
+    stripe_created = factory.LazyFunction(lambda: datetime.now(UTC))
+    currency = "usd"
+    total = 1000
+    status = "open"
+    customer = factory.SubFactory(factory=StripeCustomerFactory)
+
+    line_items = RelatedFactoryVariableList(
+        StripeInvoiceLineItemFactory,
+        factory_related_name="invoice",
         size=1,
     )
 
@@ -168,6 +256,8 @@ __all__ = (
     "FirefoxAccountFactory",
     "NewsletterFactory",
     "StripeCustomerFactory",
+    "StripeInvoiceFactory",
+    "StripeInvoiceLineItemFactory",
     "StripePriceFactory",
     "StripeSubscriptionFactory",
     "StripeSubscriptionItemFactory",

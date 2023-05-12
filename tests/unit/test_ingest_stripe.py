@@ -14,9 +14,6 @@ from ctms.crud import (
     create_stripe_subscription,
     create_stripe_subscription_item,
     get_stripe_customer_by_stripe_id,
-    get_stripe_invoice_by_stripe_id,
-    get_stripe_invoice_line_item_by_stripe_id,
-    get_stripe_price_by_stripe_id,
 )
 from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
@@ -38,7 +35,7 @@ from ctms.schemas import (
     StripeSubscriptionItemCreateSchema,
 )
 from tests.data import fake_stripe_id
-from tests.unit.conftest import FAKE_STRIPE_CUSTOMER_ID, unix_timestamp
+from tests.unit.conftest import unix_timestamp
 
 
 @pytest.fixture
@@ -162,13 +159,15 @@ def test_ingest_update_customer(
 ):
     """A Stripe Customer can be updated."""
     customer = stripe_customer_factory(
-        default_source_id=fake_stripe_id("card", "old credit card")
+        stripe_id=fake_stripe_id("cus", "customer"),
+        default_source_id=fake_stripe_id("card", "old credit card"),
     )
     dbsession.commit()
 
     # Change payment method
     data = stripe_customer_data_factory(
-        default_source=fake_stripe_id("card", "new credit card")
+        id=fake_stripe_id("cus", "customer"),
+        default_source=fake_stripe_id("card", "new credit card"),
     )
     data["invoice_settings"]["default_payment_method"] = None
 
@@ -642,30 +641,28 @@ def test_get_email_id_subscription(
 
 
 def test_get_email_id_invoice(
-    dbsession, stripe_customer_factory, raw_stripe_invoice_data
+    dbsession,
+    email_factory,
+    stripe_customer_factory,
+    stripe_subscription_item_factory,
+    stripe_invoice_line_item_factory,
 ):
     """A Stripe Invoice and related objects can return the related email_id."""
-    customer = stripe_customer_factory(stripe_id=FAKE_STRIPE_CUSTOMER_ID)
-    invoice, actions = ingest_stripe_invoice(dbsession, raw_stripe_invoice_data)
-    dbsession.commit()
-    assert actions
-    customer = get_stripe_customer_by_stripe_id(
-        dbsession, raw_stripe_invoice_data["customer"]
-    )
-    invoice = get_stripe_invoice_by_stripe_id(dbsession, raw_stripe_invoice_data["id"])
-    line_item = get_stripe_invoice_line_item_by_stripe_id(
-        dbsession, raw_stripe_invoice_data["lines"]["data"][0]["id"]
-    )
-    price = get_stripe_price_by_stripe_id(
-        dbsession, raw_stripe_invoice_data["lines"]["data"][0]["price"]["id"]
-    )
 
-    email_id = customer.email.email_id
-    assert customer.get_email_id() == email_id
-    assert invoice.get_email_id() == email_id
-    assert line_item.get_email_id() == email_id
-    # Prices always return None since they can relate to multiple contacts.
-    assert price.get_email_id() is None
+    email = email_factory(fxa=True)
+    customer = stripe_customer_factory(fxa=email.fxa)
+    subscription_item = stripe_subscription_item_factory(
+        subscription__customer=customer
+    )
+    invoice_line_item = stripe_invoice_line_item_factory(
+        subscription_item=subscription_item,
+        invoice__customer=customer,
+    )
+    dbsession.commit()
+
+    invoice = invoice_line_item.invoice
+    assert invoice.get_email_id() == email.email_id
+    assert invoice_line_item.get_email_id() == email.email_id
 
 
 def test_ingest_unknown_stripe_object_raises(dbsession):
