@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from collections import defaultdict
 from datetime import datetime, timezone
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
@@ -44,7 +43,6 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
-    ProductBaseSchema,
     StripeCustomerCreateSchema,
     StripeInvoiceCreateSchema,
     StripeInvoiceLineItemCreateSchema,
@@ -153,19 +151,7 @@ def get_bulk_contacts(
         .all()
     )
 
-    return [
-        ContactSchema.parse_obj(
-            {
-                "amo": email.amo,
-                "email": email,
-                "fxa": email.fxa,
-                "mofo": email.mofo,
-                "newsletters": email.newsletters,
-                "waitlists": email.waitlists,
-            }
-        )
-        for email in bulk_contacts
-    ]
+    return [ContactSchema.from_email(email) for email in bulk_contacts]
 
 
 def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
@@ -181,16 +167,7 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[ContactSch
     email = get_email(db, email_id)
     if email is None:
         return None
-    products = get_stripe_products(email)
-    return ContactSchema(
-        amo=email.amo,
-        email=email,
-        fxa=email.fxa,
-        mofo=email.mofo,
-        newsletters=email.newsletters,
-        products=products,
-        waitlists=email.waitlists,
-    )
+    return ContactSchema.from_email(email)
 
 
 def get_contacts_by_any_id(
@@ -252,17 +229,7 @@ def get_contacts_by_any_id(
             fxa_primary_email_insensitive_comparator=fxa_primary_email
         )
     emails = cast(List[Email], statement.all())
-    return [
-        ContactSchema(
-            amo=email.amo,
-            email=email,
-            fxa=email.fxa,
-            mofo=email.mofo,
-            newsletters=email.newsletters,
-            waitlists=email.waitlists,
-        )
-        for email in emails
-    ]
+    return [ContactSchema.from_email(email) for email in emails]
 
 
 def _acoustic_sync_retry_query(db: Session):
@@ -782,96 +749,6 @@ def get_stripe_customer_by_fxa_id(
         query = query.with_for_update()
     obj = query.filter(StripeCustomer.fxa_id == fxa_id).one_or_none()
     return cast(Optional[StripeCustomer], obj)
-
-
-def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
-    """Return a list of Stripe products for the contact, if any."""
-    if not email.stripe_customer:
-        return []
-
-    base_data: Dict[str, Any] = {
-        "payment_service": "stripe",
-        # These come from the Payment Method, not imported from Stripe.
-        "payment_type": None,
-        "card_brand": None,
-        "card_last4": None,
-        "billing_country": None,
-    }
-    by_product = defaultdict(list)
-
-    for subscription in email.stripe_customer.subscriptions:
-        subscription_data = base_data.copy()
-        subscription_data.update(
-            {
-                "status": subscription.status,
-                "created": subscription.stripe_created,
-                "start": subscription.start_date,
-                "current_period_start": subscription.current_period_start,
-                "current_period_end": subscription.current_period_end,
-                "canceled_at": subscription.canceled_at,
-                "cancel_at_period_end": subscription.cancel_at_period_end,
-                "ended_at": subscription.ended_at,
-            }
-        )
-        for item in subscription.subscription_items:
-            product_data = subscription_data.copy()
-            price = item.price
-            product_data.update(
-                {
-                    "product_id": price.stripe_product_id,
-                    "product_name": None,  # Products are not imported
-                    "price_id": price.stripe_id,
-                    "currency": price.currency,
-                    "amount": price.unit_amount,
-                    "interval_count": price.recurring_interval_count,
-                    "interval": price.recurring_interval,
-                }
-            )
-            by_product[price.stripe_product_id].append(product_data)
-
-    products = []
-    for subscriptions in by_product.values():
-        # Sort to find the latest subscription
-        def get_current_period(sub: Dict) -> datetime:
-            return cast(datetime, sub["current_period_end"])
-
-        subscriptions.sort(key=get_current_period, reverse=True)
-        latest = subscriptions[0]
-        data = latest.copy()
-        if len(subscriptions) == 1:
-            segment_prefix = ""
-        else:
-            segment_prefix = "re-"
-        if latest["status"] == "active":
-            if latest["canceled_at"]:
-                segment = "cancelling"
-                changed = latest["canceled_at"]
-            else:
-                segment = "active"
-                changed = latest["start"]
-        elif latest["status"] == "canceled":
-            segment = "canceled"
-            changed = latest["ended_at"]
-        else:
-            segment_prefix = ""
-            segment = "other"
-            changed = latest["created"]
-
-        assert changed
-        data.update(
-            {
-                "sub_count": len(subscriptions),
-                "segment": f"{segment_prefix}{segment}",
-                "changed": changed,
-            }
-        )
-        products.append(ProductBaseSchema(**data))
-
-    def get_product_id(prod: ProductBaseSchema) -> str:
-        return prod.product_id or ""
-
-    products.sort(key=get_product_id)
-    return products
 
 
 def get_all_acoustic_fields(dbsession: Session, tablename: Optional[str] = None):
