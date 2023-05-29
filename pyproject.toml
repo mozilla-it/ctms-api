@@ -31,7 +31,7 @@ prometheus-client = "0.16.0"
 structlog = "^23.1.0"
 colorama = "^0.4.6"
 psycopg2 = "^2.9.6"
-google-auth = "^2.17.3"
+google-auth = "^2.19.0"
 
 
 [tool.poetry.dev-dependencies]
