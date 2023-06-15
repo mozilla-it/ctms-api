@@ -105,12 +105,6 @@ def _contact_base_query(db):
     )
 
 
-def get_all_contacts(db):
-    """Fetch all contacts."""
-    bulk_contacts = _contact_base_query(db)
-    return bulk_contacts.order_by(asc(Email.email_id)).all()
-
-
 def get_all_contacts_from_ids(db, email_ids):
     """Fetch all contacts that have the specified IDs."""
     bulk_contacts = _contact_base_query(db)

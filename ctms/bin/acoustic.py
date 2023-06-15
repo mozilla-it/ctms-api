@@ -211,7 +211,7 @@ def do_resync(
     help="Query to select contacts to be dumped",
     default="SELECT email_id FROM emails;",
 )
-@click.option("-o", "--output", type=click.File("w"))
+@click.option("-o", "--output", default="-", type=click.File("w"))
 @click.pass_context
 def dump(
     ctx,
