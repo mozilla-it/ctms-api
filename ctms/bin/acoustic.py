@@ -27,7 +27,7 @@ from ctms.crud import (
 from ctms.database import SessionLocal
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
-from ctms.schemas.contact import ContactSchema, get_stripe_products
+from ctms.schemas.contact import ContactSchema
 
 
 def confirm(msg):
