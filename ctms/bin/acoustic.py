@@ -260,16 +260,7 @@ def do_dump(dbsession, contacts, output: TextIO):
     fieldnames = None
     writer = None
     for email in contacts:
-        contact_mapping = {
-            "amo": email.amo,
-            "email": email,
-            "fxa": email.fxa,
-            "mofo": email.mofo,
-            "newsletters": email.newsletters,
-            "products": get_stripe_products(email),
-            "waitlists": email.waitlists,
-        }
-        contact = ContactSchema.parse_obj(contact_mapping)
+        contact = ContactSchema.from_email(email)
         main_table_row, _, _ = service.convert_ctms_to_acoustic(
             contact, main_fields, newsletters_mapping
         )
