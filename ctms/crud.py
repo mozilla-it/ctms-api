@@ -105,6 +105,12 @@ def _contact_base_query(db):
     )
 
 
+def get_all_contacts_from_ids(db, email_ids):
+    """Fetch all contacts that have the specified IDs."""
+    bulk_contacts = _contact_base_query(db)
+    return bulk_contacts.filter(Email.email_id.in_(email_ids)).all()
+
+
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     filters = [
         Email.update_timestamp >= start_time,
