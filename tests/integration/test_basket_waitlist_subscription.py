@@ -123,6 +123,7 @@ def test_vpn_waitlist(ctms_headers):
                 "geo": "us",
                 "platform": "ios,android",
             },
+            "subscribed": True,
         }
     ]
     assert contact_details["vpn_waitlist"] == {
@@ -155,6 +156,7 @@ def test_vpn_waitlist(ctms_headers):
                 "geo": "fr",
                 "platform": "linux",
             },
+            "subscribed": True,
         }
     ]
 
@@ -206,6 +208,7 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "es",
             },
+            "subscribed": True,
         }
     ]
     assert contact_details["relay_waitlist"] == {
@@ -237,6 +240,7 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "es",
             },
+            "subscribed": True,
         },
         {
             "name": "relay-vpn-bundle",
@@ -244,6 +248,7 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "fr",
             },
+            "subscribed": True,
         },
     ]
     # If multiple `relay-` waitlists are present, the `geo` field of the
@@ -275,6 +280,7 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "fr",
             },
+            "subscribed": True,
         },
     ]
     # relay_waitlist geo is pulled from the remaining waitlist.
@@ -289,8 +295,8 @@ def test_relay_waitlists(ctms_headers):
     @retry_until_pass
     def check_unsubscribed_last():
         details = ctms_fetch(email, ctms_headers)
-        # CTMS has no more waitlist or newsletter.
-        assert len(details["waitlists"]) == 0
+        # CTMS has no more subscribed waitlist or newsletter.
+        assert not any(wl["subscribed"] for wl in details["waitlists"])
         return details
 
     contact_details = check_unsubscribed_last()
