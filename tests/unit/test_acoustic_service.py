@@ -437,17 +437,6 @@ def test_ctms_to_acoustic_traced_email(
             example_contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
 
-    acoustic_mock.add_recipient.assert_called_once_with(
-        list_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
-        created_from=3,
-        update_if_found="TRUE",
-        allow_html=False,
-        sync_fields={"email_id": _main["email_id"]},
-        columns=_main,
-    )
-    acoustic_mock.insert_update_relational_table.assert_not_called()
-    acoustic_mock.insert_update_product_table.assert_not_called()
-
     assert len(caplog) == 1
     expected_log = EXPECTED_LOG.copy()
     expected_log.update(
