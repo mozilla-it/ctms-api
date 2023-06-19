@@ -5,7 +5,6 @@ from typing import Dict, List, Union
 from uuid import UUID
 
 import dateutil
-from ctms.schemas.waitlist import WaitlistBase
 import structlog
 from lxml import etree
 from requests.exceptions import Timeout
@@ -14,6 +13,7 @@ from silverpop.api import Silverpop, SilverpopResponseException
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import re_trace_email
 from ctms.schemas import ContactSchema, NewsletterSchema
+from ctms.schemas.waitlist import WaitlistBase
 
 # Start cherry-picked from django.utils.encoding
 _PROTECTED_TYPES = (
@@ -309,9 +309,11 @@ class CTMSToAcousticService:
                 "update_timestamp": update_timestamp,
             }
             # Extra optional fields (eg. "geo", "platform", ...)
-            waitlist_fields = ["geo", "platform"] # TODO: read these from fields in DB
+            waitlist_fields = ["geo", "platform"]  # TODO: read these from fields in DB
             for field in waitlist_fields:
-                waitlist_row[f"waitlist_{field}"] = str(waitlist.fields.get(field) or "")
+                waitlist_row[f"waitlist_{field}"] = str(
+                    waitlist.fields.get(field) or ""
+                )
 
             # TODO: manage sync of unsubscribed waitlists (currently not possible)
             waitlist_rows.append(waitlist_row)
@@ -471,9 +473,12 @@ class CTMSToAcousticService:
         """
         self.context = {}
         try:
-            main_table_data, nl_data, wl_data, prod_data = self.convert_ctms_to_acoustic(
-                contact, main_fields, newsletters_mapping
-            )
+            (
+                main_table_data,
+                nl_data,
+                wl_data,
+                prod_data,
+            ) = self.convert_ctms_to_acoustic(contact, main_fields, newsletters_mapping)
             main_table_id = str(self.acoustic_main_table_id)
             email_id = main_table_data["email_id"]
             self.context["email_id"] = email_id

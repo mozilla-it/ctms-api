@@ -216,7 +216,12 @@ def test_ctms_to_acoustic_mocked(
 ):
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
-    _main, _newsletter, _waitlist, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        _main,
+        _newsletter,
+        _waitlist,
+        _product,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
@@ -275,7 +280,12 @@ def test_ctms_to_acoustic_with_subscription(
 
     acoustic_mock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
-    _main, _newsletter, _waitlist, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        _main,
+        _newsletter,
+        _waitlist,
+        _product,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         contact,
         main_acoustic_fields,
         acoustic_newsletters_mapping,
@@ -426,7 +436,12 @@ def test_ctms_to_acoustic_traced_email(
     example_contact.email.primary_email = email
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
-    _main, _newsletter, _waitlist, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        _main,
+        _newsletter,
+        _waitlist,
+        _product,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         example_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
