@@ -481,7 +481,7 @@ def create_waitlist(
         # Sample data are used as both input (`WaitlistInSchema`) and internal (`WaitlistSchema`)
         # representations.
         waitlist = WaitlistInSchema(**waitlist.dict())
-    db_waitlist = Waitlist(email_id=email_id, **waitlist.orm_dict())
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict())
     db.add(db_waitlist)
     return db_waitlist
 

@@ -124,6 +124,8 @@ class Waitlist(Base):
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     name = Column(String(255), nullable=False)
     source = Column(Text)
+    subscribed = Column(Boolean)
+    unsub_reason = Column(Text)
     fields = Column(JSON, nullable=False, server_default="'{}'::json")
 
     create_timestamp = Column(
