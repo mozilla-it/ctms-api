@@ -461,6 +461,7 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
         "name": "future-tech",
         "source": None,
         "fields": {"geo": "es"},
+        "subscribed": True,
     }
 
 
@@ -496,7 +497,10 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) - 1
+    assert (
+        len([wl for wl in actual["waitlists"] if wl["subscribed"]])
+        == len(maximal_contact.waitlists) - 1
+    )
 
 
 def test_patch_to_remove_all_waitlists(client, maximal_contact):
@@ -506,7 +510,7 @@ def test_patch_to_remove_all_waitlists(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == 0
+    assert not any(wl["subscribed"] for wl in actual["waitlists"])
 
 
 def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):
@@ -533,6 +537,7 @@ def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
                 "geo": "fr",
                 "platform": "win32",
             },
+            "subscribed": True,
         }
     ]
 
@@ -545,7 +550,7 @@ def test_patch_vpn_waitlist_legacy_delete(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == before - 1
+    assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == before - 1
 
 
 def test_patch_vpn_waitlist_legacy_delete_default(client, maximal_contact):
@@ -556,7 +561,7 @@ def test_patch_vpn_waitlist_legacy_delete_default(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == before - 1
+    assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == before - 1
 
 
 def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
@@ -577,6 +582,7 @@ def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
             "name": "vpn",
             "source": "https://www.example.com/vpn_signup",
             "fields": {"geo": "it", "platform": None},
+            "subscribed": True,
         }
     ]
 
@@ -599,6 +605,7 @@ def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_facto
             "name": "vpn",
             "source": "https://www.example.com/vpn_signup",
             "fields": {"geo": "it", "platform": "linux"},
+            "subscribed": True,
         }
     ]
 
@@ -614,6 +621,7 @@ def test_patch_relay_waitlist_legacy_add(client, minimal_contact):
             "name": "relay",
             "source": None,
             "fields": {"geo": "fr"},
+            "subscribed": True,
         }
     ]
 
@@ -626,7 +634,7 @@ def test_patch_relay_waitlist_legacy_delete(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == before - 1
+    assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == before - 1
 
 
 def test_patch_relay_waitlist_legacy_delete_default(client, maximal_contact):
@@ -637,7 +645,7 @@ def test_patch_relay_waitlist_legacy_delete_default(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == before - 1
+    assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == before - 1
 
 
 def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory):
@@ -658,6 +666,7 @@ def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory)
             "name": "relay",
             "source": "https://www.example.com/relay_signup",
             "fields": {"geo": "it"},
+            "subscribed": True,
         }
     ]
 
@@ -705,11 +714,13 @@ def test_patch_relay_waitlist_legacy_update_all(
             "name": "relay",
             "source": "https://www.example.com/relay_signup",
             "fields": {"geo": "it"},
+            "subscribed": True,
         },
         {
             "name": "relay-vpn-bundle",
             "source": "https://www.example.com/relay_vpn_bundle_signup",
             "fields": {"geo": "it"},
+            "subscribed": True,
         },
     ]
 
@@ -730,6 +741,7 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
             "name": "relay-vpn-bundle",
             "source": None,
             "fields": {"geo": "ru"},
+            "subscribed": True,
         },
     ]
 
@@ -745,7 +757,7 @@ def test_unsubscribe_from_all_newsletters_removes_all_waitlists(
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     current = resp.json()
-    assert current["waitlists"] == []
+    assert not any(wl["subscribed"] for wl in current["waitlists"])
 
 
 def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
@@ -762,7 +774,7 @@ def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     current = resp.json()
-    wl_names = {wl["name"] for wl in current["waitlists"]}
+    wl_names = {wl["name"] for wl in current["waitlists"] if wl["subscribed"]}
     assert "vpn" not in wl_names
 
 
@@ -777,7 +789,12 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     current = resp.json()
     assert current["waitlists"] == [
-        {"fields": {"geo": "ru"}, "name": "relay-vpn-bundle", "source": None}
+        {
+            "fields": {"geo": "ru"},
+            "name": "relay-vpn-bundle",
+            "source": None,
+            "subscribed": True,
+        }
     ]
 
     patch_data = {
@@ -786,7 +803,7 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert actual["waitlists"] == []
+    assert not actual["waitlists"][0]["subscribed"]
 
 
 def test_cannot_subscribe_to_relay_newsletter_without_relay_country(

@@ -191,21 +191,25 @@ def test_get_ctms_for_maximal_contact(client, maximal_contact):
                 "fields": {"geo": "fr"},
                 "name": "a-software",
                 "source": "https://a-software.mozilla.org/",
+                "subscribed": True,
             },
             {
                 "fields": {"geo": "cn"},
                 "name": "relay",
                 "source": None,
+                "subscribed": True,
             },
             {
                 "fields": {"geo": "fr", "platform": "win64"},
                 "name": "super-product",
                 "source": "https://super-product.mozilla.org/",
+                "subscribed": True,
             },
             {
                 "fields": {"geo": "ca", "platform": "windows,android"},
                 "name": "vpn",
                 "source": None,
+                "subscribed": True,
             },
         ],
     }
@@ -287,16 +291,19 @@ def test_get_ctms_for_api_example(client, example_contact):
                 "fields": {"geo": "fr", "platform": "win64"},
                 "name": "example-product",
                 "source": None,
+                "subscribed": True,
             },
             {
                 "fields": {"geo": "fr"},
                 "name": "relay",
                 "source": None,
+                "subscribed": True,
             },
             {
                 "fields": {"geo": "fr", "platform": "ios,mac"},
                 "name": "vpn",
                 "source": None,
+                "subscribed": True,
             },
         ],
     }

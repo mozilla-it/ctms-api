@@ -107,7 +107,7 @@ def test_relay_waitlist_unsubscribed_on_newsletter_unsubscribed(
     dbsession.flush()
 
     waitlists = get_waitlists_by_email_id(dbsession, email_id)
-    assert sorted(wl.name for wl in waitlists) == ["relay-vpn"]
+    assert sorted(wl.name for wl in waitlists if wl.subscribed) == ["relay-vpn"]
 
 
 def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
@@ -120,7 +120,7 @@ def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
     dbsession.flush()
 
     waitlists = get_waitlists_by_email_id(dbsession, email_id)
-    assert waitlists == []
+    assert not any(wl.subscribed for wl in waitlists)
 
 
 def test_alembic_migration_waitlists(engine):

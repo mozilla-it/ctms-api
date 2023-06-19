@@ -489,25 +489,12 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
-    # Remove waitlists that are marked as subscribed.
-    names_to_delete = [
-        waitlist.name for waitlist in waitlists if not waitlist.subscribed
-    ]
-    if names_to_delete:
-        db.query(Waitlist).filter(
-            Waitlist.email_id == email_id, Waitlist.name.in_(names_to_delete)
-        ).delete(
-            synchronize_session=False
-        )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
-
     waitlists_to_upsert = [
-        UpdatedWaitlistInSchema(**waitlist.dict())
-        for waitlist in waitlists
-        if waitlist.subscribed
+        UpdatedWaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
     ]
     if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.orm_dict()} for wl in waitlists_to_upsert]
+            [{"email_id": email_id, **wl.dict()} for wl in waitlists_to_upsert]
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uix_wl_email_name", set_=dict(stmt.excluded)
@@ -637,19 +624,13 @@ def update_contact(
     if "waitlists" in update_data:
         if update_data["waitlists"] == "UNSUBSCRIBE":
             for waitlist_orm in existing.values():
-                db.delete(waitlist_orm)
-                email.waitlists.remove(waitlist_orm)
+                _update_orm(waitlist_orm, {"subscribed": False})
         else:
             for wl_update in update_data["waitlists"]:
                 if wl_update["name"] in existing:
                     waitlist_orm = existing[wl_update["name"]]
-                    # Delete waitlists when `subscribed` is False
-                    if not wl_update.get("subscribed", True):
-                        db.delete(waitlist_orm)
-                        email.waitlists.remove(waitlist_orm)
-                    else:
-                        # Update the Waitlist ORM object
-                        _update_orm(waitlist_orm, wl_update)
+                    # Update the Waitlist ORM object
+                    _update_orm(waitlist_orm, wl_update)
                 elif wl_update.get("subscribed", True):
                     new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
                     email.waitlists.append(new)

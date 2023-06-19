@@ -295,15 +295,18 @@ def maximal_contact_data():
                 name="a-software",
                 source="https://a-software.mozilla.org/",
                 fields={"geo": "fr"},
+                subscribed=True,
             ),
             schemas.WaitlistSchema(
                 name="relay",
                 fields={"geo": "cn"},
+                subscribed=True,
             ),
             schemas.WaitlistSchema(
                 name="super-product",
                 source="https://super-product.mozilla.org/",
                 fields={"geo": "fr", "platform": "win64"},
+                subscribed=True,
             ),
             schemas.WaitlistSchema(
                 name="vpn",
@@ -311,6 +314,7 @@ def maximal_contact_data():
                     "geo": "ca",
                     "platform": "windows,android",
                 },
+                subscribed=True,
             ),
         ],
     )
