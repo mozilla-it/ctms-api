@@ -35,7 +35,7 @@ google-auth = "^2.19.1"
 
 
 [tool.poetry.dev-dependencies]
-pre-commit = "^3.3.2"
+pre-commit = "^3.3.3"
 sphinx = "^7.0.1"
 pytest = "^7.3.2"
 isort = {extras = ["pyproject"], version = "^5.12.0"}
