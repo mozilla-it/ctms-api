@@ -264,7 +264,7 @@ def do_dump(dbsession, contacts, output: TextIO):
     with tempfile.NamedTemporaryFile(mode="w") as tmpfile:
         for email in contacts:
             contact = ContactSchema.from_email(email)
-            main_table_row, _, _ = service.convert_ctms_to_acoustic(
+            main_table_row, _, _, _ = service.convert_ctms_to_acoustic(
                 contact, main_fields, newsletters_mapping
             )
             columns.update(set(main_table_row.keys()))

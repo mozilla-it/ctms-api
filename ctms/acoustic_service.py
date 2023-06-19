@@ -5,6 +5,7 @@ from typing import Dict, List, Union
 from uuid import UUID
 
 import dateutil
+from ctms.schemas.waitlist import WaitlistBase
 import structlog
 from lxml import etree
 from requests.exceptions import Timeout
@@ -150,13 +151,13 @@ class CTMSToAcousticService:
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
             acoustic_main_table, contact, newsletters_mapping
         )
-        acoustic_main_table = self._waitlist_converter(
+        waitlist_rows, acoustic_main_table = self._waitlist_converter(
             acoustic_main_table,
             contact,
             main_fields,
         )
         product_rows = self._product_converter(contact)
-        return acoustic_main_table, newsletter_rows, product_rows
+        return acoustic_main_table, newsletter_rows, waitlist_rows, product_rows
 
     def _main_table_converter(self, contact, main_fields):
         acoustic_main_table = {}
@@ -271,10 +272,12 @@ class CTMSToAcousticService:
         If the field `{name}_waitlist_{field}` is not present in the `main_fields`
         list, then it is ignored.
         See `bin/acoustic_fields.py` to manage them (eg. add ``vpn_waitlist_source``).
-
-        Note: In the future, a dedicated relation/table for waitlists can be considered.
         """
-        waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
+        waitlist_rows = []
+        contact_waitlists: List[WaitlistBase] = contact.waitlists
+        contact_email_id = str(contact.email.email_id)
+
+        waitlists_by_name = {wl.name: wl for wl in contact_waitlists}
         for acoustic_field_name in main_fields:
             if "_waitlist_" not in acoustic_field_name:
                 continue
@@ -286,7 +289,34 @@ class CTMSToAcousticService:
             acoustic_main_table[
                 acoustic_field_name
             ] = self.transform_field_for_acoustic(value)
-        return acoustic_main_table
+
+        # Waitlist relational table
+        for waitlist in contact_waitlists:
+            # This shoud not be necessary, since here we should always have
+            # contact data read from DB, thus always with create/update timestamps.
+            # The only reason to have this is that test fixtures do not provide the
+            # right schema instance (should be `WaitlistTableSchema`)
+            waitlist_dict = waitlist.dict()
+            _now = datetime.date.today().isoformat()
+            create_timestamp = waitlist_dict.get("create_timestamp", _now)
+            update_timestamp = waitlist_dict.get("update_timestamp", _now)
+            waitlist_row = {
+                "email_id": contact_email_id,
+                "waitlist_name": waitlist.name,
+                "waitlist_source": str(waitlist.source or ""),
+                # Timestamps
+                "create_timestamp": create_timestamp,
+                "update_timestamp": update_timestamp,
+            }
+            # Extra optional fields (eg. "geo", "platform", ...)
+            waitlist_fields = ["geo", "platform"] # TODO: read these from fields in DB
+            for field in waitlist_fields:
+                waitlist_row[f"waitlist_{field}"] = str(waitlist.fields.get(field) or "")
+
+            # TODO: manage sync of unsubscribed waitlists (currently not possible)
+            waitlist_rows.append(waitlist_row)
+
+        return waitlist_rows, acoustic_main_table
 
     @staticmethod
     def transform_field_for_acoustic(data):
@@ -441,7 +471,7 @@ class CTMSToAcousticService:
         """
         self.context = {}
         try:
-            main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(
+            main_table_data, nl_data, wl_data, prod_data = self.convert_ctms_to_acoustic(
                 contact, main_fields, newsletters_mapping
             )
             main_table_id = str(self.acoustic_main_table_id)
@@ -455,6 +485,7 @@ class CTMSToAcousticService:
                 columns=main_table_data,
             )
             self._insert_update_relational_table("newsletter", nl_data)
+            self._insert_update_relational_table("waitlist", wl_data)
             self._insert_update_relational_table("product", prod_data)
 
             # success
