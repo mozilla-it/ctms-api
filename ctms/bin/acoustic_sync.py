@@ -33,6 +33,7 @@ def main(db, settings):
         refresh_token=settings.acoustic_refresh_token,
         acoustic_main_table_id=settings.acoustic_main_table_id,
         acoustic_newsletter_table_id=settings.acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id=settings.acoustic_waitlist_table_id,
         acoustic_product_table_id=settings.acoustic_product_subscriptions_id,
         server_number=settings.acoustic_server_number,
         retry_limit=settings.acoustic_retry_limit,

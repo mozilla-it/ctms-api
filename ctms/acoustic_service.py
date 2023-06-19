@@ -121,6 +121,7 @@ class CTMSToAcousticService:
         self,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id,
         acoustic_product_table_id,
         acoustic_client: Acoustic,
         metric_service: BackgroundMetricService = None,
@@ -133,6 +134,7 @@ class CTMSToAcousticService:
         self.relational_tables = {
             "newsletter": str(int(acoustic_newsletter_table_id)),
             "product": str(int(acoustic_product_table_id)),
+            "waitlist": str(int(acoustic_waitlist_table_id)),
         }
         self.logger = structlog.get_logger(__name__)
         self.context: Dict[str, Union[str, int, List[str]]] = {}

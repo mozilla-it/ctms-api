@@ -25,6 +25,7 @@ class CTMSToAcousticSync:
         refresh_token,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id,
         acoustic_product_table_id,
         server_number,
         retry_limit=5,
@@ -44,6 +45,7 @@ class CTMSToAcousticSync:
             acoustic_client=acoustic_client,
             acoustic_main_table_id=acoustic_main_table_id,
             acoustic_newsletter_table_id=acoustic_newsletter_table_id,
+            acoustic_waitlist_table_id=acoustic_waitlist_table_id,
             acoustic_product_table_id=acoustic_product_table_id,
             metric_service=metric_service,
         )

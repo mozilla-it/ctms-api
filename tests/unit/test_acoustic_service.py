@@ -13,6 +13,7 @@ from ctms.schemas.contact import ContactSchema
 CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
 CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
 CTMS_ACOUSTIC_PRODUCT_TABLE_ID = "10"
+CTMS_ACOUSTIC_WAITLIST_TABLE_ID = "11"
 
 
 @pytest.fixture
@@ -37,6 +38,7 @@ def base_ctms_acoustic_service(acoustic_client):
             acoustic_client=acoustic_client,
             acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
             acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
+            acoustic_waitlist_table_id=CTMS_ACOUSTIC_WAITLIST_TABLE_ID,
             acoustic_product_table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID,
         )
 
@@ -48,6 +50,7 @@ def metrics_ctms_acoustic_service(acoustic_client, background_metric_service):
             acoustic_client=acoustic_client,
             acoustic_main_table_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
             acoustic_newsletter_table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID,
+            acoustic_waitlist_table_id=CTMS_ACOUSTIC_WAITLIST_TABLE_ID,
             acoustic_product_table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID,
             metric_service=background_metric_service,
         )

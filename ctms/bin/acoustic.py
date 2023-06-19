@@ -248,6 +248,7 @@ def do_dump(dbsession, contacts, output: TextIO):
         acoustic_client=None,
         acoustic_main_table_id=-1,
         acoustic_newsletter_table_id=-1,
+        acoustic_waitlist_table_id=-1,
         acoustic_product_table_id=-1,
     )
     main_fields = {

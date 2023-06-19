@@ -19,6 +19,7 @@ def ctms_to_acoustic_sync():
             refresh_token="REFRESH",
             acoustic_main_table_id="1",
             acoustic_newsletter_table_id="9",
+            acoustic_waitlist_table_id="11",
             acoustic_product_table_id="10",
             server_number=6,
         )
@@ -33,6 +34,7 @@ def ctms_to_acoustic_sync_with_metrics(background_metric_service):
             refresh_token="REFRESH",
             acoustic_main_table_id="1",
             acoustic_newsletter_table_id="9",
+            acoustic_waitlist_table_id="11",
             acoustic_product_table_id="10",
             server_number=6,
             metric_service=background_metric_service,
