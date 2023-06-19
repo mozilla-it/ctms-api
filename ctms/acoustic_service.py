@@ -145,6 +145,7 @@ class CTMSToAcousticService:
         self,
         contact: ContactSchema,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):
         acoustic_main_table = self._main_table_converter(contact, main_fields)
@@ -155,6 +156,7 @@ class CTMSToAcousticService:
             acoustic_main_table,
             contact,
             main_fields,
+            waitlist_fields,
         )
         product_rows = self._product_converter(contact)
         return acoustic_main_table, newsletter_rows, waitlist_rows, product_rows
@@ -266,7 +268,9 @@ class CTMSToAcousticService:
             self.context["newsletters_skipped"] = sorted(skipped)
         return newsletter_rows, acoustic_main_table
 
-    def _waitlist_converter(self, acoustic_main_table, contact, main_fields):
+    def _waitlist_converter(
+        self, acoustic_main_table, contact, main_fields, waitlist_fields
+    ):
         """Turns waitlists into flat fields on the main table.
 
         If the field `{name}_waitlist_{field}` is not present in the `main_fields`
@@ -309,7 +313,6 @@ class CTMSToAcousticService:
                 "update_timestamp": update_timestamp,
             }
             # Extra optional fields (eg. "geo", "platform", ...)
-            waitlist_fields = ["geo", "platform"]  # TODO: read these from fields in DB
             for field in waitlist_fields:
                 waitlist_row[f"waitlist_{field}"] = str(
                     waitlist.fields.get(field) or ""
@@ -464,6 +467,7 @@ class CTMSToAcousticService:
         self,
         contact: ContactSchema,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):  # raises AcousticUploadError
         """
@@ -478,7 +482,9 @@ class CTMSToAcousticService:
                 nl_data,
                 wl_data,
                 prod_data,
-            ) = self.convert_ctms_to_acoustic(contact, main_fields, newsletters_mapping)
+            ) = self.convert_ctms_to_acoustic(
+                contact, main_fields, waitlist_fields, newsletters_mapping
+            )
             main_table_id = str(self.acoustic_main_table_id)
             email_id = main_table_data["email_id"]
             self.context["email_id"] = email_id
