@@ -462,6 +462,7 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
         "source": None,
         "fields": {"geo": "es"},
         "subscribed": True,
+        "unsub_reason": None,
     }
 
 
@@ -493,14 +494,18 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
     """PATCH can remove a single waitlist."""
     email_id = maximal_contact.email.email_id
     existing = [wl.dict() for wl in maximal_contact.waitlists]
-    patch_data = {"waitlists": [{**existing[-1], "subscribed": False}]}
+    patch_data = {
+        "waitlists": [
+            {**existing[-1], "subscribed": False, "unsub_reason": "Not interested"}
+        ]
+    }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert (
-        len([wl for wl in actual["waitlists"] if wl["subscribed"]])
-        == len(maximal_contact.waitlists) - 1
-    )
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
+    unsubscribed = [wl for wl in actual["waitlists"] if not wl["subscribed"]]
+    assert len(unsubscribed) == 1
+    assert unsubscribed[0]["unsub_reason"] == "Not interested"
 
 
 def test_patch_to_remove_all_waitlists(client, maximal_contact):
@@ -538,6 +543,7 @@ def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
                 "platform": "win32",
             },
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -583,6 +589,7 @@ def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
             "source": "https://www.example.com/vpn_signup",
             "fields": {"geo": "it", "platform": None},
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -606,6 +613,7 @@ def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_facto
             "source": "https://www.example.com/vpn_signup",
             "fields": {"geo": "it", "platform": "linux"},
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -622,6 +630,7 @@ def test_patch_relay_waitlist_legacy_add(client, minimal_contact):
             "source": None,
             "fields": {"geo": "fr"},
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -667,6 +676,7 @@ def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory)
             "source": "https://www.example.com/relay_signup",
             "fields": {"geo": "it"},
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -715,12 +725,14 @@ def test_patch_relay_waitlist_legacy_update_all(
             "source": "https://www.example.com/relay_signup",
             "fields": {"geo": "it"},
             "subscribed": True,
+            "unsub_reason": None,
         },
         {
             "name": "relay-vpn-bundle",
             "source": "https://www.example.com/relay_vpn_bundle_signup",
             "fields": {"geo": "it"},
             "subscribed": True,
+            "unsub_reason": None,
         },
     ]
 
@@ -742,6 +754,7 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
             "source": None,
             "fields": {"geo": "ru"},
             "subscribed": True,
+            "unsub_reason": None,
         },
     ]
 
@@ -794,6 +807,7 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
             "name": "relay-vpn-bundle",
             "source": None,
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 

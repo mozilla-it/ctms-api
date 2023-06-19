@@ -37,6 +37,9 @@ class WaitlistBase(ComparableBase):
     subscribed: bool = Field(
         default=True, description="True to subscribe, False to unsubscribe"
     )
+    unsub_reason: Optional[str] = Field(
+        default=None, description="Reason for unsubscribing"
+    )
 
     def __lt__(self, other):
         return self.name < other.name

@@ -124,6 +124,7 @@ def test_vpn_waitlist(ctms_headers):
                 "platform": "ios,android",
             },
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
     assert contact_details["vpn_waitlist"] == {
@@ -157,6 +158,7 @@ def test_vpn_waitlist(ctms_headers):
                 "platform": "linux",
             },
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -209,6 +211,7 @@ def test_relay_waitlists(ctms_headers):
                 "geo": "es",
             },
             "subscribed": True,
+            "unsub_reason": None,
         }
     ]
     assert contact_details["relay_waitlist"] == {
@@ -241,6 +244,7 @@ def test_relay_waitlists(ctms_headers):
                 "geo": "es",
             },
             "subscribed": True,
+            "unsub_reason": None,
         },
         {
             "name": "relay-vpn-bundle",
@@ -249,6 +253,7 @@ def test_relay_waitlists(ctms_headers):
                 "geo": "fr",
             },
             "subscribed": True,
+            "unsub_reason": None,
         },
     ]
     # If multiple `relay-` waitlists are present, the `geo` field of the
@@ -281,6 +286,7 @@ def test_relay_waitlists(ctms_headers):
                 "geo": "fr",
             },
             "subscribed": True,
+            "unsub_reason": None,
         },
     ]
     # relay_waitlist geo is pulled from the remaining waitlist.
