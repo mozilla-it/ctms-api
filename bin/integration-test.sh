@@ -18,4 +18,4 @@ cat tests/integration/basket-db-init.sql | $DOCKER_COMPOSE exec -T mysql mariadb
 cat tests/integration/ctms-db-init.sql | $DOCKER_COMPOSE exec -T postgres psql --user postgres -d postgres
 
 # docker-compose run basket django-admin loaddata ./basket/news/fixtures/newsletters.json
-$POETRY_RUN pytest tests/integration/
+$POETRY_RUN pytest -vv -s tests/integration/

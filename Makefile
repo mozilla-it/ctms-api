@@ -44,7 +44,7 @@ $(INSTALL_STAMP): poetry.lock
 
 .PHONY: build
 build: .env
-	${DOCKER_COMPOSE} --version
+	${DOCKER_COMPOSE} version
 	${DOCKER_COMPOSE} build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
@@ -89,8 +89,11 @@ endif
 
 .PHONY: integration-test
 integration-test: .env setup $(INSTALL_STAMP)
+	echo "Starting containers..."
 	${DOCKER_COMPOSE} --profile integration-test up --wait basket
+	echo "Start test suite..."
 	bin/integration-test.sh
+	echo "Done."
 ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
