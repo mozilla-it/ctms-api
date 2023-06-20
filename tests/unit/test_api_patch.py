@@ -19,6 +19,11 @@ from ctms.schemas import (
 )
 
 
+def omit_keys(dic, *keys):
+    """Return copy without specified keys"""
+    return {k: v for k, v in dic.items() if k not in keys}
+
+
 def swap_bool(existing):
     """Use the opposite of the existing value for this boolean."""
     return not existing
@@ -64,6 +69,14 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
     """PATCH can update a single value."""
     contact = request.getfixturevalue(contact_name)
     expected = json.loads(CTMSResponse(**contact.dict()).json())
+    expected["newsletters"] = [
+        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+        for nl in expected["newsletters"]
+    ]
+    expected["waitlists"] = [
+        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+        for nl in expected["waitlists"]
+    ]
     existing_value = expected[group_name][key]
 
     # Set dynamic test values
@@ -130,6 +143,14 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
     """PATCH can set a field to the default value."""
     email_id = maximal_contact.email.email_id
     expected = json.loads(CTMSResponse(**maximal_contact.dict()).json())
+    expected["newsletters"] = [
+        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+        for nl in expected["newsletters"]
+    ]
+    expected["waitlists"] = [
+        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+        for nl in expected["waitlists"]
+    ]
     existing_value = expected[group_name][key]
 
     # Load the default value from the schema
@@ -191,6 +212,14 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert expected["products"] == []
     assert "products" not in actual
     actual["products"] = []
+    expected["newsletters"] = [
+        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+        for nl in expected["newsletters"]
+    ]
+    expected["waitlists"] = [
+        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+        for nl in expected["waitlists"]
+    ]
     # The response shows computed fields for retro-compat. Contact schema
     # does not have them.
     # TODO waitlist: remove once Basket reads from `waitlists` list.
@@ -323,7 +352,9 @@ def test_patch_to_unsubscribe(client, maximal_contact):
     """PATCH can unsubscribe by setting a newsletter field."""
     email_id = maximal_contact.email.email_id
     existing_news_data = maximal_contact.newsletters[1].dict()
-    assert existing_news_data == {
+    assert omit_keys(
+        existing_news_data, "email_id", "create_timestamp", "update_timestamp"
+    ) == {
         "format": "T",
         "lang": "fr",
         "name": "common-voice",
@@ -476,7 +507,10 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, maximal_contact):
 def test_patch_to_update_a_waitlist(client, maximal_contact):
     """PATCH can update a waitlist."""
     email_id = maximal_contact.email.email_id
-    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    existing = [
+        omit_keys(wl.dict(), "email_id", "create_timestamp", "update_timestamp")
+        for wl in maximal_contact.waitlists
+    ]
     existing[0]["fields"]["geo"] = "ca"
     patch_data = {"waitlists": existing}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -491,8 +525,9 @@ def test_patch_to_update_a_waitlist(client, maximal_contact):
 def test_patch_to_remove_a_waitlist(client, maximal_contact):
     """PATCH can remove a single waitlist."""
     email_id = maximal_contact.email.email_id
-    existing = [wl.dict() for wl in maximal_contact.waitlists]
-    patch_data = {"waitlists": [{**existing[-1], "subscribed": False}]}
+    patch_data = {
+        "waitlists": [{"name": maximal_contact.waitlists[-1].name, "subscribed": False}]
+    }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()

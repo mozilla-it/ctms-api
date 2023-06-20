@@ -109,6 +109,18 @@ def test_get_ctms_bulk_by_timerange(
     assert "items" in results
     assert len(results["items"]) > 0
     dict_contact_expected = sorted_list[1].dict()
+    # Since the contact data contains more info than the response, let's strip fields
+    # to be able to compare dict down the line (sic).
+    omit_fields = ("email_id", "create_timestamp", "update_timestamp")
+    dict_contact_expected["newsletters"] = [
+        {k: v for k, v in nl.items() if k not in omit_fields}
+        for nl in dict_contact_expected["newsletters"]
+    ]
+    dict_contact_expected["waitlists"] = [
+        {k: v for k, v in wl.items() if k not in omit_fields}
+        for wl in dict_contact_expected["waitlists"]
+    ]
+
     dict_contact_actual = CTMSResponse.parse_obj(results["items"][0]).dict()
     # products list is not (yet) in output schema
     assert dict_contact_expected["products"] == []

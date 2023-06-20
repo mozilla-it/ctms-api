@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import UUID4, AnyUrl, Field, root_validator
 
 from .base import ComparableBase
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
+
+if TYPE_CHECKING:
+    from ctms.models import Waitlist
 
 
 class WaitlistBase(ComparableBase):
@@ -94,6 +97,17 @@ class WaitlistTableSchema(WaitlistBase):
         description="Waitlist data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
     )
+
+    @classmethod
+    def from_waitlist(cls, waitlist: "Waitlist") -> "WaitlistTableSchema":
+        return cls(
+            email_id=waitlist.email_id,
+            name=waitlist.name,
+            source=waitlist.source,
+            fields=waitlist.fields,
+            create_timestamp=waitlist.create_timestamp,
+            update_timestamp=waitlist.update_timestamp,
+        )
 
     class Config:
         extra = "forbid"

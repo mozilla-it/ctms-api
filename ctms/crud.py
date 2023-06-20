@@ -10,6 +10,9 @@ from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
+from ctms.schemas.newsletter import NewsletterTableSchema
+from ctms.schemas.waitlist import WaitlistTableSchema
+
 from .auth import hash_password
 from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
 from .database import Base
@@ -173,7 +176,22 @@ def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[ContactSch
     email = get_email(db, email_id)
     if email is None:
         return None
-    return ContactSchema.from_email(email)
+    contact = ContactSchema.from_email(email)
+
+    # In the `ContactSchema` instance, the newsletters and waitlists are
+    # instances of `NewsletterSchema` and `WaitlistSchema`,
+    # which loose the `create_timestamp` and `update_timestamp` fields.
+    # Note: the whole code base with regards to models and schemas is a real house of cards.
+    contact_newsletters = get_newsletters_by_email_id(db, email_id)
+    contact.newsletters = [
+        NewsletterTableSchema.from_newsletter(nl) for nl in contact_newsletters
+    ]
+    contact_waitlists = get_waitlists_by_email_id(db, email_id)
+    contact.waitlists = [
+        WaitlistTableSchema.from_waitlist(wl) for wl in contact_waitlists
+    ]
+
+    return contact
 
 
 def get_contacts_by_any_id(

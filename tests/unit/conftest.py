@@ -28,6 +28,7 @@ from ctms.crud import (
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
+    get_contact_by_email_id,
     get_contacts_by_any_id,
     get_fxa_by_email_id,
     get_mofo_by_email_id,
@@ -218,7 +219,7 @@ def minimal_contact(minimal_contact_data, dbsession):
         get_metrics(),
     )
     dbsession.commit()
-    return minimal_contact_data
+    return get_contact_by_email_id(dbsession, minimal_contact_data.email.email_id)
 
 
 @pytest.fixture
@@ -325,7 +326,7 @@ def maximal_contact(dbsession, maximal_contact_data):
         get_metrics(),
     )
     dbsession.commit()
-    return maximal_contact_data
+    return get_contact_by_email_id(dbsession, maximal_contact_data.email.email_id)
 
 
 @pytest.fixture
@@ -353,7 +354,7 @@ def example_contact(dbsession, example_contact_data):
         get_metrics(),
     )
     dbsession.commit()
-    return example_contact_data
+    return get_contact_by_email_id(dbsession, example_contact_data.email.email_id)
 
 
 @pytest.fixture

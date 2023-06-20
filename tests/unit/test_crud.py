@@ -453,9 +453,10 @@ def test_get_bulk_contacts_some_after_higher_limit(
         limit=2,
         after_email_id=after_id,
     )
-    assert len(bulk_contact_list) == 2
-    assert last_contact in bulk_contact_list
-    assert sorted_list[-2] in bulk_contact_list
+    bulk_contact_list_ids = [c.email.email_id for c in bulk_contact_list]
+    assert len(bulk_contact_list_ids) == 2
+    assert last_contact.email.email_id in bulk_contact_list_ids
+    assert sorted_list[-2].email.email_id in bulk_contact_list_ids
 
 
 def test_get_bulk_contacts_some_after(
@@ -482,7 +483,7 @@ def test_get_bulk_contacts_some_after(
         after_email_id=after_id,
     )
     assert len(bulk_contact_list) == 1
-    assert last_contact in bulk_contact_list
+    assert bulk_contact_list[0].email.email_id == last_contact.email.email_id
 
 
 def test_get_bulk_contacts_some(
@@ -502,9 +503,10 @@ def test_get_bulk_contacts_some(
         limit=10,
     )
     assert len(bulk_contact_list) >= 3
-    assert example_contact in bulk_contact_list
-    assert maximal_contact in bulk_contact_list
-    assert minimal_contact in bulk_contact_list
+    bulk_contact_list_ids = [c.email.email_id for c in bulk_contact_list]
+    assert example_contact.email.email_id in bulk_contact_list_ids
+    assert maximal_contact.email.email_id in bulk_contact_list_ids
+    assert minimal_contact.email.email_id in bulk_contact_list_ids
 
 
 def test_get_bulk_contacts_one(dbsession, example_contact):
