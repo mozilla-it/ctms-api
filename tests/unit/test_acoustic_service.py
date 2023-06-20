@@ -166,7 +166,7 @@ def test_ctms_to_acoustic_waitlists_maximal(
     waitlist_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    main, _, _, _ = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    main, _, waitlist_records, _ = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact,
         main_acoustic_fields,
         waitlist_acoustic_fields,
@@ -176,6 +176,34 @@ def test_ctms_to_acoustic_waitlists_maximal(
     assert main["vpn_waitlist_geo"] == "ca"
     assert main["vpn_waitlist_platform"] == "windows,android"
     assert main["relay_waitlist_geo"] == "cn"
+
+    assert [sorted(wl.keys()) for wl in waitlist_records] == (
+        len(maximal_contact.waitlists)
+        * [
+            [
+                "create_timestamp",
+                "email_id",
+                "subscribed",
+                "unsub_reason",
+                "update_timestamp",
+                "waitlist_geo",  # from `waitlist_acoustic_fields`
+                "waitlist_name",
+                "waitlist_platform",  # ditto
+                "waitlist_source",
+            ]
+        ]
+    )
+
+    waitlist_records_by_name = {wl["waitlist_name"]: wl for wl in waitlist_records}
+    assert waitlist_records_by_name["vpn"]["email_id"] == str(
+        maximal_contact.email.email_id
+    )
+    assert waitlist_records_by_name["vpn"]["subscribed"]
+    assert waitlist_records_by_name["vpn"]["unsub_reason"] == ""
+    assert waitlist_records_by_name["vpn"]["waitlist_geo"] == "ca"
+    assert waitlist_records_by_name["vpn"]["waitlist_platform"] == "windows,android"
+    assert waitlist_records_by_name["a-software"]["waitlist_geo"] == "fr"
+    assert waitlist_records_by_name["a-software"]["waitlist_platform"] == ""
 
 
 def test_ctms_to_acoustic_minimal_fields(

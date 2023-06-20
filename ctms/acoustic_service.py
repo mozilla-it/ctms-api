@@ -308,6 +308,8 @@ class CTMSToAcousticService:
                 "email_id": contact_email_id,
                 "waitlist_name": waitlist.name,
                 "waitlist_source": str(waitlist.source or ""),
+                "subscribed": True,
+                "unsub_reason": "",
                 # Timestamps
                 "create_timestamp": create_timestamp,
                 "update_timestamp": update_timestamp,
