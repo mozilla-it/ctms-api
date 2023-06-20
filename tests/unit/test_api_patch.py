@@ -1,5 +1,6 @@
 """Tests for PATCH /ctms/{email_id}"""
 import json
+from operator import itemgetter
 from uuid import uuid4
 
 import pytest
@@ -69,14 +70,20 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
     """PATCH can update a single value."""
     contact = request.getfixturevalue(contact_name)
     expected = json.loads(CTMSResponse(**contact.dict()).json())
-    expected["newsletters"] = [
-        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
-        for nl in expected["newsletters"]
-    ]
-    expected["waitlists"] = [
-        omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
-        for nl in expected["waitlists"]
-    ]
+    expected["newsletters"] = sorted(
+        [
+            omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+            for nl in expected["newsletters"]
+        ],
+        key=itemgetter("name"),
+    )
+    expected["waitlists"] = sorted(
+        [
+            omit_keys(nl, "email_id", "create_timestamp", "update_timestamp")
+            for nl in expected["waitlists"]
+        ],
+        key=itemgetter("name"),
+    )
     existing_value = expected[group_name][key]
 
     # Set dynamic test values
