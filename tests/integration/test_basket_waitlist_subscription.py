@@ -171,9 +171,8 @@ def test_vpn_waitlist(ctms_headers):
     @retry_until_pass
     def check_updated():
         contact_details = ctms_fetch(email, ctms_headers)
-
         assert contact_details["newsletters"] == []
-        assert contact_details["waitlists"] == []
+        assert not contact_details["waitlists"][0]["subscribed"]
         assert contact_details["vpn_waitlist"] == {
             "geo": None,
             "platform": None,
@@ -271,14 +270,21 @@ def test_relay_waitlists(ctms_headers):
     @retry_until_pass
     def check_unsubscribed():
         details = ctms_fetch(email, ctms_headers)
-        # CTMS has now one waitlist.
-        assert len(details["waitlists"]) == 1
+        # CTMS has now one subscribed waitlist.
+        assert len([wl for wl in details["waitlists"] if wl["subscribed"]]) == 1
         return details
 
     contact_details = check_unsubscribed()
     # And only one newsletter subscribed.
     assert contact_details["newsletters"] == []
     assert contact_details["waitlists"] == [
+        {
+            "fields": {"geo": "es"},
+            "name": "relay",
+            "source": "https://relay.firefox.com/",
+            "subscribed": False,
+            "unsub_reason": None,
+        },
         {
             "name": "relay-vpn-bundle",
             "source": "https://relay.firefox.com/vpn-relay/waitlist/",

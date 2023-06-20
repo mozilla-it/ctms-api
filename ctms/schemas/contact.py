@@ -366,6 +366,9 @@ class CTMSResponse(BaseModel):
         values["vpn_waitlist"] = VpnWaitlistSchema()
         values["relay_waitlist"] = RelayWaitlistSchema()
         for waitlist in values.get("waitlists", []):
+            if not waitlist["subscribed"]:
+                # Ignore unsubscribed waitlists...
+                continue
             if isinstance(waitlist, dict):
                 # TODO: figure out why dict from `response_model` decorators param in app.py)
                 waitlist = WaitlistSchema(**waitlist)
