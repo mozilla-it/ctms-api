@@ -119,6 +119,7 @@ def test_ctms_to_acoustic_newsletter_timestamps(
     base_ctms_acoustic_service,
     minimal_contact,
     main_acoustic_fields,
+    waitlist_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
     # Set timestamps on DB objects.
@@ -131,8 +132,11 @@ def test_ctms_to_acoustic_newsletter_timestamps(
     # Reload contact from DB.
     minimal_contact = get_contact_by_email_id(dbsession, minimal_contact.email.email_id)
 
-    (_, newsletters_rows, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    (_, newsletters_rows, _, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        minimal_contact,
+        main_acoustic_fields,
+        waitlist_acoustic_fields,
+        acoustic_newsletters_mapping,
     )
 
     app_dev_row = [r for r in newsletters_rows if r["newsletter_name"] == "app-dev"][0]
@@ -270,19 +274,20 @@ def test_ctms_to_acoustic_mocked(
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
     (
-        _main,
-        _newsletter,
-        _waitlist,
-        _product,
+        main_row,
+        newsletter_rows,
+        waitlist_rows,
+        product_rows,
     ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact,
         main_acoustic_fields,
         waitlist_acoustic_fields,
         acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
-    assert _main is not None
-    assert _newsletter is not None
-    assert len(_product) == 0
+    assert main_row
+    assert len(newsletter_rows) > 0
+    assert len(waitlist_rows) > 0
+    assert len(product_rows) == 0
     with capture_logs() as caplog:
         base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             maximal_contact,
@@ -298,16 +303,16 @@ def test_ctms_to_acoustic_mocked(
         created_from=3,
         update_if_found="TRUE",
         allow_html=False,
-        sync_fields={"email_id": _main["email_id"]},
-        columns=_main,
+        sync_fields={"email_id": main_row["email_id"]},
+        columns=main_row,
     )
 
     acoustic_mock.insert_update_relational_table.assert_any_call(
-        table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID, rows=_newsletter
+        table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID, rows=newsletter_rows
     )
 
     acoustic_mock.insert_update_relational_table.assert_any_call(
-        table_id=CTMS_ACOUSTIC_WAITLIST_TABLE_ID, rows=_waitlist
+        table_id=CTMS_ACOUSTIC_WAITLIST_TABLE_ID, rows=waitlist_rows
     )
 
     acoustic_mock.insert_update_product_table.assert_not_called()
@@ -341,19 +346,24 @@ def test_ctms_to_acoustic_with_subscription(
     acoustic_mock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
     (
-        _main,
-        _newsletter,
-        _waitlist,
-        _product,
+        main_row,
+        newsletter_rows,
+        waitlist_rows,
+        product_rows,
     ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         contact,
         main_acoustic_fields,
         waitlist_acoustic_fields,
         acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
-    assert _main is not None
-    assert len(_newsletter) == 0  # None in Main Table Subscriber flags
-    assert len(_product) == 1
+    assert main_row
+    assert len(newsletter_rows) == 0  # None in Main Table Subscriber flags
+    assert len(waitlist_rows) == 0
+    assert len(product_rows) == 1
+    assert all(
+        isinstance(value, str) for value in product_rows[0].values()
+    ), product_rows[0]
+
     with capture_logs() as caplog:
         base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             contact,
@@ -363,10 +373,8 @@ def test_ctms_to_acoustic_with_subscription(
         )
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
-        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
+        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=product_rows
     )
-    for name, value in _product[0].items():
-        assert isinstance(value, str), name
 
     assert len(caplog) == 1
     expected_log = EXPECTED_LOG.copy()
@@ -404,15 +412,21 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     acoustic_mock = MagicMock()
     acoustic_svc = metrics_ctms_acoustic_service
     acoustic_svc.acoustic = acoustic_mock
-    _main, _newsletter, _waitlist, _product = acoustic_svc.convert_ctms_to_acoustic(
+    (
+        main_row,
+        newsletter_rows,
+        waitlist_rows,
+        product_rows,
+    ) = acoustic_svc.convert_ctms_to_acoustic(
         contact,
         main_acoustic_fields,
         waitlist_acoustic_fields,
         acoustic_newsletters_mapping,
     )  # To be used as in testing, for expected inputs to downstream methods
-    assert _main is not None
-    assert len(_newsletter) == 0  # None in Main Table Subscriber flags
-    assert len(_product) == 1
+    assert main_row
+    assert len(newsletter_rows) == 0  # None in Main Table Subscriber flags
+    assert len(waitlist_rows) == 0
+    assert len(product_rows) == 1
 
     # Alpha-sorted, to ease cross-check with Acoustic table displays
     expected_product = {
@@ -441,7 +455,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
         "status": "active",
         "sub_count": "1",
     }
-    assert _product[0] == expected_product
+    assert product_rows[0] == expected_product
 
     with capture_logs() as caplog:
         acoustic_svc.attempt_to_upload_ctms_contact(
@@ -452,7 +466,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
         )
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
-        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=_product
+        table_id=CTMS_ACOUSTIC_PRODUCT_TABLE_ID, rows=product_rows
     )
 
     registry = acoustic_svc.metric_service.registry
@@ -502,20 +516,7 @@ def test_ctms_to_acoustic_traced_email(
     example_contact.email.primary_email = email
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
-    (
-        _main,
-        _newsletter,
-        _waitlist,
-        _product,
-    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        example_contact,
-        main_acoustic_fields,
-        waitlist_acoustic_fields,
-        acoustic_newsletters_mapping,
-    )  # To be used as in testing, for expected inputs to downstream methods
-    assert _main is not None
-    assert _newsletter is not None
-    assert len(_product) == 0
+
     with capture_logs() as caplog:
         base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             example_contact,
