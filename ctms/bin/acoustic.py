@@ -219,8 +219,6 @@ def dump(
     output: TextIO,
 ):
     """CTMS command to dump the contacts database."""
-    if output is None:
-        output = sys.stdout
 
     with SessionLocal() as dbsession:
         result = dbsession.execute(sqlalchemy.text(query))
