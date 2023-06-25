@@ -14,7 +14,7 @@ from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import get_api_client_by_id
 from ctms.dependencies import get_settings, get_token_settings
 from ctms.routers.stripe import _pubsub_settings
-from tests.unit.test_api_stripe import pubsub_wrap
+from tests.unit.routers.test_stripe import pubsub_wrap
 
 # Sample token claim from https://cloud.google.com/pubsub/docs/push
 SAMPLE_GCP_JWT_CLAIM = {
