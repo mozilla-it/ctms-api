@@ -1,13 +1,11 @@
 # Test for metrics
-from unittest.mock import patch
-
 import pytest
 from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.parser import text_string_to_metric_families
 from structlog.testing import capture_logs
 
+from ctms import metrics as metrics_module
 from ctms.app import app
-from ctms.metrics import METRICS_PARAMS, init_metrics, init_metrics_labels
 
 # Metric cardinatility numbers
 # These numbers change as routes are added or changed
@@ -27,17 +25,16 @@ METHOD_API_PATH_COMBINATIONS = 19
 
 
 @pytest.fixture
-def setup_metrics():
+def setup_metrics(monkeypatch):
     """Setup a metrics registry and metrics, use them in the app"""
 
     test_registry = CollectorRegistry()
-    test_metrics = init_metrics(test_registry)
+    test_metrics = metrics_module.init_metrics(test_registry)
     # Because these methods are called from a middleware
     # we can't use dependency injection like with get_db
-    with patch("ctms.app.get_metrics_registry", return_value=test_registry), patch(
-        "ctms.app.get_metrics", return_value=test_metrics
-    ):
-        yield test_registry, test_metrics
+    monkeypatch.setattr(metrics_module, "METRICS_REGISTRY", test_registry)
+    monkeypatch.setattr(metrics_module, "METRICS", test_metrics)
+    yield test_registry, test_metrics
 
 
 @pytest.fixture
@@ -56,7 +53,7 @@ def metrics(setup_metrics):
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):
     """Test that init_metric_labels populates variants"""
-    init_metrics_labels(dbsession, app, metrics)
+    metrics_module.init_metrics_labels(dbsession, app, metrics)
 
     metrics_text = generate_latest(registry).decode()
     families = list(text_string_to_metric_families(metrics_text))
@@ -267,7 +264,7 @@ def test_unknown_path(anon_client, registry):
     assert resp.status_code == 404
 
     without_labels = []
-    for name, (_, params) in METRICS_PARAMS.items():
+    for name, (_, params) in metrics_module.METRICS_PARAMS.items():
         if "labelnames" not in params:
             without_labels.append(f"ctms_{name}_total")
             without_labels.append(f"ctms_{name}_created")

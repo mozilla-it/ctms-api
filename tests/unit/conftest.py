@@ -19,7 +19,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms import schemas
-from ctms.app import app, get_api_client, get_db, get_metrics
+from ctms.app import app
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
@@ -35,6 +35,8 @@ from ctms.crud import (
     get_waitlists_by_email_id,
 )
 from ctms.database import ScopedSessionLocal, SessionLocal
+from ctms.dependencies import get_api_client, get_db
+from ctms.metrics import get_metrics
 from ctms.schemas import ApiClientSchema, ContactSchema
 from tests import factories
 from tests.data import fake_stripe_id

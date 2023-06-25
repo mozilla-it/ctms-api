@@ -5,8 +5,9 @@ import pytest
 from sqlalchemy.exc import TimeoutError as SQATimeoutError
 from structlog.testing import capture_logs
 
-from ctms.app import app, get_db, get_settings
+from ctms.app import app
 from ctms.config import Settings
+from ctms.dependencies import get_db, get_settings
 
 
 @pytest.fixture

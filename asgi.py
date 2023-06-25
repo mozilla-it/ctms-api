@@ -1,9 +1,9 @@
 import uvicorn
 
-from ctms.app import get_settings
+from ctms.config import Settings
 from ctms.log import configure_logging
 
-settings = get_settings()
+settings = Settings()
 
 
 if __name__ == "__main__":
