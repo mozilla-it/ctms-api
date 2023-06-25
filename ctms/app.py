@@ -782,7 +782,13 @@ def version():
     return version_info
 
 
-def heartbeat(request: Request, db: Session, settings: config.Settings):
+@app.get("/__heartbeat__", tags=["Platform"])
+@app.head("/__heartbeat__", tags=["Platform"])
+def heartbeat(
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: config.Settings = Depends(get_settings),
+):
     """Return status of backing services, as required by Dockerflow."""
     x_nr_synthetics = request.headers.get("x-newrelic-synthetics", "")
     x_abuse_info = request.headers.get("x-abuse-info", "")
@@ -810,40 +816,14 @@ def heartbeat(request: Request, db: Session, settings: config.Settings):
     return JSONResponse(content=data, status_code=status_code)
 
 
-@app.get("/__heartbeat__", tags=["Platform"])
-def get_heartbeat(
-    request: Request,
-    db: Session = Depends(get_db),
-    settings: config.Settings = Depends(get_settings),
-):
-    return heartbeat(request, db, settings)
-
-
-@app.head("/__heartbeat__", tags=["Platform"])
-def head_heartbeat(
-    request: Request,
-    db: Session = Depends(get_db),
-    settings: config.Settings = Depends(get_settings),
-):
-    return heartbeat(request, db, settings)
-
-
+@app.get("/__lbheartbeat__", tags=["Platform"])
+@app.head("/__lbheartbeat__", tags=["Platform"])
 def lbheartbeat(request: Request):
     """Return response when application is running, as required by Dockerflow."""
     user_agent = request.headers.get("user-agent", "")
     if user_agent.startswith("kube-probe/"):
         request.state.log_context["trivial_code"] = 200
     return {"status": "OK"}
-
-
-@app.get("/__lbheartbeat__", tags=["Platform"])
-def get_lbheartbeat(request: Request):
-    return lbheartbeat(request)
-
-
-@app.head("/__lbheartbeat__", tags=["Platform"])
-def head_lbheartbeat(request: Request):
-    return lbheartbeat(request)
 
 
 @app.get("/__crash__", tags=["Platform"], include_in_schema=False)
