@@ -1,5 +1,3 @@
-"""Tests for ctms/bin/acoustic.py resync"""
-
 from ctms.bin.acoustic import do_resync
 from ctms.models import PendingAcousticRecord
 
