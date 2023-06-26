@@ -138,7 +138,7 @@ def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
     return products
 
 
-class ContactSchema(ComparableBase):
+class ContactTableSchema(ComparableBase):
     """A complete contact."""
 
     amo: Optional[AddOnsSchema] = None
@@ -150,7 +150,7 @@ class ContactSchema(ComparableBase):
     products: List[ProductBaseSchema] = []
 
     @classmethod
-    def from_email(cls, email: "Email") -> "ContactSchema":
+    def from_email(cls, email: "Email") -> "ContactTableSchema":
         return cls(
             amo=email.amo,
             email=email,
@@ -247,7 +247,7 @@ class ContactInBase(ComparableBase):
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
     class Config:
-        fields = ContactSchema.Config.fields
+        fields = ContactTableSchema.Config.fields
 
     @root_validator
     def check_fields(cls, values):  # pylint:disable = no-self-argument
@@ -353,7 +353,7 @@ class CTMSResponse(BaseModel):
     """
     Response for GET /ctms/ by alternate IDs
 
-    Similar to ContactSchema, but groups are required
+    Similar to ContactTableSchema, but groups are required
     """
 
     amo: AddOnsSchema
@@ -414,7 +414,7 @@ class CTMSSingleResponse(CTMSResponse):
     """
     Response for /ctms/<email_id>
 
-    Similar to ContactSchema, but groups are required and includes status: OK
+    Similar to ContactTableSchema, but groups are required and includes status: OK
     """
 
     status: Literal["ok"] = Field(

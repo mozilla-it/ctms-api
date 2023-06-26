@@ -27,7 +27,7 @@ from ctms.crud import (
 from ctms.database import SessionLocal
 from ctms.exception_capture import init_sentry
 from ctms.log import configure_logging
-from ctms.schemas.contact import ContactSchema
+from ctms.schemas.contact import ContactTableSchema
 
 
 def confirm(msg):
@@ -258,7 +258,7 @@ def do_dump(dbsession, contacts, output: TextIO):
     fieldnames = None
     writer = None
     for email in contacts:
-        contact = ContactSchema.from_email(email)
+        contact = ContactTableSchema.from_email(email)
         main_table_row, _, _ = service.convert_ctms_to_acoustic(
             contact, main_fields, newsletters_mapping
         )

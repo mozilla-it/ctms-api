@@ -35,7 +35,7 @@ from ctms.crud import (
     get_waitlists_by_email_id,
 )
 from ctms.database import ScopedSessionLocal, SessionLocal
-from ctms.schemas import ApiClientSchema, ContactSchema
+from ctms.schemas import ApiClientSchema, ContactTableSchema
 from tests import factories
 from tests.data import fake_stripe_id
 
@@ -177,7 +177,7 @@ register(factories.stripe.StripeCustomerDataFactory)
 
 @pytest.fixture
 def most_minimal_contact(dbsession):
-    contact = ContactSchema(
+    contact = ContactTableSchema(
         email=schemas.EmailSchema(
             email_id=UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
             primary_email="ctms-most-minimal-user@example.com",
@@ -189,9 +189,9 @@ def most_minimal_contact(dbsession):
 
 
 @pytest.fixture
-def minimal_contact_data() -> ContactSchema:
+def minimal_contact_data() -> ContactTableSchema:
     email_id = UUID("93db83d4-4119-4e0c-af87-a713786fa81d")
-    return ContactSchema(
+    return ContactTableSchema(
         email=schemas.EmailSchema(
             basket_token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
             create_timestamp="2014-01-22T15:24:00.000+0000",
@@ -231,7 +231,7 @@ def minimal_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def minimal_contact(minimal_contact_data, dbsession) -> ContactSchema:
+def minimal_contact(minimal_contact_data, dbsession) -> ContactTableSchema:
     create_contact(
         dbsession,
         minimal_contact_data.email.email_id,
@@ -243,9 +243,9 @@ def minimal_contact(minimal_contact_data, dbsession) -> ContactSchema:
 
 
 @pytest.fixture
-def maximal_contact_data() -> ContactSchema:
+def maximal_contact_data() -> ContactTableSchema:
     email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
-    return ContactSchema(
+    return ContactTableSchema(
         amo=schemas.AddOnsSchema(
             add_on_ids="fanfox,foxfan",
             display_name="#1 Mozilla Fan",
@@ -382,7 +382,7 @@ def maximal_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def maximal_contact(dbsession, maximal_contact_data) -> ContactSchema:
+def maximal_contact(dbsession, maximal_contact_data) -> ContactTableSchema:
     create_contact(
         dbsession,
         maximal_contact_data.email.email_id,
@@ -394,23 +394,25 @@ def maximal_contact(dbsession, maximal_contact_data) -> ContactSchema:
 
 
 @pytest.fixture
-def example_contact_data() -> ContactSchema:
-    return ContactSchema(
+def example_contact_data() -> ContactTableSchema:
+    return ContactTableSchema(
         amo=schemas.AddOnsSchema(**_gather_examples(schemas.AddOnsSchema)),
         email=schemas.EmailSchema(**_gather_examples(schemas.EmailSchema)),
         fxa=schemas.FirefoxAccountsSchema(
             **_gather_examples(schemas.FirefoxAccountsSchema)
         ),
-        newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
+        newsletters=ContactTableSchema.schema()["properties"]["newsletters"]["example"],
         waitlists=[
             schemas.WaitlistTableSchema(**example)
-            for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
+            for example in ContactTableSchema.schema()["properties"]["waitlists"][
+                "example"
+            ]
         ],
     )
 
 
 @pytest.fixture
-def example_contact(dbsession, example_contact_data) -> ContactSchema:
+def example_contact(dbsession, example_contact_data) -> ContactTableSchema:
     create_contact(
         dbsession,
         example_contact_data.email.email_id,
@@ -423,7 +425,7 @@ def example_contact(dbsession, example_contact_data) -> ContactSchema:
 
 @pytest.fixture
 def to_add_contact_data():
-    return ContactSchema(
+    return ContactTableSchema(
         email=schemas.EmailInSchema(
             basket_token="21aeb466-4003-4c2b-a27e-e6651c13d231",
             email_id=UUID("d1da1c99-fe09-44db-9c68-78a75752574d"),
@@ -448,7 +450,7 @@ def to_add_contact(dbsession, to_add_contact_data):
 
 @pytest.fixture
 def simple_default_contact_data():
-    return ContactSchema(
+    return ContactTableSchema(
         email=schemas.EmailInSchema(
             basket_token="d3a827b5-747c-41c2-8381-59ce9ad63050",
             email_id=UUID("4f98b303-8863-421f-95d3-847cd4d83c9f"),
@@ -474,7 +476,7 @@ def simple_default_contact(dbsession, simple_default_contact_data):
 
 @pytest.fixture
 def default_newsletter_contact_data():
-    contact = ContactSchema(
+    contact = ContactTableSchema(
         email=schemas.EmailInSchema(
             basket_token="b5487fbf-86ae-44b9-a638-bbb037ce61a6",
             email_id=UUID("dd2bc52c-49e4-4df9-95a8-197d3a7794cd"),
@@ -570,7 +572,7 @@ def post_contact(client, dbsession, request):
     email_id = contact_fixture.email.email_id
 
     def _add(
-        modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
+        modifier: Callable[[ContactTableSchema], ContactTableSchema] = lambda x: x,
         code: int = 201,
         stored_contacts: int = 1,
         check_redirect: bool = True,
@@ -650,12 +652,12 @@ def put_contact(client, dbsession, request):
     sample_email_id = contact_fixture.email.email_id
 
     def _add(
-        modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
+        modifier: Callable[[ContactTableSchema], ContactTableSchema] = lambda x: x,
         code: int = 201,
         stored_contacts: int = 1,
         query_fields: Optional[dict] = None,
         check_written: bool = True,
-        record: Optional[ContactSchema] = None,
+        record: Optional[ContactTableSchema] = None,
         new_default_fields: Optional[set] = None,
     ):
         if record:

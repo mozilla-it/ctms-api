@@ -12,7 +12,7 @@ from silverpop.api import Silverpop, SilverpopResponseException
 
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import re_trace_email
-from ctms.schemas import ContactSchema, NewsletterSchema
+from ctms.schemas import ContactTableSchema, NewsletterSchema
 
 # Start cherry-picked from django.utils.encoding
 _PROTECTED_TYPES = (
@@ -140,7 +140,7 @@ class CTMSToAcousticService:
 
     def convert_ctms_to_acoustic(
         self,
-        contact: ContactSchema,
+        contact: ContactTableSchema,
         main_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):
@@ -428,7 +428,7 @@ class CTMSToAcousticService:
 
     def attempt_to_upload_ctms_contact(
         self,
-        contact: ContactSchema,
+        contact: ContactTableSchema,
         main_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):  # raises AcousticUploadError

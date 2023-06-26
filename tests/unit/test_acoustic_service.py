@@ -8,7 +8,7 @@ from structlog.testing import capture_logs
 from ctms import acoustic_service
 from ctms.acoustic_service import CTMSToAcousticService
 from ctms.crud import get_contact_by_email_id, get_newsletters_by_email_id
-from ctms.schemas.contact import ContactSchema
+from ctms.schemas.contact import ContactTableSchema
 
 CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
 CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID = "9"
@@ -264,7 +264,7 @@ def test_ctms_to_acoustic_with_subscription(
     dbsession.commit()
 
     contact = get_contact_by_email_id(dbsession, email_id=subscription.get_email_id())
-    contact = ContactSchema.parse_obj(contact)
+    contact = ContactTableSchema.parse_obj(contact)
 
     acoustic_mock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
@@ -319,7 +319,7 @@ def test_ctms_to_acoustic_with_subscription_and_metrics(
     dbsession.commit()
 
     contact = get_contact_by_email_id(dbsession, email_id=subscription.get_email_id())
-    contact = ContactSchema.parse_obj(contact)
+    contact = ContactTableSchema.parse_obj(contact)
 
     acoustic_mock = MagicMock()
     acoustic_svc = metrics_ctms_acoustic_service
