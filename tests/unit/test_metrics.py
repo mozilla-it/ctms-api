@@ -2,7 +2,6 @@
 import pytest
 from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.parser import text_string_to_metric_families
-from structlog.testing import capture_logs
 
 from ctms import metrics as metrics_module
 from ctms.app import app
@@ -22,33 +21,6 @@ DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 # Base cardinatility of ctms_api_requests_total
 # Actual is multiplied by the number of API clients
 METHOD_API_PATH_COMBINATIONS = 19
-
-
-@pytest.fixture
-def setup_metrics(monkeypatch):
-    """Setup a metrics registry and metrics, use them in the app"""
-
-    test_registry = CollectorRegistry()
-    test_metrics = metrics_module.init_metrics(test_registry)
-    # Because these methods are called from a middleware
-    # we can't use dependency injection like with get_db
-    monkeypatch.setattr(metrics_module, "METRICS_REGISTRY", test_registry)
-    monkeypatch.setattr(metrics_module, "METRICS", test_metrics)
-    yield test_registry, test_metrics
-
-
-@pytest.fixture
-def registry(setup_metrics):
-    """Get the test metrics registry"""
-    test_registry, _ = setup_metrics
-    return test_registry
-
-
-@pytest.fixture
-def metrics(setup_metrics):
-    """Get the test metrics"""
-    _, test_metrics = setup_metrics
-    return test_metrics
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):
@@ -278,22 +250,3 @@ def test_unknown_path(anon_client, registry):
             assert sample.labels == {}
         else:
             assert len(family.samples) == 0
-
-
-def test_get_metrics(anon_client, setup_metrics):
-    """An anonoymous user can request metrics."""
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics")
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    assert "trivial" not in cap_logs[0]
-
-
-def test_prometheus_metrics_is_logged_as_trivial(anon_client, setup_metrics):
-    """When Prometheus requests metrics, it is logged as trivial."""
-    headers = {"user-agent": "Prometheus/2.26.0"}
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics", headers=headers)
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    assert cap_logs[0]["trivial"] is True

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasicCredentials
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
+from structlog.testing import capture_logs
 
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
@@ -187,3 +188,22 @@ def configuration(
         "sync_fields": fields_grouped_by_tablename,
         "newsletter_mappings": newsletter_mappings,
     }
+
+
+def test_get_metrics(anon_client, setup_metrics):
+    """An anonoymous user can request metrics."""
+    with capture_logs() as cap_logs:
+        resp = anon_client.get("/metrics")
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    assert "trivial" not in cap_logs[0]
+
+
+def test_prometheus_metrics_is_logged_as_trivial(anon_client, setup_metrics):
+    """When Prometheus requests metrics, it is logged as trivial."""
+    headers = {"user-agent": "Prometheus/2.26.0"}
+    with capture_logs() as cap_logs:
+        resp = anon_client.get("/metrics", headers=headers)
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1
+    assert cap_logs[0]["trivial"] is True

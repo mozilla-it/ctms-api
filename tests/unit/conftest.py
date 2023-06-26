@@ -18,6 +18,7 @@ from pytest_factoryboy import register
 from sqlalchemy import create_engine, event
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
+from ctms import metrics as metrics_module
 from ctms import schemas
 from ctms.app import app
 from ctms.background_metrics import BackgroundMetricService
@@ -486,6 +487,33 @@ def client(anon_client):
 @pytest.fixture
 def settings():
     return Settings()
+
+
+@pytest.fixture
+def setup_metrics(monkeypatch):
+    """Setup a metrics registry and metrics, use them in the app"""
+
+    test_registry = CollectorRegistry()
+    test_metrics = metrics_module.init_metrics(test_registry)
+    # Because these methods are called from a middleware
+    # we can't use dependency injection like with get_db
+    monkeypatch.setattr(metrics_module, "METRICS_REGISTRY", test_registry)
+    monkeypatch.setattr(metrics_module, "METRICS", test_metrics)
+    yield test_registry, test_metrics
+
+
+@pytest.fixture
+def registry(setup_metrics):
+    """Get the test metrics registry"""
+    test_registry, _ = setup_metrics
+    return test_registry
+
+
+@pytest.fixture
+def metrics(setup_metrics):
+    """Get the test metrics"""
+    _, test_metrics = setup_metrics
+    return test_metrics
 
 
 @pytest.fixture
