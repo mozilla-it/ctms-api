@@ -189,28 +189,49 @@ def most_minimal_contact(dbsession):
 
 
 @pytest.fixture
-def minimal_contact_data():
+def minimal_contact_data() -> ContactSchema:
+    email_id = UUID("93db83d4-4119-4e0c-af87-a713786fa81d")
     return ContactSchema(
         email=schemas.EmailSchema(
             basket_token="142e20b6-1ef5-43d8-b5f4-597430e956d7",
-            create_timestamp="2014-01-22T15:24:00+00:00",
-            email_id=UUID("93db83d4-4119-4e0c-af87-a713786fa81d"),
+            create_timestamp="2014-01-22T15:24:00.000+0000",
+            email_id=email_id,
             mailing_country="us",
             primary_email="ctms-user@example.com",
             sfdc_id="001A000001aABcDEFG",
             update_timestamp="2020-01-22T15:24:00.000+0000",
         ),
         newsletters=[
-            {"name": "app-dev"},
-            {"name": "maker-party"},
-            {"name": "mozilla-foundation"},
-            {"name": "mozilla-learning-network"},
+            schemas.NewsletterTableSchema(
+                name="app-dev",
+                email_id=email_id,
+                create_timestamp="2014-01-22T15:24:00.000+0000",
+                update_timestamp="2020-01-22T15:24:00.000+0000",
+            ),
+            schemas.NewsletterTableSchema(
+                name="maker-party",
+                email_id=email_id,
+                create_timestamp="2014-01-22T15:24:00.000+0000",
+                update_timestamp="2020-01-22T15:24:00.000+0000",
+            ),
+            schemas.NewsletterTableSchema(
+                name="mozilla-foundation",
+                email_id=email_id,
+                create_timestamp="2014-01-22T15:24:00.000+0000",
+                update_timestamp="2020-01-22T15:24:00.000+0000",
+            ),
+            schemas.NewsletterTableSchema(
+                name="mozilla-learning-network",
+                email_id=email_id,
+                create_timestamp="2014-01-22T15:24:00.000+0000",
+                update_timestamp="2020-01-22T15:24:00.000+0000",
+            ),
         ],
     )
 
 
 @pytest.fixture
-def minimal_contact(minimal_contact_data, dbsession):
+def minimal_contact(minimal_contact_data, dbsession) -> ContactSchema:
     create_contact(
         dbsession,
         minimal_contact_data.email.email_id,
@@ -222,7 +243,8 @@ def minimal_contact(minimal_contact_data, dbsession):
 
 
 @pytest.fixture
-def maximal_contact_data():
+def maximal_contact_data() -> ContactSchema:
+    email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
     return ContactSchema(
         amo=schemas.AddOnsSchema(
             add_on_ids="fanfox,foxfan",
@@ -240,7 +262,7 @@ def maximal_contact_data():
             update_timestamp="2020-01-27T14:25:43+00:00",
         ),
         email=schemas.EmailSchema(
-            email_id=UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
+            email_id=email_id,
             primary_email="mozilla-fan@example.com",
             basket_token=UUID("d9ba6182-f5dd-4728-a477-2cc11bf62b69"),
             first_name="Fan",
@@ -250,7 +272,7 @@ def maximal_contact_data():
             sfdc_id="001A000001aMozFan",
             double_opt_in=True,
             unsubscribe_reason="done with this mailing list",
-            create_timestamp="2010-01-01T08:04:00+00:00",
+            create_timestamp="2010-01-01T08:04:00.000+0000",
             update_timestamp="2020-01-28T14:50:00.000+0000",
         ),
         fxa=schemas.FirefoxAccountsSchema(
@@ -266,58 +288,101 @@ def maximal_contact_data():
             mofo_relevant=True,
         ),
         newsletters=[
-            schemas.NewsletterSchema(
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
                 name="ambassadors",
                 source="https://www.mozilla.org/en-US/contribute/studentambassadors/",
                 subscribed=False,
                 unsub_reason="Graduated, don't have time for FSA",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
-            schemas.NewsletterSchema(
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
                 name="common-voice",
                 format="T",
                 lang="fr",
                 source="https://commonvoice.mozilla.org/fr",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
-            schemas.NewsletterSchema(
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
                 name="firefox-accounts-journey",
                 source="https://www.mozilla.org/fr/firefox/accounts/",
                 lang="fr",
                 subscribed=False,
                 unsub_reason="done with this mailing list",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
-            schemas.NewsletterSchema(name="firefox-os"),
-            schemas.NewsletterSchema(name="hubs", lang="fr"),
-            schemas.NewsletterSchema(name="mozilla-festival"),
-            schemas.NewsletterSchema(name="mozilla-foundation", lang="fr"),
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
+                name="firefox-os",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
+            ),
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
+                name="hubs",
+                lang="fr",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
+            ),
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
+                name="mozilla-festival",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
+            ),
+            schemas.NewsletterTableSchema(
+                email_id=email_id,
+                name="mozilla-foundation",
+                lang="fr",
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
+            ),
         ],
         waitlists=[
-            schemas.WaitlistSchema(
+            schemas.WaitlistTableSchema(
+                email_id=email_id,
                 name="a-software",
                 source="https://a-software.mozilla.org/",
                 fields={"geo": "fr"},
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
-            schemas.WaitlistSchema(
+            schemas.WaitlistTableSchema(
+                email_id=email_id,
                 name="relay",
                 fields={"geo": "cn"},
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
-            schemas.WaitlistSchema(
+            schemas.WaitlistTableSchema(
+                email_id=email_id,
                 name="super-product",
                 source="https://super-product.mozilla.org/",
                 fields={"geo": "fr", "platform": "win64"},
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
-            schemas.WaitlistSchema(
+            schemas.WaitlistTableSchema(
+                email_id=email_id,
                 name="vpn",
                 fields={
                     "geo": "ca",
                     "platform": "windows,android",
                 },
+                create_timestamp="2010-01-01T08:04:00.000+0000",
+                update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
         ],
     )
 
 
 @pytest.fixture
-def maximal_contact(dbsession, maximal_contact_data):
+def maximal_contact(dbsession, maximal_contact_data) -> ContactSchema:
     create_contact(
         dbsession,
         maximal_contact_data.email.email_id,
@@ -329,7 +394,7 @@ def maximal_contact(dbsession, maximal_contact_data):
 
 
 @pytest.fixture
-def example_contact_data():
+def example_contact_data() -> ContactSchema:
     return ContactSchema(
         amo=schemas.AddOnsSchema(**_gather_examples(schemas.AddOnsSchema)),
         email=schemas.EmailSchema(**_gather_examples(schemas.EmailSchema)),
@@ -338,14 +403,14 @@ def example_contact_data():
         ),
         newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
         waitlists=[
-            schemas.WaitlistSchema(**example)
+            schemas.WaitlistTableSchema(**example)
             for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
         ],
     )
 
 
 @pytest.fixture
-def example_contact(dbsession, example_contact_data):
+def example_contact(dbsession, example_contact_data) -> ContactSchema:
     create_contact(
         dbsession,
         example_contact_data.email.email_id,

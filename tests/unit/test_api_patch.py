@@ -17,6 +17,7 @@ from ctms.schemas import (
     MozillaFoundationInSchema,
     MozillaFoundationSchema,
 )
+from ctms.schemas.waitlist import WaitlistInSchema
 
 
 def swap_bool(existing):
@@ -187,6 +188,19 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert actual["amo"]["update_timestamp"] != new_ts
     expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
+    # `actual` comes from a `CTMSResponse`, and `expected` is a `ContactTableSchema`
+    # that has timestamps.
+    # Since this test compares the two instances directly, we strip the timestamps from
+    # `expected`.
+    for newsletter in expected["newsletters"]:
+        del newsletter["email_id"]
+        del newsletter["create_timestamp"]
+        del newsletter["update_timestamp"]
+    for waitlist in expected["waitlists"]:
+        del waitlist["email_id"]
+        del waitlist["create_timestamp"]
+        del waitlist["update_timestamp"]
+
     # products list is not (yet) in output schema
     assert expected["products"] == []
     assert "products" not in actual
@@ -323,14 +337,9 @@ def test_patch_to_unsubscribe(client, maximal_contact):
     """PATCH can unsubscribe by setting a newsletter field."""
     email_id = maximal_contact.email.email_id
     existing_news_data = maximal_contact.newsletters[1].dict()
-    assert existing_news_data == {
-        "format": "T",
-        "lang": "fr",
-        "name": "common-voice",
-        "source": "https://commonvoice.mozilla.org/fr",
-        "subscribed": True,
-        "unsub_reason": None,
-    }
+    assert existing_news_data["subscribed"]
+    assert existing_news_data["name"] == "common-voice"
+    assert existing_news_data["unsub_reason"] is None
     patch_data = {
         "newsletters": [
             {
@@ -476,7 +485,9 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, maximal_contact):
 def test_patch_to_update_a_waitlist(client, maximal_contact):
     """PATCH can update a waitlist."""
     email_id = maximal_contact.email.email_id
-    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    existing = [
+        WaitlistInSchema(**wl.dict()).dict() for wl in maximal_contact.waitlists
+    ]
     existing[0]["fields"]["geo"] = "ca"
     patch_data = {"waitlists": existing}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -492,7 +503,9 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
     """PATCH can remove a single waitlist."""
     email_id = maximal_contact.email.email_id
     existing = [wl.dict() for wl in maximal_contact.waitlists]
-    patch_data = {"waitlists": [{**existing[-1], "subscribed": False}]}
+    patch_data = {
+        "waitlists": [WaitlistInSchema(**existing[-1], subscribed=False).dict()]
+    }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
