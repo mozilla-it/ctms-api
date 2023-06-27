@@ -71,6 +71,37 @@ class FirefoxAccountFactory(BaseSQLAlchemyModelFactory):
     email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
 
 
+class MozillaFoundationContactFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.MozillaFoundationContact
+
+    mofo_email_id = factory.Faker("uuid4")
+    mofo_contact_id = factory.Faker("uuid4")
+    mofo_relevant = True
+
+    email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
+
+
+class AmoAccountFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.AmoAccount
+
+    add_on_ids = "fanfox,foxfan"
+    display_name = factory.Faker("user_name")
+    email_opt_in = True
+    language = factory.Faker("language_code")
+    last_login = factory.Faker("date_object")
+    location = factory.Faker("city")
+    profile_url = factory.LazyAttribute(
+        lambda obj: f"https://www.example.com/{obj.display_name}"
+    )
+    user = True
+    user_id = factory.Faker("pystr", max_chars=40)
+    username = factory.SelfAttribute("display_name")
+
+    email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
+
+
 class EmailFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.Email
