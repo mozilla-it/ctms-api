@@ -10,10 +10,6 @@ from sqlalchemy import asc, or_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
-from ctms.schemas.email import EmailSchema
-from ctms.schemas.newsletter import NewsletterTableSchema
-from ctms.schemas.waitlist import WaitlistTableSchema
-
 from .auth import hash_password
 from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
 from .database import Base
@@ -373,7 +369,7 @@ def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSch
     db.execute(stmt)
 
 
-def create_email(db: Session, email: EmailInSchema | EmailSchema):
+def create_email(db: Session, email: EmailInSchema):
     db_email = Email(**email.dict())
     db.add(db_email)
 
@@ -443,14 +439,11 @@ def create_or_update_mofo(
 
 
 def create_newsletter(
-    db: Session, email_id: UUID4, newsletter: NewsletterInSchema | NewsletterTableSchema
+    db: Session, email_id: UUID4, newsletter: NewsletterInSchema
 ) -> Optional[Newsletter]:
     if newsletter.is_default():
         return None
-    # This is called from API input data with `NewsletterInSchema`, and from tests fixtures
-    # with `NewsletterTableSchema`
-    # Unlike `NewsletterTableSchema`, `NewsletterInSchema` has no `email_id` field.
-    db_newsletter = Newsletter(**{"email_id": email_id, **newsletter.dict()})
+    db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
     db.add(db_newsletter)
     return db_newsletter
 
@@ -480,19 +473,16 @@ def create_or_update_newsletters(
 
 
 def create_waitlist(
-    db: Session, email_id: UUID4, waitlist: WaitlistInSchema | WaitlistTableSchema
+    db: Session, email_id: UUID4, waitlist: WaitlistInSchema
 ) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
 
-    # This is called from API input data with `WaitlistInSchema`, and from tests fixtures
-    # with `WaitlistTableSchema`
-    # Unlike `WaitlistTableSchema`, `WaitlistInSchema` has no `email_id`, `subscribed` fields.
-    attrs = {"email_id": email_id, **waitlist.dict()}
+    attrs = waitlist.dict()
     if "subscribed" in attrs:
         del attrs["subscribed"]
 
-    db_waitlist = Waitlist(**attrs)
+    db_waitlist = Waitlist(email_id=email_id, **attrs)
     db.add(db_waitlist)
     return db_waitlist
 
@@ -530,7 +520,7 @@ def create_or_update_waitlists(
 def create_contact(
     db: Session,
     email_id: UUID4,
-    contact: ContactInSchema | ContactSchema,
+    contact: ContactInSchema,
     metrics: Optional[Dict],
 ):
     create_email(db, contact.email)

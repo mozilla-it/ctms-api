@@ -5,11 +5,10 @@ from uuid import uuid4
 import pytest
 from structlog.testing import capture_logs
 
-from ctms.crud import create_contact
 from ctms.schemas import (
     AddOnsInSchema,
     AddOnsSchema,
-    ContactInSchema,
+    ContactSchema,
     CTMSResponse,
     EmailSchema,
     FirefoxAccountsInSchema,
@@ -18,6 +17,7 @@ from ctms.schemas import (
     MozillaFoundationSchema,
 )
 from ctms.schemas.waitlist import WaitlistInSchema
+from tests.unit.conftest import create_full_contact
 
 
 def swap_bool(existing):
@@ -188,7 +188,7 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert actual["amo"]["update_timestamp"] != new_ts
     expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
-    # `actual` comes from a `CTMSResponse`, and `expected` is a `ContactTableSchema`
+    # `actual` comes from a `CTMSResponse`, and `expected` is a `ContactSchema`
     # that has timestamps.
     # Since this test compares the two instances directly, we strip the timestamps from
     # `expected`.
@@ -253,7 +253,7 @@ def test_patch_error_on_id_conflict(
 ):
     """PATCH returns an error on ID conflicts, and makes none of the changes."""
     conflict_id = str(uuid4())
-    conflicting_data = ContactInSchema(
+    conflicting_data = ContactSchema(
         amo=AddOnsInSchema(user_id=1337),
         email=EmailSchema(
             email_id=conflict_id,
@@ -269,7 +269,7 @@ def test_patch_error_on_id_conflict(
             fxa_id=1337, primary_email="fxa-conflict@example.com"
         ),
     )
-    create_contact(dbsession, conflict_id, conflicting_data, metrics=None)
+    create_full_contact(dbsession, conflicting_data)
 
     existing_value = getattr(getattr(maximal_contact, group_name), key)
     conflicting_value = getattr(getattr(conflicting_data, group_name), key)

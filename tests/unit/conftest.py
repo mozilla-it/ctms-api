@@ -29,6 +29,7 @@ from ctms.crud import (
     get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
     get_contacts_by_any_id,
+    get_email,
     get_fxa_by_email_id,
     get_mofo_by_email_id,
     get_newsletters_by_email_id,
@@ -36,6 +37,7 @@ from ctms.crud import (
 )
 from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.schemas import ApiClientSchema, ContactSchema
+from ctms.schemas.contact import ContactInSchema
 from tests import factories
 from tests.data import fake_stripe_id
 
@@ -175,6 +177,52 @@ register(factories.models.WaitlistFactory)
 register(factories.stripe.StripeCustomerDataFactory)
 
 
+def create_full_contact(db, contact: ContactSchema):
+    """Helper to save a whole contact object into the database.
+    Unlike the `crud.py` functions, this takes a `ContactSchema`
+    instead of a `ContactInSchema` as input, and will save the specified
+    timestamps.
+    """
+    contact_input = ContactInSchema(**contact.dict())
+    create_contact(db, contact.email.email_id, contact_input, get_metrics())
+    db.flush()
+
+    if contact.email.create_timestamp and contact.email.update_timestamp:
+        email_in_db = get_email(db, contact.email.email_id)
+        email_in_db.create_timestamp = contact.email.create_timestamp
+        email_in_db.update_timestamp = contact.email.update_timestamp
+
+    if contact.amo and contact.amo.create_timestamp and contact.amo.create_timestamp:
+        amo_in_db = get_amo_by_email_id(db, contact.email.email_id)
+        amo_in_db.create_timestamp = contact.amo.create_timestamp
+        amo_in_db.update_timestamp = contact.amo.update_timestamp
+        db.add(amo_in_db)
+
+    specified_newsletters_by_name = {nl.name: nl for nl in contact.newsletters}
+    if specified_newsletters_by_name:
+        for newsletter_in_db in get_newsletters_by_email_id(db, contact.email.email_id):
+            newsletter_in_db.create_timestamp = specified_newsletters_by_name[
+                newsletter_in_db.name
+            ].create_timestamp
+            newsletter_in_db.update_timestamp = specified_newsletters_by_name[
+                newsletter_in_db.name
+            ].update_timestamp
+            db.add(newsletter_in_db)
+
+    specified_waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
+    if specified_waitlists_by_name:
+        for waitlist_in_db in get_waitlists_by_email_id(db, contact.email.email_id):
+            waitlist_in_db.create_timestamp = specified_waitlists_by_name[
+                waitlist_in_db.name
+            ].create_timestamp
+            waitlist_in_db.update_timestamp = specified_waitlists_by_name[
+                waitlist_in_db.name
+            ].update_timestamp
+            db.add(waitlist_in_db)
+
+    db.commit()
+
+
 @pytest.fixture
 def most_minimal_contact(dbsession):
     contact = ContactSchema(
@@ -183,8 +231,7 @@ def most_minimal_contact(dbsession):
             primary_email="ctms-most-minimal-user@example.com",
         ),
     )
-    create_contact(dbsession, contact.email.email_id, contact, get_metrics())
-    dbsession.commit()
+    create_full_contact(dbsession, contact)
     return contact
 
 
@@ -231,14 +278,8 @@ def minimal_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def minimal_contact(minimal_contact_data, dbsession) -> ContactSchema:
-    create_contact(
-        dbsession,
-        minimal_contact_data.email.email_id,
-        minimal_contact_data,
-        get_metrics(),
-    )
-    dbsession.commit()
+def minimal_contact(minimal_contact_data: ContactSchema, dbsession) -> ContactSchema:
+    create_full_contact(dbsession, minimal_contact_data)
     return minimal_contact_data
 
 
@@ -382,14 +423,8 @@ def maximal_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def maximal_contact(dbsession, maximal_contact_data) -> ContactSchema:
-    create_contact(
-        dbsession,
-        maximal_contact_data.email.email_id,
-        maximal_contact_data,
-        get_metrics(),
-    )
-    dbsession.commit()
+def maximal_contact(dbsession, maximal_contact_data: ContactSchema) -> ContactSchema:
+    create_full_contact(dbsession, maximal_contact_data)
     return maximal_contact_data
 
 
@@ -411,18 +446,12 @@ def example_contact_data() -> ContactSchema:
 
 @pytest.fixture
 def example_contact(dbsession, example_contact_data) -> ContactSchema:
-    create_contact(
-        dbsession,
-        example_contact_data.email.email_id,
-        example_contact_data,
-        get_metrics(),
-    )
-    dbsession.commit()
+    create_full_contact(dbsession, example_contact_data)
     return example_contact_data
 
 
 @pytest.fixture
-def to_add_contact_data():
+def to_add_contact_data() -> ContactSchema:
     return ContactSchema(
         email=schemas.EmailInSchema(
             basket_token="21aeb466-4003-4c2b-a27e-e6651c13d231",
@@ -435,14 +464,8 @@ def to_add_contact_data():
 
 
 @pytest.fixture
-def to_add_contact(dbsession, to_add_contact_data):
-    create_contact(
-        dbsession,
-        to_add_contact_data.email.email_id,
-        to_add_contact_data,
-        get_metrics(),
-    )
-    dbsession.commit()
+def to_add_contact(dbsession, to_add_contact_data: ContactSchema) -> ContactSchema:
+    create_full_contact(dbsession, to_add_contact_data)
     return to_add_contact_data
 
 
@@ -461,14 +484,10 @@ def simple_default_contact_data():
 
 
 @pytest.fixture
-def simple_default_contact(dbsession, simple_default_contact_data):
-    create_contact(
-        dbsession,
-        simple_default_contact_data.email.email_id,
-        simple_default_contact_data,
-        get_metrics(),
-    )
-    dbsession.commit()
+def simple_default_contact(
+    dbsession, simple_default_contact_data: ContactSchema
+) -> ContactSchema:
+    create_full_contact(dbsession, simple_default_contact_data)
     return simple_default_contact_data
 
 
@@ -488,14 +507,10 @@ def default_newsletter_contact_data():
 
 
 @pytest.fixture
-def default_newsletter_contact(dbsession, default_newsletter_contact_data):
-    create_contact(
-        dbsession,
-        default_newsletter_contact_data.email.email_id,
-        default_newsletter_contact_data,
-        get_metrics(),
-    )
-    dbsession.commit()
+def default_newsletter_contact(
+    dbsession, default_newsletter_contact_data: ContactSchema
+) -> ContactSchema:
+    create_full_contact(dbsession, default_newsletter_contact_data)
     return default_newsletter_contact_data
 
 
