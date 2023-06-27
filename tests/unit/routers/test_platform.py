@@ -1,12 +1,14 @@
-"""Unit tests for dockerflow health monitoring endpoints"""
+import json
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 from sqlalchemy.exc import TimeoutError as SQATimeoutError
 from structlog.testing import capture_logs
 
-from ctms.app import app, get_db, get_settings
+from ctms.app import app
 from ctms.config import Settings
+from ctms.dependencies import get_db, get_settings
 
 
 @pytest.fixture
@@ -35,6 +37,54 @@ def test_settings():
     app.dependency_overrides[get_settings] = lambda: Settings(**settings)
     yield settings
     del app.dependency_overrides[get_settings]
+
+
+def test_read_root(anon_client):
+    """The site root redirects to the Swagger docs"""
+    with capture_logs() as caplogs:
+        resp = anon_client.get("/")
+    assert resp.status_code == 200
+    assert len(resp.history) == 1
+    prev_resp = resp.history[0]
+    assert prev_resp.status_code == 307  # Temporary Redirect
+    assert prev_resp.headers["location"] == "./docs"
+    assert len(caplogs) == 2
+    assert caplogs[0]["trivial"] is True
+    assert "trivial" not in caplogs[1]
+
+
+def test_read_version(anon_client):
+    """__version__ returns the contents of version.json."""
+    here = Path(__file__)
+    root_dir = here.parents[3]
+    version_path = Path(root_dir / "version.json")
+    with open(version_path, "r", encoding="utf8") as vp_file:
+        version_contents = vp_file.read()
+    expected = json.loads(version_contents)
+    resp = anon_client.get("/__version__")
+    assert resp.status_code == 200
+    assert resp.json() == expected
+
+
+def test_crash_authorized(client):
+    """The endpoint /__crash__ can be used to test Sentry integration."""
+    with pytest.raises(RuntimeError):
+        client.get("/__crash__")
+
+
+def test_crash_unauthorized(anon_client):
+    """The endpoint /__crash__ can not be used without credentials."""
+    resp = anon_client.get("/__crash__")
+    assert resp.status_code == 401
+    assert resp.json() == {"detail": "Not authenticated"}
+
+
+def test_exposed_configuration(anon_client):
+    resp = anon_client.get("/acoustic_configuration")
+    exposed = resp.json()
+
+    assert "fxa_lang" in exposed["sync_fields"]["main"]
+    assert exposed["newsletter_mappings"]["mozilla-rally"] == "sub_rally"
 
 
 def test_read_heartbeat(anon_client, test_settings):

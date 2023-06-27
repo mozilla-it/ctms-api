@@ -9,10 +9,12 @@ from jose import jwt
 from requests.auth import HTTPBasicAuth
 from structlog.testing import capture_logs
 
-from ctms.app import _pubsub_settings, _token_settings, app, get_settings
+from ctms.app import app
 from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import get_api_client_by_id
-from tests.unit.test_api_stripe import pubsub_wrap
+from ctms.dependencies import get_settings, get_token_settings
+from ctms.routers.stripe import _pubsub_settings
+from tests.unit.routers.test_stripe import pubsub_wrap
 
 # Sample token claim from https://cloud.google.com/pubsub/docs/push
 SAMPLE_GCP_JWT_CLAIM = {
@@ -36,9 +38,9 @@ def test_token_settings():
         "secret_key": "AN_AWESOME_RANDOM_SECRET_KEY",
     }
 
-    app.dependency_overrides[_token_settings] = lambda: settings
+    app.dependency_overrides[get_token_settings] = lambda: settings
     yield settings
-    del app.dependency_overrides[_token_settings]
+    del app.dependency_overrides[get_token_settings]
 
 
 @pytest.fixture
@@ -329,7 +331,7 @@ def test_post_pubsub_token(
 ):
     """A PubSub client can authenticate."""
 
-    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
         mock_get.return_value = SAMPLE_GCP_JWT_CLAIM
         with capture_logs() as caplog:
             resp = anon_client.post(
@@ -374,7 +376,7 @@ def test_post_pubsub_token_fail_client(
     anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if pubsub_client is incorrect."""
-    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = Exception("Should not be called.")
         with capture_logs() as caplog:
             resp = anon_client.post(
@@ -392,7 +394,7 @@ def test_post_pubsub_token_unknown_key(
     anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if the jwt 'kid' doesn't refer to a known cert."""
-    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = ValueError(
             "Certificate for key id the_kid_value not found."
         )
@@ -412,7 +414,7 @@ def test_post_pubsub_token_fail_ssl_fetch(
     anon_client, test_pubsub_settings, stripe_customer_data_factory
 ):
     """An error is returned if there is an issue fetching certs."""
-    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
         mock_get.side_effect = TransportError(
             "Could not fetch certificates at https://example.com"
         )
@@ -434,7 +436,7 @@ def test_post_pubsub_token_fail_wrong_email(
     """An error is returned if the claim email doesn't match."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
     claim["email"] = "different_email@example.com"
-    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
         mock_get.return_value = claim
         with capture_logs() as caplog:
             resp = anon_client.post(
@@ -457,7 +459,7 @@ def test_post_pubsub_token_fail_unverified_email(
     """An error is returned if the claim email isn't verified."""
     claim = SAMPLE_GCP_JWT_CLAIM.copy()
     del claim["email_verified"]
-    with patch("ctms.app.get_claim_from_pubsub_token") as mock_get:
+    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
         mock_get.return_value = claim
         with capture_logs() as caplog:
             resp = anon_client.post(

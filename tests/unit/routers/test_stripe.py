@@ -9,8 +9,9 @@ import pytest
 from sqlalchemy.exc import IntegrityError, OperationalError
 from structlog.testing import capture_logs
 
-from ctms.app import app, get_pubsub_claim
+from ctms.app import app
 from ctms.models import PendingAcousticRecord
+from ctms.routers.stripe import get_pubsub_claim
 from tests.data import fake_stripe_id
 from tests.unit.conftest import FAKE_STRIPE_CUSTOMER_ID
 

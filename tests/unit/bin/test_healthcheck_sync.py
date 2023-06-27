@@ -1,5 +1,3 @@
-"""Check ctms/bin/healthcheck_sync.py"""
-
 from datetime import datetime, timedelta, timezone
 
 from structlog.testing import capture_logs
