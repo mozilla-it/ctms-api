@@ -1,5 +1,3 @@
-"""Tests for ctms/bin/client_credentials.py"""
-
 import pytest
 
 from ctms.bin.client_credentials import main

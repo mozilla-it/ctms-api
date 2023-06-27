@@ -6,7 +6,8 @@ import pytest
 from structlog.testing import capture_logs
 
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
-from tests.unit.test_api import _compare_written_contacts
+
+from .test_api import _compare_written_contacts
 
 PUT_TEST_PARAMS = pytest.mark.parametrize(
     "put_contact", SAMPLE_CONTACT_PARAMS, indirect=True

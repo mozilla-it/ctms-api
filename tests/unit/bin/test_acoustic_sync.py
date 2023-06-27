@@ -1,5 +1,3 @@
-"""Tests for ctms/bin/acoustic_sync.py"""
-
 from unittest import mock
 
 import pytest

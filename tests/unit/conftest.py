@@ -18,8 +18,9 @@ from pytest_factoryboy import register
 from sqlalchemy import create_engine, event
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
+from ctms import metrics as metrics_module
 from ctms import schemas
-from ctms.app import app, get_api_client, get_db, get_metrics
+from ctms.app import app
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
@@ -35,6 +36,8 @@ from ctms.crud import (
     get_waitlists_by_email_id,
 )
 from ctms.database import ScopedSessionLocal, SessionLocal
+from ctms.dependencies import get_api_client, get_db
+from ctms.metrics import get_metrics
 from ctms.schemas import ApiClientSchema, ContactSchema
 from tests import factories
 from tests.data import fake_stripe_id
@@ -484,6 +487,33 @@ def client(anon_client):
 @pytest.fixture
 def settings():
     return Settings()
+
+
+@pytest.fixture
+def setup_metrics(monkeypatch):
+    """Setup a metrics registry and metrics, use them in the app"""
+
+    test_registry = CollectorRegistry()
+    test_metrics = metrics_module.init_metrics(test_registry)
+    # Because these methods are called from a middleware
+    # we can't use dependency injection like with get_db
+    monkeypatch.setattr(metrics_module, "METRICS_REGISTRY", test_registry)
+    monkeypatch.setattr(metrics_module, "METRICS", test_metrics)
+    yield test_registry, test_metrics
+
+
+@pytest.fixture
+def registry(setup_metrics):
+    """Get the test metrics registry"""
+    test_registry, _ = setup_metrics
+    return test_registry
+
+
+@pytest.fixture
+def metrics(setup_metrics):
+    """Get the test metrics"""
+    _, test_metrics = setup_metrics
+    return test_metrics
 
 
 @pytest.fixture
