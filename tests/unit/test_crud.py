@@ -315,8 +315,7 @@ def test_get_contact_by_email_id_stripe_subscription_cancelled(
     dbsession.commit()
 
     email_id = subscription.get_email_id()
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_contact_by_email_id(dbsession, pending.email_id)
+    contact = get_contact_by_email_id(dbsession, email_id)
     assert len(contact.products) == 1
     product = contact.products[0]
     assert product.segment == "canceled"
