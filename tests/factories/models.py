@@ -129,11 +129,33 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
                 NewsletterFactory(email=self, **kwargs)
 
     @factory.post_generation
+    def waitlists(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for _ in range(extracted):
+                WaitlistFactory(email=self, **kwargs)
+
+    @factory.post_generation
     def fxa(self, create, extracted, **kwargs):
         if not create:
             return
         if extracted:
             FirefoxAccountFactory(email=self, **kwargs)
+
+    @factory.post_generation
+    def mofo(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            MozillaFoundationContactFactory(email=self, **kwargs)
+
+    @factory.post_generation
+    def amo(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            AmoAccountFactory(email=self, **kwargs)
 
 
 class StripeCustomerFactory(BaseSQLAlchemyModelFactory):
