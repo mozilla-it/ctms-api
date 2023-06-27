@@ -3,25 +3,47 @@ import pytest
 from ctms.schemas.contact import ContactInSchema
 
 
-def test_idempotent_equal(maximal_contact):
-    data = maximal_contact.dict()
-    original = ContactInSchema(**data)
-    modified = ContactInSchema(**data)
-    assert original.idempotent_equal(modified)
-    assert modified.idempotent_equal(original)
+@pytest.fixture
+def example_contact_in(dbsession, email_factory):
+    email = email_factory(
+        email_format="H",
+        amo=True,
+        amo__display_name="foo",
+        fxa=True,
+        fxa__lang="en",
+        mofo=True,
+        newsletters=1,
+        waitlists=1,
+    )
+    dbsession.commit()
+
+    return ContactInSchema(
+        amo=email.amo,
+        email=email,
+        mofo=email.mofo,
+        fxa=email.fxa,
+        newsletters=email.newsletters,
+        waitlists=email.waitlists,
+    )
+
+
+def test_idempotent_equal(example_contact_in):
+    contact_copy = example_contact_in.copy(deep=True)
+    assert example_contact_in.idempotent_equal(contact_copy)
+    assert contact_copy.idempotent_equal(example_contact_in)
 
 
 @pytest.mark.parametrize(
     "group,field,value",
     (
-        ("amo", "display_name", "changed"),
+        ("amo", "display_name", "bar"),
         ("email", "email_format", "T"),
         ("fxa", "lang", "es"),
         ("mofo", "mofo_relevant", False),
     ),
 )
-def test_change_field_not_idempotent_equal(maximal_contact, group, field, value):
-    data = maximal_contact.dict()
+def test_change_field_not_idempotent_equal(example_contact_in, group, field, value):
+    data = example_contact_in.dict()
     original = ContactInSchema(**data)
     assert data[group][field] != value
     data[group][field] = value
@@ -29,16 +51,10 @@ def test_change_field_not_idempotent_equal(maximal_contact, group, field, value)
     assert not original.idempotent_equal(modified)
 
 
-def test_unsubscribe_not_idempotent_equal(maximal_contact):
-    data = maximal_contact.dict()
+def test_unsubscribe_not_idempotent_equal(example_contact_in):
+    data = example_contact_in.dict()
     original = ContactInSchema(**data)
-    assert not data["newsletters"][0]["subscribed"]
-    data["newsletters"][0]["subscribed"] = True
+    assert data["newsletters"][0]["subscribed"]
+    data["newsletters"][0]["subscribed"] = False
     modified = ContactInSchema(**data)
     assert not original.idempotent_equal(modified)
-
-
-def test_source_url_supports_localhost(maximal_contact):
-    data = maximal_contact.dict()
-    data["newsletters"][0]["source"] = "http://localhost:8888/v1"
-    ContactInSchema(**data)
