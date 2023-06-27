@@ -1,7 +1,6 @@
 """Test database operations"""
 # pylint: disable=too-many-lines
 from datetime import datetime, timedelta, timezone
-from typing import List
 from uuid import uuid4
 
 import pytest
@@ -80,153 +79,120 @@ def test_get_email_miss(dbsession):
     assert email is None
 
 
-def test_schedule_then_get_acoustic_records_before_time(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+def test_schedule_then_get_acoustic_records_before_time(dbsession, email_factory):
+    email = email_factory()
+    dbsession.flush()
 
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+    [record] = get_all_acoustic_records_before(
+        dbsession,
+        end_time=end_time,
+    )
+    assert record.email is not None
+    assert record.retry is not None and record.retry == 0
+    assert record.create_timestamp is not None
+    assert record.update_timestamp is not None
+    assert record.id is not None
+
+
+def test_schedule_then_get_acoustic_records_as_contacts(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+    [record] = get_all_acoustic_records_before(
+        dbsession,
+        end_time=end_time,
+    )
+    [contact] = [get_contact_by_email_id(dbsession, record.email_id)]
+    assert contact.email.email_id == record.email.email_id == email.email_id
+
+
+def test_schedule_then_get_acoustic_records_retry_records(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+    [record] = get_all_acoustic_records_before(
+        dbsession,
+        end_time=end_time,
+    )
+    retry_acoustic_record(dbsession, record)
 
     dbsession.flush()
+
+    [record] = get_all_acoustic_records_before(
+        dbsession,
+        end_time=end_time,
+    )
+    assert isinstance(record.email, Email)
+    assert record.retry is not None and record.retry > 0
+    assert record.create_timestamp != record.update_timestamp
+    assert record.id is not None
+
+
+def test_schedule_then_get_acoustic_records_minimum_retry(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
+    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+    [record] = get_all_acoustic_records_before(
+        dbsession,
+        end_time=end_time,
+    )
+    retry_acoustic_record(dbsession, record)
+    dbsession.flush()
+
     record_list = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    dbsession.flush()
-    assert len(record_list) == 3
-    for record in record_list:
-        assert record.email is not None
-        assert record.retry is not None and record.retry == 0
-        assert record.create_timestamp is not None
-        assert record.update_timestamp is not None
-        assert record.id is not None
-
-
-def test_schedule_then_get_acoustic_records_as_contacts(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-    dbsession.flush()
-
-    record_list = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    dbsession.flush()
-    contact_record_list = [
-        get_contact_by_email_id(dbsession, record.email_id) for record in record_list
-    ]
-    assert len(contact_record_list) == 3
-    for record in contact_record_list:
-        assert record.email is not None
-
-
-def test_schedule_then_get_acoustic_records_retry_records(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    for record in record_list:
-        retry_acoustic_record(dbsession, record)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    dbsession.flush()
-
-    assert len(record_list) == 3
-    for record in record_list:
-        assert isinstance(record.email, Email)
-        assert record.retry is not None and record.retry > 0
-        assert record.create_timestamp != record.update_timestamp
-        assert record.id is not None
-
-
-def test_schedule_then_get_acoustic_records_minimum_retry(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-
-    for record in record_list:
-        retry_acoustic_record(dbsession, record)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
         dbsession, end_time=end_time, retry_limit=1
     )
-    dbsession.flush()
     assert len(record_list) == 0
 
 
-def test_schedule_then_get_acoustic_records_then_delete(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
+def test_schedule_then_get_acoustic_records_then_delete(dbsession, email_factory):
+    email = email_factory()
+    dbsession.flush()
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
     end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
+    [record] = get_all_acoustic_records_before(
         dbsession,
         end_time=end_time,
     )
-    assert len(record_list) > 0
+    dbsession.commit()
 
-    for record in record_list:
-        delete_acoustic_record(dbsession, record)
+    delete_acoustic_record(dbsession, record)
+    dbsession.commit()
 
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
+    record_list = get_all_acoustic_records_before(
         dbsession,
         end_time=end_time,
     )
-    dbsession.flush()
     assert len(record_list) == 0
 
 
-def retry_acoustic_record_with_error(dbsession, example_contact):
-    pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
+def retry_acoustic_record_with_error(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+
+    pending = PendingAcousticRecord(email_id=email.email_id)
     retry_acoustic_record(dbsession, pending, error_message="Boom!")
     dbsession.flush()
 
     assert (
         "Boom"
         in dbsession.query(PendingAcousticRecord)
-        .filter(PendingAcousticRecord.email_id == example_contact.email.email_id)
+        .filter(PendingAcousticRecord.email_id == email.email_id)
         .last_error
     )
 
