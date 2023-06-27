@@ -41,7 +41,7 @@ from .schemas import (
     ApiClientSchema,
     ContactInSchema,
     ContactPutSchema,
-    ContactTableSchema,
+    ContactSchema,
     EmailInSchema,
     EmailPutSchema,
     FirefoxAccountsInSchema,
@@ -161,7 +161,7 @@ def get_bulk_contacts(
         .all()
     )
 
-    return [ContactTableSchema.from_email(email) for email in bulk_contacts]
+    return [ContactSchema.from_email(email) for email in bulk_contacts]
 
 
 def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
@@ -172,14 +172,12 @@ def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
     )
 
 
-def get_contact_by_email_id(
-    db: Session, email_id: UUID4
-) -> Optional[ContactTableSchema]:
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[ContactSchema]:
     """Return a Contact object for a given email id"""
     email = get_email(db, email_id)
     if email is None:
         return None
-    return ContactTableSchema.from_email(email)
+    return ContactSchema.from_email(email)
 
 
 def get_contacts_by_any_id(
@@ -193,7 +191,7 @@ def get_contacts_by_any_id(
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[str] = None,
-) -> List[ContactTableSchema]:
+) -> List[ContactSchema]:
     """
     Get all the data for multiple contacts by ID as a list of Contacts.
 
@@ -241,7 +239,7 @@ def get_contacts_by_any_id(
             fxa_primary_email_insensitive_comparator=fxa_primary_email
         )
     emails = cast(List[Email], statement.all())
-    return [ContactTableSchema.from_email(email) for email in emails]
+    return [ContactSchema.from_email(email) for email in emails]
 
 
 def _acoustic_sync_retry_query(db: Session):
@@ -532,7 +530,7 @@ def create_or_update_waitlists(
 def create_contact(
     db: Session,
     email_id: UUID4,
-    contact: ContactInSchema | ContactTableSchema,
+    contact: ContactInSchema | ContactSchema,
     metrics: Optional[Dict],
 ):
     create_email(db, contact.email)

@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from ctms.schemas import ContactInSchema, ContactTableSchema, NewsletterInSchema
+from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
@@ -155,7 +155,7 @@ def _compare_written_contacts(
     assert saved_contact.idempotent_equal(sample)
 
 
-def find_default_fields(contact: ContactTableSchema) -> Set[str]:
+def find_default_fields(contact: ContactSchema) -> Set[str]:
     """Return names of fields that contain default values only"""
     default_fields = set()
     if hasattr(contact, "amo") and contact.amo and contact.amo.is_default():

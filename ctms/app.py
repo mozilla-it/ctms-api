@@ -70,7 +70,7 @@ from .schemas import (
     ContactInSchema,
     ContactPatchSchema,
     ContactPutSchema,
-    ContactTableSchema,
+    ContactSchema,
     CTMSBulkResponse,
     CTMSResponse,
     CTMSSingleResponse,
@@ -152,10 +152,10 @@ def get_email_or_404(db: Session, email_id) -> Email:
     return email
 
 
-def get_contact_or_404(db: Session, email_id) -> ContactTableSchema:
+def get_contact_or_404(db: Session, email_id) -> ContactSchema:
     """Get a contact by email_ID, or raise a 404 exception."""
     email = get_email_or_404(db, email_id)
-    return ContactTableSchema.from_email(email)
+    return ContactSchema.from_email(email)
 
 
 def all_ids(
