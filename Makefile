@@ -79,13 +79,7 @@ start: .env
 
 .PHONY: test
 test: .env $(INSTALL_STAMP)
-	${DOCKER_COMPOSE} up --wait postgres
-	bin/test.sh
-ifneq (1, ${MK_KEEP_DOCKER_UP})
-	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
-	# rm all running containers
-	${DOCKER_COMPOSE} down
-endif
+	COVERAGE_REPORT=1 bin/test.sh
 
 .PHONY: integration-test
 integration-test: .env setup $(INSTALL_STAMP)
