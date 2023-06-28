@@ -5,11 +5,10 @@ from uuid import uuid4
 import pytest
 from structlog.testing import capture_logs
 
-from ctms.crud import create_contact
 from ctms.schemas import (
     AddOnsInSchema,
     AddOnsSchema,
-    ContactInSchema,
+    ContactSchema,
     CTMSResponse,
     EmailSchema,
     FirefoxAccountsInSchema,
@@ -17,6 +16,8 @@ from ctms.schemas import (
     MozillaFoundationInSchema,
     MozillaFoundationSchema,
 )
+from ctms.schemas.waitlist import WaitlistInSchema
+from tests.unit.conftest import create_full_contact
 
 
 def swap_bool(existing):
@@ -187,6 +188,19 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     assert actual["amo"]["update_timestamp"] != new_ts
     expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
+    # `actual` comes from a `CTMSResponse`, and `expected` is a `ContactSchema`
+    # that has timestamps.
+    # Since this test compares the two instances directly, we strip the timestamps from
+    # `expected`.
+    for newsletter in expected["newsletters"]:
+        del newsletter["email_id"]
+        del newsletter["create_timestamp"]
+        del newsletter["update_timestamp"]
+    for waitlist in expected["waitlists"]:
+        del waitlist["email_id"]
+        del waitlist["create_timestamp"]
+        del waitlist["update_timestamp"]
+
     # products list is not (yet) in output schema
     assert expected["products"] == []
     assert "products" not in actual
@@ -239,7 +253,7 @@ def test_patch_error_on_id_conflict(
 ):
     """PATCH returns an error on ID conflicts, and makes none of the changes."""
     conflict_id = str(uuid4())
-    conflicting_data = ContactInSchema(
+    conflicting_data = ContactSchema(
         amo=AddOnsInSchema(user_id=1337),
         email=EmailSchema(
             email_id=conflict_id,
@@ -255,7 +269,7 @@ def test_patch_error_on_id_conflict(
             fxa_id=1337, primary_email="fxa-conflict@example.com"
         ),
     )
-    create_contact(dbsession, conflict_id, conflicting_data, metrics=None)
+    create_full_contact(dbsession, conflicting_data)
 
     existing_value = getattr(getattr(maximal_contact, group_name), key)
     conflicting_value = getattr(getattr(conflicting_data, group_name), key)
@@ -323,14 +337,9 @@ def test_patch_to_unsubscribe(client, maximal_contact):
     """PATCH can unsubscribe by setting a newsletter field."""
     email_id = maximal_contact.email.email_id
     existing_news_data = maximal_contact.newsletters[1].dict()
-    assert existing_news_data == {
-        "format": "T",
-        "lang": "fr",
-        "name": "common-voice",
-        "source": "https://commonvoice.mozilla.org/fr",
-        "subscribed": True,
-        "unsub_reason": None,
-    }
+    assert existing_news_data["subscribed"]
+    assert existing_news_data["name"] == "common-voice"
+    assert existing_news_data["unsub_reason"] is None
     patch_data = {
         "newsletters": [
             {
@@ -478,7 +487,9 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, maximal_contact):
 def test_patch_to_update_a_waitlist(client, maximal_contact):
     """PATCH can update a waitlist."""
     email_id = maximal_contact.email.email_id
-    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    existing = [
+        WaitlistInSchema(**wl.dict()).dict() for wl in maximal_contact.waitlists
+    ]
     existing[0]["fields"]["geo"] = "ca"
     patch_data = {"waitlists": existing}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
@@ -496,7 +507,13 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
     existing = [wl.dict() for wl in maximal_contact.waitlists]
     patch_data = {
         "waitlists": [
-            {**existing[-1], "subscribed": False, "unsub_reason": "Not interested"}
+            WaitlistInSchema(
+                **{
+                    **existing[-1],
+                    "subscribed": False,
+                    "unsub_reason": "Not interested",
+                }
+            ).dict()
         ]
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)

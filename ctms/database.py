@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, engine
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 
-from . import config
+from .config import Settings
 
 
 def engine_factory(settings):
@@ -15,7 +15,7 @@ def engine_factory(settings):
     )
 
 
-engine = engine_factory(config.Settings())
+engine = engine_factory(Settings())
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Used for testing
 ScopedSessionLocal = scoped_session(SessionLocal)

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Schedule contacts to be synced to Acoustic."""
 import csv
+import json
 import os
 import sys
+import tempfile
 from typing import Optional, TextIO
 from uuid import UUID
 
@@ -219,8 +221,6 @@ def dump(
     output: TextIO,
 ):
     """CTMS command to dump the contacts database."""
-    if output is None:
-        output = sys.stdout
 
     with SessionLocal() as dbsession:
         result = dbsession.execute(sqlalchemy.text(query))
@@ -257,19 +257,26 @@ def do_dump(dbsession, contacts, output: TextIO):
         m.source: m.destination for m in get_all_acoustic_newsletters_mapping(dbsession)
     }
 
-    fieldnames = None
-    writer = None
-    for email in contacts:
-        contact = ContactSchema.from_email(email)
-        main_table_row, _, _ = service.convert_ctms_to_acoustic(
-            contact, main_fields, newsletters_mapping
-        )
-        # Write header on the first iteration.
-        if fieldnames is None:
-            fieldnames = sorted(main_table_row.keys())
-            writer = csv.DictWriter(output, fieldnames=fieldnames)
-            writer.writeheader()
-        writer.writerow(main_table_row)
+    # Do a first pass to obtain an exhaustive list of columns.
+    # We use a temporary file to avoid loading everything in memory.
+    columns = set()
+    with tempfile.NamedTemporaryFile(mode="w") as tmpfile:
+        for email in contacts:
+            contact = ContactSchema.from_email(email)
+            main_table_row, _, _ = service.convert_ctms_to_acoustic(
+                contact, main_fields, newsletters_mapping
+            )
+            columns.update(set(main_table_row.keys()))
+            tmpfile.write(json.dumps(main_table_row) + "\n")
+        tmpfile.flush()  # does not hurt.
+
+        # Now that we know all columns, turn this temporary file into
+        # the final CSV.
+        writer = csv.DictWriter(output, fieldnames=sorted(columns))
+        writer.writeheader()
+        with open(tmpfile.name, "r", encoding="utf-8") as readtmp:
+            for line in readtmp.readlines():
+                writer.writerow(json.loads(line))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Literal, Optional, Set, Union, cast
+from typing import TYPE_CHECKING, List, Literal, Optional, Union, cast
 from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
@@ -16,7 +16,7 @@ from .email import (
 )
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import NewsletterInSchema, NewsletterSchema
+from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
 from .product import ProductBaseSchema, ProductSegmentEnum
 from .waitlist import (
     RelayWaitlistInSchema,
@@ -25,6 +25,7 @@ from .waitlist import (
     VpnWaitlistSchema,
     WaitlistInSchema,
     WaitlistSchema,
+    WaitlistTableSchema,
     validate_waitlist_newsletters,
 )
 
@@ -144,8 +145,8 @@ class ContactSchema(ComparableBase):
     email: EmailSchema
     fxa: Optional[FirefoxAccountsSchema] = None
     mofo: Optional[MozillaFoundationSchema] = None
-    newsletters: List[NewsletterSchema] = []
-    waitlists: List[WaitlistSchema] = []
+    newsletters: List[NewsletterTableSchema] = []
+    waitlists: List[WaitlistTableSchema] = []
     products: List[ProductBaseSchema] = []
 
     @classmethod
@@ -164,7 +165,24 @@ class ContactSchema(ComparableBase):
         fields = {
             "newsletters": {
                 "description": "List of newsletters for which the contact is or was subscribed",
-                "example": [{"name": "firefox-welcome"}, {"name": "mozilla-welcome"}],
+                "example": [
+                    {
+                        "name": "firefox-welcome",
+                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                        "email_id": EmailSchema.schema()["properties"]["email_id"][
+                            "example"
+                        ],
+                    },
+                    {
+                        "name": "mozilla-welcome",
+                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                        "email_id": EmailSchema.schema()["properties"]["email_id"][
+                            "example"
+                        ],
+                    },
+                ],
             },
             "waitlists": {
                 "description": "List of waitlists for which the contact is or was subscribed",
@@ -172,14 +190,29 @@ class ContactSchema(ComparableBase):
                     {
                         "name": "example-product",
                         "fields": {"geo": "fr", "platform": "win64"},
+                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                        "email_id": EmailSchema.schema()["properties"]["email_id"][
+                            "example"
+                        ],
                     },
                     {
                         "name": "relay",
                         "fields": {"geo": "fr"},
+                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                        "email_id": EmailSchema.schema()["properties"]["email_id"][
+                            "example"
+                        ],
                     },
                     {
                         "name": "vpn",
                         "fields": {"geo": "fr", "platform": "ios,mac"},
+                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                        "email_id": EmailSchema.schema()["properties"]["email_id"][
+                            "example"
+                        ],
                     },
                 ],
             },
@@ -198,21 +231,6 @@ class ContactSchema(ComparableBase):
             primary_email=getattr(self.email, "primary_email", None),
             sfdc_id=getattr(self.email, "sfdc_id", None),
         )
-
-    def find_default_fields(self) -> Set[str]:
-        """Return names of fields that contain default values only"""
-        default_fields = set()
-        if hasattr(self, "amo") and self.amo and self.amo.is_default():
-            default_fields.add("amo")
-        if hasattr(self, "fxa") and self.fxa and self.fxa.is_default():
-            default_fields.add("fxa")
-        if hasattr(self, "mofo") and self.mofo and self.mofo.is_default():
-            default_fields.add("mofo")
-        if all(n.is_default() for n in self.newsletters):
-            default_fields.add("newsletters")
-        if all(n.is_default() for n in self.waitlists):
-            default_fields.add("waitlists")
-        return default_fields
 
 
 class ContactInBase(ComparableBase):

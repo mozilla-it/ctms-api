@@ -1,6 +1,7 @@
-"""Tests for ctms/bin/acoustic.py resync"""
+from uuid import UUID
 
-from ctms.bin.acoustic import do_resync
+from ctms.bin.acoustic import do_dump, do_resync
+from ctms.crud import get_all_contacts_from_ids
 from ctms.models import PendingAcousticRecord
 
 
@@ -49,3 +50,18 @@ def test_main_force_resync_by_reset_retry(dbsession, minimal_contact, maximal_co
         )
         == 0
     )
+
+
+def test_csv_dump(dbsession, sample_contacts, tmpdir):
+    uuids = [contact[0] for contact in sample_contacts.values()]
+    contacts = get_all_contacts_from_ids(dbsession, email_ids=uuids)
+    output_path = tmpdir.join("output.csv")
+
+    with open(output_path, "w", encoding="utf-8") as output:
+        do_dump(dbsession, contacts, output)
+
+    with open(output_path, "r", encoding="utf-8") as produced:
+        lines = produced.readlines()
+
+    assert len(lines) == len(uuids) + 1  # with header line
+    assert len(lines[0].split(",")) >= 52  # remains true if columns are added

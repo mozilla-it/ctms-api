@@ -59,8 +59,7 @@ class WaitlistBase(ComparableBase):
 WaitlistSchema = WaitlistBase
 
 
-class WaitlistInSchema = WaitlistBase
-    """Schema for input data."""
+WaitlistInSchema = WaitlistBase
 
 
 class UpdatedWaitlistInSchema(WaitlistInSchema):
