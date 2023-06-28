@@ -478,6 +478,10 @@ def create_waitlist(
     if waitlist.is_default():
         return None
 
+    # `create_waitlist` uses the `WaitlistInSchema``, which has a `subscribed`` property
+    # this makes sense because we're receiving this payload from Basket, and waitlists
+    # are just newsletters with naming conventions, so it has this property.
+    # Our Waitlist ORM model currently doesn't have an update property, so we need to remove it.
     db_waitlist = Waitlist(email_id=email_id, **waitlist.dict(exclude={"subscribed"}))
     db.add(db_waitlist)
     return db_waitlist
