@@ -478,11 +478,7 @@ def create_waitlist(
     if waitlist.is_default():
         return None
 
-    attrs = waitlist.dict()
-    if "subscribed" in attrs:
-        del attrs["subscribed"]
-
-    db_waitlist = Waitlist(email_id=email_id, **attrs)
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict(exclude={"subscribed"}))
     db.add(db_waitlist)
     return db_waitlist
 
