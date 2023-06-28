@@ -240,14 +240,12 @@ class CTMSToAcousticService:
             }
 
             if newsletter.name in newsletters_mapping:
-                newsletter_dict = newsletter.dict()
-                _today = datetime.date.today().isoformat()
-                newsletter_template["create_timestamp"] = newsletter_dict.get(
-                    "create_timestamp", _today
-                )
-                newsletter_template["update_timestamp"] = newsletter_dict.get(
-                    "update_timestamp", _today
-                )
+                newsletter_template[
+                    "create_timestamp"
+                ] = newsletter.create_timestamp.date().isoformat()
+                newsletter_template[
+                    "update_timestamp"
+                ] = newsletter.update_timestamp.date().isoformat()
                 newsletter_template["newsletter_name"] = newsletter.name
                 newsletter_template["newsletter_unsub_reason"] = newsletter.unsub_reason
                 _source = newsletter.source

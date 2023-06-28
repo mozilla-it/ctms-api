@@ -24,7 +24,12 @@ from .fxa import (
     UpdatedFirefoxAccountsInSchema,
 )
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import NewsletterInSchema, NewsletterSchema, UpdatedNewsletterInSchema
+from .newsletter import (
+    NewsletterInSchema,
+    NewsletterSchema,
+    NewsletterTableSchema,
+    UpdatedNewsletterInSchema,
+)
 from .product import ProductBaseSchema
 from .stripe_customer import (
     StripeCustomerCreateSchema,
@@ -68,6 +73,7 @@ from .waitlist import (
     VpnWaitlistInSchema,
     WaitlistInSchema,
     WaitlistSchema,
+    WaitlistTableSchema,
 )
 from .web import (
     BadRequestResponse,

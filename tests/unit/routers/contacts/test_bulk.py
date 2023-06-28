@@ -118,6 +118,15 @@ def test_get_ctms_bulk_by_timerange(
     # does not have them.
     del dict_contact_actual["vpn_waitlist"]
     del dict_contact_actual["relay_waitlist"]
+    # The reponse does not show `email_id` and timestamp fields.
+    for newsletter in dict_contact_expected["newsletters"]:
+        del newsletter["email_id"]
+        del newsletter["create_timestamp"]
+        del newsletter["update_timestamp"]
+    for waitlist in dict_contact_expected["waitlists"]:
+        del waitlist["email_id"]
+        del waitlist["create_timestamp"]
+        del waitlist["update_timestamp"]
 
     assert dict_contact_expected == dict_contact_actual
     assert results["next"] is not None

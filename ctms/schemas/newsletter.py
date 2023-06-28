@@ -1,9 +1,13 @@
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
-from pydantic import AnyUrl, Field
+from pydantic import UUID4, AnyUrl, Field
 
 from .base import ComparableBase
+from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
+
+if TYPE_CHECKING:
+    from ctms.models import Newsletter
 
 
 class NewsletterBase(ComparableBase):
@@ -44,6 +48,24 @@ class NewsletterBase(ComparableBase):
 # No need to change anything, just extend if you want to
 NewsletterInSchema = NewsletterBase
 NewsletterSchema = NewsletterBase
+
+
+class NewsletterTableSchema(NewsletterBase):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
+    )
+    create_timestamp: datetime = Field(
+        description="Newsletter data creation timestamp",
+        example="2020-12-05T19:21:50.908000+00:00",
+    )
+    update_timestamp: datetime = Field(
+        description="Newsletter data update timestamp",
+        example="2021-02-04T15:36:57.511000+00:00",
+    )
+
+    class Config:
+        extra = "forbid"
 
 
 class UpdatedNewsletterInSchema(NewsletterInSchema):

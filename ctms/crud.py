@@ -477,11 +477,12 @@ def create_waitlist(
 ) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
-    if not isinstance(waitlist, WaitlistInSchema):
-        # Sample data are used as both input (`WaitlistInSchema`) and internal (`WaitlistSchema`)
-        # representations.
-        waitlist = WaitlistInSchema(**waitlist.dict())
-    db_waitlist = Waitlist(email_id=email_id, **waitlist.orm_dict())
+
+    # `create_waitlist` uses the `WaitlistInSchema``, which has a `subscribed`` property
+    # this makes sense because we're receiving this payload from Basket, and waitlists
+    # are just newsletters with naming conventions, so it has this property.
+    # Our Waitlist ORM model currently doesn't have an update property, so we need to remove it.
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict(exclude={"subscribed"}))
     db.add(db_waitlist)
     return db_waitlist
 
@@ -517,7 +518,10 @@ def create_or_update_waitlists(
 
 
 def create_contact(
-    db: Session, email_id: UUID4, contact: ContactInSchema, metrics: Optional[Dict]
+    db: Session,
+    email_id: UUID4,
+    contact: ContactInSchema,
+    metrics: Optional[Dict],
 ):
     create_email(db, contact.email)
     if contact.amo:
