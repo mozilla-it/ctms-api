@@ -266,7 +266,7 @@ def do_dump(dbsession, contacts, output: TextIO):
             main_table_row, _, _ = service.convert_ctms_to_acoustic(
                 contact, main_fields, newsletters_mapping
             )
-            columns |= set(main_table_row.keys())
+            columns.update(set(main_table_row.keys()))
             tmpfile.write(json.dumps(main_table_row) + "\n")
         tmpfile.flush()  # does not hurt.
 
