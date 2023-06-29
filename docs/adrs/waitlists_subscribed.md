@@ -36,7 +36,7 @@ In order to choose our solution we considered the following criteria:
 
 ## Decision Outcome
 
-Chosen option: *Option 1* because it has the lowest cost and complexity. Although it does not match entirely the waiting list concept, it will be understood by stakeholders since it follows Basket. It is indeed a missed opportunity to revamp the synchronization process using a queue, but it should be reasonably easy to migrate both newsletters and waitlists together when the time comes.
+Chosen option: *Option 1* because it has the best ratio complexity/robustness. Although it does not match entirely the waiting list concept, it will be understood by stakeholders since it follows Basket. It is indeed a missed opportunity to revamp the synchronization process using a queue, but it should be reasonably easy to migrate both newsletters and waitlists together when the time comes.
 
 ## Pros and Cons of the Options
 
@@ -50,11 +50,13 @@ This is also known as *soft deletion*.
 
 This mimics what currently exists for newsletters.
 
-**Cost**: Low
+**Cost**: Mid
 
-This was implemented in a matter of hours in pull-request #707.
+The change was implemented in CTMS in a matter of hours in pull-request #707.
 
-If we look at possible evolutions of the synchronization code of CTMS, like the synchronization queue presented in *Option 4*, we could consider it regrettable to mimic newsletters. However, this evolution is not officially planned yet, and may never happen. Plus, since it will be the exact same approach as for newsletters, migrating both together to the new solution won't represent much additional effort, compared to just migrating newsletters.
+The cost is *Mid* and not *Low*, because it requires a tiny change in Basket to be implemented and deployed (filter the waitlist objects with `subscribed=true` in CTMS responses), and thus requires some coordination efforts.
+
+In parallel, if we look at possible evolutions of the synchronization code of CTMS, like the synchronization queue presented in *Option 4*, we could consider it regrettable to mimic newsletters. However, this evolution is not officially planned yet, and may never happen. Plus, since it will be the exact same approach as for newsletters, migrating both together to the new solution won't represent much additional effort, compared to just migrating newsletters.
 
 **Robustness**: High
 
