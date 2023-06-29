@@ -10,9 +10,9 @@ Since #492, onboarding new waitlists does not require any code change, redeploy,
 
 The waitlists data sent by Basket is stored without any intervention on the CMTS side.
 
-For the Basket service, waitlists are a specific kind of newsletter. For this reason, in order to remove a user from a waitlist, Basket will mimic what is done for newsletters and send the field `"subscribed": false`.
+For the Basket service, waitlists are a specific kind of newsletter. For this reason, in order to remove a user from a waitlist, Basket will mimic what is done for newsletters and send the field `"subscribed": false` and an optional `unsub_reason` text field.
 
-We currently don't store this incoming field in the database, and use it just to delete existing waitlist records when set to `false`.
+We currently don't store these incoming fields in the database, and we just use the flag to delete existing waitlist records when set to `false`.
 
 For the synchronization of waitlists to Acoustic (#561), we have to implement this waitlist unsubscription situation.
 
@@ -42,7 +42,7 @@ Chosen option: *Option 1* because it has the best ratio complexity/robustness. A
 
 ### Option 1 - Add subscribed field
 
-This solution consists in adding the `subscribed : boolean` field to the waitlist table in the database, and turn it to `false` when Basket does.
+This solution consists in adding the `subscribed : boolean` field to the waitlist table in the database, and turn it to `false` when Basket does. The `unsub_reason` text field holds an optional text.
 
 This is also known as *soft deletion*.
 
@@ -61,6 +61,7 @@ In parallel, if we look at possible evolutions of the synchronization code of CT
 **Robustness**: High
 
 When synchronizing with Acoustic, we would simply delete waitlists entries where `subscribed` is `false`. It does not affect existing waitlists entries where `subscribed` is `true`. The operation is idempotent and can be interrupted and retried without impact.
+If we want to store the `subscribed` column in Acoustic, like we plan to do for newsletters in #562, we just upsert all entries.
 
 **Adaptability**: Low
 
@@ -68,7 +69,6 @@ We introduce this notion as a consequence of Basket modelling, and it may skew t
 
 Conceptually, the notion of unsubscription for a waitlist isn't really adequate. Users join and may leave waiting lists. They don't really "subscribe" to a waitlist.
 Although members of the waitlist may receive announcements of product availability or be invited to join a newsletter, waitlists are not implicitly turned into newsletters from which users have to unsubscribe.
-
 
 ### Option 2 - Reset before add
 
@@ -88,10 +88,11 @@ This approach is fragile, because it would require at least two API calls.
 It would double the amount of requests sent to Acoustic, and will slow down synchronization.
 And it won't be transactional: if the deletion step works, but the addition part can never go through, we loose all records on the Acoustic side.
 
-**Adaptability**: High
+**Adaptability**: Mid
 
 Acoustic just lists the users's waitlists. This matches reality and stakeholders notions.
 
+With this solution, the text with the unsubscribe reason isn't stored in CTMS nor Acoustic (although the form on the Basket would show it).
 
 ### Option 3 - Fetch and compare
 
@@ -111,10 +112,11 @@ This approach is robust in terms of data integrity. We are not exposed to TOCTOU
 
 It would double the amount of requests sent to Acoustic, and will slow down synchronization. Which makes the system less robust. Hence *Mid* instead of *High* on this criteria.
 
-**Adaptability**: High
+**Adaptability**: Mid
 
 Acoustic just lists the users's waitlists. This matches reality and stakeholders notions.
 
+With this solution, the text with the unsubscribe reason isn't stored in CTMS nor Acoustic (although the form on the Basket would show it).
 
 ### Option 4 - Implement deletion queue
 
@@ -129,6 +131,8 @@ key: {"email_id": "F9601A02-09C0-4C38-9C61-DC8F9F3CB79F", "name": "vpn"}
 ```
 
 During the synchronization process, we process this queue, and remove entries from it, only if the deletion was successful on the Acoustic side.
+
+Note: If the text with the unsubscribe reason would have to be stored in CTMS and Acoustic, we would combine this with *Option 1*, and store an `update` operation in the synchronization queue.
 
 **Complexity**: Mid
 
@@ -145,3 +149,5 @@ The additions and removals from the queue are transactional with the reception a
 **Adaptability**: High
 
 Acoustic just lists the users's waitlists. This matches reality and stakeholders notions.
+
+Combining with soft-deletion and storing the unsubscribe reason is possible if necessary, and does not fundamentally change the design.
