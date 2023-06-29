@@ -158,6 +158,18 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
             AmoAccountFactory(email=self, **kwargs)
 
 
+class PendingAcousticRecordFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.PendingAcousticRecord
+
+    retry = 0
+    last_error = None
+    create_timestamp = factory.LazyFunction(lambda: datetime.now(UTC))
+    update_timestamp = factory.LazyAttribute(lambda obj: obj.create_timestamp)
+
+    email = factory.SubFactory(factory=EmailFactory)
+
+
 class StripeCustomerFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.StripeCustomer

@@ -169,6 +169,7 @@ def dbsession(connection):
 # Database models
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
+register(factories.models.PendingAcousticRecordFactory)
 register(factories.models.StripeCustomerFactory)
 register(factories.models.StripeInvoiceFactory)
 register(factories.models.StripeInvoiceLineItemFactory)
