@@ -1,3 +1,4 @@
+import logging
 import os
 from uuid import uuid4
 
@@ -22,8 +23,19 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-
 retry_until_pass = backoff.on_exception(backoff.expo, AssertionError)
+
+# Show the failing retried assertions in console.
+backoff_logger = logging.getLogger("backoff")
+backoff_logger.addHandler(logging.StreamHandler())
+
+
+@pytest.fixture(scope="session", autouse=True)
+def adjust_backoff_logger(pytestconfig):
+    # Detect whether pytest was run using `-v` or `-vv` and logging.
+    backoff_logger.setLevel(
+        logging.INFO if pytestconfig.getoption("verbose") > 0 else logging.ERROR
+    )
 
 
 @pytest.fixture(scope="session")
