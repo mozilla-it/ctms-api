@@ -1,24 +1,35 @@
 import pytest
 
 from ctms.crud import (
-    create_contact,
     create_or_update_contact,
     get_email,
     get_waitlists_by_email_id,
     update_contact,
 )
-from ctms.schemas import ContactPatchSchema, NewsletterInSchema, WaitlistInSchema
+from ctms.schemas import ContactPatchSchema, NewsletterInSchema
+from ctms.schemas.contact import ContactSchema
+from ctms.schemas.newsletter import NewsletterTableSchema
+from ctms.schemas.waitlist import WaitlistTableSchema
+from tests.unit.conftest import create_full_contact
 
 
 @pytest.fixture
-def minimal_contact_with_relay(dbsession, minimal_contact_data):
+def minimal_contact_with_relay(dbsession, minimal_contact_data: ContactSchema):
     email_id = minimal_contact_data.email.email_id
     contact = minimal_contact_data.copy(
         update={
-            "waitlists": [WaitlistInSchema(name="relay", fields={"geo": "es"})],
+            "waitlists": [
+                WaitlistTableSchema(
+                    email_id=email_id,
+                    name="relay",
+                    fields={"geo": "es"},
+                    create_timestamp="2014-01-22T15:24:00.000+0000",
+                    update_timestamp="2020-01-22T15:24:00.000+0000",
+                )
+            ],
         }
     )
-    create_contact(dbsession, email_id, contact, metrics={})
+    create_full_contact(dbsession, contact)
     dbsession.commit()
     return contact
 
@@ -29,12 +40,24 @@ def minimal_contact_with_relay_phone(dbsession, minimal_contact_data):
     contact = minimal_contact_data.copy(
         update={
             "waitlists": [
-                WaitlistInSchema(name="relay-vpn", fields={"geo": "es"}),
-                WaitlistInSchema(name="relay-phone-masking", fields={"geo": "es"}),
+                WaitlistTableSchema(
+                    email_id=email_id,
+                    name="relay-vpn",
+                    fields={"geo": "es"},
+                    create_timestamp="2014-01-22T15:24:00.000+0000",
+                    update_timestamp="2020-01-22T15:24:00.000+0000",
+                ),
+                WaitlistTableSchema(
+                    email_id=email_id,
+                    name="relay-phone-masking",
+                    fields={"geo": "es"},
+                    create_timestamp="2014-01-22T15:24:00.000+0000",
+                    update_timestamp="2020-01-22T15:24:00.000+0000",
+                ),
             ],
         }
     )
-    create_contact(dbsession, email_id, contact, metrics={})
+    create_full_contact(dbsession, contact)
     dbsession.commit()
     return contact
 
@@ -47,12 +70,22 @@ def test_relay_waitlist_created_on_newsletter_subscribe(
         update={
             "relay_waitlist": {"geo": "fr"},
             "newsletters": [
-                NewsletterInSchema(name="amazing-product"),
-                NewsletterInSchema(name="relay-phone-masking-waitlist"),
+                NewsletterTableSchema(
+                    email_id=email_id,
+                    name="amazing-product",
+                    create_timestamp="2014-01-22T15:24:00.000+0000",
+                    update_timestamp="2020-01-22T15:24:00.000+0000",
+                ),
+                NewsletterTableSchema(
+                    email_id=email_id,
+                    name="relay-phone-masking-waitlist",
+                    create_timestamp="2014-01-22T15:24:00.000+0000",
+                    update_timestamp="2020-01-22T15:24:00.000+0000",
+                ),
             ],
         }
     )
-    create_contact(dbsession, email_id, contact, metrics={})
+    create_full_contact(dbsession, contact)
     dbsession.flush()
 
     waitlists_by_name = {
@@ -71,7 +104,12 @@ def test_relay_waitlist_created_on_newsletter_updated(
         update={
             "relay_waitlist": {"geo": "es"},
             "newsletters": [
-                NewsletterInSchema(name="relay-phone-masking-waitlist"),
+                NewsletterTableSchema(
+                    email_id=email_id,
+                    name="relay-phone-masking-waitlist",
+                    create_timestamp="2014-01-22T15:24:00.000+0000",
+                    update_timestamp="2020-01-22T15:24:00.000+0000",
+                ),
             ],
         }
     )

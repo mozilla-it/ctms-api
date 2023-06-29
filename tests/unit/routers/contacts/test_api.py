@@ -1,5 +1,5 @@
 """Unit tests for cross-API functionality"""
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Set, Tuple
 from uuid import uuid4
 
 import pytest
@@ -155,6 +155,22 @@ def _compare_written_contacts(
     assert saved_contact.idempotent_equal(sample)
 
 
+def find_default_fields(contact: ContactSchema) -> Set[str]:
+    """Return names of fields that contain default values only"""
+    default_fields = set()
+    if hasattr(contact, "amo") and contact.amo and contact.amo.is_default():
+        default_fields.add("amo")
+    if hasattr(contact, "fxa") and contact.fxa and contact.fxa.is_default():
+        default_fields.add("fxa")
+    if hasattr(contact, "mofo") and contact.mofo and contact.mofo.is_default():
+        default_fields.add("mofo")
+    if all(n.is_default() for n in contact.newsletters):
+        default_fields.add("newsletters")
+    if all(n.is_default() for n in contact.waitlists):
+        default_fields.add("waitlists")
+    return default_fields
+
+
 @pytest.mark.parametrize("post_contact", SAMPLE_CONTACT_PARAMS, indirect=True)
 def test_post_get_put(client, post_contact, put_contact, update_fetched):
     """This encompasses the entire expected flow for basket"""
@@ -164,9 +180,18 @@ def test_post_get_put(client, post_contact, put_contact, update_fetched):
     resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == 200
 
-    fetched = ContactSchema(**resp.json())
+    # TODO: remove this once we remove support of `vpn_waitlist` and
+    # `relay_waitlist` as input.
+    # If we don't strip these two fields before turning the data into
+    # a `ContactInSchema`, they will create waitlist objects.
+    without_alias_fields = {
+        k: v
+        for k, v in resp.json().items()
+        if k not in ("vpn_waitlist", "relay_waitlist")
+    }
+    fetched = ContactInSchema(**without_alias_fields)
     update_fetched(fetched)
-    new_default_fields = fetched.find_default_fields()
+    new_default_fields = find_default_fields(fetched)
     # We set new_default_fields here because the returned response above
     # _includes_ defaults for many fields and we want to not write
     # them when the record is PUT again

@@ -7,7 +7,7 @@ from structlog.testing import capture_logs
 
 from ctms import acoustic_service
 from ctms.acoustic_service import CTMSToAcousticService
-from ctms.crud import get_contact_by_email_id
+from ctms.crud import get_contact_by_email_id, get_newsletters_by_email_id
 from ctms.schemas.contact import ContactSchema
 
 CTMS_ACOUSTIC_MAIN_TABLE_ID = "1"
@@ -101,6 +101,32 @@ def test_ctms_to_acoustic_newsletters(
         "maker-party",
         "mozilla-learning-network",
     ]
+
+
+def test_ctms_to_acoustic_newsletter_timestamps(
+    dbsession,
+    base_ctms_acoustic_service,
+    minimal_contact,
+    main_acoustic_fields,
+    acoustic_newsletters_mapping,
+):
+    # Set timestamps on DB objects.
+    newsletters = get_newsletters_by_email_id(dbsession, minimal_contact.email.email_id)
+    app_dev_nl = [nl for nl in newsletters if nl.name == "app-dev"][0]
+    app_dev_nl.create_timestamp = "1982-05-08T13:20"
+    app_dev_nl.update_timestamp = "2023-06-19T12:17"
+    dbsession.add(app_dev_nl)
+    dbsession.commit()
+    # Reload contact from DB.
+    minimal_contact = get_contact_by_email_id(dbsession, minimal_contact.email.email_id)
+
+    (_, newsletters_rows, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+    )
+
+    app_dev_row = [r for r in newsletters_rows if r["newsletter_name"] == "app-dev"][0]
+    assert app_dev_row["create_timestamp"] == "1982-05-08"
+    assert app_dev_row["update_timestamp"] == "2023-06-19"
 
 
 def test_ctms_to_acoustic_waitlists_minimal(
