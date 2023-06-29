@@ -188,19 +188,6 @@ def test_pending_sync(client, minimal_contact, registry):
     assert_pending_acoustic_sync_inc(registry)
 
 
-def test_patch_relay_waitlist_legacy_reports_metric(client, minimal_contact, registry):
-    email_id = minimal_contact.email.email_id
-    patch_data = {"waitlists": [{"name": "relay", "fields": {"geo": "fr"}}]}
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
-
-    patch_data = {"relay_waitlist": {"geo": "fr"}}
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 1
-
-
 @pytest.mark.parametrize(
     "email_id,status_code",
     (

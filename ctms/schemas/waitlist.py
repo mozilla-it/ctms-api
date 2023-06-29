@@ -13,12 +13,6 @@ class WaitlistBase(ComparableBase):
 
     This is meant to serve as the common and generic schemas to
     all waitlists.
-
-    In this implementation phase, it cohabits with individual (non-generic)
-    schemas of Relay and VPN.
-
-    TODO waitlist: once Basket leverages the `waitlists` field, we can drop
-    `RelayWaitlistBase` and `VpnWaitlistBase`.
     """
 
     name: str = Field(
@@ -101,8 +95,10 @@ class WaitlistTableSchema(WaitlistBase):
 
 def validate_waitlist_fields(name: str, fields: dict):
     """
-    Once waitlists will have been migrated to a full N-N relationship,
-    this will be the only remaining VPN specific piece of code.
+    This is the only place where specific code has
+    to be added for custom validation of extra waitlist
+    fields.
+    In the future, a JSON schema for each waitlist could be put in the database instead.
     """
     if name == "relay":
 
@@ -141,53 +137,9 @@ def validate_waitlist_fields(name: str, fields: dict):
         VPNFieldsSchema(**fields)
 
 
-def validate_waitlist_newsletters(values):
+class RelayWaitlistSchema(ComparableBase):
     """
-    This helper validates that when subscribing to `relay-*-waitlist`
-    newsletters, the country is provided.
-    # TODO waitlist: remove once Basket leverages the `waitlists` field.
-    """
-    if "newsletters" not in values:
-        return values
-
-    newsletters = values["newsletters"]
-    if not isinstance(newsletters, list):
-        return values
-
-    relay_newsletter_found = False
-    for newsletter in newsletters:
-        if newsletter.subscribed and newsletter.name.startswith("relay-"):
-            relay_newsletter_found = True
-            break
-
-    if not relay_newsletter_found:
-        return values
-
-    # If specified using the legacy `relay_waitlist`
-    relay_country = None
-    relay_waitlist = values.get("relay_waitlist")
-    if relay_waitlist:
-        relay_country = relay_waitlist.geo
-    elif "waitlists" in values:
-        # If specified using the `waitlists` field (unlikely, but in our tests we do)
-        waitlists = values["waitlists"]
-        if isinstance(waitlists, list):
-            for waitlist in waitlists:
-                if waitlist.name == "relay":
-                    relay_country = waitlist.fields.get("geo")
-
-    # Relay country not specified, check if a relay newsletter is being subscribed.
-    if not relay_country:
-        raise ValueError("Relay country missing")
-
-    return values
-
-
-class RelayWaitlistBase(ComparableBase):
-    """
-    The Mozilla Relay Waitlist schema.
-
-    TODO waitlist: remove once Basket leverages the `waitlists` field.
+    The Mozilla Relay Waitlist schema for the read-only `relay_waitlist` field.
     """
 
     geo: Optional[str] = Field(
@@ -201,19 +153,9 @@ class RelayWaitlistBase(ComparableBase):
         orm_mode = True
 
 
-# No need to change anything, just extend if you want to
-RelayWaitlistInSchema = RelayWaitlistBase
-RelayWaitlistSchema = RelayWaitlistBase
-
-
-class VpnWaitlistBase(ComparableBase):
+class VpnWaitlistSchema(ComparableBase):
     """
-    The Mozilla VPN Waitlist schema.
-
-    This was previously the Firefox Private Network (fpn) waitlist data,
-    with a similar purpose.
-
-    TODO waitlist: remove once Basket leverages the `waitlists` field.
+    The Mozilla VPN Waitlist schema for the read-only `vpn_waitlist` field
     """
 
     geo: Optional[str] = Field(
@@ -234,8 +176,3 @@ class VpnWaitlistBase(ComparableBase):
 
     class Config:
         orm_mode = True
-
-
-# No need to change anything, just extend if you want to
-VpnWaitlistInSchema = VpnWaitlistBase
-VpnWaitlistSchema = VpnWaitlistBase

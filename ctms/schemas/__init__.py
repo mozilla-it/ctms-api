@@ -68,9 +68,7 @@ from .stripe_subscription_item import (
     StripeSubscriptionItemUpsertSchema,
 )
 from .waitlist import (
-    RelayWaitlistInSchema,
     UpdatedWaitlistInSchema,
-    VpnWaitlistInSchema,
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,
