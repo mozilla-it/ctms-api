@@ -1,11 +1,4 @@
-import os
-from uuid import uuid4
-
 import pytest
-from alembic import command as alembic_command
-from alembic import config as alembic_config
-from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker
 
 from ctms.crud import (
     create_contact,
@@ -15,7 +8,6 @@ from ctms.crud import (
     update_contact,
 )
 from ctms.schemas import ContactPatchSchema, NewsletterInSchema, WaitlistInSchema
-from tests.unit.conftest import APP_FOLDER
 
 
 @pytest.fixture
