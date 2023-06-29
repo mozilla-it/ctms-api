@@ -32,13 +32,13 @@ class CaseInsensitiveComparator(Comparator):  # pylint: disable=abstract-method
 
 class TimestampMixin:
     @declared_attr
-    def create_timestamp(cls):
+    def create_timestamp(cls):  # pylint: disable=no-self-argument
         return Column(
             TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
         )
 
     @declared_attr
-    def update_timestamp(cls):
+    def update_timestamp(cls):  # pylint: disable=no-self-argument
         return Column(
             TIMESTAMP(timezone=True),
             nullable=False,
