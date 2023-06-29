@@ -387,9 +387,6 @@ class CTMSResponse(BaseModel):
             if isinstance(waitlist, dict):
                 # TODO: figure out why dict from `response_model` decorators param in app.py)
                 waitlist = WaitlistSchema(**waitlist)
-            if isinstance(waitlist, WaitlistInSchema):
-                # Many tests instantiates CTMSResponse with `WaitlistInSchema` (input schema).
-                waitlist = WaitlistSchema(**waitlist.dict())
             if waitlist.name == "vpn":
                 values["vpn_waitlist"] = VpnWaitlistSchema(
                     geo=waitlist.fields.get("geo"),
