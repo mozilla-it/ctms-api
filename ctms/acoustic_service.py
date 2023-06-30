@@ -296,14 +296,6 @@ class CTMSToAcousticService:
 
         # Waitlist relational table
         for waitlist in contact_waitlists:
-            # This shoud not be necessary, since here we should always have
-            # contact data read from DB, thus always with create/update timestamps.
-            # The only reason to have this is that test fixtures do not provide the
-            # right schema instance (should be `WaitlistTableSchema`)
-            waitlist_dict = waitlist.dict()
-            _now = datetime.date.today().isoformat()
-            create_timestamp = waitlist_dict.get("create_timestamp", _now)
-            update_timestamp = waitlist_dict.get("update_timestamp", _now)
             waitlist_row = {
                 "email_id": contact_email_id,
                 "waitlist_name": waitlist.name,
@@ -311,8 +303,8 @@ class CTMSToAcousticService:
                 "subscribed": True,
                 "unsub_reason": "",
                 # Timestamps
-                "create_timestamp": create_timestamp,
-                "update_timestamp": update_timestamp,
+                "create_timestamp": waitlist.create_timestamp.date().isoformat(),
+                "update_timestamp": waitlist.update_timestamp.date().isoformat(),
             }
             # Extra optional fields (eg. "geo", "platform", ...)
             for field in waitlist_fields:
