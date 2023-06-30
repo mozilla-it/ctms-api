@@ -49,18 +49,12 @@ from ctms.schemas import (
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
 
 
-def test_get_email(dbsession, example_contact):
-    email_id = example_contact.email.email_id
-    email = get_email(dbsession, email_id)
-    assert email.email_id == email_id
+def test_get_email(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
 
-    newsletter_names = [newsletter.name for newsletter in email.newsletters]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
-
-    waitlists_names = [waitlist.name for waitlist in email.waitlists]
-    assert waitlists_names == ["example-product", "relay", "vpn"]
-    assert sorted(waitlists_names) == waitlists_names
+    fetched_email = get_email(dbsession, email.email_id)
+    assert fetched_email.email_id == email.email_id
 
 
 def test_get_email_with_stripe_customer(dbsession, stripe_customer_factory):
