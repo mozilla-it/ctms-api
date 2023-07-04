@@ -1,7 +1,7 @@
 # Waitlists `subscribed` field
 
-* Status: proposed
-* Deciders: <CTMS stakeholders> + <Basket stakeholders>
+* Status: accepted
+* Deciders: <CTMS stakeholders>
 * Date: June 29, 2023
 
 ## Context and Problem Statement
@@ -32,11 +32,11 @@ In order to choose our solution we considered the following criteria:
 1. [Option 1 - Add subscribed field](#option-1---add-subscribed-field)
 2. [Option 2 - Reset before add](#option-2---reset-before-add)
 3. [Option 3 - Fetch and compare](#option-3--fetch-and-compare)
-4. [Option 4 - Implement deletion queue](#option-3---implement-deletion-queue)
+4. [Option 4 - Implement deletion queue](#option-4---implement-deletion-queue)
 
 ## Decision Outcome
 
-Chosen option: *Option 1* because it has the best ratio complexity/robustness. Although it does not match entirely the waiting list concept, it will be understood by stakeholders since it follows Basket. It is indeed a missed opportunity to revamp the synchronization process using a queue, but it should be reasonably easy to migrate both newsletters and waitlists together when the time comes.
+Chosen option: *Option 1* because it is most pragmatic decision. And it has the best ratio complexity/robustness. Although it does not match entirely the waiting list concept, it will be understood by stakeholders since it follows Basket. It is indeed a missed opportunity to revamp the synchronization process using a queue, but it should be reasonably easy to migrate both newsletters and waitlists together when the time comes.
 
 ## Pros and Cons of the Options
 
