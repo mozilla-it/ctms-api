@@ -113,8 +113,9 @@ def get_all_contacts_from_ids(db, email_ids):
 
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     filters = [
+        # pylint: disable-next=comparison-with-callable
         Email.update_timestamp >= start_time,
-        Email.update_timestamp < end_time,
+        Email.update_timestamp < end_time,  # pylint: disable=comparison-with-callable
         Email.email_id != after_email_uuid,
     ]
     if mofo_relevant is False:
@@ -263,6 +264,7 @@ def _acoustic_sync_base_query(db: Session, end_time: datetime, retry_limit: int 
     return (
         db.query(PendingAcousticRecord)
         .filter(
+            # pylint: disable-next=comparison-with-callable
             PendingAcousticRecord.update_timestamp < end_time,
             PendingAcousticRecord.retry < retry_limit,
         )
