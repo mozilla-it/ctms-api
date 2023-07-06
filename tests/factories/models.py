@@ -121,6 +121,9 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
     double_opt_in = False
     has_opted_out_of_email = False
 
+    create_timestamp = factory.LazyFunction(lambda: datetime.now(timezone.utc))
+    update_timestamp = factory.LazyAttribute(lambda obj: obj.create_timestamp)
+
     @factory.post_generation
     def newsletters(self, create, extracted, **kwargs):
         if not create:
