@@ -46,7 +46,7 @@ services:
       - 8080:8080
   basket:
     profiles: [integration-test]
-    image: mozmeao/basket
+    image: mozmeao/basket:2023-04-24
     env_file:
       - ./tests/integration/basket.env
     command:
