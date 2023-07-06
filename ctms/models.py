@@ -17,9 +17,10 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.functions import func, now
+from sqlalchemy.sql.functions import func
 
 from .database import Base
 
@@ -29,7 +30,26 @@ class CaseInsensitiveComparator(Comparator):  # pylint: disable=abstract-method
         return func.lower(self.__clause_element__()) == func.lower(other)
 
 
-class Email(Base):
+class TimestampMixin:
+    @declared_attr
+    def create_timestamp(cls):  # pylint: disable=no-self-argument
+        return Column(
+            TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
+        )
+
+    @declared_attr
+    def update_timestamp(cls):  # pylint: disable=no-self-argument
+        return Column(
+            TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=func.now(),
+            # server_onupdate would be nice to use here, but it's not supported
+            # by Postgres
+            onupdate=func.now(),
+        )
+
+
+class Email(Base, TimestampMixin):
     __tablename__ = "emails"
     __mapper_args__ = {"eager_defaults": True}
 
@@ -45,16 +65,6 @@ class Email(Base):
     double_opt_in = Column(Boolean)
     has_opted_out_of_email = Column(Boolean)
     unsubscribe_reason = Column(Text)
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        onupdate=func.now(),
-        default=func.now(),
-    )
 
     newsletters = relationship(
         "Newsletter", back_populates="email", order_by="Newsletter.name"
@@ -93,7 +103,7 @@ class Email(Base):
     )
 
 
-class Newsletter(Base):
+class Newsletter(Base, TimestampMixin):
     __tablename__ = "newsletters"
 
     id = Column(Integer, primary_key=True)
@@ -105,40 +115,28 @@ class Newsletter(Base):
     source = Column(Text)
     unsub_reason = Column(Text)
 
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
-
     email = relationship("Email", back_populates="newsletters", uselist=False)
 
     __table_args__ = (UniqueConstraint("email_id", "name", name="uix_email_name"),)
 
 
-class Waitlist(Base):
+class Waitlist(Base, TimestampMixin):
     __tablename__ = "waitlists"
 
     id = Column(Integer, primary_key=True)
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     name = Column(String(255), nullable=False)
     source = Column(Text)
+    subscribed = Column(Boolean, nullable=False, default=True)
+    unsub_reason = Column(Text)
     fields = Column(JSON, nullable=False, server_default="'{}'::json")
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
 
     email = relationship("Email", back_populates="waitlists", uselist=False)
 
     __table_args__ = (UniqueConstraint("email_id", "name", name="uix_wl_email_name"),)
 
 
-class FirefoxAccount(Base):
+class FirefoxAccount(Base, TimestampMixin):
     __tablename__ = "fxa"
 
     id = Column(Integer, primary_key=True)
@@ -151,13 +149,6 @@ class FirefoxAccount(Base):
     lang = Column(String(255))
     first_service = Column(String(50))
     account_deleted = Column(Boolean)
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
 
     email = relationship(
         "Email", back_populates="fxa", overlaps="stripe_customer", uselist=False
@@ -184,7 +175,7 @@ class FirefoxAccount(Base):
     __table_args__ = (Index("idx_fxa_primary_email_lower", func.lower(primary_email)),)
 
 
-class AmoAccount(Base):
+class AmoAccount(Base, TimestampMixin):
     __tablename__ = "amo"
 
     id = Column(Integer, primary_key=True)
@@ -201,13 +192,6 @@ class AmoAccount(Base):
     user = Column(Boolean)
     user_id = Column(String(40), index=True)
     username = Column(String(100))
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
 
     email = relationship("Email", back_populates="amo", uselist=False)
 
@@ -230,7 +214,7 @@ class AcousticNewsletterMapping(Base):
     destination = Column(String)
 
 
-class ApiClient(Base):
+class ApiClient(Base, TimestampMixin):
     """An OAuth2 Client"""
 
     __tablename__ = "api_client"
@@ -240,18 +224,8 @@ class ApiClient(Base):
     enabled = Column(Boolean, default=True)
     hashed_secret = Column(String, nullable=False)
 
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
-    update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
-    )
 
-
-class MozillaFoundationContact(Base):
+class MozillaFoundationContact(Base, TimestampMixin):
     __tablename__ = "mofo"
 
     id = Column(Integer, primary_key=True)
@@ -265,19 +239,13 @@ class MozillaFoundationContact(Base):
     email = relationship("Email", back_populates="mofo", uselist=False)
 
 
-class PendingAcousticRecord(Base):
+class PendingAcousticRecord(Base, TimestampMixin):
     __tablename__ = "pending_acoustic"
 
     id = Column(Integer, primary_key=True)
     email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     retry = Column(Integer, nullable=False, default=0)
     last_error = Column(Text, default="")
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
 
     email = relationship("Email", uselist=False)
 
@@ -292,7 +260,7 @@ class StripeBase(Base):
         raise NotImplementedError()
 
 
-class StripeCustomer(StripeBase):
+class StripeCustomer(StripeBase, TimestampMixin):
     __tablename__ = "stripe_customer"
 
     stripe_id = Column(String(255), nullable=False, primary_key=True)
@@ -302,13 +270,6 @@ class StripeCustomer(StripeBase):
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
     deleted = Column(Boolean, nullable=False, default=False)
-
-    create_timestamp = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    update_timestamp = Column(
-        DateTime(timezone=True), nullable=False, onupdate=func.now(), default=func.now()
-    )
 
     email = relationship(
         "Email",
@@ -350,7 +311,7 @@ class StripeCustomer(StripeBase):
         return None
 
 
-class StripePrice(StripeBase):
+class StripePrice(StripeBase, TimestampMixin):
     __tablename__ = "stripe_price"
 
     stripe_id = Column(String(255), nullable=False, primary_key=True)
@@ -362,16 +323,6 @@ class StripePrice(StripeBase):
     recurring_interval = Column(String(5), nullable=True)
     recurring_interval_count = Column(Integer, nullable=True)
     unit_amount = Column(Integer, nullable=True)
-
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
-    update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
-    )
 
     invoice_line_items = relationship(
         "StripeInvoiceLineItem", back_populates="price", uselist=True
@@ -385,7 +336,7 @@ class StripePrice(StripeBase):
         return None
 
 
-class StripeInvoice(StripeBase):
+class StripeInvoice(StripeBase, TimestampMixin):
     __tablename__ = "stripe_invoice"
 
     stripe_id = Column(String(255), nullable=False, primary_key=True)
@@ -397,16 +348,6 @@ class StripeInvoice(StripeBase):
     currency = Column(String(3), nullable=False)
     total = Column(Integer, nullable=False)
     status = Column(String(15), nullable=False)
-
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
-    update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
-    )
 
     customer = relationship(
         "StripeCustomer",
@@ -427,7 +368,7 @@ class StripeInvoice(StripeBase):
         return None
 
 
-class StripeInvoiceLineItem(StripeBase):
+class StripeInvoiceLineItem(StripeBase, TimestampMixin):
     __tablename__ = "stripe_invoice_line_item"
 
     stripe_id = Column(String(255), nullable=False, primary_key=True)
@@ -449,16 +390,6 @@ class StripeInvoiceLineItem(StripeBase):
     stripe_subscription_item_id = Column(String(255), nullable=True)
     amount = Column(Integer, nullable=False)
     currency = Column(String(3), nullable=False)
-
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
-    update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
-    )
 
     invoice = relationship("StripeInvoice", back_populates="line_items", uselist=False)
     price = relationship(
@@ -485,7 +416,7 @@ class StripeInvoiceLineItem(StripeBase):
         return cast(Optional[PythonUUID], self.invoice.get_email_id())
 
 
-class StripeSubscription(StripeBase):
+class StripeSubscription(StripeBase, TimestampMixin):
     __tablename__ = "stripe_subscription"
 
     stripe_id = Column(String(255), nullable=False, primary_key=True)
@@ -501,16 +432,6 @@ class StripeSubscription(StripeBase):
     ended_at = Column(DateTime(timezone=True), nullable=True)
     start_date = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(20), nullable=False)
-
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
-    update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
-    )
 
     customer = relationship(
         "StripeCustomer",
@@ -530,7 +451,7 @@ class StripeSubscription(StripeBase):
         return None
 
 
-class StripeSubscriptionItem(StripeBase):
+class StripeSubscriptionItem(StripeBase, TimestampMixin):
     __tablename__ = "stripe_subscription_item"
 
     stripe_id = Column(String(255), nullable=False, primary_key=True)
@@ -546,16 +467,6 @@ class StripeSubscriptionItem(StripeBase):
     )
 
     stripe_created = Column(DateTime(timezone=True), nullable=False)
-
-    create_timestamp = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=now()
-    )
-    update_timestamp = Column(
-        TIMESTAMP(timezone=True),
-        nullable=False,
-        server_default=now(),
-        server_onupdate=now(),
-    )
 
     subscription = relationship(
         "StripeSubscription", back_populates="subscription_items", uselist=False
