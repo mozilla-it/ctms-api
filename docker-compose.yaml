@@ -67,7 +67,7 @@ services:
       retries: 10
   basket-worker:
     profiles: [integration-test]
-    image: mozmeao/basket
+    image: mozmeao/basket:2023-04-24
     env_file:
       - ./tests/integration/basket.env
     command:
