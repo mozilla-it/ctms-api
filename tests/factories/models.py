@@ -53,6 +53,7 @@ class WaitlistFactory(BaseSQLAlchemyModelFactory):
     name = factory.Sequence(lambda n: f"waitlist-{n}")
     source = factory.Faker("url")
     fields = {}
+    subscribed = True
 
     email = factory.SubFactory(factory="tests.factories.models.EmailFactory")
 

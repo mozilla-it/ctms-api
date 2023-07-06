@@ -1,3 +1,4 @@
+import logging
 import os
 from uuid import uuid4
 
@@ -22,8 +23,19 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-
 retry_until_pass = backoff.on_exception(backoff.expo, AssertionError)
+
+# Show the failing retried assertions in console.
+backoff_logger = logging.getLogger("backoff")
+backoff_logger.addHandler(logging.StreamHandler())
+
+
+@pytest.fixture(scope="session", autouse=True)
+def adjust_backoff_logger(pytestconfig):
+    # Detect whether pytest was run using `-v` or `-vv` and logging.
+    backoff_logger.setLevel(
+        logging.INFO if pytestconfig.getoption("verbose") > 0 else logging.ERROR
+    )
 
 
 @pytest.fixture(scope="session")
@@ -123,6 +135,8 @@ def test_vpn_waitlist(ctms_headers):
                 "geo": "us",
                 "platform": "ios,android",
             },
+            "subscribed": True,
+            "unsub_reason": None,
         }
     ]
     assert contact_details["vpn_waitlist"] == {
@@ -155,6 +169,8 @@ def test_vpn_waitlist(ctms_headers):
                 "geo": "fr",
                 "platform": "linux",
             },
+            "subscribed": True,
+            "unsub_reason": None,
         }
     ]
 
@@ -167,9 +183,8 @@ def test_vpn_waitlist(ctms_headers):
     @retry_until_pass
     def check_updated():
         contact_details = ctms_fetch(email, ctms_headers)
-
         assert contact_details["newsletters"] == []
-        assert contact_details["waitlists"] == []
+        assert not contact_details["waitlists"][0]["subscribed"]
         assert contact_details["vpn_waitlist"] == {
             "geo": None,
             "platform": None,
@@ -206,6 +221,8 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "es",
             },
+            "subscribed": True,
+            "unsub_reason": None,
         }
     ]
     assert contact_details["relay_waitlist"] == {
@@ -237,6 +254,8 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "es",
             },
+            "subscribed": True,
+            "unsub_reason": None,
         },
         {
             "name": "relay-vpn-bundle",
@@ -244,6 +263,8 @@ def test_relay_waitlists(ctms_headers):
             "fields": {
                 "geo": "fr",
             },
+            "subscribed": True,
+            "unsub_reason": None,
         },
     ]
     # If multiple `relay-` waitlists are present, the `geo` field of the
@@ -261,8 +282,8 @@ def test_relay_waitlists(ctms_headers):
     @retry_until_pass
     def check_unsubscribed():
         details = ctms_fetch(email, ctms_headers)
-        # CTMS has now one waitlist.
-        assert len(details["waitlists"]) == 1
+        # CTMS has now one subscribed waitlist.
+        assert len([wl for wl in details["waitlists"] if wl["subscribed"]]) == 1
         return details
 
     contact_details = check_unsubscribed()
@@ -270,11 +291,20 @@ def test_relay_waitlists(ctms_headers):
     assert contact_details["newsletters"] == []
     assert contact_details["waitlists"] == [
         {
+            "fields": {"geo": "es"},
+            "name": "relay",
+            "source": "https://relay.firefox.com/",
+            "subscribed": False,
+            "unsub_reason": None,
+        },
+        {
             "name": "relay-vpn-bundle",
             "source": "https://relay.firefox.com/vpn-relay/waitlist/",
             "fields": {
                 "geo": "fr",
             },
+            "subscribed": True,
+            "unsub_reason": None,
         },
     ]
     # relay_waitlist geo is pulled from the remaining waitlist.
@@ -289,8 +319,8 @@ def test_relay_waitlists(ctms_headers):
     @retry_until_pass
     def check_unsubscribed_last():
         details = ctms_fetch(email, ctms_headers)
-        # CTMS has no more waitlist or newsletter.
-        assert len(details["waitlists"]) == 0
+        # CTMS has no more subscribed waitlist or newsletter.
+        assert not any(wl["subscribed"] for wl in details["waitlists"])
         return details
 
     contact_details = check_unsubscribed_last()
