@@ -785,8 +785,8 @@ def test_create_or_update_contact_timestamps(dbsession, email_factory):
     dbsession.commit()
 
     updated_email = get_email(dbsession, email.email_id)
-    assert updated_email.newsletters[0].update_timestamp != before_nl
-    assert updated_email.waitlists[0].update_timestamp != before_wl
+    assert updated_email.newsletters[0].update_timestamp > before_nl
+    assert updated_email.waitlists[0].update_timestamp > before_wl
 
 
 def test_get_contacts_from_newsletter(dbsession, newsletter_factory):

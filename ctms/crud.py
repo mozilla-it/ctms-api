@@ -466,7 +466,10 @@ def create_or_update_newsletters(
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uix_email_name",
-            set_={**dict(stmt.excluded), "update_timestamp": text("NOW()")},
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
@@ -491,7 +494,10 @@ def create_or_update_waitlists(
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uix_wl_email_name",
-            set_={**dict(stmt.excluded), "update_timestamp": text("NOW()")},
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
