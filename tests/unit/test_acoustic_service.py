@@ -202,7 +202,7 @@ def test_ctms_to_acoustic_waitlists_maximal(
     assert waitlist_records_by_name["vpn"]["email_id"] == str(
         maximal_contact.email.email_id
     )
-    assert waitlist_records_by_name["vpn"]["subscribed"]
+    assert waitlist_records_by_name["vpn"]["subscribed"] == "1"
     assert waitlist_records_by_name["vpn"]["unsub_reason"] == ""
     assert waitlist_records_by_name["vpn"]["waitlist_geo"] == "ca"
     assert waitlist_records_by_name["vpn"]["waitlist_platform"] == "windows,android"
