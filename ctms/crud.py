@@ -453,6 +453,9 @@ def create_newsletter(
 def create_or_update_newsletters(
     db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
 ):
+    # Start by deleting the existing newsletters that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
     names = [
         newsletter.name for newsletter in newsletters if not newsletter.is_default()
     ]
@@ -487,6 +490,17 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
+    # Start by deleting the existing waitlists that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
+    # Note: the contact is marked as pending synchronization at the API routers level.
+    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    db.query(Waitlist).filter(
+        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+    ).delete(
+        synchronize_session=False
+    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+
     waitlists_to_upsert = [
         UpdatedWaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
     ]
