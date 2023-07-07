@@ -191,6 +191,7 @@ def test_post_get_put(client, post_contact, put_contact, update_fetched):
 
     # TODO: remove this once we remove support of `vpn_waitlist` and
     # `relay_waitlist` as input.
+    # If we don't strip these two fields before turning the data into
     # a `ContactInSchema`, they will create waitlist objects.
     without_alias_fields = {
         k: v

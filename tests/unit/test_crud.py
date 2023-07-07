@@ -31,7 +31,12 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
-from ctms.models import AcousticField, AcousticNewsletterMapping, PendingAcousticRecord
+from ctms.models import (
+    AcousticField,
+    AcousticNewsletterMapping,
+    Email,
+    PendingAcousticRecord,
+)
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -548,7 +553,7 @@ def test_create_or_update_contact_related_objects(dbsession, email_factory):
     create_or_update_contact(dbsession, email.email_id, putdata, None)
     dbsession.commit()
 
-    updated_email = get_email(dbsession, email.email_id)
+    updated_email = dbsession.get(Email, email.email_id)
     # Existing related objects were deleted and replaced by the specified list.
     assert len(updated_email.newsletters) == 1
     assert len(updated_email.waitlists) == 1
