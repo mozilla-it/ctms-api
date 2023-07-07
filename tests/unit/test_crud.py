@@ -347,148 +347,98 @@ def test_get_contact_by_email_id_stripe_subscription_other(
     assert product.changed == subscription.stripe_created
 
 
-def test_get_bulk_contacts_mofo_relevant_false(
-    dbsession, example_contact, maximal_contact, minimal_contact
+@pytest.mark.parametrize(
+    "mofo_relevant_flag,num_contacts_returned",
+    [
+        (None, 3),
+        (True, 1),
+        (False, 2),
+    ],
+)
+def test_get_bulk_contacts_mofo_relevant(
+    dbsession, email_factory, mofo_relevant_flag, num_contacts_returned
 ):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
-    mofo_relevant_flag = False
+    email_factory()
+    email_factory(mofo=True, mofo__mofo_relevant=True)
+    email_factory(mofo=True, mofo__mofo_relevant=False)
+    dbsession.commit()
 
-    first_contact = sorted_list[0]
-    after_start = first_contact.email.update_timestamp - timedelta(hours=12)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
+    contacts = get_bulk_contacts(
         dbsession,
-        start_time=after_start,
-        end_time=end_time,
-        limit=10,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        limit=3,
         mofo_relevant=mofo_relevant_flag,
     )
-    assert len(bulk_contact_list) == 2
+    assert len(contacts) == num_contacts_returned
 
 
-def test_get_bulk_contacts_mofo_relevant_true(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
-    mofo_relevant_flag = True
+def test_get_bulk_contacts_time_bounds(dbsession, email_factory):
+    start_time = datetime.now(timezone.utc)
+    end_time = start_time + timedelta(minutes=2)
 
-    first_contact = sorted_list[0]
-    after_start = first_contact.email.update_timestamp - timedelta(hours=12)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-    bulk_contact_list = get_bulk_contacts(
+    email_factory(update_timestamp=start_time - timedelta(minutes=1))
+    targets = [
+        email_factory(update_timestamp=start_time),
+        email_factory(update_timestamp=start_time + timedelta(minutes=1)),
+    ]
+    email_factory(update_timestamp=end_time)
+    email_factory(update_timestamp=end_time + timedelta(minutes=1))
+    dbsession.commit()
+
+    contacts = get_bulk_contacts(
         dbsession,
-        start_time=after_start,
-        end_time=end_time,
-        limit=10,
-        mofo_relevant=mofo_relevant_flag,
-    )
-    assert len(bulk_contact_list) == 1
-    for contact in bulk_contact_list:
-        assert contact.mofo.mofo_relevant == mofo_relevant_flag
-
-
-def test_get_bulk_contacts_some_after_higher_limit(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        limit=5,
     )
 
-    first_contact = sorted_list[0]
-    after_start = first_contact.email.update_timestamp
-    after_id = str(first_contact.email.email_id)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-    bulk_contact_list = get_bulk_contacts(
+    assert len(contacts) == 2
+    target_email_ids = [target.email_id for target in targets]
+    contact_email_ids = [contact.email.email_id for contact in contacts]
+    assert set(target_email_ids) == set(contact_email_ids)
+
+
+def test_get_bulk_contacts_limited(dbsession, email_factory):
+    email_factory.create_batch(10)
+    dbsession.commit()
+
+    contacts = get_bulk_contacts(
         dbsession,
-        start_time=after_start,
-        end_time=end_time,
-        limit=2,
-        after_email_id=after_id,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        limit=5,
     )
-    assert len(bulk_contact_list) == 2
-    bulk_contact_list_ids = [c.email.email_id for c in bulk_contact_list]
-    assert last_contact.email.email_id in bulk_contact_list_ids
-    assert sorted_list[-2].email.email_id in bulk_contact_list_ids
+    assert len(contacts) == 5
 
 
-def test_get_bulk_contacts_some_after(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
+def test_get_bulk_contacts_after_email_id(dbsession, email_factory):
+    first_email = email_factory()
+    second_email = email_factory()
+    dbsession.commit()
 
-    second_to_last_contact = sorted_list[-2]
-    after_start = second_to_last_contact.email.update_timestamp
-    after_id = str(second_to_last_contact.email.email_id)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
+    [contact] = get_bulk_contacts(
         dbsession,
-        start_time=after_start,
-        end_time=end_time,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
         limit=1,
-        after_email_id=after_id,
+        after_email_id=str(first_email.email_id),
     )
-    assert len(bulk_contact_list) == 1
-    assert last_contact.email.email_id == bulk_contact_list[0].email.email_id
+    assert contact.email.email_id != first_email.email_id
+    assert contact.email.email_id == second_email.email_id
 
 
-def test_get_bulk_contacts_some(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    example_timestamp: datetime = example_contact.email.update_timestamp
-    maximal_timestamp: datetime = maximal_contact.email.update_timestamp
-    minimal_timestamp: datetime = minimal_contact.email.update_timestamp
+def test_get_bulk_contacts_one(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
 
-    oldest_timestamp = min([example_timestamp, maximal_timestamp, minimal_timestamp])
-    timestamp = oldest_timestamp - timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
+    [contact] = get_bulk_contacts(
         dbsession,
-        start_time=timestamp,
-        end_time=datetime.now(timezone.utc),
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
         limit=10,
     )
-    assert len(bulk_contact_list) >= 3
-    bulk_contact_list_ids = [c.email.email_id for c in bulk_contact_list]
-    assert example_contact.email.email_id in bulk_contact_list_ids
-    assert maximal_contact.email.email_id in bulk_contact_list_ids
-    assert minimal_contact.email.email_id in bulk_contact_list_ids
-
-
-def test_get_bulk_contacts_one(dbsession, example_contact):
-    email_id = example_contact.email.email_id
-    timestamp: datetime = example_contact.email.update_timestamp
-    start_time = timestamp - timedelta(12)
-    end_time = timestamp + timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
-        dbsession, start_time=start_time, end_time=end_time, limit=10
-    )
-    assert len(bulk_contact_list) == 1
-    assert bulk_contact_list[0].email.email_id == email_id
+    assert contact.email.email_id == email.email_id
 
 
 def test_get_bulk_contacts_none(dbsession):

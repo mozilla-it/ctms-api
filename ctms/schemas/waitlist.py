@@ -34,6 +34,12 @@ class WaitlistBase(ComparableBase):
     fields: dict = Field(
         default={}, description="Additional fields", example='{"platform": "linux"}'
     )
+    subscribed: bool = Field(
+        default=True, description="True to subscribe, False to unsubscribe"
+    )
+    unsub_reason: Optional[str] = Field(
+        default=None, description="Reason for unsubscribing"
+    )
 
     def __lt__(self, other):
         return self.name < other.name
@@ -51,25 +57,7 @@ class WaitlistBase(ComparableBase):
 WaitlistSchema = WaitlistBase
 
 
-class WaitlistInSchema(WaitlistBase):
-    """Schema for input data."""
-
-    subscribed: bool = Field(
-        default=True, description="True to subscribe, False to unsubscribe"
-    )
-
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
-        if "subscribed" in values and values["subscribed"]:
-            return super().check_fields(values)
-        # If subscribed is False, we don't need to validate fields.
-        return values
-
-    def orm_dict(self):
-        """TODO: is there a native way to exclude attrs for ORM?"""
-        dict_for_orm = self.dict()
-        del dict_for_orm["subscribed"]
-        return dict_for_orm
+WaitlistInSchema = WaitlistBase
 
 
 class UpdatedWaitlistInSchema(WaitlistInSchema):

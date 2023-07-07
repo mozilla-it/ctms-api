@@ -17,5 +17,5 @@ cat tests/integration/basket-db-init.sql | $DOCKER_COMPOSE exec -T mysql mariadb
 # Create token in CTMS (will only work with specific CTMS_SECRET, see .sql source)
 cat tests/integration/ctms-db-init.sql | $DOCKER_COMPOSE exec -T postgres psql --user postgres -d postgres
 
-# docker-compose run basket django-admin loaddata ./basket/news/fixtures/newsletters.json
-$POETRY_RUN pytest tests/integration/
+# We don't capture tests output to trace retries of failing assertions.
+$POETRY_RUN pytest --capture=no tests/integration/
