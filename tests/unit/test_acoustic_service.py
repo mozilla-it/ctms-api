@@ -79,14 +79,24 @@ def test_ctms_to_acoustic_newsletters(
     main_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
-    (main, newsletters, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (main, newsletter_rows, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
 
-    assert len(minimal_contact.newsletters) == 4
-    # Newsletters records
-    assert len(newsletters) == 2
-    app_dev, mofo = newsletters
+    assert len(minimal_contact.newsletters) > 0
+    # As many records in the newsletters relation table as in contact
+    assert len(newsletter_rows) == len(minimal_contact.newsletters)
+    # Newsletters not in mapping are listed as skipped
+    assert base_ctms_acoustic_service.context["newsletters_skipped"] == [
+        "maker-party",
+        "mozilla-learning-network",
+    ]
+    app_dev, mofo = [
+        nl
+        for nl in newsletter_rows
+        if nl["newsletter_name"]
+        not in base_ctms_acoustic_service.context["newsletters_skipped"]
+    ]
     assert (
         app_dev["email_id"] == mofo["email_id"] == str(minimal_contact.email.email_id)
     )
@@ -96,11 +106,6 @@ def test_ctms_to_acoustic_newsletters(
     # Newsletters are marked as subscribed in main table
     assert main["sub_apps_and_hacks"] == "1"
     assert main["sub_mozilla_foundation"] == "1"
-    # Newsletters not in mapping are skipped
-    assert base_ctms_acoustic_service.context["newsletters_skipped"] == [
-        "maker-party",
-        "mozilla-learning-network",
-    ]
 
 
 def test_ctms_to_acoustic_newsletter_timestamps(
@@ -213,18 +218,20 @@ def test_ctms_to_acoustic_mocked(
 ):
     acoustic_mock: MagicMock = MagicMock()
     base_ctms_acoustic_service.acoustic = acoustic_mock
-    _main, _newsletter, _product = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+    (
+        _main,
+        newsletters_rows,
+        _product,
+    ) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
         maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
     )  # To be used as in testing, for expected inputs to downstream methods
     assert _main is not None
-    assert _newsletter is not None
+    assert len(newsletters_rows) == len(maximal_contact.newsletters)
     assert len(_product) == 0
     with capture_logs() as caplog:
         base_ctms_acoustic_service.attempt_to_upload_ctms_contact(
             maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
         )
-    acoustic_mock.add_recipient.assert_called()
-    acoustic_mock.insert_update_relational_table.assert_called()
 
     acoustic_mock.add_recipient.assert_called_with(
         list_id=CTMS_ACOUSTIC_MAIN_TABLE_ID,
@@ -236,7 +243,7 @@ def test_ctms_to_acoustic_mocked(
     )
 
     acoustic_mock.insert_update_relational_table.assert_called_with(
-        table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID, rows=_newsletter
+        table_id=CTMS_ACOUSTIC_NEWSLETTER_TABLE_ID, rows=newsletters_rows
     )
 
     acoustic_mock.insert_update_product_table.assert_not_called()
@@ -246,7 +253,7 @@ def test_ctms_to_acoustic_mocked(
     expected_log.update(
         {
             "email_id": "67e52c77-950f-4f28-accb-bb3ea1a2c51a",
-            "newsletter_count": 5,
+            "newsletter_count": len(newsletters_rows),
             "newsletters_skipped": ["ambassadors", "firefox-os"],
         }
     )
@@ -438,19 +445,15 @@ def test_ctms_to_acoustic_traced_email(
         sync_fields={"email_id": _main["email_id"]},
         columns=_main,
     )
-    acoustic_mock.insert_update_relational_table.assert_not_called()
-    acoustic_mock.insert_update_product_table.assert_not_called()
 
     assert len(caplog) == 1
-    expected_log = EXPECTED_LOG.copy()
-    expected_log.update(
-        {
-            "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
-            "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
-            "trace": email,
-        }
-    )
-    assert caplog[0] == expected_log
+    assert caplog[0] == {
+        **EXPECTED_LOG,
+        "email_id": "332de237-cab7-4461-bcc3-48e68f42bd5c",
+        "newsletter_count": 2,
+        "newsletters_skipped": ["firefox-welcome", "mozilla-welcome"],
+        "trace": email,
+    }
 
 
 def test_transform_field(base_ctms_acoustic_service):
