@@ -74,38 +74,55 @@ def test_ctms_to_acoustic_no_product(
 
 
 def test_ctms_to_acoustic_newsletters(
+    dbsession,
     base_ctms_acoustic_service,
-    minimal_contact,
+    email_factory,
     main_acoustic_fields,
-    acoustic_newsletters_mapping,
 ):
+    email = email_factory(newsletters=5)
+    email.newsletters[2].subscribed = False
+    email.newsletters[2].unsub_reason = "not interested"
+    dbsession.commit()
+
+    contact = ContactSchema.from_email(email)
+
+    acoustic_newsletters_mapping = {
+        contact.newsletters[0].name: "sub_column_1",
+        contact.newsletters[1].name: "sub_column_2",
+        contact.newsletters[2].name: "sub_column_3",
+    }
+
     (main, newsletter_rows, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
-        minimal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+        contact, main_acoustic_fields, acoustic_newsletters_mapping
     )
 
-    assert len(minimal_contact.newsletters) > 0
     # As many records in the newsletters relation table as in contact
-    assert len(newsletter_rows) == len(minimal_contact.newsletters)
-    # Newsletters not in mapping are listed as skipped
-    assert base_ctms_acoustic_service.context["newsletters_skipped"] == [
-        "maker-party",
-        "mozilla-learning-network",
-    ]
-    app_dev, mofo = [
-        nl
-        for nl in newsletter_rows
-        if nl["newsletter_name"]
-        not in base_ctms_acoustic_service.context["newsletters_skipped"]
-    ]
-    assert (
-        app_dev["email_id"] == mofo["email_id"] == str(minimal_contact.email.email_id)
+    assert len(newsletter_rows) == len(contact.newsletters)
+    # `newsletter_name` for all names
+    assert sorted(nl["newsletter_name"] for nl in newsletter_rows) == sorted(
+        nl.name for nl in contact.newsletters
     )
-    assert app_dev["newsletter_source"] == mofo["newsletter_source"] == None
-    assert app_dev["newsletter_name"] == "app-dev"
-    assert mofo["newsletter_name"] == "mozilla-foundation"
-    # Newsletters are marked as subscribed in main table
-    assert main["sub_apps_and_hacks"] == "1"
-    assert main["sub_mozilla_foundation"] == "1"
+    # `email_id` column
+    assert all(nl["email_id"] == str(contact.email.email_id) for nl in newsletter_rows)
+    # `source` column
+    assert sorted(nl["newsletter_source"] for nl in newsletter_rows) == sorted(
+        nl.source for nl in contact.newsletters
+    )
+    # `subscribed` column
+    assert newsletter_rows[1]["subscribed"]
+    assert not newsletter_rows[2]["subscribed"]
+    assert newsletter_rows[3]["subscribed"]
+    # Newsletters in mapping are marked as subscribed in main table
+    assert main["sub_column_1"] == "1"
+    assert main["sub_column_2"] == "1"
+    assert main["sub_column_3"] == "0"
+    # Newsletters not in mapping are listed as skipped
+    assert sorted(base_ctms_acoustic_service.context["newsletters_skipped"]) == sorted(
+        [
+            contact.newsletters[3].name,
+            contact.newsletters[4].name,
+        ]
+    )
 
 
 def test_ctms_to_acoustic_newsletter_timestamps(
