@@ -31,7 +31,12 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
-from ctms.models import AcousticField, AcousticNewsletterMapping, PendingAcousticRecord
+from ctms.models import (
+    AcousticField,
+    AcousticNewsletterMapping,
+    Email,
+    PendingAcousticRecord,
+)
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -528,6 +533,32 @@ def test_get_multiple_contacts_by_any_id(
     for contact in contacts:
         newsletter_names = [nl.name for nl in contact.newsletters]
         assert sorted(newsletter_names) == newsletter_names
+
+
+def test_create_or_update_contact_related_objects(dbsession, email_factory):
+    email = email_factory(
+        newsletters=3,
+        waitlists=3,
+    )
+    dbsession.flush()
+
+    new_source = "http://waitlists.example.com"
+    putdata = ContactPutSchema(
+        email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
+        newsletters=[
+            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
+        ],
+        waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
+    )
+    create_or_update_contact(dbsession, email.email_id, putdata, None)
+    dbsession.commit()
+
+    updated_email = dbsession.get(Email, email.email_id)
+    # Existing related objects were deleted and replaced by the specified list.
+    assert len(updated_email.newsletters) == 1
+    assert len(updated_email.waitlists) == 1
+    assert updated_email.newsletters[0].source == new_source
+    assert updated_email.waitlists[0].source == new_source
 
 
 @pytest.mark.parametrize("with_lock", (True, False))

@@ -451,14 +451,20 @@ def create_newsletter(
 def create_or_update_newsletters(
     db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
 ):
+    # Start by deleting the existing newsletters that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
     names = [
         newsletter.name for newsletter in newsletters if not newsletter.is_default()
     ]
     db.query(Newsletter).filter(
         Newsletter.email_id == email_id, Newsletter.name.notin_(names)
     ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
         synchronize_session=False
-    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+    )
 
     if newsletters:
         stmt = insert(Newsletter).values(
@@ -488,7 +494,23 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
-    if waitlists:
+    # Start by deleting the existing waitlists that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
+    # Note: the contact is marked as pending synchronization at the API routers level.
+    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    db.query(Waitlist).filter(
+        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+    ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
+        synchronize_session=False
+    )
+    waitlists_to_upsert = [
+        WaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
+    ]
+    if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
             [{"email_id": email_id, **wl.dict()} for wl in waitlists]
         )
