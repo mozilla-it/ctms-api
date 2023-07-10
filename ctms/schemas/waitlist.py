@@ -46,9 +46,7 @@ class WaitlistBase(ComparableBase):
 
     @root_validator
     def check_fields(cls, values):  # pylint:disable = no-self-argument
-        if "subscribed" in values and values["subscribed"] and "name" in values:
-            validate_waitlist_fields(values["name"], values.get("fields", {}))
-        # If subscribed is False, we don't need to validate fields.
+        validate_waitlist_fields(values.get("name"), values.get("fields", {}))
         return values
 
     class Config:
@@ -80,7 +78,25 @@ class WaitlistTableSchema(WaitlistBase):
         extra = "forbid"
 
 
-def validate_waitlist_fields(name: str, fields: dict):
+def CountryField():  # pylint:disable = invalid-name
+    return Field(
+        default=None,
+        max_length=100,
+        description="Waitlist country",
+        example="fr",
+    )
+
+
+def PlatformField():  # pylint:disable = invalid-name
+    return Field(
+        default=None,
+        max_length=100,
+        description="VPN waitlist platforms as comma-separated list",
+        example="ios,mac",
+    )
+
+
+def validate_waitlist_fields(name: Optional[str], fields: dict):
     """
     Once waitlists will have been migrated to a full N-N relationship,
     this will be the only remaining VPN specific piece of code.
@@ -88,12 +104,7 @@ def validate_waitlist_fields(name: str, fields: dict):
     if name == "relay":
 
         class RelayFieldsSchema(ComparableBase):
-            geo: Optional[str] = Field(
-                default=None,
-                max_length=100,
-                description="Waitlist country",
-                example="fr",
-            )
+            geo: Optional[str] = CountryField()
 
             class Config:
                 extra = "forbid"
@@ -103,23 +114,25 @@ def validate_waitlist_fields(name: str, fields: dict):
     elif name == "vpn":
 
         class VPNFieldsSchema(ComparableBase):
-            geo: Optional[str] = Field(
-                default=None,
-                max_length=100,
-                description="Waitlist country",
-                example="fr",
-            )
-            platform: Optional[str] = Field(
-                default=None,
-                max_length=100,
-                description="VPN waitlist platforms as comma-separated list",
-                example="ios,mac",
-            )
+            geo: Optional[str] = CountryField()
+            platform: Optional[str] = PlatformField()
 
             class Config:
                 extra = "forbid"
 
         VPNFieldsSchema(**fields)
+
+    else:
+        # Default schema for any waitlist.
+        # Only the known fields are validated. Any extra field would
+        # be accepted as is.
+        # This should allow us to onboard most waitlists without specific
+        # code change and service redeployment.
+        class DefaultFieldsSchema(ComparableBase):
+            geo: Optional[str] = CountryField()
+            platform: Optional[str] = PlatformField()
+
+        DefaultFieldsSchema(**fields)
 
 
 def validate_waitlist_newsletters(values):
