@@ -6,7 +6,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -52,8 +52,6 @@ from .schemas import (
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
-    UpdatedNewsletterInSchema,
-    UpdatedWaitlistInSchema,
     WaitlistInSchema,
 )
 from .schemas.base import BaseModel
@@ -469,12 +467,15 @@ def create_or_update_newsletters(
     )
 
     if newsletters:
-        newsletters = [UpdatedNewsletterInSchema(**news.dict()) for news in newsletters]
         stmt = insert(Newsletter).values(
             [{"email_id": email_id, **n.dict()} for n in newsletters]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_email_name", set_=dict(stmt.excluded)
+            constraint="uix_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
@@ -507,14 +508,18 @@ def create_or_update_waitlists(
         synchronize_session=False
     )
     waitlists_to_upsert = [
-        UpdatedWaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
+        WaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
     ]
     if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.dict()} for wl in waitlists_to_upsert]
+            [{"email_id": email_id, **wl.dict()} for wl in waitlists]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_wl_email_name", set_=dict(stmt.excluded)
+            constraint="uix_wl_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)

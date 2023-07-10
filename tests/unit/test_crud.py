@@ -794,6 +794,32 @@ class TestStripeRelations:
         assert subscription_item.get_email_id() == email.email_id
 
 
+def test_create_or_update_contact_timestamps(dbsession, email_factory):
+    email = email_factory(
+        newsletters=1,
+        waitlists=1,
+    )
+    dbsession.flush()
+
+    before_nl = email.newsletters[0].update_timestamp
+    before_wl = email.waitlists[0].update_timestamp
+
+    new_source = "http://waitlists.example.com"
+    putdata = ContactPutSchema(
+        email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
+        newsletters=[
+            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
+        ],
+        waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
+    )
+    create_or_update_contact(dbsession, email.email_id, putdata, None)
+    dbsession.commit()
+
+    updated_email = get_email(dbsession, email.email_id)
+    assert updated_email.newsletters[0].update_timestamp > before_nl
+    assert updated_email.waitlists[0].update_timestamp > before_wl
+
+
 def test_get_contacts_from_newsletter(dbsession, newsletter_factory):
     existing_newsletter = newsletter_factory()
     dbsession.flush()
