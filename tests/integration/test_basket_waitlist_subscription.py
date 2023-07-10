@@ -150,7 +150,13 @@ def test_vpn_waitlist(ctms_headers):
         f"{settings.ctms_server_url}/ctms/{email_id}",
         headers=ctms_headers,
         json={
-            "vpn_waitlist": {"geo": "fr", "platform": "linux"},
+            "waitlists": [{
+                "name": "vpn",
+                "fields": {
+                    "geo": "fr",
+                    "platform": "linux"
+                },
+            }],
         },
     )
     resp.raise_for_status()
