@@ -139,6 +139,7 @@ def test_vpn_waitlist(ctms_headers):
             "unsub_reason": None,
         }
     ]
+    # Legacy (read-only) fields.
     assert contact_details["vpn_waitlist"] == {
         "geo": "us",
         "platform": "ios,android",
@@ -150,23 +151,18 @@ def test_vpn_waitlist(ctms_headers):
         f"{settings.ctms_server_url}/ctms/{email_id}",
         headers=ctms_headers,
         json={
-            "waitlists": [{
-                "name": "vpn",
-                "fields": {
-                    "geo": "fr",
-                    "platform": "linux"
-                },
-            }],
+            "waitlists": [
+                {
+                    "name": "vpn",
+                    "fields": {"geo": "fr", "platform": "linux"},
+                }
+            ],
         },
     )
     resp.raise_for_status()
     # Request the full contact details again.
     contact_details = ctms_fetch(email, ctms_headers)
     assert contact_details["newsletters"] == []
-    assert contact_details["vpn_waitlist"] == {
-        "geo": "fr",
-        "platform": "linux",
-    }
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
@@ -179,6 +175,11 @@ def test_vpn_waitlist(ctms_headers):
             "unsub_reason": None,
         }
     ]
+    # Legacy (read-only) fields.
+    assert contact_details["vpn_waitlist"] == {
+        "geo": "fr",
+        "platform": "linux",
+    }
 
     # 4. Unsubscribe via Basket
     basket_token = contact_details["email"]["basket_token"]
@@ -191,6 +192,7 @@ def test_vpn_waitlist(ctms_headers):
         contact_details = ctms_fetch(email, ctms_headers)
         assert contact_details["newsletters"] == []
         assert not contact_details["waitlists"][0]["subscribed"]
+        # Legacy (read-only) fields.
         assert contact_details["vpn_waitlist"] == {
             "geo": None,
             "platform": None,
@@ -231,6 +233,7 @@ def test_relay_waitlists(ctms_headers):
             "unsub_reason": None,
         }
     ]
+    # Legacy (read-only) fields.
     assert contact_details["relay_waitlist"] == {
         "geo": "es",
     }
@@ -273,9 +276,9 @@ def test_relay_waitlists(ctms_headers):
             "unsub_reason": None,
         },
     ]
+    # Legacy (read-only) fields.
     # If multiple `relay-` waitlists are present, the `geo` field of the
-    # first waitlist is set as the value of `relay_waitlist["geo"]`. This
-    # property is intended for legacy consumers
+    # first waitlist is set as the value of `relay_waitlist["geo"]`.
     assert contact_details["relay_waitlist"] == {
         "geo": "es",
     }
@@ -313,6 +316,7 @@ def test_relay_waitlists(ctms_headers):
             "unsub_reason": None,
         },
     ]
+    # Legacy (read-only) fields.
     # relay_waitlist geo is pulled from the remaining waitlist.
     assert contact_details["relay_waitlist"] == {
         "geo": "fr",
@@ -331,5 +335,6 @@ def test_relay_waitlists(ctms_headers):
 
     contact_details = check_unsubscribed_last()
     assert contact_details["newsletters"] == []
+    # Legacy (read-only) fields.
     # Relay attribute is now empty
     assert contact_details["relay_waitlist"] == {"geo": None}
