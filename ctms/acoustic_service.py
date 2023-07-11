@@ -223,8 +223,6 @@ class CTMSToAcousticService:
         newsletter_rows = []
         contact_newsletters: List[NewsletterSchema] = contact.newsletters
         contact_email_id = str(contact.email.email_id)
-        contact_email_format = contact.email.email_format
-        contact_email_lang = contact.email.email_lang
         skipped = []
 
         # populate with all the sub_flags set to false
@@ -239,8 +237,8 @@ class CTMSToAcousticService:
                 "newsletter_source": newsletter.source and str(newsletter.source),
                 "create_timestamp": newsletter.create_timestamp.date().isoformat(),
                 "update_timestamp": newsletter.update_timestamp.date().isoformat(),
-                "newsletter_format": contact_email_format,
-                "newsletter_lang": contact_email_lang,
+                "newsletter_format": newsletter.format,
+                "newsletter_lang": newsletter.lang,
                 "subscribed": newsletter.subscribed,
                 "newsletter_unsub_reason": newsletter.unsub_reason,
             }
