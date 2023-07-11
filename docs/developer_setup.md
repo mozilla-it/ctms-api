@@ -1,142 +1,25 @@
 ## Developer Setup
-Technologies and tools in use:
-- Python: https://www.python.org/
+
+Prerequisites
+
+- Make: https://www.gnu.org/software/make/
 - Poetry: https://python-poetry.org/
-- Pre-commit: https://pre-commit.com/
 - Docker: https://www.docker.com/
-- FastAPI: https://fastapi.tiangolo.com/
-- Pydantic: https://pydantic-docs.helpmanual.io/
-- SQLAlchemy: https://www.sqlalchemy.org/
-- Alembic: https://alembic.sqlalchemy.org
+- Pre-commit: https://pre-commit.com/
+- [psycopg2 build prerequisites](https://www.psycopg.org/docs/install.html#build-prerequisites)
 
----
-## Python
-CTMS is a Python application. We tend to keep the application up to date with
-the latest version of Python -- we pin to the patch version throughout the
-repository.
+## Setup Dependencies
 
-To keep your development environment up to date, you may wish to install a
-Python version manager to switch Python versions along with the application.
-Tools for this include:
-- [pyenv](https://github.com/pyenv/pyenv)
-- [asdf](https://asdf-vm.com/)
-
-Dependabot will submit pull requests to update the Python version in the
-Dockerfile, but will miss other places like `pyproject.toml` and Github Action
-workflow files. This `sed`[^1] snippet will find/replace all Python versions in
-one go - in this example, from version `A.B.C` to `X.Y.Z`:
-```bash
-git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
-```
-
-Manually inspect the changes to filter out false positives.
-## Poetry
-
-### Installation
-Install Poetry for osx/linux (please confirm via the [poetry docs](https://python-poetry.org/docs/#installation)):
-
-```sh
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-### Setup Dependencies
 To set up dependencies necessary for local development, run:
 
 ```sh
 make install
 ```
 
-If these fail with an error like:
-
-```
-Error: pg_config executable not found.
-
-pg_config is required to build psycopg2 from source.  Please add the directory
-containing pg_config to the $PATH or specify the full executable path with the
-option:
-...
-```
-
-then you need to install the `psycopg2` prerequisites, like the PostgreSQL development package. See
-[psycopg2 build prerequisites](https://www.psycopg.org/docs/install.html#build-prerequisites)
-for help.
-
-### Using Poetry
-Opens shell with corresponding dependencies to the poetry(.lock) in the directory that you make the call:
-
-```sh
-poetry shell
-```
-
-Runs command with poetry venv:
-
-```sh
-poetry run {command}
-```
-
-### Adding Dependencies
-Add new dependencies in pyproject.toml through poetry:
-
-```sh
-poetry add {pypi-package}
-```
-
-### Updating Dependencies
-To update a dependency to the latest version:
-
-```sh
-poetry add {pypi-package}@latest
-```
-
-This can also be used to update via constraint:
-
-```sh
-poetry add {pypi-package}@^2.1.0
-poetry add {pypi-package}>=2.0.0,<3.0.0
-```
-
-Using ``poetry add`` will also update ``pyproject.toml``, which is easier for a
-human to parse than ``poetry.lock``.
-
-To update all dependencies in ``poetry.lock``, but not ``pyproject.toml``:
-
-```sh
-poetry update
-```
-
-To update a single dependency in ``poetry.lock``:
-
-```sh
-poetry update {pypi-package}
-```
-
-### Exiting Poetry Shell
-
-Run the following command to exit `poetry shell` while in a shell.
-
-```sh
-exit
-```
-
-The command `deactivate` might not work to full disengage the poetry shell as it does with `venv`.
-
-[...view poetry site for further documentation and details.](https://python-poetry.org/)
-
-### Keeping Poetry up to date
-Poetry is pinned to a specific version in a few places throughout the
-repository. This `sed`[^1] snippet will find/replace all of these insances in
-one go - in this example, from version `A.B.C` to `X.Y.Z`:
-```bash
-git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
-```
-
-Manually inspect the changes to filter out false positives.
-
 ---
 ## Pre-commit
 
 ### Install the Hooks
-Using poetry (pre-commit is located in the [pyproject.toml](../pyproject.toml) )
 
 ```sh
 poetry run pre-commit install
@@ -149,9 +32,6 @@ pre-commit installed at .git/hooks/pre-commit
 ```
 
 Reinstall the pre-commit hooks when there are changes to the `.pre-commit-config.yaml` file.
-
-### It Passively Runs on Git "Commit"
-When you commit in git, the pre-commit hooks will engage and perform the outlined steps.
 
 ### Force Run on the Entire Codebase (Optional)
 
@@ -170,12 +50,9 @@ git commit --no-verify
 ---
 ## Docker
 
-### Installation
-Install Docker here: https://docs.docker.com/get-docker/
-
 ### Linux Users
 Linux users will want to set the user ID and group ID used in the container.
-User of Docker Desktop for Mac or Windows can skip this step.
+Users of Docker Desktop for Mac or Windows can skip this step.
 
 Create a ``.env`` environment file, if it isn't already created:
 
@@ -197,71 +74,15 @@ id -g # Your group ID
 ```
 
 ---
-## Using Docker Compose and the Makefile
-`docker-compose` is a tool for configuring and running Docker containers, and is
-useful for running PostgreSQL and CTMS together in a development environment.
-
-### Installation
-`docker-compose` is included with Docker Desktop for Mac and Windows. For other systems,
-see [Install Docker Compose](https://docs.docker.com/compose/install/).
-
-`make` is included on some operating systems and an optional install on others. For
-example, `make` is part of the Windows Subsystem for Linux on Windows 10 (see the
-[Installation Guide](https://docs.microsoft.com/en-us/windows/wsl/install-win10) for
-installing).
-
-To test that they are working:
-
-```sh
-make help  # Shows the CTMS make rules
-make build # Build the docker containers
-```
-
-### Viewing the Database
-The tool [adminer](https://www.adminer.org/) is included as `postgres-admin`,
-allowing you to view the database in the development environment.  To start it:
-
-```sh
-docker-compose up -d postgres-admin
-```
-
-The adminer website runs at http://localhost:8080. Log in with these credentials:
-
-* System: PostgreSQL (from dropdown)
-* Server: `postgres`
-* Username: `postgres`
-* Password: `postgres`
-* Database: `postgres`
-
----
-## FastAPI
-
-### Details
-Web-Framework for building APIs with Python that provides short, easy, and
-intuitive decorator-based annotations for routing (similar to Flask), but
-also provides OpenAPI and JSON Schema portals for API viewing.
-- https://fastapi.tiangolo.com/
-
----
-## Pydantic
-
-### Details
-Data Modeling and validation package that enforces type hints at
-runtime and provides friendly errors for easy debugging.
-- https://pydantic-docs.helpmanual.io/
----
-## SQLAlchemy and Alembic
-
-### Details
-The usage of these tools is complex and extends beyond this document. The
-best place to read to understand how to create/apply migrations and such things
-is [the Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html#create-a-migration-script).
+## Database
 
 To create or recreate a database with empty tables:
 
 ```sh
 make setup
 ```
+
+### Migrations
 
 To create a new migration file based on updated SQLAlchemy models:
 
@@ -282,6 +103,22 @@ make shell  # Enter the web container
 alembic upgrade head
 exit
 ```
+
+### Viewing the Database
+The tool [adminer](https://www.adminer.org/) is included as `postgres-admin`,
+allowing you to view the database in the development environment.  To start it:
+
+```sh
+docker-compose up -d postgres-admin
+```
+
+The adminer website runs at http://localhost:8080. Log in with these credentials:
+
+* System: PostgreSQL (from dropdown)
+* Server: `postgres`
+* Username: `postgres`
+* Password: `postgres`
+* Database: `postgres`
 
 ---
 ## OAuth2 Client Credentials
@@ -308,17 +145,4 @@ Your OAuth2 client credentials are:
 You can use these on the interactive Swagger docs by clicking the "**Authorize**" button.
 
 ---
-## Configuration
-See [Configuration](configuration.md) for local and production configuration settings.
-
----
-## Approaching this repo
-
-After you've done the necessary developer setup, try 'make' for some quick first steps.
-
-> Use `make help` to see additional make commands that help with setup, starting, and testing.
-
----
 [View All Docs](./)
-
-[^1]: Use [`gnu-sed`](https://formulae.brew.sh/formula/gnu-sed#default) on Mac for command compatability 
