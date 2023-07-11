@@ -145,4 +145,32 @@ Your OAuth2 client credentials are:
 You can use these on the interactive Swagger docs by clicking the "**Authorize**" button.
 
 ---
+## Python
+CTMS is a Python application. We tend to keep the application up to date with
+the latest version of Python -- we pin to the patch version throughout the
+repository.
+
+Dependabot will submit pull requests to update the Python version in the
+Dockerfile, but will miss other places like `pyproject.toml` and Github Action
+workflow files. This `sed`[^1] snippet will find/replace all Python versions in
+one go - in this example, from version `A.B.C` to `X.Y.Z`:
+```bash
+git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
+```
+
+Manually inspect the changes to filter out false positives.
+
+### Keeping Poetry up to date
+Poetry is pinned to a specific version in a few places throughout the
+repository. This `sed`[^1] snippet will find/replace all of these insances in
+one go - in this example, from version `A.B.C` to `X.Y.Z`:
+```bash
+git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
+```
+
+Manually inspect the changes to filter out false positives.
+
+---
 [View All Docs](./)
+
+[^1]: Use [`gnu-sed`](https://formulae.brew.sh/formula/gnu-sed#default) on Mac for command compatability
