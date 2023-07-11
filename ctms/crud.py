@@ -6,7 +6,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -51,8 +51,6 @@ from .schemas import (
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
-    UpdatedNewsletterInSchema,
-    UpdatedWaitlistInSchema,
     WaitlistInSchema,
 )
 from .schemas.base import BaseModel
@@ -112,8 +110,9 @@ def get_all_contacts_from_ids(db, email_ids):
 
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     filters = [
+        # pylint: disable-next=comparison-with-callable
         Email.update_timestamp >= start_time,
-        Email.update_timestamp < end_time,
+        Email.update_timestamp < end_time,  # pylint: disable=comparison-with-callable
         Email.email_id != after_email_uuid,
     ]
     if mofo_relevant is False:
@@ -262,6 +261,7 @@ def _acoustic_sync_base_query(db: Session, end_time: datetime, retry_limit: int 
     return (
         db.query(PendingAcousticRecord)
         .filter(
+            # pylint: disable-next=comparison-with-callable
             PendingAcousticRecord.update_timestamp < end_time,
             PendingAcousticRecord.retry < retry_limit,
         )
@@ -450,22 +450,31 @@ def create_newsletter(
 def create_or_update_newsletters(
     db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
 ):
+    # Start by deleting the existing newsletters that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
     names = [
         newsletter.name for newsletter in newsletters if not newsletter.is_default()
     ]
     db.query(Newsletter).filter(
         Newsletter.email_id == email_id, Newsletter.name.notin_(names)
     ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
         synchronize_session=False
-    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+    )
 
     if newsletters:
-        newsletters = [UpdatedNewsletterInSchema(**news.dict()) for news in newsletters]
         stmt = insert(Newsletter).values(
             [{"email_id": email_id, **n.dict()} for n in newsletters]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_email_name", set_=dict(stmt.excluded)
+            constraint="uix_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
@@ -476,12 +485,7 @@ def create_waitlist(
 ) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
-
-    # `create_waitlist` uses the `WaitlistInSchema``, which has a `subscribed`` property
-    # this makes sense because we're receiving this payload from Basket, and waitlists
-    # are just newsletters with naming conventions, so it has this property.
-    # Our Waitlist ORM model currently doesn't have an update property, so we need to remove it.
-    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict(exclude={"subscribed"}))
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict())
     db.add(db_waitlist)
     return db_waitlist
 
@@ -489,28 +493,32 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
-    # Remove waitlists that are marked as subscribed.
-    names_to_delete = [
-        waitlist.name for waitlist in waitlists if not waitlist.subscribed
-    ]
-    if names_to_delete:
-        db.query(Waitlist).filter(
-            Waitlist.email_id == email_id, Waitlist.name.in_(names_to_delete)
-        ).delete(
-            synchronize_session=False
-        )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
-
+    # Start by deleting the existing waitlists that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
+    # Note: the contact is marked as pending synchronization at the API routers level.
+    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    db.query(Waitlist).filter(
+        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+    ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
+        synchronize_session=False
+    )
     waitlists_to_upsert = [
-        UpdatedWaitlistInSchema(**waitlist.dict())
-        for waitlist in waitlists
-        if waitlist.subscribed
+        WaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
     ]
     if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.orm_dict()} for wl in waitlists_to_upsert]
+            [{"email_id": email_id, **wl.dict()} for wl in waitlists]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_wl_email_name", set_=dict(stmt.excluded)
+            constraint="uix_wl_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
@@ -628,19 +636,13 @@ def update_contact(
     if "waitlists" in update_data:
         if update_data["waitlists"] == "UNSUBSCRIBE":
             for waitlist_orm in existing.values():
-                db.delete(waitlist_orm)
-                email.waitlists.remove(waitlist_orm)
+                _update_orm(waitlist_orm, {"subscribed": False})
         else:
             for wl_update in update_data["waitlists"]:
                 if wl_update["name"] in existing:
                     waitlist_orm = existing[wl_update["name"]]
-                    # Delete waitlists when `subscribed` is False
-                    if not wl_update.get("subscribed", True):
-                        db.delete(waitlist_orm)
-                        email.waitlists.remove(waitlist_orm)
-                    else:
-                        # Update the Waitlist ORM object
-                        _update_orm(waitlist_orm, wl_update)
+                    # Update the Waitlist ORM object
+                    _update_orm(waitlist_orm, wl_update)
                 elif wl_update.get("subscribed", True):
                     new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
                     email.waitlists.append(new)

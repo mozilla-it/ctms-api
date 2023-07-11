@@ -470,6 +470,8 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
         "name": "future-tech",
         "source": None,
         "fields": {"geo": "es"},
+        "subscribed": True,
+        "unsub_reason": None,
     }
 
 
@@ -504,12 +506,23 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
     email_id = maximal_contact.email.email_id
     existing = [wl.dict() for wl in maximal_contact.waitlists]
     patch_data = {
-        "waitlists": [WaitlistInSchema(**existing[-1], subscribed=False).dict()]
+        "waitlists": [
+            WaitlistInSchema(
+                **{
+                    **existing[-1],
+                    "subscribed": False,
+                    "unsub_reason": "Not interested",
+                }
+            ).dict()
+        ]
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == len(maximal_contact.waitlists) - 1
+    assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
+    unsubscribed = [wl for wl in actual["waitlists"] if not wl["subscribed"]]
+    assert len(unsubscribed) == 1
+    assert unsubscribed[0]["unsub_reason"] == "Not interested"
 
 
 def test_patch_to_remove_all_waitlists(client, maximal_contact):
@@ -519,7 +532,7 @@ def test_patch_to_remove_all_waitlists(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    assert len(actual["waitlists"]) == 0
+    assert not any(wl["subscribed"] for wl in actual["waitlists"])
 
 
 def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):

@@ -49,8 +49,9 @@ TEST_FOLDER = os.path.dirname(MY_FOLDER)
 APP_FOLDER = os.path.dirname(TEST_FOLDER)
 
 # Common test cases to use in parameterized tests
-# List of tuples comprised of name fixture name (defined below) and fields to
-# be overwritten, if any
+# List of tuples comprised of name fixture name (defined below) and the list
+# of fields that are given a default value in that fixture, and therefore
+# should not be overwritten on update.
 SAMPLE_CONTACT_PARAMS = [
     ("minimal_contact_data", set()),
     ("maximal_contact_data", set()),
@@ -58,6 +59,7 @@ SAMPLE_CONTACT_PARAMS = [
     ("to_add_contact_data", set()),
     ("simple_default_contact_data", {"amo"}),
     ("default_newsletter_contact_data", {"newsletters"}),
+    ("default_waitlist_contact_data", {"waitlists"}),
 ]
 
 FAKE_STRIPE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
@@ -169,6 +171,7 @@ def dbsession(connection):
 # Database models
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
+register(factories.models.PendingAcousticRecordFactory)
 register(factories.models.StripeCustomerFactory)
 register(factories.models.StripeInvoiceFactory)
 register(factories.models.StripeInvoiceLineItemFactory)
@@ -393,6 +396,7 @@ def maximal_contact_data() -> ContactSchema:
                 name="a-software",
                 source="https://a-software.mozilla.org/",
                 fields={"geo": "fr"},
+                subscribed=True,
                 create_timestamp="2010-01-01T08:04:00.000+0000",
                 update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
@@ -400,6 +404,7 @@ def maximal_contact_data() -> ContactSchema:
                 email_id=email_id,
                 name="relay",
                 fields={"geo": "cn"},
+                subscribed=True,
                 create_timestamp="2010-01-01T08:04:00.000+0000",
                 update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
@@ -408,6 +413,7 @@ def maximal_contact_data() -> ContactSchema:
                 name="super-product",
                 source="https://super-product.mozilla.org/",
                 fields={"geo": "fr", "platform": "win64"},
+                subscribed=True,
                 create_timestamp="2010-01-01T08:04:00.000+0000",
                 update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
@@ -418,6 +424,7 @@ def maximal_contact_data() -> ContactSchema:
                     "geo": "ca",
                     "platform": "windows,android",
                 },
+                subscribed=True,
                 create_timestamp="2010-01-01T08:04:00.000+0000",
                 update_timestamp="2020-01-28T14:50:00.000+0000",
             ),
@@ -515,6 +522,21 @@ def default_newsletter_contact(
 ) -> ContactSchema:
     create_full_contact(dbsession, default_newsletter_contact_data)
     return default_newsletter_contact_data
+
+
+@pytest.fixture
+def default_waitlist_contact_data():
+    contact = ContactSchema(
+        email=schemas.EmailInSchema(
+            basket_token="6D854AA2-C1CF-4DC0-9581-2641AD3FA52D",
+            email_id=UUID("0A6ECCA3-D007-4BD4-B596-C09DA94F0FEF"),
+            mailing_country="us",
+            primary_email="with-default-waitlist@example.com",
+            sfdc_id="7772A000001aBAcXZY",
+        ),
+        waitlists=[],
+    )
+    return contact
 
 
 @pytest.fixture

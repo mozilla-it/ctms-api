@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from pydantic import UUID4, AnyUrl, Field, root_validator
@@ -28,14 +28,19 @@ class WaitlistBase(ComparableBase):
     fields: dict = Field(
         default={}, description="Additional fields", example='{"platform": "linux"}'
     )
+    subscribed: bool = Field(
+        default=True, description="True to subscribe, False to unsubscribe"
+    )
+    unsub_reason: Optional[str] = Field(
+        default=None, description="Reason for unsubscribing"
+    )
 
     def __lt__(self, other):
         return self.name < other.name
 
     @root_validator
     def check_fields(cls, values):  # pylint:disable = no-self-argument
-        if "name" in values:
-            validate_waitlist_fields(values["name"], values.get("fields", {}))
+        validate_waitlist_fields(values.get("name"), values.get("fields", {}))
         return values
 
     class Config:
@@ -46,33 +51,7 @@ class WaitlistBase(ComparableBase):
 WaitlistSchema = WaitlistBase
 
 
-class WaitlistInSchema(WaitlistBase):
-    """Schema for input data."""
-
-    subscribed: bool = Field(
-        default=True, description="True to subscribe, False to unsubscribe"
-    )
-
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
-        if "subscribed" in values and values["subscribed"]:
-            return super().check_fields(values)
-        # If subscribed is False, we don't need to validate fields.
-        return values
-
-    def orm_dict(self):
-        """TODO: is there a native way to exclude attrs for ORM?"""
-        dict_for_orm = self.dict()
-        del dict_for_orm["subscribed"]
-        return dict_for_orm
-
-
-class UpdatedWaitlistInSchema(WaitlistInSchema):
-    update_timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Waitlist data update timestamp",
-        example="2021-01-28T21:26:57.511Z",
-    )
+WaitlistInSchema = WaitlistBase
 
 
 class WaitlistTableSchema(WaitlistBase):
@@ -93,7 +72,25 @@ class WaitlistTableSchema(WaitlistBase):
         extra = "forbid"
 
 
-def validate_waitlist_fields(name: str, fields: dict):
+def CountryField():  # pylint:disable = invalid-name
+    return Field(
+        default=None,
+        max_length=100,
+        description="Waitlist country",
+        example="fr",
+    )
+
+
+def PlatformField():  # pylint:disable = invalid-name
+    return Field(
+        default=None,
+        max_length=100,
+        description="VPN waitlist platforms as comma-separated list",
+        example="ios,mac",
+    )
+
+
+def validate_waitlist_fields(name: Optional[str], fields: dict):
     """
     This is the only place where specific code has
     to be added for custom validation of extra waitlist
@@ -103,12 +100,7 @@ def validate_waitlist_fields(name: str, fields: dict):
     if name == "relay":
 
         class RelayFieldsSchema(ComparableBase):
-            geo: Optional[str] = Field(
-                default=None,
-                max_length=100,
-                description="Waitlist country",
-                example="fr",
-            )
+            geo: Optional[str] = CountryField()
 
             class Config:
                 extra = "forbid"
@@ -118,23 +110,25 @@ def validate_waitlist_fields(name: str, fields: dict):
     elif name == "vpn":
 
         class VPNFieldsSchema(ComparableBase):
-            geo: Optional[str] = Field(
-                default=None,
-                max_length=100,
-                description="Waitlist country",
-                example="fr",
-            )
-            platform: Optional[str] = Field(
-                default=None,
-                max_length=100,
-                description="VPN waitlist platforms as comma-separated list",
-                example="ios,mac",
-            )
+            geo: Optional[str] = CountryField()
+            platform: Optional[str] = PlatformField()
 
             class Config:
                 extra = "forbid"
 
         VPNFieldsSchema(**fields)
+
+    else:
+        # Default schema for any waitlist.
+        # Only the known fields are validated. Any extra field would
+        # be accepted as is.
+        # This should allow us to onboard most waitlists without specific
+        # code change and service redeployment.
+        class DefaultFieldsSchema(ComparableBase):
+            geo: Optional[str] = CountryField()
+            platform: Optional[str] = PlatformField()
+
+        DefaultFieldsSchema(**fields)
 
 
 class RelayWaitlistSchema(ComparableBase):
