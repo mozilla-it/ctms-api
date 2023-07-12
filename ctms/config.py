@@ -1,12 +1,31 @@
+import json
+import os
 import re
 from datetime import timedelta
 from enum import Enum
+from functools import lru_cache
 from typing import Optional
 
 from pydantic import BaseSettings, PostgresDsn
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
+
+
+@lru_cache()
+def get_version():
+    """
+    Return contents of version.json.
+
+    This has generic data in repo, but gets the build details in CI.
+    """
+    ctms_root = os.path.dirname(os.path.dirname(__file__))
+    version_path = os.path.join(ctms_root, "version.json")
+    info = {}
+    if os.path.exists(version_path):
+        with open(version_path, "r", encoding="utf8") as version_file:
+            info = json.load(version_file)
+    return info
 
 
 class LogLevel(str, Enum):

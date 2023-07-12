@@ -14,7 +14,7 @@ from ctms.auth import (
     create_access_token,
     verify_password,
 )
-from ctms.config import Settings
+from ctms.config import Settings, get_version
 from ctms.crud import (
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
@@ -27,11 +27,9 @@ from ctms.dependencies import (
     get_token_settings,
 )
 from ctms.metrics import get_metrics_registry, token_scheme
-from ctms.monitor import check_database, get_version
+from ctms.monitor import check_database
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse
-
-version_info = get_version()
 
 router = APIRouter()
 
@@ -108,7 +106,7 @@ def login(
 @router.get("/__version__", tags=["Platform"])
 def version():
     """Return version.json, as required by Dockerflow."""
-    return version_info
+    return get_version()
 
 
 @router.get("/__heartbeat__", tags=["Platform"])
@@ -132,6 +130,7 @@ def heartbeat(
     status_code = 200
     if not data["database"]["up"]:
         status_code = 503
+
     if "acoustic" in data["database"]:
         backlog = data["database"]["acoustic"]["backlog"]
         retry_backlog = data["database"]["acoustic"]["retry_backlog"]
