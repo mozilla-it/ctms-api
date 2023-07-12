@@ -8,6 +8,7 @@ import sqlalchemy
 from sqlalchemy.orm import Session
 
 from ctms.crud import (
+    count_total_contacts,
     create_acoustic_field,
     create_acoustic_newsletters_mapping,
     create_amo,
@@ -49,6 +50,14 @@ from ctms.schemas.waitlist import WaitlistInSchema
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
+
+
+def test_email_count(dbsession, email_factory):
+    email_factory.create_batch(3)
+    dbsession.commit()
+
+    count = count_total_contacts(dbsession)
+    assert count == 3
 
 
 def test_get_email(dbsession, email_factory):

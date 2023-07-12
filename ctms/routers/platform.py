@@ -16,6 +16,7 @@ from ctms.auth import (
 )
 from ctms.config import Settings
 from ctms.crud import (
+    count_total_contacts,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_api_client_by_id,
@@ -26,7 +27,7 @@ from ctms.dependencies import (
     get_settings,
     get_token_settings,
 )
-from ctms.metrics import get_metrics_registry, token_scheme
+from ctms.metrics import get_metrics, get_metrics_registry, token_scheme
 from ctms.monitor import check_database, get_version
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse
@@ -150,6 +151,14 @@ def heartbeat(
                 max_retry_backlog,
             )
             status_code = 503
+
+    # Report number of contacts in the database.
+    # Sending the metric in this heartbeat endpoint is simpler than reporting
+    # it in every write endpoint. Plus, performance does not matter much here.
+    if metrics := get_metrics():
+        total_contacts = count_total_contacts(db)
+        metrics["contacts"].set(total_contacts)
+
     return JSONResponse(content=data, status_code=status_code)
 
 

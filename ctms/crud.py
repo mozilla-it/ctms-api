@@ -57,6 +57,10 @@ from .schemas import (
 from .schemas.base import BaseModel
 
 
+def count_total_contacts(db: Session):
+    return db.query(Email).count()
+
+
 def get_amo_by_email_id(db: Session, email_id: UUID4):
     return db.query(AmoAccount).filter(AmoAccount.email_id == email_id).one_or_none()
 

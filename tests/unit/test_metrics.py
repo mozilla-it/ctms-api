@@ -165,6 +165,16 @@ def test_homepage_request(anon_client, registry):
     assert_duration_metric_obs(registry, "GET", "/docs", "2xx")
 
 
+def test_contacts_total(anon_client, dbsession, email_factory, registry):
+    """Total number of contacts is reported in heartbeat."""
+    email_factory.create_batch(3)
+    dbsession.commit()
+
+    anon_client.get("/__heartbeat__")
+
+    assert registry.get_sample_value("ctms_contacts_total") == 3
+
+
 def test_api_request(client, minimal_contact, registry):
     """An API request emits API metrics as well."""
     email_id = minimal_contact.email.email_id

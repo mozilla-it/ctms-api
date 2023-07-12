@@ -5,7 +5,7 @@ from typing import Any, Type, cast
 
 from fastapi import FastAPI
 from fastapi.security import HTTPBasic
-from prometheus_client import CollectorRegistry, Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 from prometheus_client.utils import INF
 from sqlalchemy.orm import Session
 from starlette.routing import Route
@@ -61,6 +61,13 @@ METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
         {
             "name": "ctms_legacy_waitlists_requests_total",
             "documentation": "Total count of API calls that use the legacy waitlists format",
+        },
+    ),
+    "contacts": (
+        Gauge,
+        {
+            "name": "ctms_contacts_total",
+            "documentation": "Total count of contacts in the database",
         },
     ),
 }
