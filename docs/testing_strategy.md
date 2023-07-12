@@ -21,23 +21,24 @@ with the database.
 - The tests live in: `tests/unit/*.py`
 - The shared test fixtures live in: `tests/unit/conftest.py`
 
-### Running tests manually:
-Make sure you have dependencies installed and a postgres database running with
-all of the migrations run
+### Pass arguments to `pytest`
 
-And then run the installed ``pytest``:
-```sh
-pytest
+Set the `PYTEST_ADDOPTS` env var to pass arguments to `pytest`.
+
+Run in verbose mode (works for both unit and integration tests):
+
+```
+export PYTEST_ADDOPTS="-v"
 ```
 
 To stop on the first failure and drop into [pdb][pdb]:
 ```sh
-pytest -sx --pdb
+export PYTEST_ADDOPTS="-sx --pdb"
 ```
 
 To run a test or tests whose name matchs a substring:
 ```sh
-pytest -k "substring"
+export PYTEST_ADDOPTS='-k "substring"'
 ```
 
 View the [pytest] documentation for more options.
