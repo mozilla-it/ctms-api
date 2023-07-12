@@ -173,6 +173,7 @@ Manually inspect the changes to filter out false positives.
 ---
 ## Access Acoustic STAGE
 
+- Request access to our Acoustic admins on `#email` Slack channel
 - Login via https://sso.mozilla.com/acoustic
 - Select *Pod 9*
 
