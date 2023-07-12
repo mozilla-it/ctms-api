@@ -19,28 +19,28 @@ sequenceDiagram
     %% https://github.com/mozilla/bedrock/blob/ecba76406ed35c04d35532c3ed7562b09d65fabe/bedrock/products/views.py#L68-L87
 
     Basket->>Basket Task: Spawn task
-    %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/views.py#L681
+    %% https://github.com/mozmeao/basket/blob/2023-07-06/basket/news/views.py#L681
 
     Basket-->>Bedrock: [status]
     Bedrock-->>Visitor: .
 
     rect rgb(240,240,240)
     Basket Task->>Basket Task: Process data
-    %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/backends/ctms.py#L199
+    %% https://github.com/mozmeao/basket/blob/2023-07-06/basket/news/backends/ctms.py#L263
 
     Basket Task->>CTMS: update(token, email_id, newsletters, fpn_platform, fpn_country)
-    %% https://github.com/mozmeao/basket/blob/77f98bb63c70cecbb3ec8d69b512df67abce8c63/basket/news/tasks.py#L654
-    %% https://github.com/mozilla-it/ctms-api/blob/6f903aeb90b65c170f34485e1cc4b3755839daaf/ctms/crud.py#L563
+    %% https://github.com/mozmeao/basket/blob/2023-07-06/basket/news/tasks.py#L401
+    %% https://github.com/mozilla-it/ctms-api/blob/v2.1.0/ctms/crud.py#L579
 
     CTMS-->>Basket Task: .
     end
 
     rect rgb(240,240,240)
     CTMS Sync->>CTMS Sync: Flatten fields
-    %% https://github.com/mozilla-it/ctms-api/blob/cde9694e2992c2c9d8315ba9c6954c50a6facf37/ctms/acoustic_service.py#L62
+    %% https://github.com/mozilla-it/ctms-api/blob/v2.1.0/ctms/acoustic_service.py#L141
 
     CTMS Sync->>Acoustic: sync_records()
-    %% https://github.com/mozilla-it/ctms-api/blob/cde9694e2992c2c9d8315ba9c6954c50a6facf37/ctms/bin/acoustic_sync.py
+    %% https://github.com/mozilla-it/ctms-api/blob/v2.1.0/ctms/bin/acoustic_sync.py
     end
 ```
 
@@ -119,10 +119,17 @@ CTMS create contact ([`POST /ctms`](https://github.com/mozilla-it/ctms-api/blob/
             "lang": "fr",
         }
     ],
-    "vpn_waitlist": {
-        "geo": "fr",
-        "platform": "ios,mac",
-    },
+    "waitlist": [
+        {
+            "name": "vpn",
+            "subscribed": True,
+            "source": "https://vpn.mozilla.org/fr",
+            "fields": {
+                "geo": "fr",
+                "platform": "ios,mac"
+            }
+        }
+    ]
 }
 ```
 

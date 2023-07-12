@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from typing import Optional
 
@@ -33,6 +34,9 @@ from ctms.schemas.web import BadRequestResponse, TokenResponse
 version_info = get_version()
 
 router = APIRouter()
+
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", include_in_schema=False)
@@ -135,8 +139,16 @@ def heartbeat(
         max_retry_backlog = data["database"]["acoustic"]["max_retry_backlog"]
 
         if max_backlog is not None and max_backlog > backlog:
+            logger.error(
+                "Acoustic backlog size %s exceed maximum %s", backlog, max_backlog
+            )
             status_code = 503
         if max_retry_backlog is not None and max_retry_backlog > retry_backlog:
+            logger.error(
+                "Acoustic retry backlog size %s exceed maximum %s",
+                retry_backlog,
+                max_retry_backlog,
+            )
             status_code = 503
     return JSONResponse(content=data, status_code=status_code)
 
