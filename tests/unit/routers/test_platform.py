@@ -138,7 +138,7 @@ def test_read_heartbeat_acoustic_fails(anon_client, test_settings):
         side_effect=SQATimeoutError(),
     ):
         resp = anon_client.get("/__heartbeat__")
-    assert resp.status_code == 200
+    assert resp.status_code == 503
     data = resp.json()
     expected = {
         "database": {
@@ -167,8 +167,6 @@ def test_read_heartbeat_backlog_over_limit(
     """/__heartbeat__ returns 503 when measuring the acoustic backlog fails."""
     test_settings["acoustic_max_backlog"] = 50
     test_settings["acoustic_max_retry_backlog"] = 50
-    backlog = 1
-    retry_backlog = 1
     with patch(
         "ctms.routers.platform.get_all_acoustic_records_count", return_value=backlog
     ), patch(
