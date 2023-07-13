@@ -56,6 +56,10 @@ pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
 def test_email_count(connection, email_factory):
     # The default `dbsession` fixture will run in a nested transaction
     # that is rollback.
+    # In this test, we manipulate raw connections and transactions because
+    # we need to force a VACUUM operation outside a running transaction.
+
+    # Insert contacts in the table.
     transaction = connection.begin()
     session = ScopedSessionLocal()
     email_factory.create_batch(3)
@@ -63,19 +67,22 @@ def test_email_count(connection, email_factory):
     session.close()
     transaction.commit()
 
+    # Force an analysis of the table.
     old_isolation_level = connection.connection.isolation_level
     connection.connection.set_isolation_level(0)
     session.execute(sqlalchemy.text(f"VACUUM ANALYZE {Email.__tablename__}"))
     session.close()
     connection.connection.set_isolation_level(old_isolation_level)
 
+    # Query the count result (since last analyze)
     session = ScopedSessionLocal()
     count = count_total_contacts(session)
+    assert count == 3
+
+    # Delete created objects (since our transaction was not rollback automatically)
     session.query(Email).delete()
     session.commit()
     session.close()
-
-    assert count == 3
 
 
 def test_get_email(dbsession, email_factory):

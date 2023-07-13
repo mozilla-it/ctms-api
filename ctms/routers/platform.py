@@ -155,9 +155,9 @@ def heartbeat(
     # Report number of contacts in the database.
     # Sending the metric in this heartbeat endpoint is simpler than reporting
     # it in every write endpoint. Plus, performance does not matter much here.
-    if metrics := get_metrics():
+    if appmetrics := get_metrics():
         total_contacts = count_total_contacts(db)
-        metrics["contacts"].set(total_contacts)
+        appmetrics["contacts"].set(total_contacts)
 
     return JSONResponse(content=data, status_code=status_code)
 

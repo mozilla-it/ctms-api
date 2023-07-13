@@ -13,7 +13,9 @@ from starlette.routing import Route
 from ctms.auth import OAuth2ClientCredentials
 from ctms.crud import get_active_api_client_ids
 
-METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
+METRICS_PARAMS: dict[
+    str, tuple[Type[Counter] | Type[Histogram] | type[Gauge], dict]
+] = {
     "requests": (
         Counter,
         {
@@ -91,7 +93,7 @@ oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
 
 
-def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram]:
+def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram | Gauge]:
     """Initialize the metrics with the registry."""
     metrics = {}
     for name, init_bits in METRICS_PARAMS.items():
