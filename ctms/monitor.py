@@ -1,6 +1,7 @@
 """Application monitoring and health utilities"""
 
 import json
+import logging
 import os.path
 import time
 from datetime import datetime, timezone
@@ -11,13 +12,16 @@ from sqlalchemy.sql import func, select
 
 from ctms.crud import get_all_acoustic_records_count, get_all_acoustic_retries_count
 
+logger = logging.getLogger(__name__)
+
 
 def check_database(db_session, settings):
     """Check database availability and migration state."""
     start_time = time.monotonic()
     try:
         db_session.execute(select([func.now()])).first()
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
+        logger.exception(exc)
         success = False
     else:
         success = True
@@ -34,7 +38,8 @@ def check_database(db_session, settings):
         end_time = datetime.now(tz=timezone.utc)
         count = get_all_acoustic_records_count(db_session, end_time, retry_limit)
         retry_count = get_all_acoustic_retries_count(db_session)
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
+        logger.exception(exc)
         acoustic_success = False
     else:
         acoustic_success = True

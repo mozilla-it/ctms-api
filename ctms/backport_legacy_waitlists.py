@@ -102,8 +102,15 @@ def format_legacy_vpn_relay_waitlist_input(
                 # `relay_waitlist` field was specified.
                 if input_relay_newsletters:
                     # We are subscribing to a `relay-*-waitlist` newsletter.
-                    # We don't care whether the contact had already subscribed
-                    # to another Relay waitlist, we just subscribe.
+                    # We want to keep the other Relay waitlists already subscribed.
+                    for waitlist in relay_waitlists:
+                        to_update.append(
+                            WaitlistInSchema(
+                                name=waitlist.name,
+                                subscribed=waitlist.subscribed,
+                                fields=waitlist.fields,
+                            )
+                        )
                     for newsletter in input_relay_newsletters:
                         name = newsletter["name"].replace("-waitlist", "")
                         to_update.append(

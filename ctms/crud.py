@@ -6,7 +6,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
 
@@ -52,8 +52,6 @@ from .schemas import (
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
-    UpdatedNewsletterInSchema,
-    UpdatedWaitlistInSchema,
     WaitlistInSchema,
 )
 from .schemas.base import BaseModel
@@ -453,22 +451,31 @@ def create_newsletter(
 def create_or_update_newsletters(
     db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
 ):
+    # Start by deleting the existing newsletters that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
     names = [
         newsletter.name for newsletter in newsletters if not newsletter.is_default()
     ]
     db.query(Newsletter).filter(
         Newsletter.email_id == email_id, Newsletter.name.notin_(names)
     ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
         synchronize_session=False
-    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+    )
 
     if newsletters:
-        newsletters = [UpdatedNewsletterInSchema(**news.dict()) for news in newsletters]
         stmt = insert(Newsletter).values(
             [{"email_id": email_id, **n.dict()} for n in newsletters]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_email_name", set_=dict(stmt.excluded)
+            constraint="uix_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
@@ -487,15 +494,32 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
+    # Start by deleting the existing waitlists that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
+    # Note: the contact is marked as pending synchronization at the API routers level.
+    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    db.query(Waitlist).filter(
+        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+    ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
+        synchronize_session=False
+    )
     waitlists_to_upsert = [
-        UpdatedWaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
+        WaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
     ]
     if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.dict()} for wl in waitlists_to_upsert]
+            [{"email_id": email_id, **wl.dict()} for wl in waitlists]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_wl_email_name", set_=dict(stmt.excluded)
+            constraint="uix_wl_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)

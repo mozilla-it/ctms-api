@@ -13,7 +13,7 @@ from ctms.schemas.waitlist import WaitlistInSchema
         {
             "name": "a",
             "source": "http://website.com",
-            "fields": {"foo": "bar", "geo": "b"},
+            "fields": {"foo": "bar", "geo": "br"},
         },
     ],
 )
@@ -31,6 +31,16 @@ def test_waitlist_with_valid_input_data(data):
         {"name": "a", "fields": None},
         {"name": "a", "fields": "foo"},
         {"name": "a", "fields": [{}]},
+        {
+            "name": "a",
+            "source": "http://website.com",
+            "fields": {"geo": "s" * 101},
+        },
+        {
+            "name": "a",
+            "source": "http://website.com",
+            "fields": {"platform": "s" * 101},
+        },
     ],
 )
 def test_waitlist_with_invalid_input_data(data):
