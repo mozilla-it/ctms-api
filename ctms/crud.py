@@ -9,6 +9,7 @@ from pydantic import UUID4
 from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
+from sqlalchemy.sql import func, select
 
 from .auth import hash_password
 from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
@@ -55,6 +56,10 @@ from .schemas import (
     WaitlistInSchema,
 )
 from .schemas.base import BaseModel
+
+
+def ping(db: Session):
+    db.execute(select([func.now()])).first()
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):
@@ -287,11 +292,13 @@ def get_all_acoustic_records_before(
 
 
 def get_all_acoustic_records_count(
-    db: Session, end_time: datetime, retry_limit: int = 5
+    db: Session, end_time: Optional[datetime] = None, retry_limit: int = 5
 ) -> int:
     """
     Get all the pending records before a given date. Allows retry limit to be provided at query time.
     """
+    if end_time is None:
+        end_time = datetime.now(tz=timezone.utc)
     query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
     pending_records_count: int = query.count()
     return pending_records_count

@@ -1,6 +1,7 @@
 import logging
+import time
 from collections import defaultdict
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -18,7 +19,10 @@ from ctms.config import Settings, get_version
 from ctms.crud import (
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
+    get_all_acoustic_records_count,
+    get_all_acoustic_retries_count,
     get_api_client_by_id,
+    ping,
 )
 from ctms.dependencies import (
     get_db,
@@ -27,7 +31,6 @@ from ctms.dependencies import (
     get_token_settings,
 )
 from ctms.metrics import get_metrics_registry, token_scheme
-from ctms.monitor import check_database
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse
 
@@ -126,30 +129,62 @@ def heartbeat(
     is_amazon = user_agent.startswith("Amazon-Route53-Health-Check-Service (")
     if is_newrelic or is_amazon:
         request.state.log_context["trivial_code"] = 200
-    data = {"database": check_database(db, settings)}
-    status_code = 200
-    if not data["database"]["up"]:
-        status_code = 503
 
-    if "acoustic" in data["database"]:
-        backlog = data["database"]["acoustic"]["backlog"]
-        retry_backlog = data["database"]["acoustic"]["retry_backlog"]
-        max_backlog = data["database"]["acoustic"]["max_backlog"]
-        max_retry_backlog = data["database"]["acoustic"]["max_retry_backlog"]
+    result: dict[str, Any] = {}
+    start_time = time.monotonic()
+    try:
+        ping(db)
+        alive = True
+    except Exception as exc:  # pylint:disable = broad-exception-caught
+        logger.exception(exc)
+        alive = False
 
-        if max_backlog is not None and max_backlog > backlog:
-            logger.error(
-                "Acoustic backlog size %s exceed maximum %s", backlog, max_backlog
+    result["database"] = {
+        "up": alive,
+        "time_ms": int(round(1000 * time.monotonic() - start_time)),
+        "acoustic": {},
+    }
+
+    acoustic_success = True
+    if alive:
+        start_time = time.monotonic()
+        try:
+            backlog = get_all_acoustic_records_count(
+                db, retry_limit=settings.acoustic_retry_limit
             )
-            status_code = 503
-        if max_retry_backlog is not None and max_retry_backlog > retry_backlog:
-            logger.error(
-                "Acoustic retry backlog size %s exceed maximum %s",
-                retry_backlog,
-                max_retry_backlog,
-            )
-            status_code = 503
-    return JSONResponse(content=data, status_code=status_code)
+            retry_backlog = get_all_acoustic_retries_count(db)
+        except Exception as exc:  # pylint:disable = broad-exception-caught
+            logger.exception(exc)
+            backlog = None
+            retry_backlog = None
+            acoustic_success = False
+
+        for name, value, maximum in [
+            ("backlog", backlog, settings.acoustic_max_backlog),
+            ("retry backlog", retry_backlog, settings.acoustic_max_retry_backlog),
+        ]:
+            if value is not None and maximum is not None and value > maximum:
+                logger.error(
+                    f"Acoustic {name} size %s exceed maximum %s",
+                    backlog,
+                    settings.acoustic_max_backlog,
+                )
+                acoustic_success = False
+
+        result["database"]["acoustic"] = {
+            "success": acoustic_success,
+            "backlog": backlog,
+            "max_backlog": settings.acoustic_max_backlog,
+            "retry_backlog": retry_backlog,
+            "max_retry_backlog": settings.acoustic_max_retry_backlog,
+            "retry_limit": settings.acoustic_retry_limit,
+            "batch_limit": settings.acoustic_batch_limit,
+            "loop_min_sec": settings.acoustic_loop_min_secs,
+            "time_ms": int(round(1000 * time.monotonic() - start_time)),
+        }
+
+    status_code = 200 if (alive and acoustic_success) else 503
+    return JSONResponse(content=result, status_code=status_code)
 
 
 @router.get("/__lbheartbeat__", tags=["Platform"])

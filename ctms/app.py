@@ -21,7 +21,6 @@ from .metrics import (
 )
 from .routers import contacts, platform, stripe
 
-
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
