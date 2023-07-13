@@ -58,7 +58,12 @@ from .schemas.base import BaseModel
 
 
 def count_total_contacts(db: Session):
-    return db.query(Email).count()
+    query = text(
+        "SELECT reltuples AS estimate "
+        "FROM pg_class "
+        f"where relname = '{Email.__tablename__}'"
+    )
+    return int(db.execute(query).first()["estimate"])
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):

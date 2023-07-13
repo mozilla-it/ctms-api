@@ -32,6 +32,7 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
+from ctms.database import ScopedSessionLocal
 from ctms.models import (
     AcousticField,
     AcousticNewsletterMapping,
@@ -52,11 +53,28 @@ from ctms.schemas.waitlist import WaitlistInSchema
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
 
 
-def test_email_count(dbsession, email_factory):
+def test_email_count(connection, email_factory):
+    # The default `dbsession` fixture will run in a nested transaction
+    # that is rollback.
+    transaction = connection.begin()
+    session = ScopedSessionLocal()
     email_factory.create_batch(3)
-    dbsession.commit()
+    session.commit()
+    session.close()
+    transaction.commit()
 
-    count = count_total_contacts(dbsession)
+    old_isolation_level = connection.connection.isolation_level
+    connection.connection.set_isolation_level(0)
+    session.execute(sqlalchemy.text(f"VACUUM ANALYZE {Email.__tablename__}"))
+    session.close()
+    connection.connection.set_isolation_level(old_isolation_level)
+
+    session = ScopedSessionLocal()
+    count = count_total_contacts(session)
+    session.query(Email).delete()
+    session.commit()
+    session.close()
+
     assert count == 3
 
 
