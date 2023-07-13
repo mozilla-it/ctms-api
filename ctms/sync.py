@@ -25,6 +25,7 @@ class CTMSToAcousticSync:
         refresh_token,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id,
         acoustic_product_table_id,
         server_number,
         retry_limit=5,
@@ -44,6 +45,7 @@ class CTMSToAcousticSync:
             acoustic_client=acoustic_client,
             acoustic_main_table_id=acoustic_main_table_id,
             acoustic_newsletter_table_id=acoustic_newsletter_table_id,
+            acoustic_waitlist_table_id=acoustic_waitlist_table_id,
             acoustic_product_table_id=acoustic_product_table_id,
             metric_service=metric_service,
         )
@@ -58,6 +60,7 @@ class CTMSToAcousticSync:
         db,
         pending_record: PendingAcousticRecord,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ) -> str:
         state = "unknown"
@@ -67,7 +70,7 @@ class CTMSToAcousticSync:
                 contact = get_contact_by_email_id(db, pending_record.email_id)
                 try:
                     self.ctms_to_acoustic.attempt_to_upload_ctms_contact(
-                        contact, main_fields, newsletters_mapping
+                        contact, main_fields, waitlist_fields, newsletters_mapping
                     )
                 except AcousticUploadError as exc:
                     email_domain = (
@@ -134,6 +137,10 @@ class CTMSToAcousticSync:
             db.query(AcousticField).filter(AcousticField.tablename == "main").all()
         )
         main_fields = {entry.field for entry in main_acoustic_fields}
+        waitlist_acoustic_fields: List[AcousticField] = (
+            db.query(AcousticField).filter(AcousticField.tablename == "waitlist").all()
+        )
+        waitlist_fields = {entry.field for entry in waitlist_acoustic_fields}
 
         newsletters_mapping_entries: List[AcousticNewsletterMapping] = db.query(
             AcousticNewsletterMapping
@@ -158,7 +165,7 @@ class CTMSToAcousticSync:
         record_created = None
         for acoustic_record in all_acoustic_records_before_now:
             state = self._sync_pending_record(
-                db, acoustic_record, main_fields, newsletters_mapping
+                db, acoustic_record, main_fields, waitlist_fields, newsletters_mapping
             )
             total += 1
 

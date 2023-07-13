@@ -19,6 +19,7 @@ def ctms_to_acoustic_sync():
             refresh_token="REFRESH",
             acoustic_main_table_id="1",
             acoustic_newsletter_table_id="9",
+            acoustic_waitlist_table_id="11",
             acoustic_product_table_id="10",
             server_number=6,
         )
@@ -33,6 +34,7 @@ def ctms_to_acoustic_sync_with_metrics(background_metric_service):
             refresh_token="REFRESH",
             acoustic_main_table_id="1",
             acoustic_newsletter_table_id="9",
+            acoustic_waitlist_table_id="11",
             acoustic_product_table_id="10",
             server_number=6,
             metric_service=background_metric_service,
@@ -62,6 +64,7 @@ def test_sync_acoustic_record_retry_path(
     sync_obj,
     maximal_contact,
     main_acoustic_fields,
+    waitlist_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
     sync_obj.ctms_to_acoustic = MagicMock(
@@ -75,7 +78,10 @@ def test_sync_acoustic_record_retry_path(
         context = sync_obj.sync_records(dbsession, end_time=end_time)
 
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
-        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+        maximal_contact,
+        main_acoustic_fields,
+        waitlist_acoustic_fields,
+        acoustic_newsletters_mapping,
     )
     expected_context = {
         "batch_limit": 20,
@@ -141,6 +147,7 @@ def test_sync_acoustic_record_delete_path(
     maximal_contact,
     settings,
     main_acoustic_fields,
+    waitlist_acoustic_fields,
     acoustic_newsletters_mapping,
 ):
     no_metrics = sync_obj.metric_service is None
@@ -154,7 +161,10 @@ def test_sync_acoustic_record_delete_path(
     dbsession.flush()
 
     sync_obj.ctms_to_acoustic.attempt_to_upload_ctms_contact.assert_called_with(
-        maximal_contact, main_acoustic_fields, acoustic_newsletters_mapping
+        maximal_contact,
+        main_acoustic_fields,
+        waitlist_acoustic_fields,
+        acoustic_newsletters_mapping,
     )
     expected_context = {
         "batch_limit": 20,

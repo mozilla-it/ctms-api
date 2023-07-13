@@ -13,6 +13,7 @@ from silverpop.api import Silverpop, SilverpopResponseException
 from ctms.background_metrics import BackgroundMetricService
 from ctms.config import re_trace_email
 from ctms.schemas import ContactSchema, NewsletterSchema
+from ctms.schemas.waitlist import WaitlistBase
 
 # Start cherry-picked from django.utils.encoding
 _PROTECTED_TYPES = (
@@ -121,6 +122,7 @@ class CTMSToAcousticService:
         self,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id,
         acoustic_product_table_id,
         acoustic_client: Acoustic,
         metric_service: BackgroundMetricService = None,
@@ -133,6 +135,7 @@ class CTMSToAcousticService:
         self.relational_tables = {
             "newsletter": str(int(acoustic_newsletter_table_id)),
             "product": str(int(acoustic_product_table_id)),
+            "waitlist": str(int(acoustic_waitlist_table_id)),
         }
         self.logger = structlog.get_logger(__name__)
         self.context: Dict[str, Union[str, int, List[str]]] = {}
@@ -142,19 +145,21 @@ class CTMSToAcousticService:
         self,
         contact: ContactSchema,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):
         acoustic_main_table = self._main_table_converter(contact, main_fields)
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
             acoustic_main_table, contact, newsletters_mapping
         )
-        acoustic_main_table = self._waitlist_converter(
+        waitlist_rows, acoustic_main_table = self._waitlist_converter(
             acoustic_main_table,
             contact,
             main_fields,
+            waitlist_fields,
         )
         product_rows = self._product_converter(contact)
-        return acoustic_main_table, newsletter_rows, product_rows
+        return acoustic_main_table, newsletter_rows, waitlist_rows, product_rows
 
     def _main_table_converter(self, contact, main_fields):
         acoustic_main_table = {}
@@ -263,16 +268,20 @@ class CTMSToAcousticService:
             self.context["newsletters_skipped"] = sorted(skipped)
         return newsletter_rows, acoustic_main_table
 
-    def _waitlist_converter(self, acoustic_main_table, contact, main_fields):
+    def _waitlist_converter(
+        self, acoustic_main_table, contact, main_fields, waitlist_fields
+    ):
         """Turns waitlists into flat fields on the main table.
 
         If the field `{name}_waitlist_{field}` is not present in the `main_fields`
         list, then it is ignored.
         See `bin/acoustic_fields.py` to manage them (eg. add ``vpn_waitlist_source``).
-
-        Note: In the future, a dedicated relation/table for waitlists can be considered.
         """
-        waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
+        waitlist_rows = []
+        contact_waitlists: List[WaitlistBase] = contact.waitlists
+        contact_email_id = str(contact.email.email_id)
+
+        waitlists_by_name = {wl.name: wl for wl in contact_waitlists}
         for acoustic_field_name in main_fields:
             if "_waitlist_" not in acoustic_field_name:
                 continue
@@ -284,7 +293,29 @@ class CTMSToAcousticService:
             acoustic_main_table[
                 acoustic_field_name
             ] = self.transform_field_for_acoustic(value)
-        return acoustic_main_table
+
+        # Waitlist relational table
+        for waitlist in contact_waitlists:
+            waitlist_row = {
+                "email_id": contact_email_id,
+                "waitlist_name": waitlist.name,
+                "waitlist_source": str(waitlist.source or ""),
+                "subscribed": waitlist.subscribed,
+                "unsub_reason": waitlist.unsub_reason or "",
+                # Timestamps
+                "create_timestamp": waitlist.create_timestamp.date().isoformat(),
+                "update_timestamp": waitlist.update_timestamp.date().isoformat(),
+            }
+            # Extra optional fields (eg. "geo", "platform", ...)
+            for field in waitlist_fields:
+                waitlist_row[f"waitlist_{field}"] = str(
+                    waitlist.fields.get(field) or ""
+                )
+
+            # TODO: manage sync of unsubscribed waitlists (currently not possible)
+            waitlist_rows.append(waitlist_row)
+
+        return waitlist_rows, acoustic_main_table
 
     @staticmethod
     def transform_field_for_acoustic(data):
@@ -430,6 +461,7 @@ class CTMSToAcousticService:
         self,
         contact: ContactSchema,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):  # raises AcousticUploadError
         """
@@ -439,8 +471,13 @@ class CTMSToAcousticService:
         """
         self.context = {}
         try:
-            main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(
-                contact, main_fields, newsletters_mapping
+            (
+                main_table_data,
+                nl_data,
+                wl_data,
+                prod_data,
+            ) = self.convert_ctms_to_acoustic(
+                contact, main_fields, waitlist_fields, newsletters_mapping
             )
             main_table_id = str(self.acoustic_main_table_id)
             email_id = main_table_data["email_id"]
@@ -453,6 +490,7 @@ class CTMSToAcousticService:
                 columns=main_table_data,
             )
             self._insert_update_relational_table("newsletter", nl_data)
+            self._insert_update_relational_table("waitlist", wl_data)
             self._insert_update_relational_table("product", prod_data)
 
             # success

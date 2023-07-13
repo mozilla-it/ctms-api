@@ -555,6 +555,12 @@ def main_acoustic_fields(dbsession):
 
 
 @pytest.fixture
+def waitlist_acoustic_fields(dbsession):
+    records = get_all_acoustic_fields(dbsession, tablename="waitlist")
+    return {r.field for r in records}
+
+
+@pytest.fixture
 def acoustic_newsletters_mapping(dbsession):
     records = get_all_acoustic_newsletters_mapping(dbsession)
     return {r.source: r.destination for r in records}

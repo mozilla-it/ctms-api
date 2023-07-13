@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     acoustic_refresh_token: Optional[str] = None
     acoustic_main_table_id: Optional[int] = None
     acoustic_newsletter_table_id: Optional[int] = None
+    acoustic_waitlist_table_id: Optional[int] = None
     acoustic_product_subscriptions_id: Optional[int] = None
     prometheus_pushgateway_url: Optional[str] = None
     background_healthcheck_path: Optional[str] = None
@@ -81,6 +82,7 @@ class BackgroundSettings(Settings):
     acoustic_refresh_token: str
     acoustic_main_table_id: int
     acoustic_newsletter_table_id: int
+    acoustic_waitlist_table_id: int
     acoustic_product_subscriptions_id: int
     prometheus_pushgateway_url: str
 

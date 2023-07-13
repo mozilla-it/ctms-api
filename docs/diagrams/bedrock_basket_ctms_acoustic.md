@@ -1,4 +1,14 @@
-# Basket Integration
+# Bedrock Basket CTMS Acoustic
+
+* [Bedrock](https://github.com/mozilla/bedrock/) powers https://www.mozilla.org
+* [Basket](https://github.com/mozmeao/basket/) receives form POSTs and stores contacts in CTMS
+
+## Acoustic Tables
+
+* The `main` table holds contacts details, as well as boolean columns that represent the different newsletter subscriptions
+* The `newsletter` relational table stores contacts subscriptions to newsletters.
+* The `waitlist` relational table stores contacts participation to waitlists.
+* The `product` relational table stores the contacts's subscribed products.
 
 ## VPN Waiting List
 
