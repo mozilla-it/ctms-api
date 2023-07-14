@@ -121,17 +121,24 @@ def test_read_heartbeat_no_db_fails(anon_client, mock_db):
     resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 503
     data = resp.json()
-    expected = {"database": {"up": False, "time_ms": data["database"]["time_ms"]}}
+    expected = {
+        "database": {
+            "up": False,
+            "time_ms": data["database"]["time_ms"],
+            "acoustic": {},
+        }
+    }
     assert data == expected
 
 
 def test_read_heartbeat_acoustic_fails(anon_client, test_settings):
     """/__heartbeat__ returns 200 when measuring the acoustic backlog fails."""
     with patch(
-        "ctms.monitor.get_all_acoustic_records_count", side_effect=SQATimeoutError()
+        "ctms.acoustic_service.get_all_acoustic_records_count",
+        side_effect=SQATimeoutError(),
     ):
         resp = anon_client.get("/__heartbeat__")
-    assert resp.status_code == 200
+    assert resp.status_code == 503
     data = resp.json()
     expected = {
         "database": {
@@ -160,11 +167,12 @@ def test_read_heartbeat_backlog_over_limit(
     """/__heartbeat__ returns 503 when measuring the acoustic backlog fails."""
     test_settings["acoustic_max_backlog"] = 50
     test_settings["acoustic_max_retry_backlog"] = 50
-    backlog = 1
-    retry_backlog = 1
     with patch(
-        "ctms.monitor.get_all_acoustic_records_count", return_value=backlog
-    ), patch("ctms.monitor.get_all_acoustic_retries_count", return_value=retry_backlog):
+        "ctms.acoustic_service.get_all_acoustic_records_count", return_value=backlog
+    ), patch(
+        "ctms.acoustic_service.get_all_acoustic_retries_count",
+        return_value=retry_backlog,
+    ):
         resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 503
     data = resp.json()
@@ -192,8 +200,8 @@ def test_read_heartbeat_by_bot(anon_client, mock_db, success, agent, method):
         mock_db.execute.side_effect = SQATimeoutError()
 
     with capture_logs() as cap_logs, patch(
-        "ctms.monitor.get_all_acoustic_records_count", return_value=0
-    ), patch("ctms.monitor.get_all_acoustic_retries_count", return_value=0):
+        "ctms.acoustic_service.get_all_acoustic_records_count", return_value=0
+    ), patch("ctms.acoustic_service.get_all_acoustic_retries_count", return_value=0):
         resp = anon_client.request(method, "/__heartbeat__", headers=headers)
     assert len(cap_logs) == 1
 

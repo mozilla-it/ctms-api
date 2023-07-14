@@ -5,7 +5,6 @@ from pydantic import ValidationError
 from sentry_sdk.integrations.logging import ignore_logger
 
 from ctms import config
-from ctms.monitor import get_version
 
 
 def init_sentry():
@@ -24,9 +23,10 @@ def init_sentry():
     except ValidationError:
         sentry_debug = False
 
+    version_info = config.get_version()
     # pylint: disable=abstract-class-instantiated
     sentry_sdk.init(
-        release=get_version().get("commit", None),
+        release=version_info.get("commit", version_info["version"]),
         debug=sentry_debug,
         send_default_pii=False,
     )

@@ -1,7 +1,8 @@
 import datetime
+import logging
 import time
 from decimal import Decimal
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from uuid import UUID
 
 import dateutil
@@ -9,11 +10,17 @@ import structlog
 from lxml import etree
 from requests.exceptions import Timeout
 from silverpop.api import Silverpop, SilverpopResponseException
+from sqlalchemy.orm import Session
 
 from ctms.background_metrics import BackgroundMetricService
-from ctms.config import re_trace_email
+from ctms.config import Settings, re_trace_email
+from ctms.crud import get_all_acoustic_records_count, get_all_acoustic_retries_count
+from ctms.dependencies import get_settings
 from ctms.schemas import ContactSchema, NewsletterSchema
 from ctms.schemas.waitlist import WaitlistBase
+
+logger = logging.getLogger(__name__)
+
 
 # Start cherry-picked from django.utils.encoding
 _PROTECTED_TYPES = (
@@ -56,6 +63,46 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 
 
 # End cherry-picked from django.utils.encoding
+
+
+def acoustic_heartbeat(
+    db: Session, settings: Settings = get_settings()
+) -> tuple[bool, dict[str, Any]]:
+    """Check Acoustic backlog limits."""
+    success = True
+    try:
+        backlog = get_all_acoustic_records_count(
+            db, retry_limit=settings.acoustic_retry_limit
+        )
+        retry_backlog = get_all_acoustic_retries_count(db)
+    except Exception as exc:  # pylint:disable = broad-exception-caught
+        logger.exception(exc)
+        backlog = None
+        retry_backlog = None
+        success = False
+
+    for name, value, maximum in [
+        ("backlog", backlog, settings.acoustic_max_backlog),
+        ("retry backlog", retry_backlog, settings.acoustic_max_retry_backlog),
+    ]:
+        if value is not None and maximum is not None and value > maximum:
+            logger.error(
+                f"Acoustic {name} size %s exceed maximum %s",
+                backlog,
+                settings.acoustic_max_backlog,
+            )
+            success = False
+
+    details = {
+        "backlog": backlog,
+        "max_backlog": settings.acoustic_max_backlog,
+        "retry_backlog": retry_backlog,
+        "max_retry_backlog": settings.acoustic_max_retry_backlog,
+        "retry_limit": settings.acoustic_retry_limit,
+        "batch_limit": settings.acoustic_batch_limit,
+        "loop_min_sec": settings.acoustic_loop_min_secs,
+    }
+    return success, details
 
 
 class AcousticUploadError(Exception):
