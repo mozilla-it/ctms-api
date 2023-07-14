@@ -131,14 +131,9 @@ def heartbeat(
         request.state.log_context["trivial_code"] = 200
 
     result: dict[str, Any] = {}
-    start_time = time.monotonic()
-    try:
-        ping(db)
-        alive = True
-    except Exception as exc:  # pylint:disable = broad-exception-caught
-        logger.exception(exc)
-        alive = False
 
+    start_time = time.monotonic()
+    alive = ping(db)
     result["database"] = {
         "up": alive,
         "time_ms": int(round(1000 * time.monotonic() - start_time)),

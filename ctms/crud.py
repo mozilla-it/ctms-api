@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from functools import partial
@@ -57,9 +58,16 @@ from .schemas import (
 )
 from .schemas.base import BaseModel
 
+logger = logging.getLogger(__name__)
+
 
 def ping(db: Session):
-    db.execute(select([func.now()])).first()
+    try:
+        db.execute(select([func.now()])).first()
+        return True
+    except Exception as exc:  # pylint:disable = broad-exception-caught
+        logger.exception(exc)
+        return False
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):
