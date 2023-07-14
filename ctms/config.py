@@ -4,6 +4,7 @@ import re
 from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseSettings, PostgresDsn
@@ -19,13 +20,11 @@ def get_version():
 
     This has generic data in repo, but gets the build details in CI.
     """
-    ctms_root = os.path.dirname(os.path.dirname(__file__))
-    version_path = os.path.join(ctms_root, "version.json")
-    info = {}
-    if os.path.exists(version_path):
-        with open(version_path, "r", encoding="utf8") as version_file:
-            info = json.load(version_file)
-    return info
+    ctms_root = Path(__file__).parent.parent
+    version_path = ctms_root / "version.json"
+    if version_path.exists():
+        return json.loads(version_path.read_text())
+    return {}
 
 
 class LogLevel(str, Enum):
