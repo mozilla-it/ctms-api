@@ -134,7 +134,7 @@ def test_read_heartbeat_no_db_fails(anon_client, mock_db):
 def test_read_heartbeat_acoustic_fails(anon_client, test_settings):
     """/__heartbeat__ returns 200 when measuring the acoustic backlog fails."""
     with patch(
-        "ctms.routers.platform.get_all_acoustic_records_count",
+        "ctms.acoustic_service.get_all_acoustic_records_count",
         side_effect=SQATimeoutError(),
     ):
         resp = anon_client.get("/__heartbeat__")
@@ -168,9 +168,9 @@ def test_read_heartbeat_backlog_over_limit(
     test_settings["acoustic_max_backlog"] = 50
     test_settings["acoustic_max_retry_backlog"] = 50
     with patch(
-        "ctms.routers.platform.get_all_acoustic_records_count", return_value=backlog
+        "ctms.acoustic_service.get_all_acoustic_records_count", return_value=backlog
     ), patch(
-        "ctms.routers.platform.get_all_acoustic_retries_count",
+        "ctms.acoustic_service.get_all_acoustic_retries_count",
         return_value=retry_backlog,
     ):
         resp = anon_client.get("/__heartbeat__")
@@ -200,8 +200,8 @@ def test_read_heartbeat_by_bot(anon_client, mock_db, success, agent, method):
         mock_db.execute.side_effect = SQATimeoutError()
 
     with capture_logs() as cap_logs, patch(
-        "ctms.routers.platform.get_all_acoustic_records_count", return_value=0
-    ), patch("ctms.routers.platform.get_all_acoustic_retries_count", return_value=0):
+        "ctms.acoustic_service.get_all_acoustic_records_count", return_value=0
+    ), patch("ctms.acoustic_service.get_all_acoustic_retries_count", return_value=0):
         resp = anon_client.request(method, "/__heartbeat__", headers=headers)
     assert len(cap_logs) == 1
 

@@ -10,6 +10,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
 from structlog.testing import capture_logs
 
+from ctms.acoustic_service import acoustic_heartbeat
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
     create_access_token,
@@ -19,8 +20,6 @@ from ctms.config import Settings, get_version
 from ctms.crud import (
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
-    get_all_acoustic_records_count,
-    get_all_acoustic_retries_count,
     get_api_client_by_id,
     ping,
 )
@@ -140,42 +139,15 @@ def heartbeat(
         "acoustic": {},
     }
 
-    acoustic_success = True
+    acoustic_success = alive
     if alive:
         start_time = time.monotonic()
-        try:
-            backlog = get_all_acoustic_records_count(
-                db, retry_limit=settings.acoustic_retry_limit
-            )
-            retry_backlog = get_all_acoustic_retries_count(db)
-        except Exception as exc:  # pylint:disable = broad-exception-caught
-            logger.exception(exc)
-            backlog = None
-            retry_backlog = None
-            acoustic_success = False
-
-        for name, value, maximum in [
-            ("backlog", backlog, settings.acoustic_max_backlog),
-            ("retry backlog", retry_backlog, settings.acoustic_max_retry_backlog),
-        ]:
-            if value is not None and maximum is not None and value > maximum:
-                logger.error(
-                    f"Acoustic {name} size %s exceed maximum %s",
-                    backlog,
-                    settings.acoustic_max_backlog,
-                )
-                acoustic_success = False
+        acoustic_success, details = acoustic_heartbeat(db, settings)
 
         result["database"]["acoustic"] = {
             "success": acoustic_success,
-            "backlog": backlog,
-            "max_backlog": settings.acoustic_max_backlog,
-            "retry_backlog": retry_backlog,
-            "max_retry_backlog": settings.acoustic_max_retry_backlog,
-            "retry_limit": settings.acoustic_retry_limit,
-            "batch_limit": settings.acoustic_batch_limit,
-            "loop_min_sec": settings.acoustic_loop_min_secs,
             "time_ms": int(round(1000 * time.monotonic() - start_time)),
+            **details,
         }
 
     status_code = 200 if (alive and acoustic_success) else 503
