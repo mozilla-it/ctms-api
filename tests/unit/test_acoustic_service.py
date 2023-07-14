@@ -6,7 +6,7 @@ import pytest
 from structlog.testing import capture_logs
 
 from ctms import acoustic_service
-from ctms.acoustic_service import CTMSToAcousticService
+from ctms.acoustic_service import CTMSToAcousticService, transform_field_for_acoustic
 from ctms.crud import get_contact_by_email_id, get_newsletters_by_email_id
 from ctms.schemas.contact import ContactSchema
 
@@ -158,9 +158,9 @@ def test_ctms_to_acoustic_waitlists_minimal(
         acoustic_newsletters_mapping,
     )
     assert len(minimal_contact.waitlists) == 0
-    assert main["vpn_waitlist_geo"] is None
-    assert main["vpn_waitlist_platform"] is None
-    assert main["relay_waitlist_geo"] is None
+    assert main["vpn_waitlist_geo"] == ""
+    assert main["vpn_waitlist_platform"] == ""
+    assert main["relay_waitlist_geo"] == ""
 
 
 def test_ctms_to_acoustic_waitlists_maximal(
@@ -538,19 +538,15 @@ def test_ctms_to_acoustic_traced_email(
 
 
 def test_transform_field(base_ctms_acoustic_service):
-    is_true = base_ctms_acoustic_service.transform_field_for_acoustic(True)
+    is_true = transform_field_for_acoustic(True)
     assert is_true == "1"
-    is_false = base_ctms_acoustic_service.transform_field_for_acoustic(False)
+    is_false = transform_field_for_acoustic(False)
     assert is_false == "0"
-    transformed_from_datetime = base_ctms_acoustic_service.transform_field_for_acoustic(
-        datetime.datetime.now()
-    )
+    transformed_from_datetime = transform_field_for_acoustic(datetime.datetime.now())
     assert (
         transformed_from_datetime is not None
     ), "Error when using method to transform datetime object"
-    transformed_from_date = base_ctms_acoustic_service.transform_field_for_acoustic(
-        datetime.date.today()
-    )
+    transformed_from_date = transform_field_for_acoustic(datetime.date.today())
     assert (
         transformed_from_date is not None
     ), "Error when using method to transform date object"
