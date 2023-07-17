@@ -1,12 +1,13 @@
 import datetime
 from unittest import mock
 from unittest.mock import MagicMock
+from uuid import UUID
 
 import pytest
 from structlog.testing import capture_logs
 
 from ctms import acoustic_service
-from ctms.acoustic_service import CTMSToAcousticService
+from ctms.acoustic_service import CTMSToAcousticService, transform_field_for_acoustic
 from ctms.crud import get_contact_by_email_id, get_newsletters_by_email_id
 from ctms.schemas.contact import ContactSchema
 
@@ -158,9 +159,9 @@ def test_ctms_to_acoustic_waitlists_minimal(
         acoustic_newsletters_mapping,
     )
     assert len(minimal_contact.waitlists) == 0
-    assert main["vpn_waitlist_geo"] is None
-    assert main["vpn_waitlist_platform"] is None
-    assert main["relay_waitlist_geo"] is None
+    assert main["vpn_waitlist_geo"] == ""
+    assert main["vpn_waitlist_platform"] == ""
+    assert main["relay_waitlist_geo"] == ""
 
 
 def test_ctms_to_acoustic_waitlists_maximal(
@@ -537,49 +538,26 @@ def test_ctms_to_acoustic_traced_email(
     assert caplog[0] == expected_log
 
 
-def test_transform_field(base_ctms_acoustic_service):
-    is_true = base_ctms_acoustic_service.transform_field_for_acoustic(True)
-    assert is_true == "1"
-    is_false = base_ctms_acoustic_service.transform_field_for_acoustic(False)
-    assert is_false == "0"
-    transformed_from_datetime = base_ctms_acoustic_service.transform_field_for_acoustic(
-        datetime.datetime.now()
-    )
-    assert (
-        transformed_from_datetime is not None
-    ), "Error when using method to transform datetime object"
-    transformed_from_date = base_ctms_acoustic_service.transform_field_for_acoustic(
-        datetime.date.today()
-    )
-    assert (
-        transformed_from_date is not None
-    ), "Error when using method to transform date object"
-
-    assert transformed_from_datetime == transformed_from_date, (
-        "The result of the transformation process of a "
-        "date and datetime should be identical, "
-        "when starting values are equivalent in date "
-    )
-
-    is_datetime_parsed = datetime.datetime.strptime(
-        transformed_from_datetime, "%m/%d/%Y"
-    )
-    assert isinstance(
-        is_datetime_parsed, datetime.date
-    ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
-    is_date_parsed = datetime.datetime.strptime(transformed_from_date, "%m/%d/%Y")
-    assert isinstance(
-        is_date_parsed, datetime.date
-    ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
-
-
 @pytest.mark.parametrize(
-    "value,expected",
-    (("true", "Yes"), (True, "Yes"), (False, "No"), ("false", "No"), ("", "No")),
+    "value, expected",
+    (
+        ("string", "string"),
+        (True, "Yes"),
+        (False, "No"),
+        (None, ""),
+        (
+            UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
+            "62d8d3c6-95f3-4ed6-b176-7f69acff22f6",
+        ),
+        (
+            datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc),
+            "11/08/2021",
+        ),
+        (datetime.date(2021, 11, 8), "11/08/2021"),
+    ),
 )
-def test_to_acoustic_bool(value, expected):
-    """Python and JS booleans are converted to Acoustic Yes/No bools."""
-    assert CTMSToAcousticService.to_acoustic_bool(value) == expected
+def test_transform_field_for_acoustic(value, expected):
+    assert transform_field_for_acoustic(value) == expected
 
 
 def test_to_acoustic_timestamp():

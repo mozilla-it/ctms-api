@@ -65,6 +65,24 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 # End cherry-picked from django.utils.encoding
 
 
+def transform_field_for_acoustic(data):
+    """Transform data type for Acoustic."""
+    if isinstance(data, bool):
+        if data:
+            return "Yes"
+        return "No"
+    if isinstance(data, datetime.datetime):
+        # Acoustic doesn't have timestamps, so make timestamps into dates.
+        data = data.date()
+    if isinstance(data, datetime.date):
+        return data.strftime("%m/%d/%Y")
+    if isinstance(data, UUID):
+        return str(data)
+    if data is None:
+        return ""
+    return data
+
+
 def acoustic_heartbeat(
     db: Session, settings: Settings = get_settings()
 ) -> tuple[bool, dict[str, Any]]:
@@ -245,7 +263,7 @@ class CTMSToAcousticService:
 
                         acoustic_main_table[
                             acoustic_field_name
-                        ] = self.transform_field_for_acoustic(inner_value)
+                        ] = transform_field_for_acoustic(inner_value)
                     elif (contact_attr, inner_attr) in AcousticResources.SKIP_FIELDS:
                         pass
                     else:
@@ -326,7 +344,6 @@ class CTMSToAcousticService:
         """
         waitlist_rows = []
         contact_waitlists: List[WaitlistBase] = contact.waitlists
-        contact_email_id = str(contact.email.email_id)
 
         waitlists_by_name = {wl.name: wl for wl in contact_waitlists}
         for acoustic_field_name in main_fields:
@@ -337,55 +354,32 @@ class CTMSToAcousticService:
             if name in waitlists_by_name:
                 waitlist = waitlists_by_name[name]
                 value = getattr(waitlist, field, waitlist.fields.get(field, None))
-            acoustic_main_table[
-                acoustic_field_name
-            ] = self.transform_field_for_acoustic(value)
+            acoustic_main_table[acoustic_field_name] = transform_field_for_acoustic(
+                value
+            )
 
         # Waitlist relational table
         for waitlist in contact_waitlists:
-            waitlist_row = {
-                "email_id": contact_email_id,
-                "waitlist_name": waitlist.name,
-                "waitlist_source": str(waitlist.source or ""),
-                "subscribed": waitlist.subscribed,
-                "unsub_reason": waitlist.unsub_reason or "",
-                # Timestamps
-                "create_timestamp": waitlist.create_timestamp.date().isoformat(),
-                "update_timestamp": waitlist.update_timestamp.date().isoformat(),
-            }
+            waitlist_row = {}
+            for column, field in (
+                ("email_id", "email_id"),
+                ("waitlist_name", "name"),
+                ("waitlist_source", "source"),
+                ("subscribed", "subscribed"),
+                ("unsub_reason", "unsub_reason"),
+                ("create_timestamp", "create_timestamp"),
+                ("update_timestamp", "update_timestamp"),
+            ):
+                value = getattr(waitlist, field)
+                waitlist_row[column] = transform_field_for_acoustic(value)
             # Extra optional fields (eg. "geo", "platform", ...)
             for field in waitlist_fields:
-                waitlist_row[f"waitlist_{field}"] = str(
-                    waitlist.fields.get(field) or ""
+                waitlist_row[f"waitlist_{field}"] = transform_field_for_acoustic(
+                    waitlist.fields.get(field)
                 )
-
-            # TODO: manage sync of unsubscribed waitlists (currently not possible)
             waitlist_rows.append(waitlist_row)
 
         return waitlist_rows, acoustic_main_table
-
-    @staticmethod
-    def transform_field_for_acoustic(data):
-        """Transform data for main contact table."""
-        if isinstance(data, bool):
-            if data:
-                return "1"
-            return "0"
-        if isinstance(data, datetime.datetime):
-            # Acoustic doesn't have timestamps, so make timestamps into dates.
-            data = data.date()
-        if isinstance(data, datetime.date):
-            return data.strftime("%m/%d/%Y")
-        if isinstance(data, UUID):
-            return str(data)
-        return data
-
-    @staticmethod
-    def to_acoustic_bool(bool_str):
-        """Transform bool for products relational table."""
-        if bool_str in (True, "true"):
-            return "Yes"
-        return "No"
 
     @staticmethod
     def to_acoustic_timestamp(dt_val):
@@ -429,8 +423,8 @@ class CTMSToAcousticService:
                     "current_period_start": to_ts(product.current_period_start),
                     "current_period_end": to_ts(product.current_period_end),
                     "canceled_at": to_ts(product.canceled_at),
-                    "cancel_at_period_end": CTMSToAcousticService.to_acoustic_bool(
-                        product.cancel_at_period_end
+                    "cancel_at_period_end": transform_field_for_acoustic(
+                        product.cancel_at_period_end in (True, "true")
                     ),
                     "ended_at": to_ts(product.ended_at),
                 }
