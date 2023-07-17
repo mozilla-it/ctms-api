@@ -1,6 +1,7 @@
 import datetime
 from unittest import mock
 from unittest.mock import MagicMock
+from uuid import UUID
 
 import pytest
 from structlog.testing import capture_logs
@@ -537,36 +538,22 @@ def test_ctms_to_acoustic_traced_email(
     assert caplog[0] == expected_log
 
 
-def test_transform_field(base_ctms_acoustic_service):
-    is_true = transform_field_for_acoustic(True)
-    assert is_true == "1"
-    is_false = transform_field_for_acoustic(False)
-    assert is_false == "0"
-    transformed_from_datetime = transform_field_for_acoustic(datetime.datetime.now())
-    assert (
-        transformed_from_datetime is not None
-    ), "Error when using method to transform datetime object"
-    transformed_from_date = transform_field_for_acoustic(datetime.date.today())
-    assert (
-        transformed_from_date is not None
-    ), "Error when using method to transform date object"
-
-    assert transformed_from_datetime == transformed_from_date, (
-        "The result of the transformation process of a "
-        "date and datetime should be identical, "
-        "when starting values are equivalent in date "
-    )
-
-    is_datetime_parsed = datetime.datetime.strptime(
-        transformed_from_datetime, "%m/%d/%Y"
-    )
-    assert isinstance(
-        is_datetime_parsed, datetime.date
-    ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
-    is_date_parsed = datetime.datetime.strptime(transformed_from_date, "%m/%d/%Y")
-    assert isinstance(
-        is_date_parsed, datetime.date
-    ), "The result should be in MM/DD/YYYY format, to be able to be processed to a date"
+@pytest.mark.parametrize(
+    "value, expected",
+    (
+        (True, "1"),
+        (False, "0"),
+        (None, ""),
+        (
+            UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
+            "62d8d3c6-95f3-4ed6-b176-7f69acff22f6",
+        ),
+        (datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc), "11/08/2021"),
+        (datetime.date(2021, 11, 8), "11/08/2021"),
+    ),
+)
+def test_transform_field_for_acoustic(value, expected):
+    assert transform_field_for_acoustic(value) == expected
 
 
 @pytest.mark.parametrize(
