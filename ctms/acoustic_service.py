@@ -68,12 +68,9 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 def transform_field_for_acoustic(data):
     """Transform data type for Acoustic."""
     if isinstance(data, bool):
-        if data:
-            return "Yes"
-        return "No"
+        return "Yes" if data else "No"
     if isinstance(data, datetime.datetime):
-        # Acoustic doesn't have timestamps, so make timestamps into dates.
-        data = data.date()
+        return data.strftime("%m/%d/%Y %H:%M:%S")
     if isinstance(data, datetime.date):
         return data.strftime("%m/%d/%Y")
     if isinstance(data, UUID):
@@ -381,19 +378,12 @@ class CTMSToAcousticService:
 
         return waitlist_rows, acoustic_main_table
 
-    @staticmethod
-    def to_acoustic_timestamp(dt_val):
-        """Transform datetime for products relational table."""
-        if dt_val:
-            return dt_val.strftime("%m/%d/%Y %H:%M:%S")
-        return ""
-
     def _product_converter(self, contact):
         """Create the rows for the product subscription table in Acoustic."""
         contact_email_id = str(contact.email.email_id)
         product_rows = []
         template: Dict[str, str] = {"email_id": contact_email_id}
-        to_ts = CTMSToAcousticService.to_acoustic_timestamp
+        to_ts = transform_field_for_acoustic
         for product in contact.products:
             row: Dict[str, str] = template.copy()
             row.update(
