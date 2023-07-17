@@ -69,8 +69,8 @@ def transform_field_for_acoustic(data):
     """Transform data type for Acoustic."""
     if isinstance(data, bool):
         if data:
-            return "1"
-        return "0"
+            return "Yes"
+        return "No"
     if isinstance(data, datetime.datetime):
         # Acoustic doesn't have timestamps, so make timestamps into dates.
         data = data.date()
@@ -382,13 +382,6 @@ class CTMSToAcousticService:
         return waitlist_rows, acoustic_main_table
 
     @staticmethod
-    def to_acoustic_bool(bool_str):
-        """Transform bool for products relational table."""
-        if bool_str in (True, "true"):
-            return "Yes"
-        return "No"
-
-    @staticmethod
     def to_acoustic_timestamp(dt_val):
         """Transform datetime for products relational table."""
         if dt_val:
@@ -430,8 +423,8 @@ class CTMSToAcousticService:
                     "current_period_start": to_ts(product.current_period_start),
                     "current_period_end": to_ts(product.current_period_end),
                     "canceled_at": to_ts(product.canceled_at),
-                    "cancel_at_period_end": CTMSToAcousticService.to_acoustic_bool(
-                        product.cancel_at_period_end
+                    "cancel_at_period_end": transform_field_for_acoustic(
+                        product.cancel_at_period_end in (True, "true")
                     ),
                     "ended_at": to_ts(product.ended_at),
                 }

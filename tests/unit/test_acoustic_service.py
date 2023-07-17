@@ -541,8 +541,9 @@ def test_ctms_to_acoustic_traced_email(
 @pytest.mark.parametrize(
     "value, expected",
     (
-        (True, "1"),
-        (False, "0"),
+        ("string", "string"),
+        (True, "Yes"),
+        (False, "No"),
         (None, ""),
         (
             UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
@@ -557,15 +558,6 @@ def test_ctms_to_acoustic_traced_email(
 )
 def test_transform_field_for_acoustic(value, expected):
     assert transform_field_for_acoustic(value) == expected
-
-
-@pytest.mark.parametrize(
-    "value,expected",
-    (("true", "Yes"), (True, "Yes"), (False, "No"), ("false", "No"), ("", "No")),
-)
-def test_to_acoustic_bool(value, expected):
-    """Python and JS booleans are converted to Acoustic Yes/No bools."""
-    assert CTMSToAcousticService.to_acoustic_bool(value) == expected
 
 
 def test_to_acoustic_timestamp():
