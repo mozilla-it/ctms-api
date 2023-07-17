@@ -548,7 +548,10 @@ def test_ctms_to_acoustic_traced_email(
             UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
             "62d8d3c6-95f3-4ed6-b176-7f69acff22f6",
         ),
-        (datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc), "11/08/2021"),
+        (
+            datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc),
+            "11/08/2021",
+        ),
         (datetime.date(2021, 11, 8), "11/08/2021"),
     ),
 )
