@@ -58,6 +58,12 @@ from .schemas.base import BaseModel
 
 
 def count_total_contacts(db: Session):
+    """Return the total number of email records.
+    Since the table is huge, we rely on the PostgreSQL internal
+    catalog to retrieve an approximate size efficiently.
+    This metadata is refreshed on `VACUUM` or `ANALYSIS` which
+    is run regularly by default on our database instances.
+    """
     query = text(
         "SELECT reltuples AS estimate "
         "FROM pg_class "
