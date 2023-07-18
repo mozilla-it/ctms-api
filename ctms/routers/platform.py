@@ -18,6 +18,7 @@ from ctms.auth import (
 )
 from ctms.config import Settings, get_version
 from ctms.crud import (
+    count_total_contacts,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_api_client_by_id,
@@ -29,7 +30,7 @@ from ctms.dependencies import (
     get_settings,
     get_token_settings,
 )
-from ctms.metrics import get_metrics_registry, token_scheme
+from ctms.metrics import get_metrics, get_metrics_registry, token_scheme
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse
 
@@ -149,6 +150,13 @@ def heartbeat(
             "time_ms": int(round(1000 * time.monotonic() - start_time)),
             **details,
         }
+
+    if alive and (appmetrics := get_metrics()):
+        # Report number of contacts in the database.
+        # Sending the metric in this heartbeat endpoint is simpler than reporting
+        # it in every write endpoint. Plus, performance does not matter much here.
+        total_contacts = count_total_contacts(db)
+        appmetrics["contacts"].set(total_contacts)
 
     status_code = 200 if (alive and acoustic_success) else 503
     return JSONResponse(content=result, status_code=status_code)
