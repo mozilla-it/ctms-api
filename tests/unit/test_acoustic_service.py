@@ -7,7 +7,7 @@ import pytest
 from structlog.testing import capture_logs
 
 from ctms import acoustic_service
-from ctms.acoustic_service import CTMSToAcousticService, transform_field_for_acoustic
+from ctms.acoustic_service import transform_field_for_acoustic
 from ctms.crud import get_contact_by_email_id, get_newsletters_by_email_id
 from ctms.schemas.contact import ContactSchema
 
@@ -551,25 +551,13 @@ def test_ctms_to_acoustic_traced_email(
         ),
         (
             datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc),
-            "11/08/2021",
+            "11/08/2021 09:06:00",
         ),
         (datetime.date(2021, 11, 8), "11/08/2021"),
     ),
 )
 def test_transform_field_for_acoustic(value, expected):
     assert transform_field_for_acoustic(value) == expected
-
-
-def test_to_acoustic_timestamp():
-    """Python datetimes are converted to Acoustic timestamps."""
-    the_datetime = datetime.datetime(2021, 11, 8, 9, 6, tzinfo=datetime.timezone.utc)
-    acoustic_ts = CTMSToAcousticService.to_acoustic_timestamp(the_datetime)
-    assert acoustic_ts == "11/08/2021 09:06:00"
-
-
-def test_to_acoustic_timestamp_null():
-    """Null datetimes are converted to an empty string."""
-    assert CTMSToAcousticService.to_acoustic_timestamp(None) == ""
 
 
 def test_transform_fxa_created_date(base_ctms_acoustic_service):
