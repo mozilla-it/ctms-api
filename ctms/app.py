@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
+from .config import get_version
 from .database import SessionLocal
 from .exception_capture import init_sentry
 from .log import context_from_request, get_log_line
@@ -18,15 +19,12 @@ from .metrics import (
     init_metrics_labels,
     set_metrics,
 )
-from .monitor import get_version
 from .routers import contacts, platform, stripe
-
-version_info = get_version()
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
-    version=version_info["version"],
+    version=get_version()["version"],
 )
 app.include_router(platform.router)
 app.include_router(stripe.router)
