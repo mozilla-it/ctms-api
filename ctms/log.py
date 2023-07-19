@@ -1,7 +1,7 @@
 """Logging configuration"""
-
 import logging
 import logging.config
+import sys
 from typing import Any, Dict, List, Optional
 
 import structlog
@@ -48,6 +48,7 @@ def configure_logging(
         "handlers": {
             "humans": {
                 "class": "logging.StreamHandler",
+                "stream": sys.stdout,
                 "formatter": "dev_console",
                 "level": logging.DEBUG,
             },
@@ -56,6 +57,7 @@ def configure_logging(
             },
             "mozlog": {
                 "class": "logging.StreamHandler",
+                "stream": sys.stdout,
                 "formatter": "mozlog_json",
                 "level": logging.DEBUG,
             },
