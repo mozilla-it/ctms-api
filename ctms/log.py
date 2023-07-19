@@ -105,7 +105,6 @@ def context_from_request(request: Request) -> Dict:
     if request.client:
         host = request.client.host
     context: Dict[str, Any] = {
-        "trivial": False,  # For filtering in papertrail, place early in log
         "client_host": host,
         "method": request.method,
         "path": request.url.path,

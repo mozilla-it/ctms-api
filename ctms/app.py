@@ -60,12 +60,7 @@ async def log_request_middleware(request: Request, call_next):
         context = request.state.log_context
         if request.path_params:
             context["path_params"] = request.path_params
-        if "trivial_code" in context:
-            if status_code == context["trivial_code"]:
-                context["trivial"] = True
-            del context["trivial_code"]
-        if context["trivial"] is False:
-            del context["trivial"]
+
         log_line = get_log_line(request, status_code, context.get("client_id"))
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)

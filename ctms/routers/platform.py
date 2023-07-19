@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/", include_in_schema=False)
-def root(request: Request):
+def root():
     """GET via root redirects to /docs.
 
     - Args:
@@ -49,7 +49,6 @@ def root(request: Request):
     - Returns:
         - **redirect**: Redirects call to ./docs
     """
-    request.state.log_context["trivial_code"] = 307
     return RedirectResponse(url="./docs")
 
 
@@ -120,15 +119,6 @@ def heartbeat(
     settings: Settings = Depends(get_settings),
 ):
     """Return status of backing services, as required by Dockerflow."""
-    x_nr_synthetics = request.headers.get("x-newrelic-synthetics", "")
-    x_abuse_info = request.headers.get("x-abuse-info", "")
-    user_agent = request.headers.get("user-agent", "")
-    is_newrelic = x_nr_synthetics != "" and x_abuse_info.startswith(
-        "Request sent by a New Relic Synthetics Monitor ("
-    )
-    is_amazon = user_agent.startswith("Amazon-Route53-Health-Check-Service (")
-    if is_newrelic or is_amazon:
-        request.state.log_context["trivial_code"] = 200
 
     result: dict[str, Any] = {}
 
@@ -164,11 +154,8 @@ def heartbeat(
 
 @router.get("/__lbheartbeat__", tags=["Platform"])
 @router.head("/__lbheartbeat__", tags=["Platform"])
-def lbheartbeat(request: Request):
+def lbheartbeat():
     """Return response when application is running, as required by Dockerflow."""
-    user_agent = request.headers.get("user-agent", "")
-    if user_agent.startswith("kube-probe/"):
-        request.state.log_context["trivial_code"] = 200
     return {"status": "OK"}
 
 
@@ -179,11 +166,8 @@ def crash(api_client: ApiClientSchema = Depends(get_enabled_api_client)):
 
 
 @router.get("/metrics", tags=["Platform"])
-def metrics(request: Request):
+def metrics():
     """Return Prometheus metrics"""
-    agent = request.headers.get("user-agent", "")
-    if agent.startswith("Prometheus/"):
-        request.state.log_context["trivial_code"] = 200
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_registry()
     return Response(generate_latest(registry), status_code=200, headers=headers)
@@ -217,14 +201,3 @@ def test_get_metrics(anon_client, setup_metrics):
         resp = anon_client.get("/metrics")
     assert resp.status_code == 200
     assert len(cap_logs) == 1
-    assert "trivial" not in cap_logs[0]
-
-
-def test_prometheus_metrics_is_logged_as_trivial(anon_client, setup_metrics):
-    """When Prometheus requests metrics, it is logged as trivial."""
-    headers = {"user-agent": "Prometheus/2.26.0"}
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics", headers=headers)
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    assert cap_logs[0]["trivial"] is True
