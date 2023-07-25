@@ -289,7 +289,6 @@ class CTMSToAcousticService:
         # create the RT rows for the newsletter table in acoustic
         newsletter_rows = []
         contact_newsletters: List[NewsletterSchema] = contact.newsletters
-        contact_email_id = str(contact.email.email_id)
         skipped = []
 
         # populate with all the sub_flags set to false
@@ -298,17 +297,20 @@ class CTMSToAcousticService:
             acoustic_main_table[sub_flag] = "0"
 
         for newsletter in contact_newsletters:
-            newsletter_row = {
-                "email_id": contact_email_id,
-                "newsletter_name": newsletter.name,
-                "newsletter_source": newsletter.source and str(newsletter.source),
-                "create_timestamp": newsletter.create_timestamp.date().isoformat(),
-                "update_timestamp": newsletter.update_timestamp.date().isoformat(),
-                "newsletter_format": newsletter.format,
-                "newsletter_lang": newsletter.lang,
-                "subscribed": transform_field_for_acoustic(newsletter.subscribed),
-                "newsletter_unsub_reason": newsletter.unsub_reason,
-            }
+            newsletter_row = {}
+            for column, field in (
+                ("email_id", "email_id"),
+                ("newsletter_name", "name"),
+                ("newsletter_source", "source"),
+                ("newsletter_format", "format"),
+                ("newsletter_lang", "lang"),
+                ("subscribed", "subscribed"),
+                ("newsletter_unsub_reason", "unsub_reason"),
+                ("create_timestamp", "create_timestamp"),
+                ("update_timestamp", "update_timestamp"),
+            ):
+                value = getattr(newsletter, field)
+                newsletter_row[column] = transform_field_for_acoustic(value)
             newsletter_rows.append(newsletter_row)
 
             if newsletter.name in newsletters_mapping:
