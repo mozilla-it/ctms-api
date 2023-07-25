@@ -306,7 +306,7 @@ class CTMSToAcousticService:
                 "update_timestamp": newsletter.update_timestamp.date().isoformat(),
                 "newsletter_format": newsletter.format,
                 "newsletter_lang": newsletter.lang,
-                "subscribed": newsletter.subscribed,
+                "subscribed": transform_field_for_acoustic(newsletter.subscribed),
                 "newsletter_unsub_reason": newsletter.unsub_reason,
             }
             newsletter_rows.append(newsletter_row)
