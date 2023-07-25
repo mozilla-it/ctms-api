@@ -121,9 +121,9 @@ def test_ctms_to_acoustic_newsletters(
         nl.source for nl in contact.newsletters
     )
     # `subscribed` column
-    assert newsletter_rows[1]["subscribed"]
-    assert not newsletter_rows[2]["subscribed"]
-    assert newsletter_rows[3]["subscribed"]
+    assert newsletter_rows[1]["subscribed"] == "Yes"
+    assert newsletter_rows[2]["subscribed"] == "No"
+    assert newsletter_rows[3]["subscribed"] == "Yes"
     # Newsletters in mapping are marked as subscribed in main table
     assert main["sub_column_1"] == "1"
     assert main["sub_column_2"] == "1"
