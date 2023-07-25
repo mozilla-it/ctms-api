@@ -58,6 +58,10 @@ The cost is *Mid* and not *Low*, because it requires a tiny change in Basket to 
 
 In parallel, if we look at possible evolutions of the synchronization code of CTMS, like the synchronization queue presented in *Option 4*, we could consider it regrettable to mimic newsletters. However, this evolution is not officially planned yet, and may never happen. Plus, since it will be the exact same approach as for newsletters, migrating both together to the new solution won't represent much additional effort, compared to just migrating newsletters.
 
+> Note:
+> As for newsletters, the upsert operation of a contact via a PUT request will permanently
+> delete existing waitlist entries that are not listed in the incoming payload.
+
 **Robustness**: High
 
 When synchronizing with Acoustic, we would simply delete waitlists entries where `subscribed` is `false`. It does not affect existing waitlists entries where `subscribed` is `true`. The operation is idempotent and can be interrupted and retried without impact.
@@ -77,6 +81,8 @@ Since we don't delete waitlists when we receive unsubscription, we loose track o
 **Complexity**: Low
 
 The Acoustic has endpoints to delete relational tables by key, and the resulting code should not be too complex.
+
+The fact that upsert operations via `PUT` requests overwrite list attributes, and delete existing records has no impact with this solution.
 
 **Cost**: Mid
 
@@ -137,6 +143,8 @@ Note: If the text with the unsubscribe reason would have to be stored in CTMS an
 **Complexity**: Mid
 
 The concept is simple. But until this solution is applied to all kind of records (contact, newsletters, etc.), and the old one completely removed, this adds up to the current complexity of the code base.
+
+The tracking of deleted objects must be put in place consistently on every model in every situation. Including for example when objects are deleted as the result of a list attribute overwrite in upsert operations via `PUT` requests.
 
 **Cost**: High
 

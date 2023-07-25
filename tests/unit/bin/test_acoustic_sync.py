@@ -21,6 +21,7 @@ def test_env():
         acoustic_refresh_token="REFRESH_TOKEN",
         acoustic_main_table_id=1234,
         acoustic_newsletter_table_id=12345,
+        acoustic_waitlist_table_id=6789,
         acoustic_product_subscriptions_id=123456,
         acoustic_retry_limit=6,
         acoustic_batch_limit=20,

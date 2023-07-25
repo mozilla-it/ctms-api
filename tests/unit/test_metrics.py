@@ -1,4 +1,6 @@
 # Test for metrics
+from unittest import mock
+
 import pytest
 from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.parser import text_string_to_metric_families
@@ -163,6 +165,14 @@ def test_homepage_request(anon_client, registry):
     assert_request_metric_inc(registry, "GET", "/docs", 200)
     assert_duration_metric_obs(registry, "GET", "/", "3xx")
     assert_duration_metric_obs(registry, "GET", "/docs", "2xx")
+
+
+def test_contacts_total(anon_client, dbsession, registry):
+    """Total number of contacts is reported in heartbeat."""
+    with mock.patch("ctms.routers.platform.count_total_contacts", return_value=3):
+        anon_client.get("/__heartbeat__")
+
+    assert registry.get_sample_value("ctms_contacts_total") == 3
 
 
 def test_api_request(client, minimal_contact, registry):

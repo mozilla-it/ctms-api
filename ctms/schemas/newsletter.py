@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Literal, Optional
 
 from pydantic import UUID4, AnyUrl, Field
@@ -66,11 +66,3 @@ class NewsletterTableSchema(NewsletterBase):
 
     class Config:
         extra = "forbid"
-
-
-class UpdatedNewsletterInSchema(NewsletterInSchema):
-    update_timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Newsletter subscription data update timestamp",
-        example="2021-01-28T21:26:57.511Z",
-    )

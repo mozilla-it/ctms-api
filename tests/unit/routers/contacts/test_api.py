@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
+from ctms.schemas.waitlist import WaitlistInSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
@@ -90,15 +91,15 @@ def test_authorized_api_call_succeeds(client, example_contact, method, path, par
             assert resp.status_code == 200
 
 
-def _subscribe(contact):
+def _subscribe_newsletter(contact):
     contact.newsletters.append(NewsletterInSchema(name="new-newsletter"))
 
 
-def _unsubscribe(contact):
+def _unsubscribe_newsletter(contact):
     contact.newsletters = contact.newsletters[0:-1]
 
 
-def _subscribe_and_change(contact):
+def _subscribe_newsletters_and_change(contact):
     if contact.newsletters:
         contact.newsletters[-1].subscribed = not contact.newsletters[-1].subscribed
     contact.newsletters.append(
@@ -107,6 +108,13 @@ def _subscribe_and_change(contact):
     contact.newsletters.append(
         NewsletterInSchema(name="another-newsletter", subscribed=True)
     )
+
+
+def _subscribe_waitlists_and_change(contact):
+    if contact.waitlists:
+        contact.waitlists[-1].subscribed = not contact.waitlists[-1].subscribed
+    contact.waitlists.append(WaitlistInSchema(name="a-waitlist", subscribed=False))
+    contact.waitlists.append(WaitlistInSchema(name="another-waitlist", subscribed=True))
 
 
 def _un_amo(contact):
@@ -119,11 +127,12 @@ def _change_email(contact):
 
 
 _test_get_put_modifiers = [
-    _subscribe,
-    _unsubscribe,
+    _subscribe_newsletter,
+    _unsubscribe_newsletter,
     _un_amo,
     _change_email,
-    _subscribe_and_change,
+    _subscribe_newsletters_and_change,
+    _subscribe_waitlists_and_change,
 ]
 
 

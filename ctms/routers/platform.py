@@ -1,5 +1,7 @@
+import logging
+import time
 from collections import defaultdict
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -8,16 +10,19 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
 from structlog.testing import capture_logs
 
+from ctms.acoustic_service import acoustic_heartbeat
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
     create_access_token,
     verify_password,
 )
-from ctms.config import Settings
+from ctms.config import Settings, get_version
 from ctms.crud import (
+    count_total_contacts,
     get_all_acoustic_fields,
     get_all_acoustic_newsletters_mapping,
     get_api_client_by_id,
+    ping,
 )
 from ctms.dependencies import (
     get_db,
@@ -25,14 +30,14 @@ from ctms.dependencies import (
     get_settings,
     get_token_settings,
 )
-from ctms.metrics import get_metrics_registry, token_scheme
-from ctms.monitor import check_database, get_version
+from ctms.metrics import get_metrics, get_metrics_registry, token_scheme
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse
 
-version_info = get_version()
-
 router = APIRouter()
+
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", include_in_schema=False)
@@ -104,7 +109,7 @@ def login(
 @router.get("/__version__", tags=["Platform"])
 def version():
     """Return version.json, as required by Dockerflow."""
-    return version_info
+    return get_version()
 
 
 @router.get("/__heartbeat__", tags=["Platform"])
@@ -124,21 +129,37 @@ def heartbeat(
     is_amazon = user_agent.startswith("Amazon-Route53-Health-Check-Service (")
     if is_newrelic or is_amazon:
         request.state.log_context["trivial_code"] = 200
-    data = {"database": check_database(db, settings)}
-    status_code = 200
-    if not data["database"]["up"]:
-        status_code = 503
-    if "acoustic" in data["database"]:
-        backlog = data["database"]["acoustic"]["backlog"]
-        retry_backlog = data["database"]["acoustic"]["retry_backlog"]
-        max_backlog = data["database"]["acoustic"]["max_backlog"]
-        max_retry_backlog = data["database"]["acoustic"]["max_retry_backlog"]
 
-        if max_backlog is not None and max_backlog > backlog:
-            status_code = 503
-        if max_retry_backlog is not None and max_retry_backlog > retry_backlog:
-            status_code = 503
-    return JSONResponse(content=data, status_code=status_code)
+    result: dict[str, Any] = {}
+
+    start_time = time.monotonic()
+    alive = ping(db)
+    result["database"] = {
+        "up": alive,
+        "time_ms": int(round(1000 * time.monotonic() - start_time)),
+        "acoustic": {},
+    }
+
+    acoustic_success = alive
+    if alive:
+        start_time = time.monotonic()
+        acoustic_success, details = acoustic_heartbeat(db, settings)
+
+        result["database"]["acoustic"] = {
+            "success": acoustic_success,
+            "time_ms": int(round(1000 * time.monotonic() - start_time)),
+            **details,
+        }
+
+    if alive and (appmetrics := get_metrics()):
+        # Report number of contacts in the database.
+        # Sending the metric in this heartbeat endpoint is simpler than reporting
+        # it in every write endpoint. Plus, performance does not matter much here.
+        total_contacts = count_total_contacts(db)
+        appmetrics["contacts"].set(total_contacts)
+
+    status_code = 200 if (alive and acoustic_success) else 503
+    return JSONResponse(content=result, status_code=status_code)
 
 
 @router.get("/__lbheartbeat__", tags=["Platform"])

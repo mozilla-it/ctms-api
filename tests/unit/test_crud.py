@@ -8,6 +8,7 @@ import sqlalchemy
 from sqlalchemy.orm import Session
 
 from ctms.crud import (
+    count_total_contacts,
     create_acoustic_field,
     create_acoustic_newsletters_mapping,
     create_amo,
@@ -15,6 +16,7 @@ from ctms.crud import (
     create_fxa,
     create_mofo,
     create_newsletter,
+    create_or_update_contact,
     delete_acoustic_field,
     delete_acoustic_newsletters_mapping,
     delete_acoustic_record,
@@ -30,7 +32,13 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
-from ctms.models import AcousticField, AcousticNewsletterMapping, PendingAcousticRecord
+from ctms.database import ScopedSessionLocal
+from ctms.models import (
+    AcousticField,
+    AcousticNewsletterMapping,
+    Email,
+    PendingAcousticRecord,
+)
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -38,9 +46,43 @@ from ctms.schemas import (
     MozillaFoundationInSchema,
     NewsletterInSchema,
 )
+from ctms.schemas.contact import ContactPutSchema
+from ctms.schemas.waitlist import WaitlistInSchema
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
+
+
+def test_email_count(connection, email_factory):
+    # The default `dbsession` fixture will run in a nested transaction
+    # that is rollback.
+    # In this test, we manipulate raw connections and transactions because
+    # we need to force a VACUUM operation outside a running transaction.
+
+    # Insert contacts in the table.
+    transaction = connection.begin()
+    session = ScopedSessionLocal()
+    email_factory.create_batch(3)
+    session.commit()
+    session.close()
+    transaction.commit()
+
+    # Force an analysis of the table.
+    old_isolation_level = connection.connection.isolation_level
+    connection.connection.set_isolation_level(0)
+    session.execute(sqlalchemy.text(f"VACUUM ANALYZE {Email.__tablename__}"))
+    session.close()
+    connection.connection.set_isolation_level(old_isolation_level)
+
+    # Query the count result (since last analyze)
+    session = ScopedSessionLocal()
+    count = count_total_contacts(session)
+    assert count == 3
+
+    # Delete created objects (since our transaction was not rollback automatically)
+    session.query(Email).delete()
+    session.commit()
+    session.close()
 
 
 def test_get_email(dbsession, email_factory):
@@ -527,6 +569,32 @@ def test_get_multiple_contacts_by_any_id(
         assert sorted(newsletter_names) == newsletter_names
 
 
+def test_create_or_update_contact_related_objects(dbsession, email_factory):
+    email = email_factory(
+        newsletters=3,
+        waitlists=3,
+    )
+    dbsession.flush()
+
+    new_source = "http://waitlists.example.com"
+    putdata = ContactPutSchema(
+        email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
+        newsletters=[
+            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
+        ],
+        waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
+    )
+    create_or_update_contact(dbsession, email.email_id, putdata, None)
+    dbsession.commit()
+
+    updated_email = dbsession.get(Email, email.email_id)
+    # Existing related objects were deleted and replaced by the specified list.
+    assert len(updated_email.newsletters) == 1
+    assert len(updated_email.waitlists) == 1
+    assert updated_email.newsletters[0].source == new_source
+    assert updated_email.waitlists[0].source == new_source
+
+
 @pytest.mark.parametrize("with_lock", (True, False))
 def test_get_stripe_customer_by_existing_fxa_id(
     dbsession, with_lock, stripe_customer_factory
@@ -758,6 +826,32 @@ class TestStripeRelations:
         assert subscription_item.subscription == subscription
         assert subscription_item.price == price
         assert subscription_item.get_email_id() == email.email_id
+
+
+def test_create_or_update_contact_timestamps(dbsession, email_factory):
+    email = email_factory(
+        newsletters=1,
+        waitlists=1,
+    )
+    dbsession.flush()
+
+    before_nl = email.newsletters[0].update_timestamp
+    before_wl = email.waitlists[0].update_timestamp
+
+    new_source = "http://waitlists.example.com"
+    putdata = ContactPutSchema(
+        email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
+        newsletters=[
+            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
+        ],
+        waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
+    )
+    create_or_update_contact(dbsession, email.email_id, putdata, None)
+    dbsession.commit()
+
+    updated_email = get_email(dbsession, email.email_id)
+    assert updated_email.newsletters[0].update_timestamp > before_nl
+    assert updated_email.waitlists[0].update_timestamp > before_wl
 
 
 def test_get_contacts_from_newsletter(dbsession, newsletter_factory):
