@@ -290,8 +290,6 @@ class CTMSToAcousticService:
         newsletter_rows = []
         contact_newsletters: List[NewsletterSchema] = contact.newsletters
         contact_email_id = str(contact.email.email_id)
-        contact_email_format = contact.email.email_format
-        contact_email_lang = contact.email.email_lang
         skipped = []
 
         # populate with all the sub_flags set to false
@@ -300,27 +298,20 @@ class CTMSToAcousticService:
             acoustic_main_table[sub_flag] = "0"
 
         for newsletter in contact_newsletters:
-            newsletter_template = {
+            newsletter_row = {
                 "email_id": contact_email_id,
-                "newsletter_format": contact_email_format,
-                "newsletter_lang": contact_email_lang,
+                "newsletter_name": newsletter.name,
+                "newsletter_source": newsletter.source and str(newsletter.source),
+                "create_timestamp": newsletter.create_timestamp.date().isoformat(),
+                "update_timestamp": newsletter.update_timestamp.date().isoformat(),
+                "newsletter_format": newsletter.format,
+                "newsletter_lang": newsletter.lang,
+                "subscribed": newsletter.subscribed,
+                "newsletter_unsub_reason": newsletter.unsub_reason,
             }
+            newsletter_rows.append(newsletter_row)
 
             if newsletter.name in newsletters_mapping:
-                newsletter_template[
-                    "create_timestamp"
-                ] = newsletter.create_timestamp.date().isoformat()
-                newsletter_template[
-                    "update_timestamp"
-                ] = newsletter.update_timestamp.date().isoformat()
-                newsletter_template["newsletter_name"] = newsletter.name
-                newsletter_template["newsletter_unsub_reason"] = newsletter.unsub_reason
-                _source = newsletter.source
-                if _source is not None:
-                    _source = str(_source)
-                newsletter_template["newsletter_source"] = _source
-
-                newsletter_rows.append(newsletter_template)
                 # and finally flip the main table's sub_<newsletter> flag to true for each subscription
                 if newsletter.subscribed:
                     acoustic_main_table[newsletters_mapping[newsletter.name]] = "1"
