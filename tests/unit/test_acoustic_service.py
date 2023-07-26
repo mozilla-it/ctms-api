@@ -163,8 +163,8 @@ def test_ctms_to_acoustic_newsletter_timestamps(
     )
 
     app_dev_row = [r for r in newsletters_rows if r["newsletter_name"] == "app-dev"][0]
-    assert app_dev_row["create_timestamp"] == "1982-05-08"
-    assert app_dev_row["update_timestamp"] == "2023-06-19"
+    assert app_dev_row["create_timestamp"] == "05/08/1982 13:20:00"
+    assert app_dev_row["update_timestamp"] == "06/19/2023 12:17:00"
 
 
 def test_ctms_to_acoustic_waitlists_minimal(
