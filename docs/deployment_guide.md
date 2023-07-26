@@ -163,9 +163,6 @@ traceback) are logged at ``ERROR`` level (Severity 3). Some of the fields are:
   requested.
 * ``trace``: An email matching the trace pattern, such as
   ``test+trace_me_mozilla_2021@example.com``
-* ``trivial``: `true` if a request is a monitoring request, such as
-  ``GET /__lbheartbeat__``. These can be excluded to focus on the "non-trivial"
-  requests.
 
 ### Acoustic Sync Process Logging Fields
 
@@ -197,7 +194,6 @@ type ``"ctms.bin.acoustic_sync"`` and these fields:
 * ``retry_backlog``: The number of contacts in the retry backlog, including those past the ``retry_limit``.
 * ``retry_limit``: The number of times to retry syncing a contact before giving up.
 * ``sync_backlog``: The number of contacts in the backlog before syncing.
-* ``trivial``: ``true`` if no contacts processed, omitted if some processed.
 
 For each contact, a log message at ``DEBUG`` level (Severity 7) is emitted, or
 at ``ERROR`` level (Severity 3) on exceptions, with type

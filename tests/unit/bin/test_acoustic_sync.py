@@ -94,7 +94,6 @@ def test_main_no_contacts(dbsession, test_env):
         "retry_backlog": 0,
         "retry_limit": 6,
         "sync_backlog": 0,
-        "trivial": True,
     }
     assert loop_duration_s + loop_sleep_s == pytest.approx(5.0, 0.001)
     assert caplog[1]["event"] == "sync_service cycle complete"
