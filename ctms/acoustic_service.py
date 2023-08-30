@@ -257,11 +257,11 @@ class CTMSToAcousticService:
                             inner_value = self.fxa_created_date_string_to_datetime(
                                 inner_value
                             )
-                        # TODO: These are boolean values on our models, but in Acoustic are
-                        # configured as text columns where we record `True` and `False`
-                        # as "1" and "0" respectively. We should configure Acoustic to
-                        # use a boolean column for this data. This is being tracked in
-                        # https://github.com/mozilla-it/ctms-api/issues/803
+                        # TODO: These are boolean values on our models, but in Acoustic
+                        # they are configured as text values where we record `True`
+                        # and `False` as `1` and `0` respectively. We should
+                        # configure Acoustic to use a boolean column for this data.
+                        # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/803
                         if acoustic_field_name in (
                             "double_opt_in",
                             "has_opted_out_of_email",
