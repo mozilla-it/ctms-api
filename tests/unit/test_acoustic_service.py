@@ -81,6 +81,42 @@ def test_ctms_to_acoustic_no_product(
         assert len(products) == 0, f"{i + 1}/3: no products in contact."
 
 
+@pytest.mark.parametrize("model_value,acoustic_value", [(False, "0"), (True, "1")])
+def test_ctms_to_acoustic_special_booleans(
+    dbsession,
+    base_ctms_acoustic_service,
+    email_factory,
+    main_acoustic_fields,
+    waitlist_acoustic_fields,
+    acoustic_newsletters_mapping,
+    model_value,
+    acoustic_value,
+):
+    email = email_factory(
+        double_opt_in=model_value,
+        has_opted_out_of_email=model_value,
+        fxa=True,
+        amo=True,
+        amo__email_opt_in=model_value,
+        fxa__account_deleted=model_value,
+    )
+    dbsession.commit()
+
+    contact = ContactSchema.from_email(email)
+
+    (main, _, _, _) = base_ctms_acoustic_service.convert_ctms_to_acoustic(
+        contact,
+        main_acoustic_fields,
+        waitlist_acoustic_fields,
+        acoustic_newsletters_mapping,
+    )
+
+    assert main["double_opt_in"] == acoustic_value
+    assert main["has_opted_out_of_email"] == acoustic_value
+    assert main["fxa_account_deleted"] == acoustic_value
+    assert main["amo_email_opt_in"] == acoustic_value
+
+
 def test_ctms_to_acoustic_newsletters(
     dbsession,
     base_ctms_acoustic_service,
