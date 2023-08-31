@@ -81,7 +81,10 @@ def test_ctms_to_acoustic_no_product(
         assert len(products) == 0, f"{i + 1}/3: no products in contact."
 
 
-@pytest.mark.parametrize("model_value,acoustic_value", [(False, "0"), (True, "1")])
+@pytest.mark.parametrize(
+    "model_value,acoustic_value,with_relations",
+    [(False, "0", True), (True, "1", True), (False, "0", False), (True, "1", False)],
+)
 def test_ctms_to_acoustic_special_booleans(
     dbsession,
     base_ctms_acoustic_service,
@@ -91,15 +94,17 @@ def test_ctms_to_acoustic_special_booleans(
     acoustic_newsletters_mapping,
     model_value,
     acoustic_value,
+    with_relations,
 ):
     email = email_factory(
         double_opt_in=model_value,
         has_opted_out_of_email=model_value,
-        fxa=True,
-        amo=True,
-        amo__email_opt_in=model_value,
-        fxa__account_deleted=model_value,
+        fxa=with_relations,
+        amo=with_relations,
     )
+    if with_relations:
+        email.amo.email_opt_in = model_value
+        email.fxa.account_deleted = model_value
     dbsession.commit()
 
     contact = ContactSchema.from_email(email)
@@ -113,8 +118,12 @@ def test_ctms_to_acoustic_special_booleans(
 
     assert main["double_opt_in"] == acoustic_value
     assert main["has_opted_out_of_email"] == acoustic_value
-    assert main["fxa_account_deleted"] == acoustic_value
-    assert main["amo_email_opt_in"] == acoustic_value
+    if with_relations:
+        assert main["fxa_account_deleted"] == acoustic_value
+        assert main["amo_email_opt_in"] == acoustic_value
+    else:
+        assert "fxa_account_deleted" not in main
+        assert "amo_email_opt_in" not in main
 
 
 def test_ctms_to_acoustic_newsletters(
