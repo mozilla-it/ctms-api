@@ -259,8 +259,10 @@ class CTMSToAcousticService:
                             )
                         # TODO: These are boolean values on our models, but in Acoustic
                         # they are configured as text values where we record `True`
-                        # and `False` as `1` and `0` respectively. We should
-                        # configure Acoustic to use a boolean column for this data.
+                        # and `False` as `1` and `0` respectively.
+                        # Note that `amo_*` and `fxa_*` fields are omitted when contact does not
+                        # have these relations.
+                        # We should configure Acoustic to use a boolean column for this data.
                         # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/803
                         if acoustic_field_name in (
                             "double_opt_in",
