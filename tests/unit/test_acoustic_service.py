@@ -291,6 +291,9 @@ def test_ctms_to_acoustic_minimal_fields(
         waitlist_acoustic_fields,
         acoustic_newsletters_mapping,
     )
+    assert main[
+        "create_timestamp"
+    ] == minimal_contact.email.create_timestamp.date().strftime("%m/%d/%Y")
     assert main["email"] == minimal_contact.email.primary_email
     assert main["basket_token"] == str(minimal_contact.email.basket_token)
     assert main["mailing_country"] == minimal_contact.email.mailing_country

@@ -253,6 +253,13 @@ class CTMSToAcousticService:
                         self.context["trace"] = inner_value
 
                     if acoustic_field_name in main_fields:
+                        # TODO: The create_timestamp is currently a Date field in Acoustic.
+                        # Sending time information will prevent Acoustic to set the value properly.
+                        # We should configure Acoustic to use a Timestamp for this data.
+                        # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/803
+                        if acoustic_field_name == "create_timestamp":
+                            inner_value = inner_value.date()
+
                         if acoustic_field_name == "fxa_created_date":
                             inner_value = self.fxa_created_date_string_to_datetime(
                                 inner_value
