@@ -256,7 +256,7 @@ class CTMSToAcousticService:
                         # TODO: The create_timestamp is currently a Date field in Acoustic.
                         # Sending time information will prevent Acoustic to set the value properly.
                         # We should configure Acoustic to use a Timestamp for this data.
-                        # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/803
+                        # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/563
                         if acoustic_field_name == "create_timestamp":
                             inner_value = inner_value.date()
 
