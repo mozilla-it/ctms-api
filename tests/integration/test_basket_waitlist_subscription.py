@@ -127,6 +127,8 @@ def test_vpn_waitlist(ctms_headers):
 
     contact_details = fetch_created()
     assert contact_details["newsletters"] == []
+    del contact_details["waitlists"][0]["create_timestamp"]
+    del contact_details["waitlists"][0]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
@@ -163,6 +165,8 @@ def test_vpn_waitlist(ctms_headers):
     # Request the full contact details again.
     contact_details = ctms_fetch(email, ctms_headers)
     assert contact_details["newsletters"] == []
+    del contact_details["waitlists"][0]["create_timestamp"]
+    del contact_details["waitlists"][0]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
@@ -222,6 +226,8 @@ def test_relay_waitlists(ctms_headers):
     contact_details = fetch_created()
 
     # 3. CTMS should show both formats (legacy `relay_waitlist` field, and entry in `waitlists` list)
+    del contact_details["waitlists"][0]["create_timestamp"]
+    del contact_details["waitlists"][0]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "relay",
@@ -256,6 +262,10 @@ def test_relay_waitlists(ctms_headers):
 
     contact_details = check_subscribed()
     assert contact_details["newsletters"] == []
+    del contact_details["waitlists"][0]["create_timestamp"]
+    del contact_details["waitlists"][0]["update_timestamp"]
+    del contact_details["waitlists"][1]["create_timestamp"]
+    del contact_details["waitlists"][1]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "relay",
@@ -298,6 +308,10 @@ def test_relay_waitlists(ctms_headers):
     contact_details = check_unsubscribed()
     # And only one newsletter subscribed.
     assert contact_details["newsletters"] == []
+    del contact_details["waitlists"][0]["create_timestamp"]
+    del contact_details["waitlists"][0]["update_timestamp"]
+    del contact_details["waitlists"][1]["create_timestamp"]
+    del contact_details["waitlists"][1]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "fields": {"geo": "es"},
