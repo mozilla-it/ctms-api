@@ -330,9 +330,17 @@ def get_all_acoustic_records_count(
 def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
     """Mark a list of primary email as pending synchronization."""
     statement = _contact_base_query(db).filter(Email.primary_email.in_(primary_emails))
-    db.bulk_save_objects(
-        PendingAcousticRecord(email_id=email.email_id) for email in statement.all()
+    insert_stmt = insert(PendingAcousticRecord).values(
+        [{"email_id": email.email_id} for email in statement.all()]
     )
+    insert_stmt = insert_stmt.on_conflict_do_update(
+        index_elements=[PendingAcousticRecord.email_id],
+        set_={
+            "retry": 0,
+            "last_error": "",
+        },
+    )
+    db.execute(insert_stmt)
 
 
 def reset_retry_acoustic_records(db: Session):

@@ -118,6 +118,7 @@ def test_get_email_miss(dbsession):
 
 def test_schedule_acoustic_record(dbsession, email_factory):
     email = email_factory()
+    dbsession.commit()
     schedule_acoustic_record(dbsession, email.email_id)
     dbsession.commit()
 
