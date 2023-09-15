@@ -352,8 +352,9 @@ def schedule_acoustic_record(
     email_id: UUID4,
     metrics: Optional[Dict] = None,
 ) -> None:
-    db_pending_record = PendingAcousticRecord(email_id=email_id)
-    db.add(db_pending_record)
+    stmt = insert(PendingAcousticRecord).values(email_id=email_id)
+    stmt = stmt.on_conflict_do_nothing()
+    db.execute(stmt)
     if metrics:
         metrics["pending_acoustic_sync"].inc()
 

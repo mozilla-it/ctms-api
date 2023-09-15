@@ -124,6 +124,21 @@ def test_schedule_acoustic_record(dbsession, email_factory):
     assert dbsession.query(PendingAcousticRecord).one().email_id == email.email_id
 
 
+def test_schedule_acoustic_record_is_unique(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+    schedule_acoustic_record(dbsession, email.email_id)
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
+    assert (
+        dbsession.query(PendingAcousticRecord)
+        .filter(PendingAcousticRecord.email_id == email.email_id)
+        .count()
+        == 1
+    )
+
+
 def test_get_acoustic_records_before_filter_by_end_time(
     dbsession, pending_acoustic_record_factory
 ):

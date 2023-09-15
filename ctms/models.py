@@ -249,6 +249,8 @@ class PendingAcousticRecord(Base, TimestampMixin):
 
     email = relationship("Email", uselist=False)
 
+    __table_args__ = (UniqueConstraint("email_id", name="uix_pr_email_id"),)
+
 
 class StripeBase(Base):
     """Base class for Stripe objects."""
