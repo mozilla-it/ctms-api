@@ -230,6 +230,9 @@ def create_ctms_contact(
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact, get_metrics())
+        # Without this, the foreign key constraint on contact is violated
+        # (contact does not exist), why!?
+        db.flush()
         schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
