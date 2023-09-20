@@ -243,13 +243,13 @@ class PendingAcousticRecord(Base, TimestampMixin):
     __tablename__ = "pending_acoustic"
 
     id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
+    email_id = Column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
+    )
     retry = Column(Integer, nullable=False, default=0)
     last_error = Column(Text, default="")
 
     email = relationship("Email", uselist=False)
-
-    __table_args__ = (UniqueConstraint("email_id", name="uix_pr_email_id"),)
 
 
 class StripeBase(Base):
