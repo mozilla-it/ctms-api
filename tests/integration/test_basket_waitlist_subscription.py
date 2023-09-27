@@ -110,7 +110,7 @@ def test_connectivity(url):
     resp.raise_for_status()
 
 
-def test_vpn_waitlist(ctms_headers):
+def test_vpn_waitlist(whatever, ctms_headers):
     # 1. Subscribe a certain email to the `vpn` waitlist
     email = f"integration-test-{uuid4()}@restmail.net"
     vpn_waitlist_slug = "guardian-vpn-waitlist"
@@ -127,8 +127,6 @@ def test_vpn_waitlist(ctms_headers):
 
     contact_details = fetch_created()
     assert contact_details["newsletters"] == []
-    del contact_details["waitlists"][0]["create_timestamp"]
-    del contact_details["waitlists"][0]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
@@ -139,6 +137,8 @@ def test_vpn_waitlist(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
     # Legacy (read-only) fields.
@@ -165,8 +165,6 @@ def test_vpn_waitlist(ctms_headers):
     # Request the full contact details again.
     contact_details = ctms_fetch(email, ctms_headers)
     assert contact_details["newsletters"] == []
-    del contact_details["waitlists"][0]["create_timestamp"]
-    del contact_details["waitlists"][0]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "vpn",
@@ -177,6 +175,8 @@ def test_vpn_waitlist(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
     # Legacy (read-only) fields.
@@ -205,7 +205,7 @@ def test_vpn_waitlist(ctms_headers):
     check_updated()
 
 
-def test_relay_waitlists(ctms_headers):
+def test_relay_waitlists(whatever, ctms_headers):
     email = f"stage-test-{uuid4()}@restmail.net"
     relay_waitlist_slug = "relay-waitlist"
 
@@ -226,8 +226,6 @@ def test_relay_waitlists(ctms_headers):
     contact_details = fetch_created()
 
     # 3. CTMS should show both formats (legacy `relay_waitlist` field, and entry in `waitlists` list)
-    del contact_details["waitlists"][0]["create_timestamp"]
-    del contact_details["waitlists"][0]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "relay",
@@ -237,6 +235,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
     # Legacy (read-only) fields.
@@ -262,10 +262,6 @@ def test_relay_waitlists(ctms_headers):
 
     contact_details = check_subscribed()
     assert contact_details["newsletters"] == []
-    del contact_details["waitlists"][0]["create_timestamp"]
-    del contact_details["waitlists"][0]["update_timestamp"]
-    del contact_details["waitlists"][1]["create_timestamp"]
-    del contact_details["waitlists"][1]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "name": "relay",
@@ -275,6 +271,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
         {
             "name": "relay-vpn-bundle",
@@ -284,6 +282,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
     ]
     # Legacy (read-only) fields.
@@ -308,10 +308,6 @@ def test_relay_waitlists(ctms_headers):
     contact_details = check_unsubscribed()
     # And only one newsletter subscribed.
     assert contact_details["newsletters"] == []
-    del contact_details["waitlists"][0]["create_timestamp"]
-    del contact_details["waitlists"][0]["update_timestamp"]
-    del contact_details["waitlists"][1]["create_timestamp"]
-    del contact_details["waitlists"][1]["update_timestamp"]
     assert contact_details["waitlists"] == [
         {
             "fields": {"geo": "es"},
@@ -319,6 +315,8 @@ def test_relay_waitlists(ctms_headers):
             "source": "https://relay.firefox.com/",
             "subscribed": False,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
         {
             "name": "relay-vpn-bundle",
@@ -328,6 +326,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
     ]
     # Legacy (read-only) fields.

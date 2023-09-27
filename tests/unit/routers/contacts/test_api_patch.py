@@ -289,7 +289,7 @@ def test_patch_error_on_id_conflict(
     }
 
 
-def test_patch_to_subscribe(client, maximal_contact):
+def test_patch_to_subscribe(whatever, client, maximal_contact):
     """PATCH can subscribe to a single newsletter."""
     email_id = maximal_contact.email.email_id
     patch_data = {"newsletters": [{"name": "zzz-newsletter"}]}
@@ -297,8 +297,6 @@ def test_patch_to_subscribe(client, maximal_contact):
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == len(maximal_contact.newsletters) + 1
-    del actual["newsletters"][-1]["create_timestamp"]
-    del actual["newsletters"][-1]["update_timestamp"]
     assert actual["newsletters"][-1] == {
         "format": "H",
         "lang": "en",
@@ -306,6 +304,8 @@ def test_patch_to_subscribe(client, maximal_contact):
         "source": None,
         "subscribed": True,
         "unsub_reason": None,
+        "create_timestamp": whatever.iso8601(),
+        "update_timestamp": whatever.iso8601(),
     }
 
 
@@ -333,7 +333,7 @@ def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
     }
 
 
-def test_patch_to_unsubscribe(client, maximal_contact):
+def test_patch_to_unsubscribe(whatever, client, maximal_contact):
     """PATCH can unsubscribe by setting a newsletter field."""
     email_id = maximal_contact.email.email_id
     existing_news_data = maximal_contact.newsletters[1].dict()
@@ -353,8 +353,6 @@ def test_patch_to_unsubscribe(client, maximal_contact):
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == len(maximal_contact.newsletters)
-    del actual["newsletters"][1]["create_timestamp"]
-    del actual["newsletters"][1]["update_timestamp"]
     assert actual["newsletters"][1] == {
         "format": "T",
         "lang": "fr",
@@ -362,6 +360,8 @@ def test_patch_to_unsubscribe(client, maximal_contact):
         "source": "https://commonvoice.mozilla.org/fr",
         "subscribed": False,
         "unsub_reason": "Too many emails.",
+        "create_timestamp": whatever.iso8601(),
+        "update_timestamp": whatever.iso8601(),
     }
 
 
@@ -458,7 +458,7 @@ def test_patch_will_validate_waitlist_fields(client, maximal_contact):
     assert details["detail"][0]["loc"] == ["body", "waitlists", 0, "source"]
 
 
-def test_patch_to_add_a_waitlist(client, maximal_contact):
+def test_patch_to_add_a_waitlist(whatever, client, maximal_contact):
     """PATCH can add a single waitlist."""
     email_id = maximal_contact.email.email_id
     patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
@@ -468,14 +468,14 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
     new_waitlists = actual["waitlists"]
     assert len(new_waitlists) == len(maximal_contact.waitlists) + 1
     new_waitlist = next((wl for wl in new_waitlists if wl["name"] == "future-tech"))
-    del new_waitlist["create_timestamp"]
-    del new_waitlist["update_timestamp"]
     assert new_waitlist == {
         "name": "future-tech",
         "source": None,
         "fields": {"geo": "es"},
         "subscribed": True,
         "unsub_reason": None,
+        "create_timestamp": whatever.iso8601(),
+        "update_timestamp": whatever.iso8601(),
     }
 
 
@@ -549,14 +549,12 @@ def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):
     assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
 
 
-def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
+def test_patch_vpn_waitlist_legacy_add(whatever, client, minimal_contact):
     email_id = minimal_contact.email.email_id
     patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    del actual["waitlists"][0]["create_timestamp"]
-    del actual["waitlists"][0]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "vpn",
@@ -567,6 +565,8 @@ def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
 
@@ -593,7 +593,9 @@ def test_patch_vpn_waitlist_legacy_delete_default(client, maximal_contact):
     assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == before - 1
 
 
-def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
+def test_patch_vpn_waitlist_legacy_update(
+    whatever, client, dbsession, waitlist_factory
+):
     vpn_waitlist = waitlist_factory(
         name="vpn",
         source="https://www.example.com/vpn_signup",
@@ -606,8 +608,6 @@ def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
     )
     assert resp.status_code == 200
     actual = resp.json()
-    del actual["waitlists"][0]["create_timestamp"]
-    del actual["waitlists"][0]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "vpn",
@@ -615,11 +615,15 @@ def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
             "fields": {"geo": "it", "platform": None},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
 
 
-def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_factory):
+def test_patch_vpn_waitlist_legacy_update_full(
+    whatever, client, dbsession, waitlist_factory
+):
     vpn_waitlist = waitlist_factory(
         name="vpn",
         source="https://www.example.com/vpn_signup",
@@ -632,8 +636,6 @@ def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_facto
     )
     assert resp.status_code == 200
     actual = resp.json()
-    del actual["waitlists"][0]["create_timestamp"]
-    del actual["waitlists"][0]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "vpn",
@@ -641,6 +643,8 @@ def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_facto
             "fields": {"geo": "it", "platform": "linux"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
 
@@ -686,7 +690,9 @@ def test_patch_relay_waitlist_legacy_delete_default(client, maximal_contact):
     assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == before - 1
 
 
-def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory):
+def test_patch_relay_waitlist_legacy_update(
+    whatever, client, dbsession, waitlist_factory
+):
     relay_waitlist = waitlist_factory(
         name="relay",
         source="https://www.example.com/relay_signup",
@@ -699,8 +705,6 @@ def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory)
     )
     assert resp.status_code == 200
     actual = resp.json()
-    del actual["waitlists"][0]["create_timestamp"]
-    del actual["waitlists"][0]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "relay",
@@ -708,12 +712,14 @@ def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory)
             "fields": {"geo": "it"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
 
 
 def test_patch_relay_waitlist_legacy_update_all(
-    client, dbsession, email_factory, waitlist_factory
+    whatever, client, dbsession, email_factory, waitlist_factory
 ):
     # Test that all relay waitlists records are updated from the legacy way.
     email = email_factory()
@@ -750,10 +756,6 @@ def test_patch_relay_waitlist_legacy_update_all(
     )
     assert resp.status_code == 200
     actual = resp.json()
-    del actual["waitlists"][0]["create_timestamp"]
-    del actual["waitlists"][0]["update_timestamp"]
-    del actual["waitlists"][1]["create_timestamp"]
-    del actual["waitlists"][1]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "relay",
@@ -761,6 +763,8 @@ def test_patch_relay_waitlist_legacy_update_all(
             "fields": {"geo": "it"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
         {
             "name": "relay-vpn-bundle",
@@ -768,12 +772,14 @@ def test_patch_relay_waitlist_legacy_update_all(
             "fields": {"geo": "it"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
     ]
 
 
 def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
-    client, minimal_contact
+    whatever, client, minimal_contact
 ):
     email_id = minimal_contact.email.email_id
     patch_data = {
@@ -783,8 +789,6 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    del actual["waitlists"][0]["create_timestamp"]
-    del actual["waitlists"][0]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "relay-vpn-bundle",
@@ -792,6 +796,8 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
             "fields": {"geo": "ru"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         },
     ]
 
@@ -829,7 +835,7 @@ def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
 
 
 def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
-    client, minimal_contact
+    whatever, client, minimal_contact
 ):
     email_id = minimal_contact.email.email_id
     patch_data = {
@@ -838,8 +844,6 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     current = resp.json()
-    del current["waitlists"][0]["create_timestamp"]
-    del current["waitlists"][0]["update_timestamp"]
     assert current["waitlists"] == [
         {
             "fields": {"geo": "ru"},
@@ -847,6 +851,8 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
             "source": None,
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": whatever.iso8601(),
+            "update_timestamp": whatever.iso8601(),
         }
     ]
 
