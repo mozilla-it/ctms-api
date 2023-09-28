@@ -1,7 +1,8 @@
 import datetime
+import logging
 import time
 from decimal import Decimal
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 from uuid import UUID
 
 import dateutil
@@ -9,10 +10,17 @@ import structlog
 from lxml import etree
 from requests.exceptions import Timeout
 from silverpop.api import Silverpop, SilverpopResponseException
+from sqlalchemy.orm import Session
 
 from ctms.background_metrics import BackgroundMetricService
-from ctms.config import re_trace_email
+from ctms.config import Settings, re_trace_email
+from ctms.crud import get_all_acoustic_records_count, get_all_acoustic_retries_count
+from ctms.dependencies import get_settings
 from ctms.schemas import ContactSchema, NewsletterSchema
+from ctms.schemas.waitlist import WaitlistBase
+
+logger = logging.getLogger(__name__)
+
 
 # Start cherry-picked from django.utils.encoding
 _PROTECTED_TYPES = (
@@ -55,6 +63,61 @@ def force_bytes(s, encoding="utf-8", strings_only=False, errors="strict"):
 
 
 # End cherry-picked from django.utils.encoding
+
+
+def transform_field_for_acoustic(data):
+    """Transform data type for Acoustic."""
+    if isinstance(data, bool):
+        return "Yes" if data else "No"
+    if isinstance(data, datetime.datetime):
+        return data.strftime("%m/%d/%Y %H:%M:%S")
+    if isinstance(data, datetime.date):
+        return data.strftime("%m/%d/%Y")
+    if isinstance(data, UUID):
+        return str(data)
+    if data is None:
+        return ""
+    return data
+
+
+def acoustic_heartbeat(
+    db: Session, settings: Settings = get_settings()
+) -> tuple[bool, dict[str, Any]]:
+    """Check Acoustic backlog limits."""
+    success = True
+    try:
+        backlog = get_all_acoustic_records_count(
+            db, retry_limit=settings.acoustic_retry_limit
+        )
+        retry_backlog = get_all_acoustic_retries_count(db)
+    except Exception as exc:  # pylint:disable = broad-exception-caught
+        logger.exception(exc)
+        backlog = None
+        retry_backlog = None
+        success = False
+
+    for name, value, maximum in [
+        ("backlog", backlog, settings.acoustic_max_backlog),
+        ("retry backlog", retry_backlog, settings.acoustic_max_retry_backlog),
+    ]:
+        if value is not None and maximum is not None and value > maximum:
+            logger.error(
+                f"Acoustic {name} size %s exceed maximum %s",
+                backlog,
+                settings.acoustic_max_backlog,
+            )
+            success = False
+
+    details = {
+        "backlog": backlog,
+        "max_backlog": settings.acoustic_max_backlog,
+        "retry_backlog": retry_backlog,
+        "max_retry_backlog": settings.acoustic_max_retry_backlog,
+        "retry_limit": settings.acoustic_retry_limit,
+        "batch_limit": settings.acoustic_batch_limit,
+        "loop_min_sec": settings.acoustic_loop_min_secs,
+    }
+    return success, details
 
 
 class AcousticUploadError(Exception):
@@ -121,6 +184,7 @@ class CTMSToAcousticService:
         self,
         acoustic_main_table_id,
         acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id,
         acoustic_product_table_id,
         acoustic_client: Acoustic,
         metric_service: BackgroundMetricService = None,
@@ -133,6 +197,7 @@ class CTMSToAcousticService:
         self.relational_tables = {
             "newsletter": str(int(acoustic_newsletter_table_id)),
             "product": str(int(acoustic_product_table_id)),
+            "waitlist": str(int(acoustic_waitlist_table_id)),
         }
         self.logger = structlog.get_logger(__name__)
         self.context: Dict[str, Union[str, int, List[str]]] = {}
@@ -142,19 +207,21 @@ class CTMSToAcousticService:
         self,
         contact: ContactSchema,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):
         acoustic_main_table = self._main_table_converter(contact, main_fields)
         newsletter_rows, acoustic_main_table = self._newsletter_converter(
             acoustic_main_table, contact, newsletters_mapping
         )
-        acoustic_main_table = self._waitlist_converter(
+        waitlist_rows, acoustic_main_table = self._waitlist_converter(
             acoustic_main_table,
             contact,
             main_fields,
+            waitlist_fields,
         )
         product_rows = self._product_converter(contact)
-        return acoustic_main_table, newsletter_rows, product_rows
+        return acoustic_main_table, newsletter_rows, waitlist_rows, product_rows
 
     def _main_table_converter(self, contact, main_fields):
         acoustic_main_table = {}
@@ -186,14 +253,34 @@ class CTMSToAcousticService:
                         self.context["trace"] = inner_value
 
                     if acoustic_field_name in main_fields:
+                        # TODO: The create_timestamp is currently a Date field in Acoustic.
+                        # Sending time information will prevent Acoustic to set the value properly.
+                        # We should configure Acoustic to use a Timestamp for this data.
+                        # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/563
+                        if acoustic_field_name == "create_timestamp":
+                            inner_value = inner_value.date()
+
                         if acoustic_field_name == "fxa_created_date":
                             inner_value = self.fxa_created_date_string_to_datetime(
                                 inner_value
                             )
-
+                        # TODO: These are boolean values on our models, but in Acoustic
+                        # they are configured as text values where we record `True`
+                        # and `False` as `1` and `0` respectively.
+                        # Note that `amo_*` and `fxa_*` fields are omitted when contact does not
+                        # have these relations.
+                        # We should configure Acoustic to use a boolean column for this data.
+                        # This is being tracked in https://github.com/mozilla-it/ctms-api/issues/803
+                        if acoustic_field_name in (
+                            "double_opt_in",
+                            "has_opted_out_of_email",
+                            "fxa_account_deleted",
+                            "amo_email_opt_in",
+                        ):
+                            inner_value = "1" if inner_value else "0"
                         acoustic_main_table[
                             acoustic_field_name
-                        ] = self.transform_field_for_acoustic(inner_value)
+                        ] = transform_field_for_acoustic(inner_value)
                     elif (contact_attr, inner_attr) in AcousticResources.SKIP_FIELDS:
                         pass
                     else:
@@ -222,9 +309,6 @@ class CTMSToAcousticService:
         # create the RT rows for the newsletter table in acoustic
         newsletter_rows = []
         contact_newsletters: List[NewsletterSchema] = contact.newsletters
-        contact_email_id = str(contact.email.email_id)
-        contact_email_format = contact.email.email_format
-        contact_email_lang = contact.email.email_lang
         skipped = []
 
         # populate with all the sub_flags set to false
@@ -233,27 +317,23 @@ class CTMSToAcousticService:
             acoustic_main_table[sub_flag] = "0"
 
         for newsletter in contact_newsletters:
-            newsletter_template = {
-                "email_id": contact_email_id,
-                "newsletter_format": contact_email_format,
-                "newsletter_lang": contact_email_lang,
-            }
+            newsletter_row = {}
+            for column, field in (
+                ("email_id", "email_id"),
+                ("newsletter_name", "name"),
+                ("newsletter_source", "source"),
+                ("newsletter_format", "format"),
+                ("newsletter_lang", "lang"),
+                ("subscribed", "subscribed"),
+                ("newsletter_unsub_reason", "unsub_reason"),
+                ("create_timestamp", "create_timestamp"),
+                ("update_timestamp", "update_timestamp"),
+            ):
+                value = getattr(newsletter, field)
+                newsletter_row[column] = transform_field_for_acoustic(value)
+            newsletter_rows.append(newsletter_row)
 
             if newsletter.name in newsletters_mapping:
-                newsletter_template[
-                    "create_timestamp"
-                ] = newsletter.create_timestamp.date().isoformat()
-                newsletter_template[
-                    "update_timestamp"
-                ] = newsletter.update_timestamp.date().isoformat()
-                newsletter_template["newsletter_name"] = newsletter.name
-                newsletter_template["newsletter_unsub_reason"] = newsletter.unsub_reason
-                _source = newsletter.source
-                if _source is not None:
-                    _source = str(_source)
-                newsletter_template["newsletter_source"] = _source
-
-                newsletter_rows.append(newsletter_template)
                 # and finally flip the main table's sub_<newsletter> flag to true for each subscription
                 if newsletter.subscribed:
                     acoustic_main_table[newsletters_mapping[newsletter.name]] = "1"
@@ -263,16 +343,19 @@ class CTMSToAcousticService:
             self.context["newsletters_skipped"] = sorted(skipped)
         return newsletter_rows, acoustic_main_table
 
-    def _waitlist_converter(self, acoustic_main_table, contact, main_fields):
+    def _waitlist_converter(
+        self, acoustic_main_table, contact, main_fields, waitlist_fields
+    ):
         """Turns waitlists into flat fields on the main table.
 
         If the field `{name}_waitlist_{field}` is not present in the `main_fields`
         list, then it is ignored.
         See `bin/acoustic_fields.py` to manage them (eg. add ``vpn_waitlist_source``).
-
-        Note: In the future, a dedicated relation/table for waitlists can be considered.
         """
-        waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
+        waitlist_rows = []
+        contact_waitlists: List[WaitlistBase] = contact.waitlists
+
+        waitlists_by_name = {wl.name: wl for wl in contact_waitlists}
         for acoustic_field_name in main_fields:
             if "_waitlist_" not in acoustic_field_name:
                 continue
@@ -281,47 +364,39 @@ class CTMSToAcousticService:
             if name in waitlists_by_name:
                 waitlist = waitlists_by_name[name]
                 value = getattr(waitlist, field, waitlist.fields.get(field, None))
-            acoustic_main_table[
-                acoustic_field_name
-            ] = self.transform_field_for_acoustic(value)
-        return acoustic_main_table
+            acoustic_main_table[acoustic_field_name] = transform_field_for_acoustic(
+                value
+            )
 
-    @staticmethod
-    def transform_field_for_acoustic(data):
-        """Transform data for main contact table."""
-        if isinstance(data, bool):
-            if data:
-                return "1"
-            return "0"
-        if isinstance(data, datetime.datetime):
-            # Acoustic doesn't have timestamps, so make timestamps into dates.
-            data = data.date()
-        if isinstance(data, datetime.date):
-            return data.strftime("%m/%d/%Y")
-        if isinstance(data, UUID):
-            return str(data)
-        return data
+        # Waitlist relational table
+        for waitlist in contact_waitlists:
+            waitlist_row = {}
+            for column, field in (
+                ("email_id", "email_id"),
+                ("waitlist_name", "name"),
+                ("waitlist_source", "source"),
+                ("subscribed", "subscribed"),
+                ("unsub_reason", "unsub_reason"),
+                ("create_timestamp", "create_timestamp"),
+                ("update_timestamp", "update_timestamp"),
+            ):
+                value = getattr(waitlist, field)
+                waitlist_row[column] = transform_field_for_acoustic(value)
+            # Extra optional fields (eg. "geo", "platform", ...)
+            for field in waitlist_fields:
+                waitlist_row[f"waitlist_{field}"] = transform_field_for_acoustic(
+                    waitlist.fields.get(field)
+                )
+            waitlist_rows.append(waitlist_row)
 
-    @staticmethod
-    def to_acoustic_bool(bool_str):
-        """Transform bool for products relational table."""
-        if bool_str in (True, "true"):
-            return "Yes"
-        return "No"
-
-    @staticmethod
-    def to_acoustic_timestamp(dt_val):
-        """Transform datetime for products relational table."""
-        if dt_val:
-            return dt_val.strftime("%m/%d/%Y %H:%M:%S")
-        return ""
+        return waitlist_rows, acoustic_main_table
 
     def _product_converter(self, contact):
         """Create the rows for the product subscription table in Acoustic."""
         contact_email_id = str(contact.email.email_id)
         product_rows = []
         template: Dict[str, str] = {"email_id": contact_email_id}
-        to_ts = CTMSToAcousticService.to_acoustic_timestamp
+        to_ts = transform_field_for_acoustic
         for product in contact.products:
             row: Dict[str, str] = template.copy()
             row.update(
@@ -351,8 +426,8 @@ class CTMSToAcousticService:
                     "current_period_start": to_ts(product.current_period_start),
                     "current_period_end": to_ts(product.current_period_end),
                     "canceled_at": to_ts(product.canceled_at),
-                    "cancel_at_period_end": CTMSToAcousticService.to_acoustic_bool(
-                        product.cancel_at_period_end
+                    "cancel_at_period_end": transform_field_for_acoustic(
+                        product.cancel_at_period_end in (True, "true")
                     ),
                     "ended_at": to_ts(product.ended_at),
                 }
@@ -430,6 +505,7 @@ class CTMSToAcousticService:
         self,
         contact: ContactSchema,
         main_fields: set[str],
+        waitlist_fields: set[str],
         newsletters_mapping: dict[str, str],
     ):  # raises AcousticUploadError
         """
@@ -439,8 +515,13 @@ class CTMSToAcousticService:
         """
         self.context = {}
         try:
-            main_table_data, nl_data, prod_data = self.convert_ctms_to_acoustic(
-                contact, main_fields, newsletters_mapping
+            (
+                main_table_data,
+                nl_data,
+                wl_data,
+                prod_data,
+            ) = self.convert_ctms_to_acoustic(
+                contact, main_fields, waitlist_fields, newsletters_mapping
             )
             main_table_id = str(self.acoustic_main_table_id)
             email_id = main_table_data["email_id"]
@@ -453,6 +534,7 @@ class CTMSToAcousticService:
                 columns=main_table_data,
             )
             self._insert_update_relational_table("newsletter", nl_data)
+            self._insert_update_relational_table("waitlist", wl_data)
             self._insert_update_relational_table("product", prod_data)
 
             # success

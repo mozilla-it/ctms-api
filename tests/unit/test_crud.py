@@ -8,6 +8,7 @@ import sqlalchemy
 from sqlalchemy.orm import Session
 
 from ctms.crud import (
+    count_total_contacts,
     create_acoustic_field,
     create_acoustic_newsletters_mapping,
     create_amo,
@@ -31,6 +32,7 @@ from ctms.crud import (
     retry_acoustic_record,
     schedule_acoustic_record,
 )
+from ctms.database import ScopedSessionLocal
 from ctms.models import (
     AcousticField,
     AcousticNewsletterMapping,
@@ -49,6 +51,38 @@ from ctms.schemas.waitlist import WaitlistInSchema
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
+
+
+def test_email_count(connection, email_factory):
+    # The default `dbsession` fixture will run in a nested transaction
+    # that is rollback.
+    # In this test, we manipulate raw connections and transactions because
+    # we need to force a VACUUM operation outside a running transaction.
+
+    # Insert contacts in the table.
+    transaction = connection.begin()
+    session = ScopedSessionLocal()
+    email_factory.create_batch(3)
+    session.commit()
+    session.close()
+    transaction.commit()
+
+    # Force an analysis of the table.
+    old_isolation_level = connection.connection.isolation_level
+    connection.connection.set_isolation_level(0)
+    session.execute(sqlalchemy.text(f"VACUUM ANALYZE {Email.__tablename__}"))
+    session.close()
+    connection.connection.set_isolation_level(old_isolation_level)
+
+    # Query the count result (since last analyze)
+    session = ScopedSessionLocal()
+    count = count_total_contacts(session)
+    assert count == 3
+
+    # Delete created objects (since our transaction was not rollback automatically)
+    session.query(Email).delete()
+    session.commit()
+    session.close()
 
 
 def test_get_email(dbsession, email_factory):
@@ -84,10 +118,26 @@ def test_get_email_miss(dbsession):
 
 def test_schedule_acoustic_record(dbsession, email_factory):
     email = email_factory()
+    dbsession.commit()
     schedule_acoustic_record(dbsession, email.email_id)
     dbsession.commit()
 
     assert dbsession.query(PendingAcousticRecord).one().email_id == email.email_id
+
+
+def test_schedule_acoustic_record_is_unique(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+    schedule_acoustic_record(dbsession, email.email_id)
+    schedule_acoustic_record(dbsession, email.email_id)
+    dbsession.commit()
+
+    assert (
+        dbsession.query(PendingAcousticRecord)
+        .filter(PendingAcousticRecord.email_id == email.email_id)
+        .count()
+        == 1
+    )
 
 
 def test_get_acoustic_records_before_filter_by_end_time(

@@ -1,67 +1,27 @@
 # Deployment Guide
 
-- Github Actions: Build Pipeline
-- Kubernetes/Helm: Manifests for Deployment
-- Docker: Container Management
-- AWS: Cloud Infra
-
 ## Overview
 
 There are two deployed instances of CTMS:
 
-* https://ctms.prod.mozilla-ess.mozit.cloud/ - The production instance
-* https://ctms.stage.mozilla-ess.mozit.cloud/ - The staging instance
-
-There are some useful endpoints for deployers:
-
-* ``/__version__`` - reports the source code version used to build the images
-* ``/__lbheartbeat__`` - returns a 200 response when the service is running
-* ``/__heartbeat__`` - returns a 200 response when the backing services, such
-  as the database, are running, as well as some additional info.
+* https://ctms.prod.mozilla-ess.mozit.cloud/ - The production instance, deployed on version tags
+* https://ctms.stage.mozilla-ess.mozit.cloud/ - The staging instance, deployed on pull-requests merges
 
 ## Deployment
 
-We use a variety of technologies to get this code into production.  Starting
-from this repo and going outwards:
+The deployment code lives in https://github.com/mozilla-sre-deploy/deploy-ctms (*private*).
 
-1. [GitHub Actions](https://github.com/mozilla-it/ctms-api/actions) builds and
-   deploys a docker image to [AWS's Elastic Container Registry](https://aws.amazon.com/ecr/) (ECR)
-    1. Pull requests and pushes to this repo will build and push a "short-sha"
-       image to AWS' ECR. The build details are written to
-       ``/app/version.json``.
-    1. Code merged to main will trigger a build that prefixes the "short sha"
-       with literal ``stg-``.
-    1. Code pushed to a tag with the form ``v{semver}`` (for example,
-       ``v0.0.1``) will get published with that tag to ECR.
-1. The helm configuration, which describes the CTMS cluster, is in the repo
-   [mozilla-it/helm-charts](https://github.com/mozilla-it/helm-charts/tree/main/charts/ctms).
-1. A helm release is configured in
-   [mozilla-it/ctms-infra](https://github.com/mozilla-it/ctms-infra/tree/main/k8s) (*private*).
-   We can trigger a release by updating the correct files there (for helm chart
-   or helm chart value changes).
-1. The [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS)
-   clusters are configured with a
-   [fluxcd](https://www.weave.works/oss/flux/)/helm operator to deploy on releases.
-   1. CTMS-API images tagged with ``stg-`` automatically deploy to the
-      staging cluster.
-   1. CTMS-API images tagged with ``v{semver}`` automatically deploy to prod
-   1. Helm chart tags are deployed to both
-   1. Flux-triggered releases appear as commits in ``mozilla-it/ctms-infra``.
-1. [Terraform](https://www.terraform.io/) defines the EKS clusters, and any
-   databases we may require. The
-   [Terraform files](https://github.com/mozilla-it/ctms-infra/tree/main/terraform)
-   are in the `mozilla-it/ctms-infra` private repo as well.
+See the [SRE mana page](https://mana.mozilla.org/wiki/pages/viewpage.action?spaceKey=SRE&title=ESS+-+CTMS) for more information and additional technical diagrams for deployment.
 
-More information about CTMS operations is available on the
-[ESS-CTMS Mana page](https://mana.mozilla.org/wiki/x/KIyXC) (*private*).
+## Common Operations
 
-## Delete Contacts in Bulk
+### Delete Contacts in Bulk
 
 In order to delete all information about certain contacts, use the `delete_bulk.py` script.
 
 **Warning**: This command removes all related data immediately, but **won't delete** Acoustic data.
 
-## Synchronized Acoustic Fields
+### Synchronized Acoustic Fields
 
 The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
 in the database.
@@ -70,7 +30,7 @@ In order to add, list, or remove certain fields, use the `acoustic.py` command:
 
 See `python ctms/bin/acoustic.py fields --help` for usage details.
 
-## Acoustic Newsletters Fields
+### Acoustic Newsletters Fields
 
 The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
 
@@ -79,8 +39,9 @@ In order to add, list, or remove certain mappings, use the `acoustic.py` command
 
 See `python ctms/bin/acoustic.py newsletter-mappings --help` for usage details.
 
+> **Note**: The usage of this command is not recommended because we are moving away from this column-based approach, and should not onboard new instances.
 
-## Force resync of contacts
+### Force resync of contacts
 
 In [CTMS-146](https://mozilla-hub.atlassian.net/browse/CTMS-146), we faced an issue where some contact data was not in sync with Acoustic.
 In order to force the resync of a batch of contacts, it is possible to run the `acoustic_resync` as a one-shot command with some options.
@@ -202,9 +163,6 @@ traceback) are logged at ``ERROR`` level (Severity 3). Some of the fields are:
   requested.
 * ``trace``: An email matching the trace pattern, such as
   ``test+trace_me_mozilla_2021@example.com``
-* ``trivial``: `true` if a request is a monitoring request, such as
-  ``GET /__lbheartbeat__``. These can be excluded to focus on the "non-trivial"
-  requests.
 
 ### Acoustic Sync Process Logging Fields
 
@@ -236,7 +194,6 @@ type ``"ctms.bin.acoustic_sync"`` and these fields:
 * ``retry_backlog``: The number of contacts in the retry backlog, including those past the ``retry_limit``.
 * ``retry_limit``: The number of times to retry syncing a contact before giving up.
 * ``sync_backlog``: The number of contacts in the backlog before syncing.
-* ``trivial``: ``true`` if no contacts processed, omitted if some processed.
 
 For each contact, a log message at ``DEBUG`` level (Severity 7) is emitted, or
 at ``ERROR`` level (Severity 3) on exceptions, with type
@@ -357,20 +314,14 @@ There are additional shared labels for all sync service metrics:
 * ``app_kubernetes_io_instance`` - set to ``"ctms"``
 * ``app_kubernetes_io_name`` - set to ``"ctms"``
 
-## Dashboards
+### Dashboards
 
 CTMS metrics are presented on two dashboards:
 
-* [CTMS - dashboard](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
+* [CTMS Telemetry](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
   Operational metrics for production and staging.
 * [CTMS Alerts](https://earthangel-b40313e5.influxcloud.net/d/UqluYyc7k/ctms-alerts?orgId=1):
   Operational metrics with triggers to alert on-call staff.
-
-## Docker
-See the [developer_setup_guide](developer_setup.md#docker) for more information about Docker.
-
-## SRE Related Doc
-See the [SRE mana page](https://mana.mozilla.org/wiki/pages/viewpage.action?spaceKey=SRE&title=ESS+-+CTMS) for more information and additional technical diagrams for deployment.
 
 ---
 [View All Docs](./)

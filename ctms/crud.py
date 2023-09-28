@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from functools import partial
@@ -9,6 +10,7 @@ from pydantic import UUID4
 from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
+from sqlalchemy.sql import func, select
 
 from .auth import hash_password
 from .database import Base
@@ -54,6 +56,32 @@ from .schemas import (
     WaitlistInSchema,
 )
 from .schemas.base import BaseModel
+
+logger = logging.getLogger(__name__)
+
+
+def ping(db: Session):
+    try:
+        db.execute(select([func.now()])).first()
+        return True
+    except Exception as exc:  # pylint:disable = broad-exception-caught
+        logger.exception(exc)
+        return False
+
+
+def count_total_contacts(db: Session):
+    """Return the total number of email records.
+    Since the table is huge, we rely on the PostgreSQL internal
+    catalog to retrieve an approximate size efficiently.
+    This metadata is refreshed on `VACUUM` or `ANALYSIS` which
+    is run regularly by default on our database instances.
+    """
+    query = text(
+        "SELECT reltuples AS estimate "
+        "FROM pg_class "
+        f"where relname = '{Email.__tablename__}'"
+    )
+    return int(db.execute(query).first()["estimate"])
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):
@@ -286,11 +314,13 @@ def get_all_acoustic_records_before(
 
 
 def get_all_acoustic_records_count(
-    db: Session, end_time: datetime, retry_limit: int = 5
+    db: Session, end_time: Optional[datetime] = None, retry_limit: int = 5
 ) -> int:
     """
     Get all the pending records before a given date. Allows retry limit to be provided at query time.
     """
+    if end_time is None:
+        end_time = datetime.now(tz=timezone.utc)
     query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
     pending_records_count: int = query.count()
     return pending_records_count
@@ -299,9 +329,17 @@ def get_all_acoustic_records_count(
 def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
     """Mark a list of primary email as pending synchronization."""
     statement = _contact_base_query(db).filter(Email.primary_email.in_(primary_emails))
-    db.bulk_save_objects(
-        PendingAcousticRecord(email_id=email.email_id) for email in statement.all()
+    insert_stmt = insert(PendingAcousticRecord).values(
+        [{"email_id": email.email_id} for email in statement.all()]
     )
+    insert_stmt = insert_stmt.on_conflict_do_update(
+        index_elements=[PendingAcousticRecord.email_id],
+        set_={
+            "retry": 0,
+            "last_error": "",
+        },
+    )
+    db.execute(insert_stmt)
 
 
 def reset_retry_acoustic_records(db: Session):
@@ -321,8 +359,9 @@ def schedule_acoustic_record(
     email_id: UUID4,
     metrics: Optional[Dict] = None,
 ) -> None:
-    db_pending_record = PendingAcousticRecord(email_id=email_id)
-    db.add(db_pending_record)
+    stmt = insert(PendingAcousticRecord).values(email_id=email_id)
+    stmt = stmt.on_conflict_do_nothing()
+    db.execute(stmt)
     if metrics:
         metrics["pending_acoustic_sync"].inc()
 

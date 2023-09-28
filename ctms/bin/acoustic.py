@@ -248,11 +248,13 @@ def do_dump(dbsession, contacts, output: TextIO):
         acoustic_client=None,
         acoustic_main_table_id=-1,
         acoustic_newsletter_table_id=-1,
+        acoustic_waitlist_table_id=-1,
         acoustic_product_table_id=-1,
     )
     main_fields = {
         f.field for f in get_all_acoustic_fields(dbsession, tablename="main")
     }
+    waitlist_fields: set[str] = set()  # Unused in main table dump.
     newsletters_mapping = {
         m.source: m.destination for m in get_all_acoustic_newsletters_mapping(dbsession)
     }
@@ -263,8 +265,8 @@ def do_dump(dbsession, contacts, output: TextIO):
     with tempfile.NamedTemporaryFile(mode="w") as tmpfile:
         for email in contacts:
             contact = ContactSchema.from_email(email)
-            main_table_row, _, _ = service.convert_ctms_to_acoustic(
-                contact, main_fields, newsletters_mapping
+            main_table_row, _, _, _ = service.convert_ctms_to_acoustic(
+                contact, main_fields, waitlist_fields, newsletters_mapping
             )
             columns.update(set(main_table_row.keys()))
             tmpfile.write(json.dumps(main_table_row) + "\n")

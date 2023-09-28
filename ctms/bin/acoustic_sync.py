@@ -33,6 +33,7 @@ def main(db, settings):
         refresh_token=settings.acoustic_refresh_token,
         acoustic_main_table_id=settings.acoustic_main_table_id,
         acoustic_newsletter_table_id=settings.acoustic_newsletter_table_id,
+        acoustic_waitlist_table_id=settings.acoustic_waitlist_table_id,
         acoustic_product_table_id=settings.acoustic_product_subscriptions_id,
         server_number=settings.acoustic_server_number,
         retry_limit=settings.acoustic_retry_limit,
@@ -55,9 +56,6 @@ def main(db, settings):
 
         else:
             to_sleep = settings.acoustic_loop_min_secs - duration_s
-
-        if context["count_total"] == 0:
-            context["trivial"] = True
 
         logger.info(
             "sync_service cycle complete",

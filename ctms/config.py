@@ -1,12 +1,29 @@
+import json
 import re
 from datetime import timedelta
 from enum import Enum
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseSettings, PostgresDsn
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
+
+
+@lru_cache()
+def get_version():
+    """
+    Return contents of version.json.
+
+    This has generic data in repo, but gets the build details in CI.
+    """
+    ctms_root = Path(__file__).parent.parent
+    version_path = ctms_root / "version.json"
+    if version_path.exists():
+        return json.loads(version_path.read_text())
+    return {}
 
 
 class LogLevel(str, Enum):
@@ -57,6 +74,7 @@ class Settings(BaseSettings):
     acoustic_refresh_token: Optional[str] = None
     acoustic_main_table_id: Optional[int] = None
     acoustic_newsletter_table_id: Optional[int] = None
+    acoustic_waitlist_table_id: Optional[int] = None
     acoustic_product_subscriptions_id: Optional[int] = None
     prometheus_pushgateway_url: Optional[str] = None
     background_healthcheck_path: Optional[str] = None
@@ -81,6 +99,7 @@ class BackgroundSettings(Settings):
     acoustic_refresh_token: str
     acoustic_main_table_id: int
     acoustic_newsletter_table_id: int
+    acoustic_waitlist_table_id: int
     acoustic_product_subscriptions_id: int
     prometheus_pushgateway_url: str
 

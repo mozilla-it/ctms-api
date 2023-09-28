@@ -230,6 +230,11 @@ def create_ctms_contact(
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact, get_metrics())
+        # Without applying the operations to the DB with `flush()`, the low level operations
+        # of `schedule_acoustic_record()` won't detect the created contact and the foreign key
+        # constraint on email id will be violated.
+        # See https://github.com/mozilla-it/ctms-api/issues/549#issuecomment-1725519936
+        db.flush()
         schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703

@@ -543,3 +543,13 @@ def test_patch_preserves_waitlists_if_omitted(client, maximal_contact):
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["waitlists"]) == len(maximal_contact.waitlists)
+
+
+def test_patch_simply_ignores_legacy_waitlist_fields(client, minimal_contact):
+    email_id = minimal_contact.email.email_id
+    patch_data = {
+        "relay_waitlist": {"geo": "fr"},
+        "vpn_waitlist": {"geo": "fr", "platform": "windows"}
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200  # Not 400

@@ -5,7 +5,7 @@ from typing import Any, Type, cast
 
 from fastapi import FastAPI
 from fastapi.security import HTTPBasic
-from prometheus_client import CollectorRegistry, Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 from prometheus_client.utils import INF
 from sqlalchemy.orm import Session
 from starlette.routing import Route
@@ -13,7 +13,9 @@ from starlette.routing import Route
 from ctms.auth import OAuth2ClientCredentials
 from ctms.crud import get_active_api_client_ids
 
-METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
+METRICS_PARAMS: dict[
+    str, tuple[Type[Counter] | Type[Histogram] | type[Gauge], dict]
+] = {
     "requests": (
         Counter,
         {
@@ -56,6 +58,13 @@ METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
             "documentation": "Total count of contacts added to Acoustic sync backlog",
         },
     ),
+    "contacts": (
+        Gauge,
+        {
+            "name": "ctms_contacts_total",
+            "documentation": "Total count of contacts in the database",
+        },
+    ),
 }
 
 # We could use the default prometheus_client.REGISTRY, but it makes tests
@@ -77,7 +86,7 @@ oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
 
 
-def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram]:
+def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram | Gauge]:
     """Initialize the metrics with the registry."""
     metrics = {}
     for name, init_bits in METRICS_PARAMS.items():
