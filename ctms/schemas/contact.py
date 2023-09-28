@@ -19,14 +19,11 @@ from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
 from .product import ProductBaseSchema, ProductSegmentEnum
 from .waitlist import (
-    RelayWaitlistInSchema,
     RelayWaitlistSchema,
-    VpnWaitlistInSchema,
     VpnWaitlistSchema,
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,
-    validate_waitlist_newsletters,
 )
 
 if TYPE_CHECKING:
@@ -242,22 +239,9 @@ class ContactInBase(ComparableBase):
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = []
     waitlists: List[WaitlistInSchema] = []
-    # TODO waitlist: remove once Basket leverages the `waitlists` field.
-    vpn_waitlist: Optional[VpnWaitlistInSchema] = None
-    relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
     class Config:
         fields = ContactSchema.Config.fields
-
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
-        """
-        This makes sure a Relay country is specified when one of the `relay-*-waitlist`
-        newsletter is subscribed.
-
-        TODO waitlist: remove once Basket leverages the `waitlists` field.
-        """
-        return validate_waitlist_newsletters(values)
 
     def idempotent_equal(self, other):
         def _noneify(field):
@@ -301,19 +285,6 @@ class ContactPatchSchema(ComparableBase):
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
     waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]]
-    # TODO waitlist: remove once Basket leverages the `waitlists` field.
-    vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]]
-    relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]]
-
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
-        """
-        This makes sure a Relay country is specified when one of the `relay-*-waitlist`
-        newsletter is subscribed.
-
-        TODO waitlist: remove once Basket leverages the `waitlists` field.
-        """
-        return validate_waitlist_newsletters(values)
 
     class Config:
         fields = {

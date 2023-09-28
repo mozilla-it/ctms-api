@@ -62,13 +62,7 @@ from .stripe_subscription_item import (
     StripeSubscriptionItemOutputSchema,
     StripeSubscriptionItemUpsertSchema,
 )
-from .waitlist import (
-    RelayWaitlistInSchema,
-    VpnWaitlistInSchema,
-    WaitlistInSchema,
-    WaitlistSchema,
-    WaitlistTableSchema,
-)
+from .waitlist import WaitlistInSchema, WaitlistSchema, WaitlistTableSchema
 from .web import (
     BadRequestResponse,
     NotFoundResponse,

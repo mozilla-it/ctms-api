@@ -58,13 +58,6 @@ METRICS_PARAMS: dict[
             "documentation": "Total count of contacts added to Acoustic sync backlog",
         },
     ),
-    "legacy_waitlists_requests": (
-        Counter,
-        {
-            "name": "ctms_legacy_waitlists_requests_total",
-            "documentation": "Total count of API calls that use the legacy waitlists format",
-        },
-    ),
     "contacts": (
         Gauge,
         {
