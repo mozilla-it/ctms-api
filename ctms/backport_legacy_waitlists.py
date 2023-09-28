@@ -17,12 +17,12 @@ def format_legacy_vpn_relay_waitlist_input(
     # Use a dict to handle all the different schemas for create, create_or_update, or update
     formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
 
-    if metrics and ("vpn_waitlist" in formatted or "relay_waitlist" in formatted):
-        metrics["legacy_waitlists_requests"].inc()
-
     if len(formatted.get("waitlists", [])) > 0:
         # We are dealing with the current format. Nothing to do.
         return input_data
+
+    if metrics and ("vpn_waitlist" in formatted or "relay_waitlist" in formatted):
+        metrics["legacy_waitlists_requests"].inc()
 
     rows = db.query(Waitlist).filter(Waitlist.email_id == email_id).all()
     existing_waitlists = {wl.name: wl for wl in rows}
