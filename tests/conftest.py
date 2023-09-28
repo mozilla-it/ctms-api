@@ -8,6 +8,28 @@ import pytest
 
 
 class Whatever:
+    """
+    This class is a testing helper that provides flexible equality
+    of values.
+
+    .. code-block::
+
+        >>> Whatever(lambda x: x.startswith("a")) == "abc"
+        True
+        >>> Whatever(lambda x: x % 2 == 0) == 11
+        False
+
+    It is mainly used to make sure fields contain valid dates
+    without having to hardcode values:
+
+    .. code-block::
+
+        >>> Whatever.iso8601() == "2020-01-01"
+        True
+        >>> Whatever.iso8601() == None
+        False
+    """
+
     def __init__(self, test=lambda x: True, name="unnamed"):
         self.test = test
         self.name = name
