@@ -205,6 +205,16 @@ def test_patch_relay_waitlist_legacy_reports_metric(client, minimal_contact, reg
     assert resp.status_code == 200
     assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
 
+    # Legacy metric isn't sent if `waitlists` is present.
+    patch_data = {
+        "relay_waitlist": {"geo": "fr"},
+        "waitlists": [{"name": "relay", "fields": {"geo": "fr"}}],
+    }
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    assert resp.status_code == 200
+    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
+
+    # Metric is sent only if legacy attributes are sent.
     patch_data = {"relay_waitlist": {"geo": "fr"}}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
