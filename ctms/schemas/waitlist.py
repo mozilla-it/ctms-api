@@ -60,11 +60,7 @@ WaitlistSchema = WaitlistBase
 WaitlistInSchema = WaitlistBase
 
 
-class WaitlistTableSchema(WaitlistBase):
-    email_id: UUID4 = Field(
-        description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
-    )
+class WaitlistTimestampedSchema(WaitlistBase):
     create_timestamp: datetime = Field(
         description="Waitlist data creation timestamp",
         example="2020-12-05T19:21:50.908000+00:00",
@@ -72,6 +68,13 @@ class WaitlistTableSchema(WaitlistBase):
     update_timestamp: datetime = Field(
         description="Waitlist data update timestamp",
         example="2021-02-04T15:36:57.511000+00:00",
+    )
+
+
+class WaitlistTableSchema(WaitlistTimestampedSchema):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        example=EMAIL_ID_EXAMPLE,
     )
 
     class Config:

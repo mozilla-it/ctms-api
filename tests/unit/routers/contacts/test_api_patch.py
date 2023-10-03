@@ -17,6 +17,7 @@ from ctms.schemas import (
     MozillaFoundationSchema,
 )
 from ctms.schemas.waitlist import WaitlistInSchema
+from tests.conftest import FuzzyAssert
 from tests.unit.conftest import create_full_contact
 
 
@@ -194,12 +195,8 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
     # `expected`.
     for newsletter in expected["newsletters"]:
         del newsletter["email_id"]
-        del newsletter["create_timestamp"]
-        del newsletter["update_timestamp"]
     for waitlist in expected["waitlists"]:
         del waitlist["email_id"]
-        del waitlist["create_timestamp"]
-        del waitlist["update_timestamp"]
 
     # products list is not (yet) in output schema
     assert expected["products"] == []
@@ -308,6 +305,8 @@ def test_patch_to_subscribe(client, maximal_contact):
         "source": None,
         "subscribed": True,
         "unsub_reason": None,
+        "create_timestamp": FuzzyAssert.iso8601(),
+        "update_timestamp": FuzzyAssert.iso8601(),
     }
 
 
@@ -330,6 +329,8 @@ def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
         "source": existing_newsletter.source,
         "subscribed": existing_newsletter.subscribed,
         "unsub_reason": existing_newsletter.unsub_reason,
+        "create_timestamp": existing_newsletter.create_timestamp.isoformat(),
+        "update_timestamp": existing_newsletter.update_timestamp.isoformat(),
     }
 
 
@@ -360,6 +361,8 @@ def test_patch_to_unsubscribe(client, maximal_contact):
         "source": "https://commonvoice.mozilla.org/fr",
         "subscribed": False,
         "unsub_reason": "Too many emails.",
+        "create_timestamp": FuzzyAssert.iso8601(),
+        "update_timestamp": FuzzyAssert.iso8601(),
     }
 
 
@@ -472,6 +475,8 @@ def test_patch_to_add_a_waitlist(client, maximal_contact):
         "fields": {"geo": "es"},
         "subscribed": True,
         "unsub_reason": None,
+        "create_timestamp": FuzzyAssert.iso8601(),
+        "update_timestamp": FuzzyAssert.iso8601(),
     }
 
 
@@ -561,6 +566,8 @@ def test_patch_vpn_waitlist_legacy_add(client, minimal_contact):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
 
@@ -607,6 +614,8 @@ def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
             "fields": {"geo": "it", "platform": None},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
 
@@ -631,6 +640,8 @@ def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_facto
             "fields": {"geo": "it", "platform": "linux"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
 
@@ -641,6 +652,8 @@ def test_patch_relay_waitlist_legacy_add(client, minimal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
+    del actual["waitlists"][0]["create_timestamp"]
+    del actual["waitlists"][0]["update_timestamp"]
     assert actual["waitlists"] == [
         {
             "name": "relay",
@@ -694,6 +707,8 @@ def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory)
             "fields": {"geo": "it"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
 
@@ -743,6 +758,8 @@ def test_patch_relay_waitlist_legacy_update_all(
             "fields": {"geo": "it"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
         {
             "name": "relay-vpn-bundle",
@@ -750,6 +767,8 @@ def test_patch_relay_waitlist_legacy_update_all(
             "fields": {"geo": "it"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
     ]
 
@@ -772,6 +791,8 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
             "fields": {"geo": "ru"},
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
     ]
 
@@ -825,6 +846,8 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
             "source": None,
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
 

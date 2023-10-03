@@ -16,7 +16,12 @@ from .email import (
 )
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
+from .newsletter import (
+    NewsletterInSchema,
+    NewsletterSchema,
+    NewsletterTableSchema,
+    NewsletterTimestampedSchema,
+)
 from .product import ProductBaseSchema, ProductSegmentEnum
 from .waitlist import (
     RelayWaitlistInSchema,
@@ -26,6 +31,7 @@ from .waitlist import (
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,
+    WaitlistTimestampedSchema,
     validate_waitlist_newsletters,
 )
 
@@ -360,8 +366,8 @@ class CTMSResponse(BaseModel):
     email: EmailSchema
     fxa: FirefoxAccountsSchema
     mofo: MozillaFoundationSchema
-    newsletters: List[NewsletterSchema]
-    waitlists: List[WaitlistSchema]
+    newsletters: List[NewsletterTimestampedSchema]
+    waitlists: List[WaitlistTimestampedSchema]
     # Retro-compat fields
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
