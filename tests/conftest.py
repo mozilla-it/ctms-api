@@ -4,19 +4,17 @@ Common test configuration both unit and integration tests.
 
 from datetime import datetime
 
-import pytest
 
-
-class Whatever:
+class FuzzyAssert:
     """
     This class is a testing helper that provides flexible equality
     of values.
 
     .. code-block::
 
-        >>> Whatever(lambda x: x.startswith("a")) == "abc"
+        >>> FuzzyAssert(lambda x: x.startswith("a")) == "abc"
         True
-        >>> Whatever(lambda x: x % 2 == 0) == 11
+        >>> FuzzyAssert(lambda x: x % 2 == 0) == 11
         False
 
     It is mainly used to make sure fields contain valid dates
@@ -24,9 +22,9 @@ class Whatever:
 
     .. code-block::
 
-        >>> Whatever.iso8601() == "2020-01-01"
+        >>> FuzzyAssert.iso8601() == "2020-01-01"
         True
-        >>> Whatever.iso8601() == None
+        >>> FuzzyAssert.iso8601() == None
         False
     """
 
@@ -52,8 +50,3 @@ class Whatever:
                 return False
 
         return cls(is_iso8601_date, name="datetime")
-
-
-@pytest.fixture
-def whatever():
-    return Whatever
