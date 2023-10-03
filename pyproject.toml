@@ -30,7 +30,7 @@ lxml = "^4.9.3"
 prometheus-client = "0.17.1"
 structlog = "^23.1.0"
 colorama = "^0.4.6"
-psycopg2 = "^2.9.7"
+psycopg2 = "^2.9.9"
 google-auth = "^2.23.2"
 
 
