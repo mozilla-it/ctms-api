@@ -30,16 +30,34 @@ In order to add, list, or remove certain fields, use the `acoustic.py` command:
 
 See `python ctms/bin/acoustic.py fields --help` for usage details.
 
-### Acoustic Newsletters Fields
+For example, in order to synchronize a new waitlist field:
 
-The mapping between the Basket/CTMS newsletter name and the Acoustic field name is controlled by the `acoustic_newsletter_mapping` table in the database.
+1. Create the column in the waitlist relational table in Acoustic
+2. Add the field using this command in CTMS:
+```
+ctms/bin/acoustic.py fields add --tablename=waitlist twitter_handle
+```
+
+> Note: the list of existing Acoustic fields that will be synchronized is exposed on the [/acoustic_configuration](https://ctms.prod.mozilla-ess.mozit.cloud/acoustic_configuration) endpoint.
+
+
+### Validate Waitlist Extra Fields
+
+Waitlist subscriptions can receive arbitrary fields. By default, only ``geo`` and ``platform`` are validated (eg. max length).
+
+In order to validate a new waitlist field, the [CTMS codebase has to modified](https://github.com/mozilla-it/ctms-api/blob/ec34e7ca56fe802f78c8b65e01448e134e29b938/ctms/schemas/waitlist.py#L130).
+
+
+### Acoustic Main Table Newsletters Flags
+
+The mapping between the Basket/CTMS newsletters names and the Acoustic main table fields names is controlled by the `acoustic_newsletter_mapping` table in the database.
 
 
 In order to add, list, or remove certain mappings, use the `acoustic.py` command.
 
 See `python ctms/bin/acoustic.py newsletter-mappings --help` for usage details.
 
-> **Note**: The usage of this command is not recommended because we are moving away from this column-based approach, and should not onboard new instances.
+> **Note**: The usage of this command is not recommended because we are moving away from this flag-based approach, and should not onboard new instances.
 
 ### Force resync of contacts
 
