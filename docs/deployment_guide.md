@@ -11,7 +11,7 @@ There are two deployed instances of CTMS:
 
 The deployment code lives in https://github.com/mozilla-sre-deploy/deploy-ctms (*private*).
 
-See the [SRE mana page](https://mana.mozilla.org/wiki/pages/viewpage.action?spaceKey=SRE&title=ESS+-+CTMS) for more information and additional technical diagrams for deployment.
+See the [SRE mana page](https://mozilla-hub.atlassian.net/wiki/spaces/SRE/pages/27922641/CTMS#Architecture) for more information and additional technical diagrams for deployment.
 
 ## Common Operations
 
