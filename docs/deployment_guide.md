@@ -2,84 +2,9 @@
 
 ## Overview
 
-There are two deployed instances of CTMS:
-
-* https://ctms.prod.mozilla-ess.mozit.cloud/ - The production instance, deployed on version tags
-* https://ctms.stage.mozilla-ess.mozit.cloud/ - The staging instance, deployed on pull-requests merges
+See [CTMS mana page](https://mozilla-hub.atlassian.net/wiki/spaces/SRE/pages/27922641/ESS+-+CTMS) for more information and additional technical diagrams for deployment.
 
 ## Deployment
-
-The deployment code lives in https://github.com/mozilla-sre-deploy/deploy-ctms (*private*).
-
-See the [SRE mana page](https://mana.mozilla.org/wiki/pages/viewpage.action?spaceKey=SRE&title=ESS+-+CTMS) for more information and additional technical diagrams for deployment.
-
-## Common Operations
-
-### Delete Contacts in Bulk
-
-In order to delete all information about certain contacts, use the `delete_bulk.py` script.
-
-**Warning**: This command removes all related data immediately, but **won't delete** Acoustic data.
-
-### Synchronized Acoustic Fields
-
-The list of contact fields to be synchronized with Acoustic is controlled by the `acoustic_field` table
-in the database.
-
-In order to add, list, or remove certain fields, use the `acoustic.py` command:
-
-See `python ctms/bin/acoustic.py fields --help` for usage details.
-
-For example, in order to synchronize a new waitlist field:
-
-1. Create the column in the waitlist relational table in Acoustic
-2. Add the field using this command in CTMS:
-```
-ctms/bin/acoustic.py fields add --tablename=waitlist twitter_handle
-```
-
-> Note: the list of existing Acoustic fields that will be synchronized is exposed on the [/acoustic_configuration](https://ctms.prod.mozilla-ess.mozit.cloud/acoustic_configuration) endpoint.
-
-
-### Validate Waitlist Extra Fields
-
-Waitlist subscriptions can receive arbitrary fields. By default, only ``geo`` and ``platform`` are validated (eg. max length).
-
-In order to validate a new waitlist field, the [CTMS codebase has to modified](https://github.com/mozilla-it/ctms-api/blob/ec34e7ca56fe802f78c8b65e01448e134e29b938/ctms/schemas/waitlist.py#L130).
-
-
-### Acoustic Main Table Newsletters Flags
-
-The mapping between the Basket/CTMS newsletters names and the Acoustic main table fields names is controlled by the `acoustic_newsletter_mapping` table in the database.
-
-
-In order to add, list, or remove certain mappings, use the `acoustic.py` command.
-
-See `python ctms/bin/acoustic.py newsletter-mappings --help` for usage details.
-
-> **Note**: The usage of this command is not recommended because we are moving away from this flag-based approach, and should not onboard new instances.
-
-### Force resync of contacts
-
-In [CTMS-146](https://mozilla-hub.atlassian.net/browse/CTMS-146), we faced an issue where some contact data was not in sync with Acoustic.
-In order to force the resync of a batch of contacts, it is possible to run the `acoustic_resync` as a one-shot command with some options.
-
-For example, from a file containing primary emails (one per line):
-```
-python ctms/bin/acoustic.py resync --email-list INPUT.txt
-```
-
-Or for all subscribers of a specific newsletter:
-```
-python ctms/bin/acoustic.py resync --newsletter common-voice
-```
-
-Or a waitlist:
-```
-python ctms/bin/acoustic.py resync --waitlist relay
-```
-
-See `python ctms/bin/acoustic.py resync --help` for usage details.
 
 ## Logging
 
@@ -331,15 +256,6 @@ There are additional shared labels for all sync service metrics:
 * ``app_kubernetes_io_component`` - set to ``"background"``
 * ``app_kubernetes_io_instance`` - set to ``"ctms"``
 * ``app_kubernetes_io_name`` - set to ``"ctms"``
-
-### Dashboards
-
-CTMS metrics are presented on two dashboards:
-
-* [CTMS Telemetry](https://earthangel-b40313e5.influxcloud.net/d/UFbHzGCMz/ctms-dashboard?orgId=1):
-  Operational metrics for production and staging.
-* [CTMS Alerts](https://earthangel-b40313e5.influxcloud.net/d/UqluYyc7k/ctms-alerts?orgId=1):
-  Operational metrics with triggers to alert on-call staff.
 
 ---
 [View All Docs](./)
