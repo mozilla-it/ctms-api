@@ -150,13 +150,11 @@ def test_put_replace_no_trace(client, minimal_contact):
 def test_put_with_not_json_is_error(client, dbsession):
     """Calling PUT with a text body is a 422 validation error."""
     email_id = str(uuid4())
-    data = "make a contact please"
+    data = b"make a contact please"
     with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", data=data)
+        resp = client.put(f"/ctms/{email_id}", content=data)
     assert resp.status_code == 422
-    assert (
-        resp.json()["detail"][0]["msg"] == "Expecting value: line 1 column 1 (char 0)"
-    )
+    assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(caplogs) == 1
     assert "trace" not in caplogs[0]
 

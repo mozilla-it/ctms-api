@@ -131,7 +131,7 @@ def test_create_without_trace(client):
 
 def test_create_with_non_json_is_error(client):
     """When non-JSON is posted /ctms, a 422 is returned"""
-    data = "this is not JSON"
+    data = b"this is not JSON"
     with capture_logs() as cap_logs:
         resp = client.post("/ctms", content=data)
     assert resp.status_code == 422
