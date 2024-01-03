@@ -63,7 +63,7 @@ def test_post_token_header(anon_client, test_token_settings, client_id_and_secre
     client_id, client_secret = client_id_and_secret
     resp = anon_client.post(
         "/token",
-        {"grant_type": "client_credentials"},
+        data={"grant_type": "client_credentials"},
         auth=HTTPBasicAuth(client_id, client_secret),
     )
     assert resp.status_code == 200
@@ -87,7 +87,7 @@ def test_post_token_form_data(anon_client, test_token_settings, client_id_and_se
     client_id, client_secret = client_id_and_secret
     resp = anon_client.post(
         "/token",
-        {
+        data={
             "grant_type": "client_credentials",
             "client_id": client_id,
             "client_secret": client_secret,
@@ -123,7 +123,7 @@ def test_post_token_succeeds_refresh_grant(
     client_id, client_secret = client_id_and_secret
     resp = anon_client.post(
         "/token",
-        {
+        data={
             "grant_type": "refresh_token",
             "refresh_token": None,
             "client_id": client_id,
@@ -137,7 +137,7 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
     """If grant_type is omitted, getting a token fails."""
     resp = anon_client.post(
         "/token",
-        {"grant_type": "password"},
+        data={"grant_type": "password"},
         auth=HTTPBasicAuth(*client_id_and_secret),
     )
     assert resp.status_code == 422
@@ -153,7 +153,7 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
 def test_post_token_fails_no_credentials(anon_client):
     """If no credentials are passed, token generation fails."""
     with capture_logs() as caplog:
-        resp = anon_client.post("/token", {"grant_type": "client_credentials"})
+        resp = anon_client.post("/token", data={"grant_type": "client_credentials"})
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
     assert caplog[0]["token_fail"] == "No credentials"
