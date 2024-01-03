@@ -40,7 +40,7 @@ sphinx = "^7.2.6"
 pytest = "^7.4.2"
 isort = {extras = ["pyproject"], version = "^5.12.0"}
 black = "^23.9.1"
-coverage = {extras = ["toml"], version = "^7.3"}
+coverage = {extras = ["toml"], version = "^7.4"}
 mypy = "^1.5"
 types-python-dateutil = "^2.8.19"
 detect-secrets = "^1.4.0"
