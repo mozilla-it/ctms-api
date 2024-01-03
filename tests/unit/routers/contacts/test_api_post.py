@@ -135,9 +135,7 @@ def test_create_with_non_json_is_error(client):
     with capture_logs() as cap_logs:
         resp = client.post("/ctms", content=data)
     assert resp.status_code == 422
-    assert (
-        resp.json()["detail"][0]["msg"] == "JSON decode error"
-    )
+    assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(cap_logs) == 1
     assert "trace" not in cap_logs[0]
 
