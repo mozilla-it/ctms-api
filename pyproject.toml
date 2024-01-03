@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=1.7"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry]
@@ -11,13 +11,13 @@ authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
-python = "~3.11.1"
+python = "^3.12.1"
 fastapi = "^0.84.0"
 starlette = "^0.19.1"
 requests = "^2.31.0"
-uvicorn = {extras = ["standard"], version = "^0.23.2"}
+uvicorn = {extras = ["standard"], version = "^0.25.0"}
 pydantic = {extras = ["email"], version = "^1.10.13"}
-SQLAlchemy = ">1.3.23,<1.5"
+SQLAlchemy = ">=1.4.51,<1.5"
 alembic = "^1.12.0"
 python-multipart = "^0.0.6"
 python-jose = {extras = ["cryptography"], version = "^3.2.0"}
@@ -34,7 +34,7 @@ psycopg2 = "^2.9.9"
 google-auth = "^2.23.2"
 
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pre-commit = "^3.4.0"
 sphinx = "^7.2.6"
 pytest = "^7.4.2"
@@ -118,7 +118,7 @@ profile = "black"
 
 [tool.mypy]
 # Sync Python version with Dockerfile
-python_version = "3.11"
+python_version = "3.12"
 # Look for errors in this file
 warn_unused_configs = true
 plugins = ["pydantic.mypy"]
