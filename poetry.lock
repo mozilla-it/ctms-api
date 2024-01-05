@@ -1538,19 +1538,19 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 
 [[package]]
 name = "pytest-factoryboy"
-version = "2.5.1"
+version = "2.6.0"
 description = "Factory Boy support for pytest."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest_factoryboy-2.5.1-py3-none-any.whl", hash = "sha256:41e3465935322188daefc8720f83cebb16bf3d3a430356dc91151c55f31d99c7"},
-    {file = "pytest_factoryboy-2.5.1.tar.gz", hash = "sha256:7275a52299b20c0f58b63fdf7326b3fd2b7cbefbdaa90fdcfc776bbe92197484"},
+    {file = "pytest_factoryboy-2.6.0-py3-none-any.whl", hash = "sha256:23facf586a1beedea03e875159001bfeb8393fb56ab104d87ad06f688d269e5b"},
+    {file = "pytest_factoryboy-2.6.0.tar.gz", hash = "sha256:d09c37178693d8e594a96faf3c56e870b7753d2622710298b850ef79eb02d63d"},
 ]
 
 [package.dependencies]
 factory_boy = ">=2.10.0"
 inflection = "*"
-pytest = ">=5.0.0"
+pytest = ">=6.2"
 typing_extensions = "*"
 
 [[package]]
@@ -2388,4 +2388,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.1"
-content-hash = "5dada7835e752d6ae62b55cfd980d9726e9bd6bb218751f89d01707d8ab9adc1"
+content-hash = "a5db5d759eab63f2b4adf124317c030a2f64dee530532c0bbe39f3dc7944969d"
