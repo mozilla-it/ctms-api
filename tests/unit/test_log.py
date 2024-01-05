@@ -54,7 +54,7 @@ def test_token_request_log(anon_client, client_id_and_secret):
     with capture_logs() as cap_logs:
         resp = anon_client.post(
             "/token",
-            {"grant_type": "client_credentials"},
+            data={"grant_type": "client_credentials"},
             auth=HTTPBasicAuth(client_id, client_secret),
             cookies={"csrftoken": "0WzT-base64-string"},
         )

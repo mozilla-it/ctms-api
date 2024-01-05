@@ -169,7 +169,7 @@ class OAuth2ClientCredentials(OAuth2):
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=True)
 
     async def __call__(self, request: Request) -> Optional[str]:
-        authorization: str = request.headers.get("Authorization")
+        authorization: Optional[str] = request.headers.get("Authorization")
 
         # TODO: Try combining these lines after FastAPI 0.61.2 / mypy update
         scheme_param = get_authorization_scheme_param(authorization)
