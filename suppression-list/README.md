@@ -5,9 +5,10 @@
 Using a tool like [xsv](https://github.com/BurntSushi/xsv) to prepare the input CSV files and merge them into one that has the following columns:
 
 ```
-email,reason
-alice@corp.com,never subscribed
-bob@fundation.org,
+"Email","Reason","Date"
+"alice@corp.com","never subscribed","20200310"
+"bob@fundation.org",,"20240501"
+"postmaster@localhost","marked undeliverable","19700101"
 ...
 ```
 

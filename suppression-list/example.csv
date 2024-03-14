@@ -1,4 +1,4 @@
-email,reason
-sam.won@else.com,tired
-alice@corp.com,never subscribed
-bob@fundation.org,
+"Email","Reason","Date"
+"alice@corp.com","never subscribed","20200310"
+"bob@fundation.org",,"20240501"
+"postmaster@localhost","marked undeliverable","19700101"

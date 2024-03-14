@@ -1,11 +1,11 @@
 import csv
-from datetime import datetime, timezone
 import logging
-from pathlib import Path
+import re
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
 import click
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +20,17 @@ $$;
 
 CREATE TEMPORARY TABLE IF NOT EXISTS imported_{tmp_suffix} (
   email TEXT,
-  unsubscribe_reason TEXT
+  unsubscribe_reason TEXT,
+  tstxt TEXT
 );
 
 CALL raise_notice('Start CSV import ({csv_rows_count} rows)...');
 
-COPY imported_{tmp_suffix}(email, unsubscribe_reason)
+COPY imported_{tmp_suffix}(email, unsubscribe_reason, ts)
   FROM '{csv_path}' -- fullpath
   DELIMITER '{delimiter}'
-  {headers};
+  {headers}
+  QUOTE AS '"';
 
 CALL raise_notice('CSV import done.');
 
@@ -37,7 +39,8 @@ CALL raise_notice('Join on existing contacts...');
 CREATE TABLE IF NOT EXISTS optouts_{tmp_suffix} (
   idx SERIAL UNIQUE,
   email_id UUID,
-  unsubscribe_reason TEXT
+  unsubscribe_reason TEXT,
+  ts TIMESTAMP
 );
 
 WITH all_primary_emails AS (
@@ -46,8 +49,11 @@ WITH all_primary_emails AS (
   UNION
    SELECT email_id, primary_email FROM fxa
 )
-INSERT INTO optouts_{tmp_suffix}(email_id, unsubscribe_reason)
-  SELECT email_id, unsubscribe_reason
+INSERT INTO optouts_{tmp_suffix}(email_id, unsubscribe_reason, ts)
+  SELECT
+    email_id,
+    unsubscribe_reason,
+    to_timestamp(tstxt,'YYYYMMDD')::timestamp AS ts
   FROM imported_{tmp_suffix}
     JOIN all_primary_emails
       ON primary_email = email;
@@ -68,7 +74,7 @@ BEGIN;
 CALL raise_notice('Batch {batch}/{batch_count}');
 
 UPDATE emails
-  SET update_timestamp = now(),
+  SET update_timestamp = ts,
       has_opted_out_of_email = true,
       unsubscribe_reason = tmp.unsubscribe_reason
   FROM optouts_{tmp_suffix} tmp
@@ -79,7 +85,7 @@ UPDATE emails
 
 INSERT INTO pending_acoustic(email_id, retry)
   SELECT email_id, 0 FROM optouts_{tmp_suffix}
-WHERE {schedule_sync} AND idx > {start_idx} AND idx <= {end_idx};
+    WHERE {schedule_sync} AND idx > {start_idx} AND idx <= {end_idx};
 
 DELETE FROM optouts_{tmp_suffix}
   WHERE idx > {start_idx} AND idx <= {end_idx};
@@ -102,27 +108,54 @@ def writefile(path, content):
 
 
 @click.command()
-@click.argument('csv_path', type=click.Path(exists=True))
-@click.option('--batch-size', default=10000, help='Number of updates per commit.')
-@click.option('--files-count', default=5, help='Number of SQL files')
-@click.option('--sleep-seconds', default=0.1, help='Wait between batches')
-@click.option('--schedule-sync', default=False, help='Mark update emails as pending sync')
-def main(csv_path, batch_size, files_count, sleep_seconds, schedule_sync) -> int:
-    now = datetime.now(tz=timezone.utc)
-    tmp_suffix = now.strftime("%Y%m%dT%H%M")
+@click.argument("csv_path", type=click.Path(exists=True))
+@click.option(
+    "--check-input-rows", default=1000, help="Number of rows to check from input CSV."
+)
+@click.option("--batch-size", default=10000, help="Number of updates per commit.")
+@click.option("--files-count", default=5, help="Number of SQL files")
+@click.option("--sleep-seconds", default=0.1, help="Wait between batches")
+@click.option(
+    "--schedule-sync", default=False, help="Mark update emails as pending sync"
+)
+def main(
+    csv_path, check_input_rows, batch_size, files_count, sleep_seconds, schedule_sync
+) -> int:
+    #
+    # Inspect CSV input.
+    #
     with open(csv_path) as f:
         csv_rows_count = sum(1 for _ in f)
         f.seek(0)
         delimiter = csv.Sniffer().sniff(f.read(1024)).delimiter
         f.seek(0)
         has_headers = csv.Sniffer().has_header(f.read(1024))
+        f.seek(0)
+
+        # Check format of X entries.
+        reader = csv.reader(f)
         if has_headers:
-            csv_rows_count -= 1
+            next(reader)
+        for i, row in enumerate(reader):
+            if i >= check_input_rows:
+                break
+            try:
+                email, reason, date = row
+                assert "@" in email
+                assert re.match(r"\d{8}", date)
+            except (AssertionError, ValueError):
+                raise ValueError(f"Line '{row}' does not look right")
 
     batch_count = 1 + csv_rows_count // batch_size
+    logger.info(
+        f"{csv_rows_count} entries, {batch_count} batches of {batch_size} updates per commit."
+    )
 
-    logger.info(f"{csv_rows_count} entries, {batch_count} batches of {batch_size} updates per commit.")
-
+    #
+    # Prepare SQL files
+    #
+    now = datetime.now(tz=timezone.utc)
+    tmp_suffix = now.strftime("%Y%m%dT%H%M")
     batch_commands = []
     for i in range(batch_count):
         start_idx = i * batch_size
@@ -157,7 +190,9 @@ def main(csv_path, batch_size, files_count, sleep_seconds, schedule_sync) -> int
         file_count += 1
         writefile(f"{csv_filename}.{file_count}.apply.sql", "".join(batch))
 
-    logger.info(f"Produced {file_count} files, with {chunk_size} commits ({chunk_size * batch_size} updates).")
+    logger.info(
+        f"Produced {file_count} files, with {chunk_size} commits ({chunk_size * batch_size} updates)."
+    )
 
     writefile(
         f"{csv_filename}.{file_count + 1}.post.sql",
