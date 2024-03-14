@@ -5,10 +5,10 @@
 Using a tool like [xsv](https://github.com/BurntSushi/xsv) to prepare the input CSV files and merge them into one that has the following columns:
 
 ```
-"Email","Reason","Date"
-"alice@corp.com","never subscribed","20200310"
-"bob@fundation.org",,"20240501"
-"postmaster@localhost","marked undeliverable","19700101"
+"Email","Date","Reason"
+"alice@corp.com","2024-03-12 05:17 PM","Opted out from list id 1364939"
+"bob@fundation.org","2024-03-12 05:29 PM",
+"postmaster@localhost","2024-03-12 10:11 AM","marked undeliverable"
 ...
 ```
 

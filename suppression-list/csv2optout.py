@@ -20,13 +20,13 @@ $$;
 
 CREATE TEMPORARY TABLE IF NOT EXISTS imported_{tmp_suffix} (
   email TEXT,
-  unsubscribe_reason TEXT,
-  tstxt TEXT
+  tstxt TEXT,
+  unsubscribe_reason TEXT
 );
 
 CALL raise_notice('Start CSV import ({csv_rows_count} rows)...');
 
-COPY imported_{tmp_suffix}(email, unsubscribe_reason, ts)
+COPY imported_{tmp_suffix}(email, tstxt, unsubscribe_reason)
   FROM '{csv_path}' -- fullpath
   DELIMITER '{delimiter}'
   {headers}
@@ -53,7 +53,7 @@ INSERT INTO optouts_{tmp_suffix}(email_id, unsubscribe_reason, ts)
   SELECT
     email_id,
     unsubscribe_reason,
-    to_timestamp(tstxt,'YYYYMMDD')::timestamp AS ts
+    to_timestamp(tstxt,'YYYY-MM-DD HH12:MI AM')::timestamp AS ts
   FROM imported_{tmp_suffix}
     JOIN all_primary_emails
       ON primary_email = email;
@@ -74,7 +74,7 @@ BEGIN;
 CALL raise_notice('Batch {batch}/{batch_count}');
 
 UPDATE emails
-  SET update_timestamp = ts,
+  SET update_timestamp = tmp.ts,
       has_opted_out_of_email = true,
       unsubscribe_reason = tmp.unsubscribe_reason
   FROM optouts_{tmp_suffix} tmp
@@ -140,9 +140,9 @@ def main(
             if i >= check_input_rows:
                 break
             try:
-                email, reason, date = row
+                email, date, reason = row
                 assert "@" in email
-                assert re.match(r"\d{8}", date)
+                assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2} (AM|PM)", date)
             except (AssertionError, ValueError):
                 raise ValueError(f"Line '{row}' does not look right")
 
