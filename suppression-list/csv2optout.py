@@ -79,7 +79,7 @@ UPDATE emails
 
 INSERT INTO pending_acoustic(email_id, retry)
   SELECT email_id, 0 FROM optouts_{tmp_suffix}
-WHERE idx > {start_idx} AND idx <= {end_idx};
+WHERE {schedule_sync} AND idx > {start_idx} AND idx <= {end_idx};
 
 DELETE FROM optouts_{tmp_suffix}
   WHERE idx > {start_idx} AND idx <= {end_idx};
@@ -106,7 +106,8 @@ def writefile(path, content):
 @click.option('--batch-size', default=10000, help='Number of updates per commit.')
 @click.option('--files-count', default=5, help='Number of SQL files')
 @click.option('--sleep-seconds', default=0.1, help='Wait between batches')
-def main(csv_path, batch_size=10000, files_count=5, sleep_seconds=1) -> int:
+@click.option('--schedule-sync', default=False, help='Mark update emails as pending sync')
+def main(csv_path, batch_size, files_count, sleep_seconds, schedule_sync) -> int:
     now = datetime.now(tz=timezone.utc)
     tmp_suffix = now.strftime("%Y%m%dT%H%M")
     with open(csv_path) as f:
@@ -134,6 +135,7 @@ def main(csv_path, batch_size=10000, files_count=5, sleep_seconds=1) -> int:
                 end_idx=end_idx,
                 tmp_suffix=tmp_suffix,
                 sleep_seconds=sleep_seconds,
+                schedule_sync=str(schedule_sync).lower(),
             )
         )
 
