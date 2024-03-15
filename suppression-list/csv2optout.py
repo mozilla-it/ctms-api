@@ -1,5 +1,6 @@
 import csv
 import logging
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -18,7 +19,8 @@ BEGIN
 END;
 $$;
 
-CREATE TEMPORARY TABLE IF NOT EXISTS imported_{tmp_suffix} (
+CREATE TEMPORARY TABLE IF NOT EXISTS csv_import (
+  idx SERIAL UNIQUE,
   email TEXT,
   tstxt TEXT,
   unsubscribe_reason TEXT
@@ -26,15 +28,13 @@ CREATE TEMPORARY TABLE IF NOT EXISTS imported_{tmp_suffix} (
 
 CALL raise_notice('Start CSV import ({csv_rows_count} rows)...');
 
-COPY imported_{tmp_suffix}(email, tstxt, unsubscribe_reason)
+COPY csv_import(email, tstxt, unsubscribe_reason)
   FROM '{csv_path}' -- fullpath
   DELIMITER '{delimiter}'
   {headers}
   QUOTE AS '"';
 
 CALL raise_notice('CSV import done.');
-
-CALL raise_notice('Join on existing contacts...');
 
 CREATE TABLE IF NOT EXISTS optouts_{tmp_suffix} (
   idx SERIAL UNIQUE,
@@ -43,24 +43,36 @@ CREATE TABLE IF NOT EXISTS optouts_{tmp_suffix} (
   ts TIMESTAMP
 );
 
+CALL raise_notice('Join on existing contacts...');
+{join_batches}
+CALL raise_notice('Join on existing contacts done.');
+
+SELECT COUNT(*) FROM optouts_{tmp_suffix};
+"""
+
+SQL_JOIN_BATCH = """
+BEGIN;
+
+CALL raise_notice('Update batch {batch}/{batch_count}');
+
 WITH all_primary_emails AS (
   SELECT email_id, primary_email FROM emails
    WHERE has_opted_out_of_email IS NOT true
   UNION
    SELECT email_id, primary_email FROM fxa
 )
-INSERT INTO optouts_{tmp_suffix}(email_id, unsubscribe_reason, ts)
+INSERT INTO optouts_{tmp_suffix}(idx, email_id, unsubscribe_reason, ts)
   SELECT
+    idx,
     email_id,
     unsubscribe_reason,
     to_timestamp(tstxt,'YYYY-MM-DD HH12:MI AM')::timestamp AS ts
-  FROM imported_{tmp_suffix}
+  FROM csv_import
     JOIN all_primary_emails
-      ON primary_email = email;
+      ON primary_email = email
+    WHERE idx > {start_idx} AND idx <= {end_idx};
 
-CALL raise_notice('Join on existing contacts done.');
-
-SELECT COUNT(*) FROM optouts_{tmp_suffix};
+COMMIT;
 """
 
 SQL_COMMANDS_POST = """
@@ -68,10 +80,10 @@ DROP PROCEDURE raise_notice;
 DROP optouts_{tmp_suffix} CASCADE;
 """
 
-SQL_BATCH = """
+SQL_UPDATE_BATCH = """
 BEGIN;
 
-CALL raise_notice('Batch {batch}/{batch_count}');
+CALL raise_notice('Join batch {batch}/{batch_count}');
 
 UPDATE emails
   SET update_timestamp = tmp.ts,
@@ -118,8 +130,17 @@ def writefile(path, content):
 @click.option(
     "--schedule-sync", default=False, help="Mark update emails as pending sync"
 )
+@click.option(
+    "--csv-path-server", default=".", help="Absolute path where to load the CSV from"
+)
 def main(
-    csv_path, check_input_rows, batch_size, files_count, sleep_seconds, schedule_sync
+    csv_path,
+    check_input_rows,
+    batch_size,
+    files_count,
+    sleep_seconds,
+    schedule_sync,
+    csv_path_server,
 ) -> int:
     #
     # Inspect CSV input.
@@ -147,28 +168,35 @@ def main(
                 raise ValueError(f"Line '{row}' does not look right")
 
     batch_count = 1 + csv_rows_count // batch_size
-    logger.info(
-        f"{csv_rows_count} entries, {batch_count} batches of {batch_size} updates per commit."
-    )
-
+    chunk_size = 1 + batch_count // files_count
+    logger.info(f"{csv_rows_count} entries")
+    logger.info(f"{batch_size} updates per commit")
+    logger.info(f"{batch_count} batches")
+    logger.info(f"{files_count} files")
+    logger.info(f"~{chunk_size} commits per file")
     #
     # Prepare SQL files
     #
     now = datetime.now(tz=timezone.utc)
     tmp_suffix = now.strftime("%Y%m%dT%H%M")
-    batch_commands = []
+    join_batches = []
+    update_batches = []
     for i in range(batch_count):
         start_idx = i * batch_size
         end_idx = (i + 1) * batch_size
-        batch_commands.append(
-            SQL_BATCH.format(
-                batch=i,
-                batch_count=batch_count,
-                start_idx=start_idx,
-                end_idx=end_idx,
-                tmp_suffix=tmp_suffix,
-                sleep_seconds=sleep_seconds,
+        params = dict(
+            batch=i + 1,
+            batch_count=batch_count,
+            start_idx=start_idx,
+            end_idx=end_idx,
+            tmp_suffix=tmp_suffix,
+            sleep_seconds=sleep_seconds,
+        )
+        join_batches.append(SQL_JOIN_BATCH.format(**params))
+        update_batches.append(
+            SQL_UPDATE_BATCH.format(
                 schedule_sync=str(schedule_sync).lower(),
+                **params,
             )
         )
 
@@ -177,25 +205,28 @@ def main(
         f"{csv_filename}.0.pre.sql",
         SQL_COMMANDS_PRE.format(
             headers="CSV HEADER" if has_headers else "",
+            join_batches="".join(join_batches),
             csv_rows_count=csv_rows_count,
             delimiter=delimiter,
             tmp_suffix=tmp_suffix,
-            csv_path=csv_filename,
+            csv_path=os.path.join(csv_path_server, csv_filename),
         ),
     )
 
-    chunk_size = 1 + batch_count // files_count
-    file_count = 0
-    for batch in chunks(batch_commands, chunk_size):
-        file_count += 1
-        writefile(f"{csv_filename}.{file_count}.apply.sql", "".join(batch))
+    chunked = list(chunks(update_batches, chunk_size))
+    file_count = len(chunked)
+    for i, batch in enumerate(chunked):
+        writefile(
+            f"{csv_filename}.{i+1}.apply.sql",
+            "".join(batch) + f"CALL raise_notice('File {i+1}/{file_count} done.');",
+        )
 
     logger.info(
         f"Produced {file_count} files, with {chunk_size} commits ({chunk_size * batch_size} updates)."
     )
 
     writefile(
-        f"{csv_filename}.{file_count + 1}.post.sql",
+        f"{csv_filename}.{file_count+1}.post.sql",
         SQL_COMMANDS_POST.format(
             tmp_suffix=tmp_suffix,
         ),

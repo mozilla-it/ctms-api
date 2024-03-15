@@ -120,7 +120,7 @@ INSERT INTO fxa(email_id, fxa_id, primary_email)
   SELECT
     email_id,
     substr(md5(random()::text), 1, 100) AS fxa_id,
-    CASE WHEN random() < 0.5 THEN primary_email ELSE substr(md5(random()::text), 1, (random() * 15)::int) || '.fxa@' || substr(md5(random()::text), 1, (random() * 10)::int) || '.' || substr(md5(random()::text), 1, 3) END AS primary_email
+    CASE WHEN random() < 0.5 THEN primary_email ELSE substr(md5(random()::text), 1, (random() * 15)::int + 1) || '.fxa@' || substr(md5(random()::text), 1, (random() * 10)::int) || '.' || substr(md5(random()::text), 1, 3) END AS primary_email
   FROM emails TABLESAMPLE BERNOULLI(1)
 ON CONFLICT DO NOTHING;
 ```
@@ -137,11 +137,11 @@ Product a CSV to opt-out some of them:
 
 ```
 optouts=# COPY (
-    SELECT email, reason
+    SELECT email, to_char(date, 'YYYY-MM-DD HH12:MI AM') AS date, reason
     FROM (
-        SELECT primary_email AS email, md5(random()::text) AS reason FROM emails TABLESAMPLE BERNOULLI(5)
+        SELECT primary_email AS email, NOW() - (random() * (INTERVAL '1 year')) AS date, md5(random()::text) AS reason FROM emails TABLESAMPLE BERNOULLI(5)
         UNION
-        SELECT primary_email AS email, md5(random()::text) AS reason FROM fxa TABLESAMPLE BERNOULLI(10)
+        SELECT primary_email AS email, NOW() - (random() * (INTERVAL '1 year')) AS date, md5(random()::text) AS reason FROM fxa TABLESAMPLE BERNOULLI(10)
     ) t
-) TO '/tmp/optouts.csv';
+) TO '/tmp/optouts.csv' WITH CSV HEADER DELIMITER ',' FORCE QUOTE *;
 ```
