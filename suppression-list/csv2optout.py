@@ -25,6 +25,7 @@ CREATE TEMPORARY TABLE IF NOT EXISTS csv_import (
   tstxt TEXT,
   unsubscribe_reason TEXT
 );
+DELETE FROM csv_import;
 
 CALL raise_notice('Start CSV import ({csv_rows_count} rows)...');
 
@@ -35,6 +36,28 @@ COPY csv_import(email, tstxt, unsubscribe_reason)
   QUOTE AS '"';
 
 CALL raise_notice('CSV import done.');
+
+CALL raise_notice('Index emails by opt-out column...');
+CREATE INDEX IF NOT EXISTS idx_emails_has_opted_out_of_email ON emails USING btree(has_opted_out_of_email);
+CALL raise_notice('Index done.');
+
+CALL raise_notice('Build a table with all primary emails...');
+CREATE TABLE IF NOT EXISTS all_primary_emails_{tmp_suffix} (
+  email_id UUID,
+  primary_email TEXT UNIQUE
+);
+
+CALL raise_notice('Primary emails 1/2');
+INSERT INTO all_primary_emails_{tmp_suffix}(email_id, primary_email)
+  SELECT email_id, lower(primary_email) FROM emails
+   WHERE has_opted_out_of_email IS NOT true;
+
+CALL raise_notice('Primary emails 2/2');
+INSERT INTO all_primary_emails_{tmp_suffix}(email_id, primary_email)
+  SELECT email_id, lower(primary_email) FROM fxa
+  ON CONFLICT (primary_email) DO NOTHING;
+
+CALL raise_notice('Primary emails table done.');
 
 CREATE TABLE IF NOT EXISTS optouts_{tmp_suffix} (
   idx SERIAL UNIQUE,
@@ -53,14 +76,8 @@ SELECT COUNT(*) FROM optouts_{tmp_suffix};
 SQL_JOIN_BATCH = """
 BEGIN;
 
-CALL raise_notice('Update batch {batch}/{batch_count}');
+CALL raise_notice('Join batch {batch}/{batch_count}');
 
-WITH all_primary_emails AS (
-  SELECT email_id, primary_email FROM emails
-   WHERE has_opted_out_of_email IS NOT true
-  UNION
-   SELECT email_id, primary_email FROM fxa
-)
 INSERT INTO optouts_{tmp_suffix}(idx, email_id, unsubscribe_reason, ts)
   SELECT
     idx,
@@ -68,8 +85,8 @@ INSERT INTO optouts_{tmp_suffix}(idx, email_id, unsubscribe_reason, ts)
     unsubscribe_reason,
     to_timestamp(tstxt,'YYYY-MM-DD HH12:MI AM')::timestamp AS ts
   FROM csv_import
-    JOIN all_primary_emails
-      ON primary_email = email
+    JOIN all_primary_emails_{tmp_suffix}
+      ON primary_email = lower(email)
     WHERE idx > {start_idx} AND idx <= {end_idx};
 
 COMMIT;
@@ -77,13 +94,15 @@ COMMIT;
 
 SQL_COMMANDS_POST = """
 DROP PROCEDURE raise_notice;
-DROP optouts_{tmp_suffix} CASCADE;
+DROP INDEX idx_emails_has_opted_out_of_email;
+DROP TABLE optouts_{tmp_suffix} CASCADE;
+DROP TABLE all_primary_emails_{tmp_suffix} CASCADE;
 """
 
 SQL_UPDATE_BATCH = """
 BEGIN;
 
-CALL raise_notice('Join batch {batch}/{batch_count}');
+CALL raise_notice('Update batch {batch}/{batch_count}');
 
 UPDATE emails
   SET update_timestamp = tmp.ts,
