@@ -19,24 +19,6 @@ BEGIN
 END;
 $$;
 
-CREATE TEMPORARY TABLE IF NOT EXISTS csv_import (
-  idx SERIAL UNIQUE,
-  email TEXT,
-  tstxt TEXT,
-  unsubscribe_reason TEXT
-);
-DELETE FROM csv_import;
-
-CALL raise_notice('Start CSV import ({csv_rows_count} rows)...');
-
-COPY csv_import(email, tstxt, unsubscribe_reason)
-  FROM '{csv_path}' -- fullpath
-  DELIMITER '{delimiter}'
-  {headers}
-  QUOTE AS '"';
-
-CALL raise_notice('CSV import done.');
-
 CALL raise_notice('Index emails by opt-out column...');
 CREATE INDEX IF NOT EXISTS idx_emails_has_opted_out_of_email ON emails USING btree(has_opted_out_of_email);
 CALL raise_notice('Index done.');
@@ -65,6 +47,7 @@ CREATE TABLE IF NOT EXISTS optouts_{tmp_suffix} (
   unsubscribe_reason TEXT,
   ts TIMESTAMP
 );
+ALTER TABLE optouts_{tmp_suffix} REPLICA IDENTITY FULL;
 
 CALL raise_notice('Join on existing contacts...');
 {join_batches}
@@ -79,15 +62,21 @@ BEGIN;
 CALL raise_notice('Join batch {batch}/{batch_count}');
 
 INSERT INTO optouts_{tmp_suffix}(idx, email_id, unsubscribe_reason, ts)
-  SELECT
-    idx,
-    email_id,
-    unsubscribe_reason,
-    to_timestamp(tstxt,'YYYY-MM-DD HH12:MI AM')::timestamp AS ts
-  FROM csv_import
-    JOIN all_primary_emails_{tmp_suffix}
-      ON primary_email = lower(email)
-    WHERE idx > {start_idx} AND idx <= {end_idx};
+  (
+    SELECT
+      idx,
+      email_id,
+      unsubscribe_reason,
+      to_timestamp(tstxt,'YYYY-MM-DD HH12:MI AM')::timestamp AS ts
+    FROM csv_import
+      JOIN all_primary_emails_{tmp_suffix}
+        ON primary_email = lower(email)
+      WHERE idx > {start_idx} AND idx <= {end_idx}
+  )
+  ON CONFLICT(idx) DO NOTHING;
+
+DELETE FROM all_primary_emails_{tmp_suffix}
+  WHERE idx > {start_idx} AND idx <= {end_idx};
 
 COMMIT;
 """
@@ -97,6 +86,7 @@ DROP PROCEDURE raise_notice;
 DROP INDEX idx_emails_has_opted_out_of_email;
 DROP TABLE optouts_{tmp_suffix} CASCADE;
 DROP TABLE all_primary_emails_{tmp_suffix} CASCADE;
+DROP TABLE csv_import CASCADE;
 """
 
 SQL_UPDATE_BATCH = """
@@ -144,13 +134,18 @@ def writefile(path, content):
     "--check-input-rows", default=1000, help="Number of rows to check from input CSV."
 )
 @click.option("--batch-size", default=10000, help="Number of updates per commit.")
-@click.option("--files-count", default=5, help="Number of SQL files")
+@click.option("--files-count", default=3, help="Number of SQL files")
 @click.option("--sleep-seconds", default=0.1, help="Wait between batches")
 @click.option(
     "--schedule-sync", default=False, help="Mark update emails as pending sync"
 )
 @click.option(
     "--csv-path-server", default=".", help="Absolute path where to load the CSV from"
+)
+@click.option(
+    "--table-suffix",
+    default=None,
+    help="Specify table suffix instead of using current time",
 )
 def main(
     csv_path,
@@ -160,6 +155,7 @@ def main(
     sleep_seconds,
     schedule_sync,
     csv_path_server,
+    table_suffix,
 ) -> int:
     #
     # Inspect CSV input.
@@ -197,7 +193,7 @@ def main(
     # Prepare SQL files
     #
     now = datetime.now(tz=timezone.utc)
-    tmp_suffix = now.strftime("%Y%m%dT%H%M")
+    tmp_suffix = table_suffix or now.strftime("%Y%m%dT%H%M")
     join_batches = []
     update_batches = []
     for i in range(batch_count):
