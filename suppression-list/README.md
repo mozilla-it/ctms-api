@@ -145,3 +145,111 @@ optouts=# COPY (
     ) t
 ) TO '/tmp/optouts.csv' WITH CSV HEADER DELIMITER ',' FORCE QUOTE *;
 ```
+
+## Full Cookbook on STAGE
+
+## Preparation of SQL files
+
+This section does not have to be done again for PROD.
+
+
+Using these input files:
+
+* `TAFTI_Unengaged.CSV`
+
+```
+$ head suppression-list/TAFTI_Unengaged.CSV
+Email,Reason
+xxxx@web.de,TAFTI Behaviorally Unengaged 2024
+```
+
+* `Acoustic_Main_Suppression_List_20240314.CSV`
+
+```
+$ head suppression-list/Acoustic_Main_Suppression_List_20240314.CSV
+"Email","Opt In Date","Opt In Details"
+"xxxxx@yahoo.com","2021-01-13 03:00 PM","User Name: sftpdrop_moco@mozilla.com. IP Address: 0.0.0.0"
+```
+
+I created a single CSV file `20240318-suppression-list.csv`:
+
+```
+$ head 20240318-suppression-list.csv
+"Email","Date","Reason"
+"xxxx@web.de","2024-03-18 05:32 PM","TAFTI Behaviorally Unengaged 2024"
+```
+
+Which I turned into SQL files to be executed using this command:
+
+```
+$ python csv2optout.py 20240318-suppression-list.csv --csv-path-server=`pwd`
+```
+
+
+## Import the CSV First
+
+Since the `COPY` SQL command requires `superuser` privileges, we will do this first manually using `\copy`.
+
+```
+ERROR:  must be superuser or a member of the pg_read_server_files role to COPY from a file
+HINT:  Anyone can COPY to stdout or from stdin. psql's \copy command also works for anyone.
+```
+
+Create the table manually:
+
+```
+CREATE TABLE csv_import (
+  idx SERIAL UNIQUE,
+  email TEXT,
+  tstxt TEXT,
+  unsubscribe_reason TEXT
+);
+```
+And import the `20240318-suppression-list.csv` file:
+```
+ctms=> \copy csv_import(email, tstxt, unsubscribe_reason) FROM '20240318-suppression-list.csv' WITH DELIMITER ',' CSV HEADER QUOTE AS '"';
+```
+
+
+## Execute the SQL files
+
+Enable logging of elapsed time and abort on error.
+
+```
+ctms=> \timing
+ctms=> \set ON_ERROR_STOP on
+```
+
+The first SQL will join the imported CSV with the emails. This does not alter any existing table.
+
+This took around 3H in STAGE.
+
+```
+ctms=> \i 20240318-suppression-list.csv.0.pre.sql
+```
+
+> Note: This script is idempotent, and be (re)executed several times if necessary.
+
+
+The following SQL files will perform the updates on the `emails` table.
+
+They should take around 2H each.
+
+```
+ctms=> \i 20240318-suppression-list.csv.1.apply.sql
+```
+
+```
+ctms=> \i 20240318-suppression-list.csv.2.apply.sql
+```
+
+```
+ctms=> \i 20240318-suppression-list.csv.3.apply.sql
+```
+
+
+## Cleanup
+
+```
+ctms=> \i 20240318-suppression-list.csv.4.post.sql
+```

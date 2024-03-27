@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS all_primary_emails_{tmp_suffix} (
   email_id UUID,
   primary_email TEXT UNIQUE
 );
+ALTER TABLE all_primary_emails_{tmp_suffix} REPLICA IDENTITY FULL;
 
 CALL raise_notice('Primary emails 1/2');
 INSERT INTO all_primary_emails_{tmp_suffix}(email_id, primary_email)
