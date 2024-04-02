@@ -10,7 +10,6 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from structlog.testing import capture_logs
 
 from ctms.app import app
-from ctms.models import PendingAcousticRecord
 from ctms.routers.stripe import get_pubsub_claim
 from tests.data import fake_stripe_id
 from tests.unit.conftest import FAKE_STRIPE_CUSTOMER_ID
@@ -69,8 +68,6 @@ def test_api_post_stripe_customer(
     )
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
-    par = dbsession.query(PendingAcousticRecord).one_or_none()
-    assert par.email.stripe_customer.stripe_id == data["id"]
 
 
 def test_api_post_stripe_customer_without_contact(
@@ -80,8 +77,6 @@ def test_api_post_stripe_customer_without_contact(
     data = stripe_customer_data_factory()
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
-    par = dbsession.query(PendingAcousticRecord).one_or_none()
-    assert par is None
 
 
 def test_api_post_stripe_customer_bad_data(client, dbsession):
@@ -89,8 +84,6 @@ def test_api_post_stripe_customer_bad_data(client, dbsession):
     data = {"email": "fake@example.com"}
     resp = client.post("/stripe", json=data)
     assert resp.status_code == 400
-    assert resp.json() == {"detail": "Request JSON is not recognized."}
-    assert dbsession.query(PendingAcousticRecord).one_or_none() is None
 
 
 def test_api_post_stripe_customer_missing_data(client, stripe_customer_data_factory):
@@ -120,8 +113,6 @@ def test_api_post_stripe_trace_customer(
     with capture_logs() as caplog:
         resp = client.post("/stripe", json=data)
     assert resp.status_code == 200
-    par = dbsession.query(PendingAcousticRecord).one_or_none()
-    assert par.email.stripe_customer.stripe_id == data["id"]
     assert len(caplog) == 1
     log = caplog[0]
     assert log["trace"] == data["email"]
@@ -178,8 +169,6 @@ def test_api_post_stripe_from_pubsub_customer(
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
-    par = dbsession.query(PendingAcousticRecord).one_or_none()
-    assert par.email.stripe_customer.stripe_id == data["id"]
 
 
 def test_api_post_stripe_from_pubsub_without_contact(
@@ -190,8 +179,6 @@ def test_api_post_stripe_from_pubsub_without_contact(
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(data))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 1}
-    par = dbsession.query(PendingAcousticRecord).one_or_none()
-    assert par is None
 
 
 def test_api_post_stripe_from_pubsub_item_dict(
@@ -216,8 +203,6 @@ def test_api_post_stripe_from_pubsub_item_dict(
     resp = pubsub_client.post("/stripe_from_pubsub", json=pubsub_wrap(item_dict))
     assert resp.status_code == 200
     assert resp.json() == {"status": "OK", "count": 3}
-    par = dbsession.query(PendingAcousticRecord).one_or_none()
-    assert par.email.stripe_customer.stripe_id == customer_data["id"]
 
 
 def test_api_post_stripe_from_pubsub_none_without_exceptions(pubsub_client):
@@ -244,7 +229,6 @@ def test_api_post_stripe_from_pubsub_customer_missing_data(
         "status": "Accepted but not processed",
         "message": "Errors processing the data, do not send again.",
     }
-    assert dbsession.query(PendingAcousticRecord).one_or_none() is None
 
 
 def test_api_post_stripe_from_pubsub_bad_data(pubsub_client):

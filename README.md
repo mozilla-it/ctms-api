@@ -3,7 +3,6 @@
 ![Status Sustain](https://img.shields.io/badge/Status-Sustain-green)
 
 *CTMS* is an internal service at Mozilla in charge of managing marketing contacts.
-It consists of a REST API and a background synchronization process.
 
 ## Usage
 

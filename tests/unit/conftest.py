@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from glob import glob
 from time import mktime
 from typing import Callable, Optional
-from unittest import mock
 from uuid import UUID
 
 import pytest
@@ -21,13 +20,10 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 from ctms import metrics as metrics_module
 from ctms import schemas
 from ctms.app import app
-from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
     create_api_client,
     create_contact,
-    get_all_acoustic_fields,
-    get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
     get_contacts_by_any_id,
     get_email,
@@ -171,7 +167,6 @@ def dbsession(connection):
 # Database models
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
-register(factories.models.PendingAcousticRecordFactory)
 register(factories.models.StripeCustomerFactory)
 register(factories.models.StripeInvoiceFactory)
 register(factories.models.StripeInvoiceLineItemFactory)
@@ -546,24 +541,6 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
         "maximal": (maximal_contact.email.email_id, maximal_contact),
         "example": (example_contact.email.email_id, example_contact),
     }
-
-
-@pytest.fixture
-def main_acoustic_fields(dbsession):
-    records = get_all_acoustic_fields(dbsession, tablename="main")
-    return {r.field for r in records}
-
-
-@pytest.fixture
-def waitlist_acoustic_fields(dbsession):
-    records = get_all_acoustic_fields(dbsession, tablename="waitlist")
-    return {r.field for r in records}
-
-
-@pytest.fixture
-def acoustic_newsletters_mapping(dbsession):
-    records = get_all_acoustic_newsletters_mapping(dbsession)
-    return {r.source: r.destination for r in records}
 
 
 @pytest.fixture
@@ -983,11 +960,3 @@ def raw_stripe_invoice_data(
             ],
         },
     }
-
-
-@pytest.fixture
-def background_metric_service():
-    """Return a BackgroundMetricService with push_to_gateway mocked."""
-    service = BackgroundMetricService(CollectorRegistry(), "https://push.example.com")
-    with mock.patch("ctms.background_metrics.BackgroundMetricService.push_to_gateway"):
-        yield service

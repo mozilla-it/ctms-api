@@ -15,7 +15,6 @@ from sqlalchemy.util import b64decode
 
 from ctms.auth import get_claim_from_pubsub_token
 from ctms.config import Settings, re_trace_email
-from ctms.crud import schedule_acoustic_record
 from ctms.dependencies import get_db, get_enabled_api_client, get_json, get_settings
 from ctms.ingest_stripe import (
     StripeIngestActions,
@@ -23,7 +22,7 @@ from ctms.ingest_stripe import (
     StripeIngestUnknownObjectError,
     ingest_stripe_object,
 )
-from ctms.metrics import get_metrics, oauth2_scheme
+from ctms.metrics import oauth2_scheme
 from ctms.models import StripeCustomer
 from ctms.schemas import ApiClientSchema
 
@@ -167,16 +166,11 @@ def stripe(
     if not ("object" in data and "id" in data):
         raise HTTPException(status_code=400, detail="Request JSON is not recognized.")
     try:
-        email_id, trace_email, fxa_conflict, actions = _process_stripe_object(
-            db_session, data
-        )
+        _, trace_email, fxa_conflict, actions = _process_stripe_object(db_session, data)
     except (KeyError, ValueError, TypeError) as exception:
         raise HTTPException(
             400, detail="Unable to process Stripe object."
         ) from exception
-    if email_id:
-        schedule_acoustic_record(db_session, email_id, get_metrics())
-        db_session.commit()
     if trace_email:
         request.state.log_context["trace"] = trace_email
         request.state.log_context["trace_json"] = data
@@ -258,10 +252,6 @@ def stripe_pubsub(
             for key, values in item_actions.items():
                 actions.setdefault(key, set()).update(values)
 
-    if email_ids:
-        for email_id in email_ids:
-            schedule_acoustic_record(db_session, email_id, get_metrics())
-        db_session.commit()
     if trace:
         request.state.log_context["trace"] = trace
         request.state.log_context["trace_json"] = payload

@@ -19,8 +19,6 @@ from ctms.ingest_stripe import (
     StripeIngestBadObjectError,
     StripeIngestFxAIdConflict,
     StripeIngestUnknownObjectError,
-    StripeToAcousticParseError,
-    add_stripe_object_to_acoustic_queue,
     ingest_stripe_customer,
     ingest_stripe_invoice,
     ingest_stripe_object,
@@ -600,17 +598,6 @@ def test_ingest_sample_data(dbsession, stripe_test_json):
     assert obj is not None
     assert type(obj.get_email_id()) in (type(None), UUID)
     assert actions
-
-
-def test_parse_sample_data_acoustic(dbsession, stripe_test_json):
-    """Stripe sample JSON can be ingested."""
-    obj, actions = ingest_stripe_object(dbsession, stripe_test_json)
-    assert obj is not None
-    assert type(obj.get_email_id()) in (type(None), UUID)
-    assert actions
-    dbsession.commit()
-    with pytest.raises(StripeToAcousticParseError):
-        add_stripe_object_to_acoustic_queue(dbsession, stripe_test_json)
 
 
 def test_get_email_id_customer(dbsession, stripe_customer):

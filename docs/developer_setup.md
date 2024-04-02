@@ -171,13 +171,6 @@ git ls-files | xargs sed -i 's/A\.B\.C/X\.Y\.Z/g'
 Manually inspect the changes to filter out false positives.
 
 ---
-## Access Acoustic STAGE
-
-- Request access to our Acoustic admins on `#email` Slack channel
-- Login via https://sso.mozilla.com/acoustic
-- Select *Pod 9*
-
----
 [View All Docs](./)
 
 [^1]: Use [`gnu-sed`](https://formulae.brew.sh/formula/gnu-sed#default) on Mac for command compatability
