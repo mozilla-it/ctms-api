@@ -1,14 +1,7 @@
-# Bedrock Basket CTMS Acoustic
+# Bedrock Basket CTMS
 
 * [Bedrock](https://github.com/mozilla/bedrock/) powers https://www.mozilla.org
 * [Basket](https://github.com/mozmeao/basket/) receives form POSTs and stores contacts in CTMS
-
-## Acoustic Tables
-
-* The `main` table holds contacts details, as well as boolean columns that represent the different newsletter subscriptions
-* The `newsletter` relational table stores contacts subscriptions to newsletters.
-* The `waitlist` relational table stores contacts participation to waitlists.
-* The `product` relational table stores the contacts's subscribed products.
 
 ## VPN Waiting List
 
@@ -43,14 +36,6 @@ sequenceDiagram
     %% https://github.com/mozilla-it/ctms-api/blob/v2.1.0/ctms/crud.py#L579
 
     CTMS-->>Basket Task: .
-    end
-
-    rect rgb(240,240,240)
-    CTMS Sync->>CTMS Sync: Flatten fields
-    %% https://github.com/mozilla-it/ctms-api/blob/v2.1.0/ctms/acoustic_service.py#L141
-
-    CTMS Sync->>Acoustic: sync_records()
-    %% https://github.com/mozilla-it/ctms-api/blob/v2.1.0/ctms/bin/acoustic_sync.py
     end
 ```
 
@@ -140,16 +125,5 @@ CTMS create contact ([`POST /ctms`](https://github.com/mozilla-it/ctms-api/blob/
             }
         }
     ]
-}
-```
-
-[Acoustic record](https://github.com/mozilla-it/ctms-api/blob/e1185efacef6389c08361f7f75534d679c03d378/ctms/acoustic_service.py#L62-L123)
-
-```
-{
-    ...
-
-    "vpn_waitlist_geo": "fr",
-    "vpn_waitlist_platform": "ios,mac",
 }
 ```

@@ -1,6 +1,5 @@
 import logging
 import time
-from collections import defaultdict
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -10,20 +9,13 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
 from structlog.testing import capture_logs
 
-from ctms.acoustic_service import acoustic_heartbeat
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
     create_access_token,
     verify_password,
 )
 from ctms.config import Settings, get_version
-from ctms.crud import (
-    count_total_contacts,
-    get_all_acoustic_fields,
-    get_all_acoustic_newsletters_mapping,
-    get_api_client_by_id,
-    ping,
-)
+from ctms.crud import count_total_contacts, get_api_client_by_id, ping
 from ctms.dependencies import (
     get_db,
     get_enabled_api_client,
@@ -127,19 +119,7 @@ def heartbeat(
     result["database"] = {
         "up": alive,
         "time_ms": int(round(1000 * time.monotonic() - start_time)),
-        "acoustic": {},
     }
-
-    acoustic_success = alive
-    if alive:
-        start_time = time.monotonic()
-        acoustic_success, details = acoustic_heartbeat(db, settings)
-
-        result["database"]["acoustic"] = {
-            "success": acoustic_success,
-            "time_ms": int(round(1000 * time.monotonic() - start_time)),
-            **details,
-        }
 
     if alive and (appmetrics := get_metrics()):
         # Report number of contacts in the database.
@@ -148,7 +128,7 @@ def heartbeat(
         total_contacts = count_total_contacts(db)
         appmetrics["contacts"].set(total_contacts)
 
-    status_code = 200 if (alive and acoustic_success) else 503
+    status_code = 200 if alive else 503
     return JSONResponse(content=result, status_code=status_code)
 
 
@@ -171,28 +151,6 @@ def metrics():
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_registry()
     return Response(generate_latest(registry), status_code=200, headers=headers)
-
-
-@router.get("/acoustic_configuration", tags=["Platform"])
-def configuration(
-    request: Request,
-    db_session: Session = Depends(get_db),
-):
-    """Return Acoustic configuration, publicly readable"""
-    all_fields = get_all_acoustic_fields(db_session)
-    fields_grouped_by_tablename = defaultdict(list)
-    for entry in all_fields:
-        fields_grouped_by_tablename[entry.tablename].append(entry.field)
-
-    newsletter_mappings = {
-        entry.source: entry.destination
-        for entry in get_all_acoustic_newsletters_mapping(db_session)
-    }
-
-    return {
-        "sync_fields": fields_grouped_by_tablename,
-        "newsletter_mappings": newsletter_mappings,
-    }
 
 
 def test_get_metrics(anon_client, setup_metrics):

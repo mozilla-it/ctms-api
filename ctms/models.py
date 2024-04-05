@@ -11,7 +11,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    PrimaryKeyConstraint,
     String,
     Text,
     UniqueConstraint,
@@ -196,24 +195,6 @@ class AmoAccount(Base, TimestampMixin):
     email = relationship("Email", back_populates="amo", uselist=False)
 
 
-class AcousticField(Base):
-    __tablename__ = "acoustic_field"
-
-    tablename = Column(String, default="main")
-    field = Column(String)
-
-    __table_args__ = (
-        PrimaryKeyConstraint("tablename", "field", name="pk_tablename_field"),
-    )
-
-
-class AcousticNewsletterMapping(Base):
-    __tablename__ = "acoustic_newsletter_mapping"
-
-    source = Column(String, primary_key=True)
-    destination = Column(String)
-
-
 class ApiClient(Base, TimestampMixin):
     """An OAuth2 Client"""
 
@@ -237,19 +218,6 @@ class MozillaFoundationContact(Base, TimestampMixin):
     mofo_relevant = Column(Boolean)
 
     email = relationship("Email", back_populates="mofo", uselist=False)
-
-
-class PendingAcousticRecord(Base, TimestampMixin):
-    __tablename__ = "pending_acoustic"
-
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
-    retry = Column(Integer, nullable=False, default=0)
-    last_error = Column(Text, default="")
-
-    email = relationship("Email", uselist=False)
 
 
 class StripeBase(Base):

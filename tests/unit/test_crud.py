@@ -5,23 +5,15 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy
-from sqlalchemy.orm import Session
 
 from ctms.crud import (
     count_total_contacts,
-    create_acoustic_field,
-    create_acoustic_newsletters_mapping,
     create_amo,
     create_email,
     create_fxa,
     create_mofo,
     create_newsletter,
     create_or_update_contact,
-    delete_acoustic_field,
-    delete_acoustic_newsletters_mapping,
-    delete_acoustic_record,
-    get_all_acoustic_fields,
-    get_all_acoustic_records_before,
     get_bulk_contacts,
     get_contact_by_email_id,
     get_contacts_by_any_id,
@@ -29,16 +21,9 @@ from ctms.crud import (
     get_contacts_from_waitlist,
     get_email,
     get_stripe_customer_by_fxa_id,
-    retry_acoustic_record,
-    schedule_acoustic_record,
 )
 from ctms.database import ScopedSessionLocal
-from ctms.models import (
-    AcousticField,
-    AcousticNewsletterMapping,
-    Email,
-    PendingAcousticRecord,
-)
+from ctms.models import Email
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
@@ -114,155 +99,6 @@ def test_get_email_with_stripe_subscription(dbsession, stripe_subscription_facto
 def test_get_email_miss(dbsession):
     email = get_email(dbsession, str(uuid4()))
     assert email is None
-
-
-def test_schedule_acoustic_record(dbsession, email_factory):
-    email = email_factory()
-    dbsession.commit()
-    schedule_acoustic_record(dbsession, email.email_id)
-    dbsession.commit()
-
-    assert dbsession.query(PendingAcousticRecord).one().email_id == email.email_id
-
-
-def test_schedule_acoustic_record_is_unique(dbsession, email_factory):
-    email = email_factory()
-    dbsession.commit()
-    schedule_acoustic_record(dbsession, email.email_id)
-    schedule_acoustic_record(dbsession, email.email_id)
-    dbsession.commit()
-
-    assert (
-        dbsession.query(PendingAcousticRecord)
-        .filter(PendingAcousticRecord.email_id == email.email_id)
-        .count()
-        == 1
-    )
-
-
-def test_get_acoustic_records_before_filter_by_end_time(
-    dbsession, pending_acoustic_record_factory
-):
-    end_time = datetime.now(timezone.utc)
-
-    record_before = pending_acoustic_record_factory(
-        update_timestamp=end_time - timedelta(minutes=1)
-    )
-    # record on the timestamp
-    pending_acoustic_record_factory(update_timestamp=end_time)
-    # record after the timestamp
-    pending_acoustic_record_factory(update_timestamp=end_time + timedelta(minutes=1))
-    dbsession.commit()
-
-    [fetched_record] = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    assert fetched_record.email_id == record_before.email_id
-
-
-@pytest.mark.parametrize(
-    "retry_limit,num_records",
-    [
-        (2, 2),
-        (1, 1),
-        (0, 0),
-    ],
-)
-def test_get_acoustic_records_before_filter_by_retries(
-    dbsession, pending_acoustic_record_factory, retry_limit, num_records
-):
-    pending_acoustic_record_factory(retry=0)
-    pending_acoustic_record_factory(retry=1)
-    dbsession.commit()
-
-    record_list = get_all_acoustic_records_before(
-        dbsession,
-        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
-        retry_limit=retry_limit,
-    )
-    assert len(record_list) == num_records
-
-
-def test_get_all_acoustic_records_before_filter_by_batch_limit(
-    dbsession, pending_acoustic_record_factory
-):
-    pending_acoustic_record_factory.create_batch(10)
-    dbsession.commit()
-
-    records = get_all_acoustic_records_before(
-        dbsession,
-        batch_limit=5,
-        end_time=datetime.now(timezone.utc) + timedelta(days=1),
-    )
-
-    assert len(records) == 5
-
-
-def test_get_all_acoustic_records_sort_order(
-    dbsession, pending_acoustic_record_factory
-):
-    now = datetime.now(timezone.utc)
-    later = now + timedelta(minutes=1)
-    first = pending_acoustic_record_factory(retry=0, update_timestamp=now)
-    second = pending_acoustic_record_factory(retry=0, update_timestamp=later)
-    third = pending_acoustic_record_factory(retry=1, update_timestamp=now)
-    fourth = pending_acoustic_record_factory(retry=1, update_timestamp=later)
-    dbsession.commit()
-
-    records = get_all_acoustic_records_before(
-        dbsession,
-        end_time=datetime.now(timezone.utc) + timedelta(days=1),
-    )
-
-    record_ids = [record.id for record in records]
-    assert [first.id, second.id, third.id, fourth.id] == record_ids
-
-
-def test_delete_acoustic_record(dbsession, pending_acoustic_record_factory):
-    record = pending_acoustic_record_factory()
-    dbsession.commit()
-
-    fetched = (
-        dbsession.query(PendingAcousticRecord).filter_by(id=record.id).one_or_none()
-    )
-    assert fetched
-
-    delete_acoustic_record(dbsession, record)
-    dbsession.commit()
-
-    fetched = (
-        dbsession.query(PendingAcousticRecord).filter_by(id=record.id).one_or_none()
-    )
-    assert fetched is None
-
-
-def test_retry_acoustic_record(dbsession, pending_acoustic_record_factory):
-    record = pending_acoustic_record_factory(retry=0)
-    dbsession.commit()
-    assert record.create_timestamp == record.update_timestamp
-
-    retry_acoustic_record(dbsession, record)
-    dbsession.flush()
-
-    fetched_record = dbsession.get(PendingAcousticRecord, record.id)
-    assert fetched_record.retry == 1
-    assert fetched_record.create_timestamp < fetched_record.update_timestamp
-
-
-def retry_acoustic_record_with_error(dbsession, pending_acoustic_record_factory):
-    pending = pending_acoustic_record_factory()
-    dbsession.commit()
-
-    retry_acoustic_record(dbsession, pending, error_message="Boom!")
-    dbsession.flush()
-
-    assert (
-        "Boom"
-        in dbsession.query(PendingAcousticRecord)
-        .filter(PendingAcousticRecord.email_id == pending.email_id)
-        .last_error
-    )
 
 
 def test_get_contact_by_email_id_found(dbsession, example_contact):
@@ -884,99 +720,3 @@ def test_get_contacts_from_waitlist(dbsession, waitlist_factory):
     contacts = get_contacts_from_waitlist(dbsession, existing_waitlist.name)
     assert len(contacts) == 1
     assert contacts[0].email.email_id == existing_waitlist.email.email_id
-
-
-def test_create_acoustic_field(dbsession: Session):
-    fields = dbsession.query(AcousticField).filter_by(tablename="main")
-    main_fields = {f.field for f in fields}
-    assert "sub_test_field" not in main_fields
-
-    create_acoustic_field(dbsession, "main", "sub_test_field")
-    dbsession.commit()
-
-    main_fields = {f.field for f in fields}
-    assert "sub_test_field" in main_fields
-
-
-def test_create_acoustic_field_same_pkey_does_not_raise(dbsession: Session):
-    # though there is a composite primary key on tablename + field, attempting
-    # to add the same tablename + field does not raise an exception
-    create_acoustic_field(dbsession, "main", "sub_test_field")
-    create_acoustic_field(dbsession, "main", "sub_test_field")
-
-
-def test_delete_acoustic_field(dbsession):
-    fields = dbsession.query(AcousticField)
-    assert ("main", "email") in [(f.tablename, f.field) for f in fields]
-
-    deleted = delete_acoustic_field(dbsession, "main", "email")
-
-    assert (deleted.tablename, deleted.field) == ("main", "email")
-    assert ("main", "email") not in [(f.tablename, f.field) for f in fields]
-
-
-def test_delete_acoustic_field_no_field_present(dbsession):
-    fields = dbsession.query(AcousticField)
-    assert ("foo", "bar") not in [(f.tablename, f.field) for f in fields]
-
-    deleted = delete_acoustic_field(dbsession, "foo", "bar")
-    assert deleted is None
-
-
-def test_get_all_acoustic_fields(dbsession):
-    assert (
-        len(get_all_acoustic_fields(dbsession))
-        == dbsession.query(AcousticField).count()
-    )
-
-
-def test_get_all_acoustic_fields_filter_by_tablename(dbsession):
-    dbsession.add(AcousticField(tablename="test", field="test"))
-    dbsession.flush()
-    num_fields = dbsession.query(AcousticField).count()
-    num_main_fields = len(get_all_acoustic_fields(dbsession, tablename="main"))
-    assert num_fields > num_main_fields
-
-
-def test_create_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
-    new_mapping = create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-    assert (new_mapping.source, new_mapping.destination) == ("test", "sub_test")
-    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count > len(acoustic_newsletters_mapping)
-
-
-def test_create_acoustic_newsletters_mapping_duplicate_mapping(dbsession):
-    create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-    with pytest.raises(sqlalchemy.exc.IntegrityError):
-        create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-
-
-def test_create_acoustic_newsletters_mapping_source_to_many_dest(dbsession):
-    create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-    create_acoustic_newsletters_mapping(dbsession, "test2", "sub_test")
-
-
-def test_delete_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
-    mappings = list(acoustic_newsletters_mapping.items())
-    (sample_source, sample_destination) = mappings[0]
-
-    deleted_mapping = delete_acoustic_newsletters_mapping(dbsession, sample_source)
-
-    assert (deleted_mapping.source, deleted_mapping.destination) == (
-        sample_source,
-        sample_destination,
-    )
-    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count < len(acoustic_newsletters_mapping)
-
-
-def test_delete_acoustic_newsletters_mapping_no_mapping(
-    dbsession, acoustic_newsletters_mapping
-):
-    deleted_mapping = delete_acoustic_newsletters_mapping(
-        dbsession, "no_mapping_for_this_source"
-    )
-
-    assert deleted_mapping is None
-    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count == len(acoustic_newsletters_mapping)

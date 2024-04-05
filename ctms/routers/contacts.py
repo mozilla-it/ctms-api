@@ -17,7 +17,6 @@ from ctms.crud import (
     get_contact_by_email_id,
     get_contacts_by_any_id,
     get_email,
-    schedule_acoustic_record,
     update_contact,
 )
 from ctms.dependencies import get_db, get_enabled_api_client, get_json, get_settings
@@ -230,12 +229,6 @@ def create_ctms_contact(
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact, get_metrics())
-        # Without applying the operations to the DB with `flush()`, the low level operations
-        # of `schedule_acoustic_record()` won't detect the created contact and the foreign key
-        # constraint on email id will be violated.
-        # See https://github.com/mozilla-it/ctms-api/issues/549#issuecomment-1725519936
-        db.flush()
-        schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
         db.rollback()
@@ -285,7 +278,6 @@ def create_or_update_ctms_contact(
         request.state.log_context["trace_json"] = content_json
     try:
         create_or_update_contact(db, email_id, contact, get_metrics())
-        schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
         db.rollback()
@@ -335,7 +327,6 @@ def partial_update_ctms_contact(
     if re_trace_email.match(email):
         request.state.log_context["trace"] = email
         request.state.log_context["trace_json"] = content_json
-    schedule_acoustic_record(db, email_id, get_metrics())
     try:
         db.commit()
     except Exception as e:  # pylint:disable = W0703

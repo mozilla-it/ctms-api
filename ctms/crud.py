@@ -16,15 +16,12 @@ from .auth import hash_password
 from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
 from .database import Base
 from .models import (
-    AcousticField,
-    AcousticNewsletterMapping,
     AmoAccount,
     ApiClient,
     Email,
     FirefoxAccount,
     MozillaFoundationContact,
     Newsletter,
-    PendingAcousticRecord,
     StripeBase,
     StripeCustomer,
     StripeInvoice,
@@ -265,125 +262,6 @@ def get_contacts_by_any_id(
     return [ContactSchema.from_email(email) for email in emails]
 
 
-def _acoustic_sync_retry_query(db: Session):
-    return (
-        db.query(PendingAcousticRecord)
-        .filter(
-            PendingAcousticRecord.retry > 0,
-        )
-        .order_by(
-            asc(PendingAcousticRecord.retry),
-            asc(PendingAcousticRecord.update_timestamp),
-        )
-    )
-
-
-def get_all_acoustic_retries_count(db: Session) -> int:
-    """
-    Get count of the pending records with >0 retries."""
-    query = _acoustic_sync_retry_query(db=db)
-    pending_retry_count: int = query.count()
-    return pending_retry_count
-
-
-def _acoustic_sync_base_query(db: Session, end_time: datetime, retry_limit: int = 5):
-    return (
-        db.query(PendingAcousticRecord)
-        .filter(
-            # pylint: disable-next=comparison-with-callable
-            PendingAcousticRecord.update_timestamp < end_time,
-            PendingAcousticRecord.retry < retry_limit,
-        )
-        .order_by(
-            asc(PendingAcousticRecord.retry),
-            asc(PendingAcousticRecord.update_timestamp),
-        )
-    )
-
-
-def get_all_acoustic_records_before(
-    db: Session, end_time: datetime, retry_limit: int = 5, batch_limit=None
-) -> List[PendingAcousticRecord]:
-    """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time.
-    """
-    query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
-    if batch_limit:
-        query = query.limit(batch_limit)
-    pending_records: List[PendingAcousticRecord] = query.all()
-    return pending_records
-
-
-def get_all_acoustic_records_count(
-    db: Session, end_time: Optional[datetime] = None, retry_limit: int = 5
-) -> int:
-    """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time.
-    """
-    if end_time is None:
-        end_time = datetime.now(tz=timezone.utc)
-    query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
-    pending_records_count: int = query.count()
-    return pending_records_count
-
-
-def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
-    """Mark a list of primary email as pending synchronization."""
-    statement = _contact_base_query(db).filter(Email.primary_email.in_(primary_emails))
-    insert_stmt = insert(PendingAcousticRecord).values(
-        [{"email_id": email.email_id} for email in statement.all()]
-    )
-    insert_stmt = insert_stmt.on_conflict_do_update(
-        index_elements=[PendingAcousticRecord.email_id],
-        set_={
-            "retry": 0,
-            "last_error": "",
-        },
-    )
-    db.execute(insert_stmt)
-
-
-def reset_retry_acoustic_records(db: Session):
-    pending_records = (
-        db.query(PendingAcousticRecord).filter(PendingAcousticRecord.retry > 0).all()
-    )
-    count = len(pending_records)
-    db.bulk_update_mappings(
-        PendingAcousticRecord,
-        [{"id": record.id, "retry": 0} for record in (pending_records)],
-    )
-    return count
-
-
-def schedule_acoustic_record(
-    db: Session,
-    email_id: UUID4,
-    metrics: Optional[Dict] = None,
-) -> None:
-    stmt = insert(PendingAcousticRecord).values(email_id=email_id)
-    stmt = stmt.on_conflict_do_nothing()
-    db.execute(stmt)
-    if metrics:
-        metrics["pending_acoustic_sync"].inc()
-
-
-def retry_acoustic_record(
-    db: Session,
-    pending_record: PendingAcousticRecord,
-    error_message: Optional[str] = None,
-) -> None:
-    if pending_record.retry is None:
-        pending_record.retry = 0
-    pending_record.retry += 1
-    if error_message:
-        pending_record.last_error = error_message
-    pending_record.update_timestamp = datetime.now(timezone.utc)
-
-
-def delete_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
-    db.delete(pending_record)
-
-
 def create_amo(
     db: Session, email_id: UUID4, amo: AddOnsInSchema
 ) -> Optional[AmoAccount]:
@@ -606,9 +484,6 @@ def create_or_update_contact(
 
 
 def delete_contact(db: Session, email_id: UUID4):
-    db.query(PendingAcousticRecord).filter(
-        PendingAcousticRecord.email_id == email_id
-    ).delete()
     db.query(AmoAccount).filter(AmoAccount.email_id == email_id).delete()
     db.query(MozillaFoundationContact).filter(
         MozillaFoundationContact.email_id == email_id
@@ -800,60 +675,6 @@ def get_stripe_customer_by_fxa_id(
         query = query.with_for_update()
     obj = query.filter(StripeCustomer.fxa_id == fxa_id).one_or_none()
     return cast(Optional[StripeCustomer], obj)
-
-
-def get_all_acoustic_fields(dbsession: Session, tablename: Optional[str] = None):
-    query = dbsession.query(AcousticField).order_by(
-        asc(AcousticField.tablename), asc(AcousticField.field)
-    )
-    if tablename:
-        query = query.filter_by(tablename=tablename)
-    return query.all()
-
-
-def create_acoustic_field(dbsession: Session, tablename: str, field: str):
-    row = AcousticField(tablename=tablename, field=field)
-    dbsession.merge(row)
-    dbsession.commit()
-    return row
-
-
-def delete_acoustic_field(dbsession: Session, tablename: str, field: str):
-    row = (
-        dbsession.query(AcousticField)
-        .filter_by(tablename=tablename, field=field)
-        .one_or_none()
-    )
-    if row is None:
-        return None
-    dbsession.delete(row)
-    dbsession.commit()
-    return row
-
-
-def get_all_acoustic_newsletters_mapping(dbsession):
-    return dbsession.query(AcousticNewsletterMapping).all()
-
-
-def create_acoustic_newsletters_mapping(dbsession, source, destination):
-    row = AcousticNewsletterMapping(source=source, destination=destination)
-    # This will fail if the mapping already exists.
-    dbsession.add(row)
-    dbsession.commit()
-    return row
-
-
-def delete_acoustic_newsletters_mapping(dbsession, source):
-    row = (
-        dbsession.query(AcousticNewsletterMapping)
-        .filter(AcousticNewsletterMapping.source == source)
-        .one_or_none()
-    )
-    if not row:
-        return None
-    dbsession.delete(row)
-    dbsession.commit()
-    return row
 
 
 def get_contacts_from_newsletter(dbsession, newsletter_name):
