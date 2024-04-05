@@ -76,7 +76,7 @@ INSERT INTO optouts_{tmp_suffix}(idx, email_id, unsubscribe_reason, ts)
   )
   ON CONFLICT(idx) DO NOTHING;
 
-DELETE FROM all_primary_emails_{tmp_suffix}
+DELETE FROM csv_import
   WHERE idx > {start_idx} AND idx <= {end_idx};
 
 COMMIT;
