@@ -3,8 +3,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
-from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
 from pydantic import UUID4
 from sqlalchemy import asc, or_, text
@@ -22,13 +21,6 @@ from .models import (
     FirefoxAccount,
     MozillaFoundationContact,
     Newsletter,
-    StripeBase,
-    StripeCustomer,
-    StripeInvoice,
-    StripeInvoiceLineItem,
-    StripePrice,
-    StripeSubscription,
-    StripeSubscriptionItem,
     Waitlist,
 )
 from .schemas import (
@@ -42,18 +34,11 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
-    StripeCustomerCreateSchema,
-    StripeInvoiceCreateSchema,
-    StripeInvoiceLineItemCreateSchema,
-    StripePriceCreateSchema,
-    StripeSubscriptionCreateSchema,
-    StripeSubscriptionItemCreateSchema,
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
     WaitlistInSchema,
 )
-from .schemas.base import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -119,12 +104,6 @@ def _contact_base_query(db):
         .options(joinedload(Email.mofo))
         .options(selectinload(Email.newsletters))
         .options(selectinload(Email.waitlists))
-        .options(
-            joinedload(Email.stripe_customer)
-            .subqueryload(StripeCustomer.subscriptions)
-            .subqueryload(StripeSubscription.subscription_items)
-            .subqueryload(StripeSubscriptionItem.price)
-        )
     )
 
 
@@ -597,84 +576,6 @@ def get_active_api_client_ids(db: Session) -> List[str]:
         .all()
     )
     return [row.client_id for row in rows]
-
-
-StripeModel = TypeVar("StripeModel", bound=StripeBase)
-StripeCreateSchema = TypeVar("StripeCreateSchema", bound=BaseModel)
-
-
-def _create_stripe(
-    model: Type[StripeModel],
-    schema: Type[StripeCreateSchema],
-    db: Session,
-    data: StripeCreateSchema,
-) -> StripeModel:
-    """Create a Stripe Model."""
-    db_obj = model(**data.dict())
-    db.add(db_obj)
-    return db_obj
-
-
-create_stripe_customer = partial(
-    _create_stripe, StripeCustomer, StripeCustomerCreateSchema
-)
-create_stripe_invoice = partial(
-    _create_stripe, StripeInvoice, StripeInvoiceCreateSchema
-)
-create_stripe_invoice_line_item = partial(
-    _create_stripe, StripeInvoiceLineItem, StripeInvoiceLineItemCreateSchema
-)
-create_stripe_price = partial(_create_stripe, StripePrice, StripePriceCreateSchema)
-create_stripe_subscription = partial(
-    _create_stripe, StripeSubscription, StripeSubscriptionCreateSchema
-)
-create_stripe_subscription_item = partial(
-    _create_stripe, StripeSubscriptionItem, StripeSubscriptionItemCreateSchema
-)
-
-
-def _get_stripe(
-    model: Type[StripeModel],
-    db_session: Session,
-    stripe_id: str,
-    for_update: bool = False,
-) -> Optional[StripeModel]:
-    """
-    Get a Stripe object by its ID, or None if not found.
-
-    If for_update is True (default False), the row will be locked for update.
-    """
-    query = db_session.query(model)
-    if for_update:
-        query = query.with_for_update()
-    return cast(
-        Optional[StripeModel], query.filter(model.stripe_id == stripe_id).one_or_none()
-    )
-
-
-get_stripe_customer_by_stripe_id = partial(_get_stripe, StripeCustomer)
-get_stripe_invoice_by_stripe_id = partial(_get_stripe, StripeInvoice)
-get_stripe_invoice_line_item_by_stripe_id = partial(_get_stripe, StripeInvoiceLineItem)
-get_stripe_price_by_stripe_id = partial(_get_stripe, StripePrice)
-get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
-get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)
-
-
-def get_stripe_customer_by_fxa_id(
-    db_session: Session,
-    fxa_id: str,
-    for_update: bool = False,
-) -> Optional[StripeCustomer]:
-    """
-    Get a StripeCustomer by FxA ID, or None if not found.
-
-    If for_update is True (default False), the row will be locked for update.
-    """
-    query = db_session.query(StripeCustomer)
-    if for_update:
-        query = query.with_for_update()
-    obj = query.filter(StripeCustomer.fxa_id == fxa_id).one_or_none()
-    return cast(Optional[StripeCustomer], obj)
 
 
 def get_contacts_from_newsletter(dbsession, newsletter_name):

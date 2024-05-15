@@ -52,10 +52,6 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    pubsub_audience: Optional[str] = None
-    pubsub_email: Optional[str] = None
-    pubsub_client: Optional[str] = None
-
     prometheus_pushgateway_url: Optional[str] = None
 
     class Config:

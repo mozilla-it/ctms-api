@@ -13,16 +13,16 @@ from ctms.app import app
 # Higher numbers = more ways to slice data, more storage, more processing time for summaries
 
 # Cardinality of ctms_requests_total counter
-METHOD_PATH_CODE_COMBINATIONS = 53
+METHOD_PATH_CODE_COMBINATIONS = 50
 
 # Cardinality of ctms_requests_duration_seconds histogram
-METHOD_PATH_CODEFAM_COMBOS = 38
+METHOD_PATH_CODEFAM_COMBOS = 35
 DURATION_BUCKETS = 8
 DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 
 # Base cardinatility of ctms_api_requests_total
 # Actual is multiplied by the number of API clients
-METHOD_API_PATH_COMBINATIONS = 19
+METHOD_API_PATH_COMBINATIONS = 18
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):

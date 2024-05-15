@@ -1,10 +1,8 @@
 """Test authentication"""
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 
 import pytest
-from google.auth.exceptions import TransportError
 from jose import jwt
 from requests.auth import HTTPBasicAuth
 from structlog.testing import capture_logs
@@ -12,21 +10,7 @@ from structlog.testing import capture_logs
 from ctms.app import app
 from ctms.auth import create_access_token, hash_password, verify_password
 from ctms.crud import get_api_client_by_id
-from ctms.dependencies import get_settings, get_token_settings
-from ctms.routers.stripe import _pubsub_settings
-from tests.unit.routers.test_stripe import pubsub_wrap
-
-# Sample token claim from https://cloud.google.com/pubsub/docs/push
-SAMPLE_GCP_JWT_CLAIM = {
-    "aud": "https://example.com",
-    "azp": "113774264463038321964",
-    "email": "gae-gcp@appspot.gserviceaccount.com",
-    "sub": "113774264463038321964",
-    "email_verified": True,
-    "exp": 1550185935,
-    "iat": 1550182335,
-    "iss": "https://accounts.google.com",
-}
+from ctms.dependencies import get_token_settings
 
 
 @pytest.fixture
@@ -41,21 +25,6 @@ def test_token_settings():
     app.dependency_overrides[get_token_settings] = lambda: settings
     yield settings
     del app.dependency_overrides[get_token_settings]
-
-
-@pytest.fixture
-def test_pubsub_settings():
-    """Set pubsub settings for tests."""
-
-    settings = {
-        "audience": "https://example.com",
-        "email": "gae-gcp@appspot.gserviceaccount.com",
-        "client": "a_shared_secret",
-    }
-
-    app.dependency_overrides[_pubsub_settings] = lambda: settings
-    yield settings
-    del app.dependency_overrides[_pubsub_settings]
 
 
 def test_post_token_header(anon_client, test_token_settings, client_id_and_secret):
@@ -324,153 +293,3 @@ def test_hashed_passwords():
     hashed2 = hash_password("password")
     assert verify_password("password", hashed1)
     assert hashed1 != hashed2
-
-
-def test_post_pubsub_token(
-    anon_client, test_pubsub_settings, stripe_customer_data_factory
-):
-    """A PubSub client can authenticate."""
-
-    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
-        mock_get.return_value = SAMPLE_GCP_JWT_CLAIM
-        with capture_logs() as caplog:
-            resp = anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
-                headers={"Authorization": "Bearer gcp_generated_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    assert resp.status_code == 200, resp.json()
-    assert len(caplog) == 1
-    log = caplog[0]
-    assert "auth_fail" not in log
-    assert log["client_allowed"]
-    assert log["pubsub_email"] == "gae-gcp@appspot.gserviceaccount.com"
-
-
-@pytest.mark.parametrize("name", ("pubsub_email", "pubsub_client"))
-def test_post_pubsub_token_checks_settings(
-    anon_client, name, stripe_customer_data_factory
-):
-    """PubSub fails if settings are unset."""
-
-    class FakeSettings:
-        pubsub_audience = "https://example.com"  # Unchecked due to fallback
-        pubsub_email = "gae-gcp@appspot.gserviceaccount.com"
-        pubsub_client = "a_shared_secret"
-
-    settings = FakeSettings()
-    setattr(settings, name, None)
-    app.dependency_overrides[get_settings] = lambda: settings
-    try:
-        with pytest.raises(Exception, match=f"{name.upper()} is unset"):
-            anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
-                headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    finally:
-        del app.dependency_overrides[get_settings]
-
-
-def test_post_pubsub_token_fail_client(
-    anon_client, test_pubsub_settings, stripe_customer_data_factory
-):
-    """An error is returned if pubsub_client is incorrect."""
-    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
-        mock_get.side_effect = Exception("Should not be called.")
-        with capture_logs() as caplog:
-            resp = anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=the_wrong_secret",
-                headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    assert resp.status_code == 401
-    assert resp.json() == {"detail": "Could not validate credentials"}
-    assert len(caplog) == 1
-    assert caplog[0]["auth_fail"] == "Verification mismatch"
-
-
-def test_post_pubsub_token_unknown_key(
-    anon_client, test_pubsub_settings, stripe_customer_data_factory
-):
-    """An error is returned if the jwt 'kid' doesn't refer to a known cert."""
-    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
-        mock_get.side_effect = ValueError(
-            "Certificate for key id the_kid_value not found."
-        )
-        with capture_logs() as caplog:
-            resp = anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
-                headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    assert resp.status_code == 401
-    assert resp.json() == {"detail": "Could not validate credentials"}
-    assert len(caplog) == 1
-    assert caplog[0]["auth_fail"] == "Unknown key"
-
-
-def test_post_pubsub_token_fail_ssl_fetch(
-    anon_client, test_pubsub_settings, stripe_customer_data_factory
-):
-    """An error is returned if there is an issue fetching certs."""
-    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
-        mock_get.side_effect = TransportError(
-            "Could not fetch certificates at https://example.com"
-        )
-        with capture_logs() as caplog:
-            resp = anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
-                headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    assert resp.status_code == 401
-    assert resp.json() == {"detail": "Could not validate credentials"}
-    assert len(caplog) == 1
-    assert caplog[0]["auth_fail"] == "Google authentication failure"
-
-
-def test_post_pubsub_token_fail_wrong_email(
-    anon_client, test_pubsub_settings, stripe_customer_data_factory
-):
-    """An error is returned if the claim email doesn't match."""
-    claim = SAMPLE_GCP_JWT_CLAIM.copy()
-    claim["email"] = "different_email@example.com"
-    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
-        mock_get.return_value = claim
-        with capture_logs() as caplog:
-            resp = anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
-                headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    assert resp.status_code == 401
-    assert resp.json() == {"detail": "Could not validate credentials"}
-    assert len(caplog) == 1
-    log = caplog[0]
-    assert log["auth_fail"] == "Wrong email"
-    assert log["pubsub_email"] == "different_email@example.com"
-    assert log["pubsub_email_verified"]
-
-
-def test_post_pubsub_token_fail_unverified_email(
-    anon_client, test_pubsub_settings, stripe_customer_data_factory
-):
-    """An error is returned if the claim email isn't verified."""
-    claim = SAMPLE_GCP_JWT_CLAIM.copy()
-    del claim["email_verified"]
-    with patch("ctms.routers.stripe.get_claim_from_pubsub_token") as mock_get:
-        mock_get.return_value = claim
-        with capture_logs() as caplog:
-            resp = anon_client.post(
-                "/stripe_from_pubsub?pubsub_client=a_shared_secret",
-                headers={"Authorization": "Bearer a_fake_token"},
-                json=pubsub_wrap(stripe_customer_data_factory()),
-            )
-    assert resp.status_code == 401
-    assert resp.json() == {"detail": "Could not validate credentials"}
-    assert len(caplog) == 1
-    log = caplog[0]
-    assert log["auth_fail"] == "Email not verified"
-    assert log["pubsub_email"] == "gae-gcp@appspot.gserviceaccount.com"
-    assert "pubsub_email_verified" not in log

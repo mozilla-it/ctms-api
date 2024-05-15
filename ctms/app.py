@@ -19,7 +19,7 @@ from .metrics import (
     init_metrics_labels,
     set_metrics,
 )
-from .routers import contacts, platform, stripe
+from .routers import contacts, platform
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
@@ -27,7 +27,6 @@ app = FastAPI(
     version=get_version()["version"],
 )
 app.include_router(platform.router)
-app.include_router(stripe.router)
 app.include_router(contacts.router)
 
 

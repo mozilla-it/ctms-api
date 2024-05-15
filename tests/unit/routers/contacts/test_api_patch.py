@@ -197,11 +197,6 @@ def test_patch_cannot_set_timestamps(client, maximal_contact):
         del newsletter["email_id"]
     for waitlist in expected["waitlists"]:
         del waitlist["email_id"]
-
-    # products list is not (yet) in output schema
-    assert expected["products"] == []
-    assert "products" not in actual
-    actual["products"] = []
     # The response shows computed fields for retro-compat. Contact schema
     # does not have them.
     # TODO waitlist: remove once Basket reads from `waitlists` list.

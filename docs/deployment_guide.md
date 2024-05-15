@@ -101,14 +101,7 @@ traceback) are logged at ``ERROR`` level (Severity 3). Some of the fields are:
 * ``client_id``: Name of the API client, such as ``"id_test"``
 * ``duration_s``: How long the request took in seconds, rounded to the
   millisecond
-* ``fxa_id_conflict``: If a Stripe API ingested a Customer whose Firefox
-  Account ID conflicted with an existing Customer, this is the conflicting
-  FxA ID (or list of comma-separated IDs). The existing customer will be
-  deleted, and will appears in ``ingest_actions``.
 * ``headers`` - Dictionary of header names (lower-cased) to header values
-* ``ingest_actions`` - For Stripe APIs, a dictionary of actions (`"created"`,
-  `"updated"`, `"deleted"`, `"skipped"`, `"no_change"`) to a list of objects
-  (formatted as `"object_type:ID"`, like `"customer:cust_abc123"`).
 * ``method`` - HTTP method, such as `"GET"`, `"POST"`, or `"PATCH"`.
 * ``msg`` - A summary line for the request, modelled after the uvicorn log
   message format.
@@ -117,8 +110,6 @@ traceback) are logged at ``ERROR`` level (Severity 3). Some of the fields are:
 * ``path_template`` - A standardized path, such as `"/ctms/{email_id}"`, to
   identify endpoints that take URL parameters.
 * ``path`` - Path portion of URL, such as `"/ctms"`.
-* ``pubsub_*``: Values parsed from the Javascript Web Token (JWT) claim set for
-  ``POST``s to ``/stripe_from_pubsub`` from a Google Pub/Sub push subscription.
 * ``status_code``: The returned HTTP status code
 * ``token_creds_from``: For ``/token``, if the credentials were read from the
   ``Authentication`` header ("header") or from the form-encoded body ("form")
