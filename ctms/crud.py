@@ -578,6 +578,11 @@ def get_active_api_client_ids(db: Session) -> List[str]:
     return [row.client_id for row in rows]
 
 
+def update_api_client_last_access(db: Session, api_client: ApiClient):
+    api_client.last_access = func.now()
+    db.add(api_client)
+
+
 def get_contacts_from_newsletter(dbsession, newsletter_name):
     entries = (
         dbsession.query(Newsletter)

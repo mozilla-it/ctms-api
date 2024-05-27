@@ -4,6 +4,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -183,6 +184,7 @@ class ApiClient(Base, TimestampMixin):
     email = Column(String(255), nullable=False)
     enabled = Column(Boolean, default=True)
     hashed_secret = Column(String, nullable=False)
+    last_access = Column(DateTime(timezone=True))
 
 
 class MozillaFoundationContact(Base, TimestampMixin):
