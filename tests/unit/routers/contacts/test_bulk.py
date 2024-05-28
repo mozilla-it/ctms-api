@@ -110,10 +110,6 @@ def test_get_ctms_bulk_by_timerange(
     assert len(results["items"]) > 0
     dict_contact_expected = sorted_list[1].dict()
     dict_contact_actual = CTMSResponse.parse_obj(results["items"][0]).dict()
-    # products list is not (yet) in output schema
-    assert dict_contact_expected["products"] == []
-    assert "products" not in dict_contact_actual
-    dict_contact_actual["products"] = []
     # The response shows computed fields for retro-compat. Contact schema
     # does not have them.
     del dict_contact_actual["vpn_waitlist"]

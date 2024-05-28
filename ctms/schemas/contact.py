@@ -1,6 +1,5 @@
-from collections import defaultdict
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
@@ -22,7 +21,6 @@ from .newsletter import (
     NewsletterTableSchema,
     NewsletterTimestampedSchema,
 )
-from .product import ProductBaseSchema, ProductSegmentEnum
 from .waitlist import (
     RelayWaitlistInSchema,
     RelayWaitlistSchema,
@@ -36,112 +34,7 @@ from .waitlist import (
 )
 
 if TYPE_CHECKING:
-    from models import Email, StripeSubscription, StripeSubscriptionItem
-
-
-def _subscription_items_by_product(
-    subscriptions: list["StripeSubscription"],
-) -> dict[str, "StripeSubscriptionItem"]:
-    """Groups Stripe subscription items by the Stripe product ID they're associated with"""
-    by_product = defaultdict(list)
-
-    for subscription in subscriptions:
-        for item in subscription.subscription_items:
-            by_product[item.price.stripe_product_id].append(item)
-    return by_product
-
-
-def _determine_segment(
-    latest: "StripeSubscription", num_subscriptions: int
-) -> ProductSegmentEnum:
-    """Use product subscription data to determine the marketing segment for
-    a customer as it pertains to a particular product"""
-
-    segment_prefix = "" if num_subscriptions == 1 else "re-"
-    if latest.status == "active":
-        if latest.canceled_at:
-            segment = "cancelling"
-        else:
-            segment = "active"
-    elif latest.status == "canceled":
-        segment = "canceled"
-    else:
-        segment_prefix = ""
-        segment = "other"
-
-    return ProductSegmentEnum(segment_prefix + segment)
-
-
-def _determine_changed(latest: "StripeSubscription") -> datetime:
-    if latest.status == "active":
-        if latest.canceled_at:
-            changed = latest.canceled_at
-        else:
-            changed = latest.start_date
-    elif latest.status == "canceled":
-        changed = latest.ended_at
-    else:
-        changed = latest.stripe_created
-    assert changed
-    return cast(datetime, changed)
-
-
-def _product_metadata(product_subscription_items: list["StripeSubscriptionItem"]):
-    """Generate metadata about a Stripe product as it pertains to a Stripe customer.
-
-    We use the latest subscription item that relates to a particular stripe product to
-    generate metadata concerning a customer's relationship to that product.
-    """
-
-    latest = max(
-        product_subscription_items,
-        key=lambda sub_item: cast(datetime, sub_item.subscription.current_period_end),
-    )
-    return ProductBaseSchema(
-        payment_service="stripe",
-        ###
-        # These come from the Payment Method, not imported from Stripe.
-        payment_type=None,
-        card_brand=None,
-        card_last4=None,
-        billing_country=None,
-        ###
-        status=latest.subscription.status,
-        created=latest.subscription.stripe_created,
-        start=latest.subscription.start_date,
-        current_period_start=latest.subscription.current_period_start,
-        current_period_end=latest.subscription.current_period_end,
-        canceled_at=latest.subscription.canceled_at,
-        cancel_at_period_end=latest.subscription.cancel_at_period_end,
-        ended_at=latest.subscription.ended_at,
-        product_id=latest.price.stripe_product_id,
-        product_name=None,  # Products are not imported
-        price_id=latest.price.stripe_id,
-        currency=latest.price.currency,
-        amount=latest.price.unit_amount,
-        interval_count=latest.price.recurring_interval_count,
-        interval=latest.price.recurring_interval,
-        sub_count=len(product_subscription_items),
-        segment=_determine_segment(
-            latest.subscription, len(product_subscription_items)
-        ),
-        changed=_determine_changed(latest.subscription),
-    )
-
-
-def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
-    """Return a list of Stripe products for the contact, if any."""
-    if not email.stripe_customer:
-        return []
-    sub_items_by_product = _subscription_items_by_product(
-        email.stripe_customer.subscriptions
-    )
-    products = [
-        _product_metadata(product_subscription_items)
-        for product_subscription_items in sub_items_by_product.values()
-    ]
-    products.sort(key=lambda prod: prod.product_id or "")
-    return products
+    from ctms.models import Email
 
 
 class ContactSchema(ComparableBase):
@@ -153,7 +46,6 @@ class ContactSchema(ComparableBase):
     mofo: Optional[MozillaFoundationSchema] = None
     newsletters: List[NewsletterTableSchema] = []
     waitlists: List[WaitlistTableSchema] = []
-    products: List[ProductBaseSchema] = []
 
     @classmethod
     def from_email(cls, email: "Email") -> "ContactSchema":
@@ -164,7 +56,6 @@ class ContactSchema(ComparableBase):
             mofo=email.mofo,
             newsletters=email.newsletters,
             waitlists=email.waitlists,
-            products=get_stripe_products(email),
         )
 
     class Config:

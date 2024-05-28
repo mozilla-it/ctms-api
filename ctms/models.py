@@ -1,13 +1,9 @@
-from typing import Optional, cast
-from uuid import UUID as PythonUUID
-
 from sqlalchemy import (
     JSON,
     TIMESTAMP,
     Boolean,
     Column,
     Date,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -76,15 +72,6 @@ class Email(Base, TimestampMixin):
     mofo = relationship(
         "MozillaFoundationContact", back_populates="email", uselist=False
     )
-    stripe_customer = relationship(
-        "StripeCustomer",
-        uselist=False,
-        back_populates="email",
-        overlaps="fxa",
-        primaryjoin="Email.email_id==FirefoxAccount.email_id",
-        secondaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
-        secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
-    )
 
     # Class Comparators
     @hybrid_property
@@ -149,15 +136,7 @@ class FirefoxAccount(Base, TimestampMixin):
     first_service = Column(String(50))
     account_deleted = Column(Boolean)
 
-    email = relationship(
-        "Email", back_populates="fxa", overlaps="stripe_customer", uselist=False
-    )
-    stripe_customer = relationship(
-        "StripeCustomer",
-        uselist=False,
-        viewonly=True,
-        primaryjoin=("foreign(FirefoxAccount.fxa_id)==remote(StripeCustomer.fxa_id)"),
-    )
+    email = relationship("Email", back_populates="fxa", uselist=False)
 
     # Class Comparators
     @hybrid_property
@@ -218,232 +197,3 @@ class MozillaFoundationContact(Base, TimestampMixin):
     mofo_relevant = Column(Boolean)
 
     email = relationship("Email", back_populates="mofo", uselist=False)
-
-
-class StripeBase(Base):
-    """Base class for Stripe objects."""
-
-    __abstract__ = True
-
-    def get_email_id(self) -> Optional[PythonUUID]:
-        """Return the email_id of the associated contact, if any."""
-        raise NotImplementedError()
-
-
-class StripeCustomer(StripeBase, TimestampMixin):
-    __tablename__ = "stripe_customer"
-
-    stripe_id = Column(String(255), nullable=False, primary_key=True)
-    fxa_id = Column(String(255), nullable=False, unique=True, index=True)
-    default_source_id = Column(String(255), nullable=True)
-    invoice_settings_default_payment_method_id = Column(String(255), nullable=True)
-
-    stripe_created = Column(DateTime(timezone=True), nullable=False)
-    deleted = Column(Boolean, nullable=False, default=False)
-
-    email = relationship(
-        "Email",
-        uselist=False,
-        back_populates="stripe_customer",
-        overlaps="email,fxa",
-        primaryjoin="remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)",
-        secondaryjoin="remote(Email.email_id)==foreign(FirefoxAccount.email_id)",
-        secondary="join(FirefoxAccount, StripeCustomer, FirefoxAccount.fxa_id == StripeCustomer.fxa_id)",
-    )
-    fxa = relationship(
-        "FirefoxAccount",
-        uselist=False,
-        viewonly=True,
-        primaryjoin=("remote(FirefoxAccount.fxa_id)==foreign(StripeCustomer.fxa_id)"),
-    )
-    invoices = relationship(
-        "StripeInvoice",
-        uselist=True,
-        viewonly=True,
-        primaryjoin=(
-            "foreign(StripeCustomer.stripe_id) =="
-            " remote(StripeInvoice.stripe_customer_id)"
-        ),
-    )
-    subscriptions = relationship(
-        "StripeSubscription",
-        back_populates="customer",
-        uselist=True,
-        primaryjoin=(
-            "foreign(StripeCustomer.stripe_id) =="
-            " remote(StripeSubscription.stripe_customer_id)"
-        ),
-    )
-
-    def get_email_id(self) -> Optional[PythonUUID]:
-        if self.fxa:
-            return cast(PythonUUID, self.fxa.email.email_id)
-        return None
-
-
-class StripePrice(StripeBase, TimestampMixin):
-    __tablename__ = "stripe_price"
-
-    stripe_id = Column(String(255), nullable=False, primary_key=True)
-    stripe_product_id = Column(String(255), nullable=False)
-
-    stripe_created = Column(DateTime(timezone=True), nullable=False)
-    active = Column(Boolean, nullable=False, default=True)
-    currency = Column(String(3), nullable=False)
-    recurring_interval = Column(String(5), nullable=True)
-    recurring_interval_count = Column(Integer, nullable=True)
-    unit_amount = Column(Integer, nullable=True)
-
-    invoice_line_items = relationship(
-        "StripeInvoiceLineItem", back_populates="price", uselist=True
-    )
-    subscription_items = relationship(
-        "StripeSubscriptionItem", back_populates="price", uselist=True
-    )
-
-    def get_email_id(self) -> None:
-        """Prices can be related to multiple Customers, so return None."""
-        return None
-
-
-class StripeInvoice(StripeBase, TimestampMixin):
-    __tablename__ = "stripe_invoice"
-
-    stripe_id = Column(String(255), nullable=False, primary_key=True)
-    stripe_customer_id = Column(String(255), nullable=False)
-    default_payment_method_id = Column(String(255), nullable=True, default=None)
-    default_source_id = Column(String(255), nullable=True, default=None)
-
-    stripe_created = Column(DateTime(timezone=True), nullable=False)
-    currency = Column(String(3), nullable=False)
-    total = Column(Integer, nullable=False)
-    status = Column(String(15), nullable=False)
-
-    customer = relationship(
-        "StripeCustomer",
-        uselist=False,
-        viewonly=True,
-        primaryjoin=(
-            " remote(StripeCustomer.stripe_id) =="
-            "foreign(StripeInvoice.stripe_customer_id)"
-        ),
-    )
-    line_items = relationship(
-        "StripeInvoiceLineItem", back_populates="invoice", uselist=True
-    )
-
-    def get_email_id(self) -> Optional[PythonUUID]:
-        if self.customer:
-            return cast(PythonUUID, self.customer.get_email_id())
-        return None
-
-
-class StripeInvoiceLineItem(StripeBase, TimestampMixin):
-    __tablename__ = "stripe_invoice_line_item"
-
-    stripe_id = Column(String(255), nullable=False, primary_key=True)
-    stripe_invoice_id = Column(
-        String(255),
-        ForeignKey("stripe_invoice.stripe_id"),
-        nullable=False,
-        index=True,
-    )
-    stripe_type = Column(String(14), nullable=False)
-    stripe_price_id = Column(
-        String(255),
-        ForeignKey(StripePrice.stripe_id),
-        nullable=False,
-        index=True,
-    )
-    stripe_invoice_item_id = Column(String(255), nullable=True)
-    stripe_subscription_id = Column(String(255), nullable=True)
-    stripe_subscription_item_id = Column(String(255), nullable=True)
-    amount = Column(Integer, nullable=False)
-    currency = Column(String(3), nullable=False)
-
-    invoice = relationship("StripeInvoice", back_populates="line_items", uselist=False)
-    price = relationship(
-        "StripePrice", back_populates="invoice_line_items", uselist=False
-    )
-    subscription = relationship(
-        "StripeSubscription",
-        uselist=False,
-        primaryjoin=(
-            " remote(StripeSubscription.stripe_id) =="
-            "foreign(StripeInvoiceLineItem.stripe_subscription_id)"
-        ),
-    )
-    subscription_item = relationship(
-        "StripeSubscriptionItem",
-        uselist=False,
-        primaryjoin=(
-            " remote(StripeSubscriptionItem.stripe_id) =="
-            "foreign(StripeInvoiceLineItem.stripe_subscription_item_id)"
-        ),
-    )
-
-    def get_email_id(self) -> Optional[PythonUUID]:
-        return cast(Optional[PythonUUID], self.invoice.get_email_id())
-
-
-class StripeSubscription(StripeBase, TimestampMixin):
-    __tablename__ = "stripe_subscription"
-
-    stripe_id = Column(String(255), nullable=False, primary_key=True)
-    stripe_customer_id = Column(String(255), nullable=False)
-    default_payment_method_id = Column(String(255), nullable=True)
-    default_source_id = Column(String(255), nullable=True)
-
-    stripe_created = Column(DateTime(timezone=True), nullable=False)
-    cancel_at_period_end = Column(Boolean, nullable=False)
-    canceled_at = Column(DateTime(timezone=True), nullable=True)
-    current_period_end = Column(DateTime(timezone=True), nullable=False)
-    current_period_start = Column(DateTime(timezone=True), nullable=False)
-    ended_at = Column(DateTime(timezone=True), nullable=True)
-    start_date = Column(DateTime(timezone=True), nullable=False)
-    status = Column(String(20), nullable=False)
-
-    customer = relationship(
-        "StripeCustomer",
-        uselist=False,
-        primaryjoin=(
-            " remote(StripeCustomer.stripe_id)=="
-            "foreign(StripeSubscription.stripe_customer_id)"
-        ),
-    )
-    subscription_items = relationship(
-        "StripeSubscriptionItem", back_populates="subscription", uselist=True
-    )
-
-    def get_email_id(self) -> Optional[PythonUUID]:
-        if self.customer:
-            return cast(PythonUUID, self.customer.get_email_id())
-        return None
-
-
-class StripeSubscriptionItem(StripeBase, TimestampMixin):
-    __tablename__ = "stripe_subscription_item"
-
-    stripe_id = Column(String(255), nullable=False, primary_key=True)
-    stripe_subscription_id = Column(
-        String(255),
-        ForeignKey(StripeSubscription.stripe_id),
-        nullable=False,
-    )
-    stripe_price_id = Column(
-        String(255),
-        ForeignKey(StripePrice.stripe_id),
-        nullable=False,
-    )
-
-    stripe_created = Column(DateTime(timezone=True), nullable=False)
-
-    subscription = relationship(
-        "StripeSubscription", back_populates="subscription_items", uselist=False
-    )
-    price = relationship(
-        "StripePrice", back_populates="subscription_items", uselist=False
-    )
-
-    def get_email_id(self) -> Optional[PythonUUID]:
-        return cast(Optional[PythonUUID], self.subscription.get_email_id())

@@ -8,15 +8,12 @@ the client POSTs to /token again.
 """
 import warnings
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
-from typing import Any, Dict, Optional, cast
+from typing import Dict, Optional
 
 from fastapi.exceptions import HTTPException
 from fastapi.param_functions import Form
 from fastapi.security.oauth2 import OAuth2, OAuthFlowsModel
 from fastapi.security.utils import get_authorization_scheme_param
-from google.auth.transport.requests import Request as GoogleRequest
-from google.oauth2 import id_token
 from passlib.context import CryptContext
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
@@ -69,40 +66,6 @@ def get_subject_from_token(token: str, secret_key: str):
     if ":" not in sub:
         return None, None
     return sub.split(":", 1)
-
-
-@lru_cache(maxsize=32)
-def get_claim_from_pubsub_token(token: str, audience: str) -> Dict[str, Any]:
-    """Get the claim from a Google PubSub token.
-
-    Returns claim dictionary if the token is valid.
-    Raises ValueError if token refers to an unknown key
-    Raises GoogleAuthError if verification fails
-
-    The function verify_oauth2_token fetches signing certificates, and then
-    uses these to verify the signature of the JWT token. The fetched
-    certificates are not cached.
-
-    The JWT token has timers with a resolution of 1 second. This means that
-    a burst of messages will have the same JWT token. The lru_cache makes
-    this efficent, avoiding decoding but more importantly the network request.
-
-    The JWT signing certificates last about 2 weeks. Many network requests
-    could be eliminated by caching the certs and using jwt functions directly.
-    PubSub messages may be delayed up to a day, so expired certs may be useful
-    to cache for a day.
-
-    The worst case is a pubsub message once a second - a new token and a new
-    network request every time. Even this may be acceptable, as opposed to
-    the complexity of caching.
-
-    If replacing, see the source code:
-    https://github.com/googleapis/google-auth-library-python/blob/main/google/oauth2/id_token.py
-    """
-    return cast(
-        Dict[str, Any],
-        id_token.verify_oauth2_token(token, GoogleRequest(), audience=audience),
-    )
 
 
 class OAuth2ClientCredentialsRequestForm:
