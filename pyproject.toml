@@ -16,7 +16,7 @@ fastapi = "^0.108.0"
 starlette = "^0.32.0"
 requests = "^2.31.0"
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
-pydantic = {extras = ["email"], version = "^1.10.13"}
+pydantic = {extras = ["email"], version = "^2.7.2"}
 SQLAlchemy = ">=1.4.51,<1.5"
 alembic = "^1.12.0"
 python-multipart = "^0.0.9"
