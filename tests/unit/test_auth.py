@@ -188,6 +188,26 @@ def test_get_ctms_with_token(
     assert resp.status_code == 200
 
 
+def test_successful_login_tracks_last_access(
+    dbsession, example_contact, anon_client, test_token_settings, client_id_and_secret
+):
+    client_id = client_id_and_secret[0]
+    api_client = get_api_client_by_id(dbsession, client_id)
+    before = api_client.last_access
+
+    token = create_access_token(
+        {"sub": f"api_client:{client_id}"}, **test_token_settings
+    )
+    anon_client.get(
+        f"/ctms/{example_contact.email.email_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    dbsession.flush()
+    after = get_api_client_by_id(dbsession, client_id).last_access
+    assert before != after
+
+
 def test_get_ctms_with_invalid_token_fails(
     example_contact, anon_client, test_token_settings, client_id_and_secret
 ):

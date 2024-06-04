@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ctms.auth import get_subject_from_token
 from ctms.config import Settings
-from ctms.crud import get_api_client_by_id
+from ctms.crud import get_api_client_by_id, update_api_client_last_access
 from ctms.database import SessionLocal
 from ctms.metrics import oauth2_scheme
 from ctms.schemas import ApiClientSchema
@@ -66,6 +66,9 @@ def get_api_client(
     if not api_client:
         log_context["auth_fail"] = "No client record"
         raise credentials_exception
+
+    # Track last usage of API client.
+    update_api_client_last_access(db, api_client)
 
     return api_client
 
