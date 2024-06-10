@@ -30,7 +30,6 @@ from ctms.crud import (
     get_newsletters_by_email_id,
     get_waitlists_by_email_id,
 )
-from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.dependencies import get_api_client, get_db
 from ctms.metrics import get_metrics
 from ctms.schemas import ApiClientSchema, ContactSchema
@@ -123,7 +122,8 @@ def engine(pytestconfig):
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
     conn = engine.connect()
-    SessionLocal.configure(bind=conn)
+    factories.SessionLocal.configure(bind=conn)
+    factories.ScopedSessionLocal.configure(bind=conn)
     yield conn
     conn.close()
 
@@ -135,7 +135,7 @@ def dbsession(connection):
     Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
     """
     transaction = connection.begin()
-    session = ScopedSessionLocal()
+    session = factories.ScopedSessionLocal()
     nested = connection.begin_nested()
 
     # If the application code calls session.commit, it will end the nested

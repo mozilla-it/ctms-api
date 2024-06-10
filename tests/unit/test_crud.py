@@ -21,7 +21,6 @@ from ctms.crud import (
     get_contacts_from_waitlist,
     get_email,
 )
-from ctms.database import ScopedSessionLocal
 from ctms.models import Email
 from ctms.schemas import (
     AddOnsInSchema,
@@ -32,6 +31,7 @@ from ctms.schemas import (
 )
 from ctms.schemas.contact import ContactPutSchema
 from ctms.schemas.waitlist import WaitlistInSchema
+from tests.factories import ScopedSessionLocal
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")

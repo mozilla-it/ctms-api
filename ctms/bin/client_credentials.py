@@ -8,7 +8,7 @@ from secrets import token_urlsafe
 from ctms import config
 from ctms.auth import hash_password
 from ctms.crud import create_api_client, get_api_client_by_id
-from ctms.database import SessionLocal
+from ctms.database import session_factory
 from ctms.schemas import ApiClientSchema
 
 
@@ -177,5 +177,6 @@ def main(db, settings, test_args=None):
 if __name__ == "__main__":
     import sys
 
+    SessionLocal = session_factory()
     with SessionLocal() as session:
         sys.exit(main(session, config.Settings()))

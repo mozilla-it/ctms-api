@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ctms.auth import get_subject_from_token
 from ctms.config import Settings
 from ctms.crud import get_api_client_by_id, update_api_client_last_access
-from ctms.database import SessionLocal
+from ctms.database import session_factory
 from ctms.metrics import oauth2_scheme
 from ctms.schemas import ApiClientSchema
 
@@ -19,6 +19,7 @@ def get_settings() -> Settings:
 
 
 def get_db():  # pragma: no cover
+    SessionLocal = session_factory()
     db = SessionLocal()
     try:
         yield db

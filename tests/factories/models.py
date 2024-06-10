@@ -5,7 +5,10 @@ import factory
 from factory.alchemy import SQLAlchemyModelFactory
 
 from ctms import models
-from ctms.database import ScopedSessionLocal
+from ctms.database import session_factory
+
+SessionLocal = session_factory()
+ScopedSessionLocal = session_factory(scoped=True)
 
 
 # Pylint complains that we don't override `evaluate` in the class below, but

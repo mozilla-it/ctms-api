@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 
 from ctms.config import Settings
-from ctms.database import engine
+from ctms.database import get_engine
 from ctms.models import Base
 
 settings = Settings()
@@ -63,7 +63,7 @@ def run_migrations_online():
     """
     connectable = context.config.attributes.get("connection", None)
     if connectable is None:
-        connectable = engine
+        connectable = get_engine()
 
     with connectable.connect() as connection:
         context.configure(

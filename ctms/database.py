@@ -1,10 +1,11 @@
-from sqlalchemy import create_engine, engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 
 from .config import Settings
 
 
-def engine_factory(settings):
+def get_engine():
+    settings = Settings()
     return create_engine(
         settings.db_url,
         pool_size=settings.db_pool_size,
@@ -15,9 +16,11 @@ def engine_factory(settings):
     )
 
 
-engine = engine_factory(Settings())
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-# Used for testing
-ScopedSessionLocal = scoped_session(SessionLocal)
+def session_factory(scoped: bool = False):
+    factory = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    if scoped:
+        factory = scoped_session(factory)
+    return factory
+
 
 Base = declarative_base()

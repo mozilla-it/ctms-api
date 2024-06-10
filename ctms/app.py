@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from .config import get_version
-from .database import SessionLocal
+from .database import session_factory
 from .exception_capture import init_sentry
 from .log import context_from_request, get_log_line
 from .metrics import (
@@ -39,6 +39,7 @@ if "pytest" not in sys.argv[0]:  # pragma: no cover
 @app.on_event("startup")
 def startup_event():  # pragma: no cover
     set_metrics(init_metrics(METRICS_REGISTRY))
+    SessionLocal = session_factory()
     init_metrics_labels(SessionLocal(), app, get_metrics())
 
 

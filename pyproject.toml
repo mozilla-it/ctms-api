@@ -77,7 +77,7 @@ testpaths = [
     [tool.pylint.REPORTS]
     output-format = 'colorized'
     [tool.pylint.FORMAT]
-    good-names = 'e,i,f,db,SessionLocal' # Normally pylint objects to these due to not being snake_case
+    good-names = 'e,i,f,db,SessionLocal,ScopedSessionLocal' # Normally pylint objects to these due to not being snake_case
     [tool.pylint.TYPECHECK]
     generated-members='alembic.*'
     [tool.pylint.MASTER]
