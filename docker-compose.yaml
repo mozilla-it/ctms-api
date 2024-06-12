@@ -87,7 +87,7 @@ services:
       retries: 10
   mysql:
     profiles: [integration-test]
-    image: mariadb
+    image: mariadb:11.2.3
     environment:
       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=basket
