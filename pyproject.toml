@@ -38,7 +38,7 @@ pre-commit = "^3.7.1"
 sphinx = "^7.3.7"
 pytest = "^8.2.0"
 isort = {extras = ["pyproject"], version = "^5.13.2"}
-black = "^23.12.1"
+black = "^24.4.2"
 coverage = {extras = ["toml"], version = "^7.5"}
 mypy = "^1.10"
 types-python-dateutil = "^2.9.0"
