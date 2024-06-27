@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ctms.auth import get_subject_from_token
-from ctms.config import Settings
+from ctms.config import AppSettings
 from ctms.crud import get_api_client_by_id, update_api_client_last_access
 from ctms.database import SessionLocal
 from ctms.metrics import oauth2_scheme
@@ -14,8 +14,8 @@ from ctms.schemas import ApiClientSchema
 
 
 @lru_cache()
-def get_settings() -> Settings:
-    return Settings()
+def get_settings() -> AppSettings:
+    return AppSettings()
 
 
 def get_db():  # pragma: no cover
@@ -27,7 +27,7 @@ def get_db():  # pragma: no cover
 
 
 def get_token_settings(
-    settings: Settings = Depends(get_settings),
+    settings: AppSettings = Depends(get_settings),
 ) -> Dict[str, Union[str, timedelta]]:
     return {
         "expires_delta": settings.token_expiration,

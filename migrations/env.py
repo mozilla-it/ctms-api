@@ -2,11 +2,11 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from ctms.config import Settings
+from ctms.config import DBSettings
 from ctms.database import engine
 from ctms.models import Base
 
-settings = Settings()
+settings = DBSettings()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

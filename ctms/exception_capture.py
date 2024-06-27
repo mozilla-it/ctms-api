@@ -18,7 +18,7 @@ def init_sentry():
     environment variable SENTRY_DSN.
     """
     try:
-        settings = config.Settings()
+        settings = config.AppSettings()
         sentry_debug = settings.sentry_debug
     except ValidationError:
         sentry_debug = False

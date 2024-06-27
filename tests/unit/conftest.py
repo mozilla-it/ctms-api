@@ -18,7 +18,7 @@ from sqlalchemy_utils.functions import create_database, database_exists, drop_da
 from ctms import metrics as metrics_module
 from ctms import schemas
 from ctms.app import app
-from ctms.config import Settings
+from ctms.config import AppSettings, DBSettings
 from ctms.crud import (
     create_api_client,
     create_contact,
@@ -75,7 +75,7 @@ def unix_timestamp(the_time: Optional[datetime] = None) -> int:
 def engine(pytestconfig):
     """Return a SQLAlchemy engine for a fresh test database."""
 
-    orig_db_url = Settings().db_url
+    orig_db_url = DBSettings().db_url
     if orig_db_url.path.endswith("test"):
         # The database ends with test, assume the caller wanted us to use it
         test_db_url = orig_db_url
@@ -100,7 +100,7 @@ def engine(pytestconfig):
             drop_database(test_db_url)
         create_database(test_db_url)
 
-    echo = Settings().log_sqlalchemy or pytestconfig.getoption("verbose") > 2
+    echo = DBSettings().log_sqlalchemy or pytestconfig.getoption("verbose") > 2
     test_engine = create_engine(
         test_db_url,
         echo=echo,
@@ -555,7 +555,7 @@ def client(anon_client):
 
 @pytest.fixture
 def settings():
-    return Settings()
+    return AppSettings()
 
 
 @pytest.fixture
