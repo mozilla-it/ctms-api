@@ -1,4 +1,5 @@
 """Unit tests for POST /ctms (create record)"""
+
 from uuid import UUID
 
 import pytest

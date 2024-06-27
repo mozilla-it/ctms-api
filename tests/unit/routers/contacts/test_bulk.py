@@ -1,4 +1,5 @@
 """pytest tests for API functionality"""
+
 import urllib.parse
 from datetime import timedelta
 from typing import Tuple

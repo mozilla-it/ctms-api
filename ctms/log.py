@@ -1,4 +1,5 @@
 """Logging configuration"""
+
 import logging
 import logging.config
 import sys
