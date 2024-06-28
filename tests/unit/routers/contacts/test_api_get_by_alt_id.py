@@ -1,4 +1,5 @@
 """Unit tests for GET /ctms?alt_id=value, returning list of contacts"""
+
 from uuid import uuid4
 
 import pytest

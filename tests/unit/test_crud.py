@@ -1,4 +1,5 @@
 """Test database operations"""
+
 # pylint: disable=too-many-lines
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -245,9 +246,9 @@ def test_get_multiple_contacts_by_any_id(
             email_id=dupe_id,
             primary_email="dupe@example.com",
             basket_token=str(uuid4()),
-            sfdc_id=alt_id_value
-            if alt_id_name == "sfdc_id"
-            else "other_sdfc_alt_id_value",
+            sfdc_id=(
+                alt_id_value if alt_id_name == "sfdc_id" else "other_sdfc_alt_id_value"
+            ),
         ),
     )
     if alt_id_name == "amo_user_id":

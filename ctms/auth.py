@@ -6,6 +6,7 @@ client_secret, either as form fields in the body, or in the Authentication
 header. A JWT token is returned that expires after a short time. To renew,
 the client POSTs to /token again.
 """
+
 import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional

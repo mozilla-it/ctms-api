@@ -1,4 +1,5 @@
 """Unit tests for PUT /ctms/{email_id} (Create or update)"""
+
 import json
 from uuid import UUID, uuid4
 

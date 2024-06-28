@@ -1,4 +1,5 @@
 """pytest fixtures for the CTMS app"""
+
 import os.path
 from datetime import datetime, timezone
 from time import mktime

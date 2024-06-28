@@ -1,4 +1,5 @@
 """Unit tests for GET /ctms/{email_id}"""
+
 from uuid import uuid4
 
 import pytest

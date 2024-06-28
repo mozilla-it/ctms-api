@@ -1,4 +1,5 @@
 """Tests for PATCH /ctms/{email_id}"""
+
 import json
 from uuid import uuid4
 
