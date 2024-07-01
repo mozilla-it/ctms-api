@@ -34,17 +34,24 @@ class LogLevel(str, Enum):
     DEBUG = "DEBUG"
 
 
-class Settings(BaseSettings):
+class DBSettings(BaseSettings):
     db_url: PostgresDsn
     db_pool_size: int = 5  # Default value from sqlalchemy
     db_max_overflow: int = 10  # Default value from sqlalchemy
     db_pool_timeout_in_seconds: int = 30  # Default value from sqlalchemy
     db_pool_recycle_in_seconds: int = 900  # 15 minutes
+    log_sqlalchemy: bool = False
+
+    class Config:
+        # The attributes of this class extract from the Env Var's that are `(prefix)(attr_name)` within the environment
+        env_prefix = "ctms_"
+
+
+class AppSettings(BaseSettings):
     secret_key: str
     token_expiration: timedelta = timedelta(minutes=60)
     server_prefix: str = "http://localhost:8000"
     use_mozlog: bool = True
-    log_sqlalchemy: bool = False
     logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
@@ -55,7 +62,6 @@ class Settings(BaseSettings):
     prometheus_pushgateway_url: Optional[str] = None
 
     class Config:
-        # The attributes of this class extract from the Env Var's that are `(prefix)(attr_name)` within the environment
         env_prefix = "ctms_"
 
         fields = {

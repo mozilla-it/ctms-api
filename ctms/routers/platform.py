@@ -14,7 +14,7 @@ from ctms.auth import (
     create_access_token,
     verify_password,
 )
-from ctms.config import Settings, get_version
+from ctms.config import AppSettings, get_version
 from ctms.crud import count_total_contacts, get_api_client_by_id, ping
 from ctms.dependencies import (
     get_db,
@@ -108,7 +108,7 @@ def version():
 def heartbeat(
     request: Request,
     db: Session = Depends(get_db),
-    settings: Settings = Depends(get_settings),
+    settings: AppSettings = Depends(get_settings),
 ):
     """Return status of backing services, as required by Dockerflow."""
 

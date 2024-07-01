@@ -178,4 +178,4 @@ if __name__ == "__main__":
     import sys
 
     with SessionLocal() as session:
-        sys.exit(main(session, config.Settings()))
+        sys.exit(main(session, config.AppSettings()))
