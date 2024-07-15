@@ -31,6 +31,7 @@ structlog = "^24.2.0"
 colorama = "^0.4.6"
 psycopg2 = "^2.9.9"
 google-auth = "^2.32.0"
+pydantic-settings = "^2.3.4"
 
 
 [tool.poetry.group.dev.dependencies]
