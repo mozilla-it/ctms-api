@@ -5,7 +5,7 @@ from uuid import uuid4
 import backoff
 import pytest
 import requests
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from tests.conftest import FuzzyAssert
 

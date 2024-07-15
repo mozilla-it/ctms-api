@@ -6,7 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseSettings, PostgresDsn
+from pydantic import PostgresDsn
+from pydantic_settings import BaseSettings
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
