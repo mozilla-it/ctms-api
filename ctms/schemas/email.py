@@ -13,7 +13,10 @@ EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
 class EmailBase(ComparableBase):
     """Data that is included in input/output/db of a primary_email and such."""
 
-    primary_email: str
+    primary_email: str = Field(
+        description="Contact email address, Email in Salesforce",
+        example="contact@example.com",
+    )
     basket_token: Optional[UUID] = Field(
         default=None,
         description="Basket token, Token__c in Salesforce",
@@ -66,12 +69,6 @@ class EmailBase(ComparableBase):
 
     class Config:
         orm_mode = True
-        fields = {
-            "primary_email": {
-                "description": "Contact email address, Email in Salesforce",
-                "example": "contact@example.com",
-            }
-        }
 
 
 class EmailSchema(EmailBase):
