@@ -2,7 +2,14 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    Field,
+    model_validator,
+    root_validator,
+    validator,
+)
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -48,46 +55,50 @@ class ContactSchema(ComparableBase):
     newsletters: List[NewsletterTableSchema] = Field(
         default_factory=list,
         description="List of newsletters for which the contact is or was subscribed",
-        example=[
-            {
-                "name": "firefox-welcome",
-                "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                "email_id": EMAIL_ID_EXAMPLE,
-            },
-            {
-                "name": "mozilla-welcome",
-                "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                "email_id": EMAIL_ID_EXAMPLE,
-            },
+        examples=[
+            [
+                {
+                    "name": "firefox-welcome",
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+                {
+                    "name": "mozilla-welcome",
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+            ]
         ],
     )
     waitlists: List[WaitlistTableSchema] = Field(
         default_factory=list,
         description="List of waitlists for which the contact is or was subscribed",
-        example=[
-            {
-                "name": "example-product",
-                "fields": {"geo": "fr", "platform": "win64"},
-                "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                "email_id": EMAIL_ID_EXAMPLE,
-            },
-            {
-                "name": "relay",
-                "fields": {"geo": "fr"},
-                "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                "email_id": EMAIL_ID_EXAMPLE,
-            },
-            {
-                "name": "vpn",
-                "fields": {"geo": "fr", "platform": "ios,mac"},
-                "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                "email_id": EMAIL_ID_EXAMPLE,
-            },
+        examples=[
+            [
+                {
+                    "name": "example-product",
+                    "fields": {"geo": "fr", "platform": "win64"},
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+                {
+                    "name": "relay",
+                    "fields": {"geo": "fr"},
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+                {
+                    "name": "vpn",
+                    "fields": {"geo": "fr", "platform": "ios,mac"},
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+            ]
         ],
     )
 
@@ -126,26 +137,30 @@ class ContactInBase(ComparableBase):
     mofo: Optional[MozillaFoundationInSchema] = None
     newsletters: List[NewsletterInSchema] = Field(
         default_factory=list,
-        example=[
-            {
-                "name": "firefox-welcome",
-            },
-            {
-                "name": "mozilla-welcome",
-            },
+        examples=[
+            [
+                {
+                    "name": "firefox-welcome",
+                },
+                {
+                    "name": "mozilla-welcome",
+                },
+            ]
         ],
     )
     waitlists: List[WaitlistInSchema] = Field(
         default_factory=list,
-        example=[
-            {
-                "name": "example-product",
-                "fields": {"geo": "fr", "platform": "win64"},
-            },
-            {
-                "name": "relay",
-                "fields": {"geo": "fr"},
-            },
+        examples=[
+            [
+                {
+                    "name": "example-product",
+                    "fields": {"geo": "fr", "platform": "win64"},
+                },
+                {
+                    "name": "relay",
+                    "fields": {"geo": "fr"},
+                },
+            ]
         ],
     )
     # TODO waitlist: remove once Basket leverages the `waitlists` field.
@@ -199,38 +214,42 @@ class ContactPatchSchema(ComparableBase):
     """
 
     amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]] = Field(
-        description='Add-ons data to update, or "DELETE" to reset.'
+        None, description='Add-ons data to update, or "DELETE" to reset.'
     )
     email: Optional[EmailPatchSchema] = None
     fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]] = Field(
-        description='Firefox Accounts data to update, or "DELETE" to reset.'
+        None, description='Firefox Accounts data to update, or "DELETE" to reset.'
     )
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]] = Field(
-        description='Mozilla Foundation data to update, or "DELETE" to reset.'
+        None, description='Mozilla Foundation data to update, or "DELETE" to reset.'
     )
     newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]] = (
         Field(
+            None,
             description=(
                 "List of newsletters to add or update, or 'UNSUBSCRIBE' to"
                 " unsubscribe from all."
             ),
-            example=[{"name": "firefox-welcome", "subscribed": False}],
+            examples=[[{"name": "firefox-welcome", "subscribed": False}]],
         )
     )
     waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]] = Field(
+        None,
         description=("List of waitlists to add or update."),
-        example=[
-            {
-                "name": "example-product",
-                "fields": {"geo": "fr", "platform": "win64"},
-            }
+        examples=[
+            [
+                {
+                    "name": "example-product",
+                    "fields": {"geo": "fr", "platform": "win64"},
+                }
+            ]
         ],
     )
     vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]] = Field(
-        description='VPN Waitlist data to update, or "DELETE" to reset.'
+        None, description='VPN Waitlist data to update, or "DELETE" to reset.'
     )
     relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]] = Field(
-        description='Relay Waitlist data to update, or "DELETE" to reset.'
+        None, description='Relay Waitlist data to update, or "DELETE" to reset.'
     )
 
     @root_validator
@@ -261,19 +280,26 @@ class CTMSResponse(BaseModel):
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("amo", pre=True, always=True)
     def set_default_amo(cls, value):  # pylint: disable=no-self-argument
         return value or AddOnsSchema()
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("fxa", pre=True, always=True)
     def set_default_fxa(cls, value):  # pylint: disable=no-self-argument
         return value or FirefoxAccountsSchema()
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("mofo", pre=True, always=True)
     def set_default_mofo(cls, value):  # pylint: disable=no-self-argument
         return value or MozillaFoundationSchema()
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def legacy_waitlists(cls, values):  # pylint: disable=no-self-argument
         # Show computed fields in response for retro-compatibility.
         values["vpn_waitlist"] = VpnWaitlistSchema()
@@ -313,7 +339,7 @@ class CTMSSingleResponse(CTMSResponse):
     """
 
     status: Literal["ok"] = Field(
-        default="ok", description="Request was successful", example="ok"
+        default="ok", description="Request was successful", examples=["ok"]
     )
 
 

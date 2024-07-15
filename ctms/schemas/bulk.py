@@ -17,6 +17,8 @@ class BulkRequestSchema(ComparableBase):
 
     end_time: Optional[Union[datetime, Literal[""]]] = None
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("end_time", always=True)
     def end_time_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
         if value in BLANK_VALS:
@@ -25,6 +27,8 @@ class BulkRequestSchema(ComparableBase):
 
     limit: Optional[Union[int, Literal[""]]] = None
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("limit", always=True)
     def limit_must_adhere_to_validations(
         cls, value
@@ -39,6 +43,8 @@ class BulkRequestSchema(ComparableBase):
 
     mofo_relevant: Optional[Union[bool, Literal[""]]] = None
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("mofo_relevant", always=True)
     def mofo_relevant_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
         if value in BLANK_VALS:
@@ -47,6 +53,8 @@ class BulkRequestSchema(ComparableBase):
 
     after: Optional[str] = None
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("after", always=True)
     def after_must_be_base64_decodable(cls, value):  # pylint: disable=no-self-argument
         if value in BLANK_VALS:

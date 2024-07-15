@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import UUID4, AnyUrl, Field, root_validator
+from pydantic import UUID4, AnyUrl, ConfigDict, Field, root_validator
 
 from .base import ComparableBase
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
@@ -24,15 +24,15 @@ class WaitlistBase(ComparableBase):
     name: str = Field(
         min_length=1,
         description="Basket slug for the waitlist",
-        example="new-product",
+        examples=["new-product"],
     )
     source: Optional[AnyUrl] = Field(
         default=None,
         description="Source URL of subscription",
-        example="https://www.mozilla.org/en-US/",
+        examples=["https://www.mozilla.org/en-US/"],
     )
     fields: dict = Field(
-        default={}, description="Additional fields", example='{"platform": "linux"}'
+        default={}, description="Additional fields", examples=['{"platform": "linux"}']
     )
     subscribed: bool = Field(
         default=True, description="True to subscribe, False to unsubscribe"
@@ -49,8 +49,7 @@ class WaitlistBase(ComparableBase):
         validate_waitlist_fields(values.get("name"), values.get("fields", {}))
         return values
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # No need to change anything, just extend if you want to
@@ -63,22 +62,20 @@ WaitlistInSchema = WaitlistBase
 class WaitlistTimestampedSchema(WaitlistBase):
     create_timestamp: datetime = Field(
         description="Waitlist data creation timestamp",
-        example="2020-12-05T19:21:50.908000+00:00",
+        examples=["2020-12-05T19:21:50.908000+00:00"],
     )
     update_timestamp: datetime = Field(
         description="Waitlist data update timestamp",
-        example="2021-02-04T15:36:57.511000+00:00",
+        examples=["2021-02-04T15:36:57.511000+00:00"],
     )
 
 
 class WaitlistTableSchema(WaitlistTimestampedSchema):
     email_id: UUID4 = Field(
         description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
+        examples=[EMAIL_ID_EXAMPLE],
     )
-
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 def CountryField():  # pylint:disable = invalid-name
@@ -86,7 +83,7 @@ def CountryField():  # pylint:disable = invalid-name
         default=None,
         max_length=100,
         description="Waitlist country",
-        example="fr",
+        examples=["fr"],
     )
 
 
@@ -95,7 +92,7 @@ def PlatformField():  # pylint:disable = invalid-name
         default=None,
         max_length=100,
         description="VPN waitlist platforms as comma-separated list",
-        example="ios,mac",
+        examples=["ios,mac"],
     )
 
 
@@ -108,9 +105,7 @@ def validate_waitlist_fields(name: Optional[str], fields: dict):
 
         class RelayFieldsSchema(ComparableBase):
             geo: Optional[str] = CountryField()
-
-            class Config:
-                extra = "forbid"
+            model_config = ConfigDict(extra="forbid")
 
         RelayFieldsSchema(**fields)
 
@@ -119,9 +114,7 @@ def validate_waitlist_fields(name: Optional[str], fields: dict):
         class VPNFieldsSchema(ComparableBase):
             geo: Optional[str] = CountryField()
             platform: Optional[str] = PlatformField()
-
-            class Config:
-                extra = "forbid"
+            model_config = ConfigDict(extra="forbid")
 
         VPNFieldsSchema(**fields)
 
@@ -191,11 +184,9 @@ class RelayWaitlistBase(ComparableBase):
         default=None,
         max_length=100,
         description="Relay waitlist country",
-        example="fr",
+        examples=["fr"],
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # No need to change anything, just extend if you want to
@@ -217,7 +208,7 @@ class VpnWaitlistBase(ComparableBase):
         default=None,
         max_length=100,
         description="VPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
-        example="fr",
+        examples=["fr"],
     )
     platform: Optional[str] = Field(
         default=None,
@@ -226,11 +217,9 @@ class VpnWaitlistBase(ComparableBase):
             "VPN waitlist platforms as comma-separated list,"
             " FPN_Waitlist_Platform__c in Salesforce"
         ),
-        example="ios,mac",
+        examples=["ios,mac"],
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # No need to change anything, just extend if you want to

@@ -6,8 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import PostgresDsn
-from pydantic_settings import BaseSettings
+from pydantic import Field, PostgresDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
@@ -49,18 +49,10 @@ class Settings(BaseSettings):
     logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
-    fastapi_env: Optional[str] = None
-    host: str = "0.0.0.0"
-    port: int = 8000
+    fastapi_env: Optional[str] = Field(default=None, alias="FASTAPI_ENV")
+    host: str = Field(default="0.0.0.0", alias="HOST")
+    port: int = Field(default=8000, alias="PORT")
 
     prometheus_pushgateway_url: Optional[str] = None
 
-    class Config:
-        # The attributes of this class extract from the Env Var's that are `(prefix)(attr_name)` within the environment
-        env_prefix = "ctms_"
-
-        fields = {
-            "fastapi_env": {"env": "fastapi_env"},
-            "host": {"env": "host"},
-            "port": {"env": "port"},
-        }
+    model_config = SettingsConfigDict(env_prefix="ctms_")

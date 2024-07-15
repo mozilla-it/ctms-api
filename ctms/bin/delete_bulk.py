@@ -3,7 +3,7 @@
 import sys
 
 import click
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from requests import Session
 from requests.auth import HTTPBasicAuth
 
@@ -13,9 +13,7 @@ class Settings(BaseSettings):
     client_id: str
     client_secret: str
     session: Session
-
-    class Config:
-        env_prefix = "ctms_"
+    model_config = SettingsConfigDict(env_prefix="ctms_")
 
 
 @click.group()
