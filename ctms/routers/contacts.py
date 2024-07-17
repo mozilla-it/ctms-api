@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import Dict, List, Literal, Optional, Union
 from uuid import UUID, uuid4
@@ -399,7 +400,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
         )
         return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.dict())
     except ValidationError as e:
-        detail = {"errors": e.errors()}
+        detail = {"errors": json.loads(e.json())}
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
         ) from e
