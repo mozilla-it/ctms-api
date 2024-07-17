@@ -224,9 +224,14 @@ def test_patch_cannot_set_email_to_null(client, maximal_contact):
     assert resp.json() == {
         "detail": [
             {
+                "ctx": {
+                    "error": {},
+                },
+                "input": None,
                 "loc": ["body", "email", "primary_email"],
-                "msg": "primary_email may not be None",
+                "msg": "Assertion failed, primary_email may not be None",
                 "type": "assertion_error",
+                "url": "https://errors.pydantic.dev/2.8/v/assertion_error",
             }
         ]
     }
@@ -452,7 +457,13 @@ def test_patch_will_validate_waitlist_fields(client, maximal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 422
     details = resp.json()
-    assert details["detail"][0]["loc"] == ["body", "waitlists", 0, "source"]
+    assert details["detail"][0]["loc"] == [
+        "body",
+        "waitlists",
+        "list[function-after[check_fields(), WaitlistBase]]",
+        0,
+        "source",
+    ]
 
 
 def test_patch_to_add_a_waitlist(client, maximal_contact):
