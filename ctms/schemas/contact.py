@@ -2,10 +2,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, Field, model_validator, validator
+from pydantic import BaseModel, Field, model_validator, validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
+from .common import AnyUrlString
 from .email import (
     EMAIL_ID_EXAMPLE,
     EmailBase,
@@ -346,7 +347,7 @@ class CTMSBulkResponse(BaseModel):
     end: datetime
     limit: int
     after: Optional[str] = None
-    next: Optional[Union[AnyUrl, str]] = None
+    next: Optional[Union[AnyUrlString, str]] = None
     items: List[CTMSResponse]
 
 

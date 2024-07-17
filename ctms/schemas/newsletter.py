@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Literal, Optional
 
-from pydantic import UUID4, AnyUrl, ConfigDict, Field
+from pydantic import UUID4, ConfigDict, Field
 
 from .base import ComparableBase
-from .common import ZeroOffsetDatetime
+from .common import AnyUrlString, ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ class NewsletterBase(ComparableBase):
         max_length=5,
         description="Newsletter language code, usually 2 lowercase letters",
     )
-    source: Optional[AnyUrl] = Field(
+    source: Optional[AnyUrlString] = Field(
         default=None,
         description="Source URL of subscription",
         examples=["https://www.mozilla.org/en-US/"],

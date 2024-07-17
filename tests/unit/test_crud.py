@@ -284,7 +284,7 @@ def test_create_or_update_contact_related_objects(dbsession, email_factory):
     )
     dbsession.flush()
 
-    new_source = "http://waitlists.example.com"
+    new_source = "http://waitlists.example.com/"
     putdata = ContactPutSchema(
         email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
         newsletters=[

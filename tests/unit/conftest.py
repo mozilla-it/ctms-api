@@ -4,6 +4,7 @@ import os.path
 from datetime import datetime, timezone
 from time import mktime
 from typing import Callable, Optional
+from urllib.parse import urlparse
 from uuid import UUID
 
 import pytest
@@ -77,22 +78,25 @@ def engine(pytestconfig):
     """Return a SQLAlchemy engine for a fresh test database."""
 
     orig_db_url = Settings().db_url
-    if orig_db_url.path.endswith("test"):
+    parsed_db_url = urlparse(orig_db_url)
+    if parsed_db_url.path.endswith("test"):
         # The database ends with test, assume the caller wanted us to use it
         test_db_url = orig_db_url
         drop_db = False
         assert database_exists(test_db_url)
     else:
         # Assume the regular database was passed, create a new test database
-        test_db_url = PostgresDsn.build(
-            scheme=orig_db_url.scheme,
-            user=orig_db_url.user,
-            password=orig_db_url.password,
-            host=orig_db_url.host,
-            port=orig_db_url.port,
-            path=orig_db_url.path + "_test",
-            query=orig_db_url.query,
-            fragment=orig_db_url.fragment,
+        test_db_url = str(
+            PostgresDsn.build(
+                scheme=parsed_db_url.scheme,
+                username=parsed_db_url.username,
+                password=parsed_db_url.password,
+                host=parsed_db_url.hostname,
+                port=parsed_db_url.port,
+                path=parsed_db_url.path + "_test",
+                query=parsed_db_url.query,
+                fragment=parsed_db_url.fragment,
+            )
         )
         drop_db = True
         # (Re)create the test database

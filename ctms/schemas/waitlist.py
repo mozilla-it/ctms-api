@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Union
 
-from pydantic import UUID4, AnyUrl, ConfigDict, Field, model_validator
+from pydantic import UUID4, ConfigDict, Field, model_validator
 
 from .base import ComparableBase
-from .common import ZeroOffsetDatetime
+from .common import AnyUrlString, ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ class WaitlistBase(ComparableBase):
         description="Basket slug for the waitlist",
         examples=["new-product"],
     )
-    source: Optional[AnyUrl] = Field(
+    source: Optional[AnyUrlString] = Field(
         default=None,
         description="Source URL of subscription",
         examples=["https://www.mozilla.org/en-US/"],

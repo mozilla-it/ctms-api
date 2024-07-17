@@ -4,13 +4,15 @@ from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import Field, PostgresDsn
+from pydantic import AfterValidator, Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # If primary email matches, then add trace to logs
 re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
+
+PostgresDsnStr = Annotated[PostgresDsn, AfterValidator(str)]
 
 
 @lru_cache()
@@ -36,7 +38,7 @@ class LogLevel(str, Enum):
 
 
 class Settings(BaseSettings):
-    db_url: PostgresDsn
+    db_url: PostgresDsnStr
     db_pool_size: int = 5  # Default value from sqlalchemy
     db_max_overflow: int = 10  # Default value from sqlalchemy
     db_pool_timeout_in_seconds: int = 30  # Default value from sqlalchemy
