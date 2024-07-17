@@ -144,7 +144,7 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
     }[group_name].__fields__[key]
-    assert not field.required
+    assert not field.is_required()
     default_value = field.get_default()
     patch_data = {group_name: {key: default_value}}
     expected[group_name][key] = default_value
