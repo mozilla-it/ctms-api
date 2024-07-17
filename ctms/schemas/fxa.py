@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import ConfigDict, Field
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 
 
 class FirefoxAccountsBase(ComparableBase):
@@ -53,8 +54,8 @@ FirefoxAccountsSchema = FirefoxAccountsBase
 
 
 class UpdatedFirefoxAccountsInSchema(FirefoxAccountsInSchema):
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="FXA data update timestamp",
-        examples=["2021-01-28T21:26:57.511Z"],
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )

@@ -1,9 +1,9 @@
-from datetime import datetime
 from typing import TYPE_CHECKING, Literal, Optional
 
 from pydantic import UUID4, AnyUrl, ConfigDict, Field
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 if TYPE_CHECKING:
@@ -50,11 +50,11 @@ NewsletterSchema = NewsletterBase
 
 
 class NewsletterTimestampedSchema(NewsletterBase):
-    create_timestamp: datetime = Field(
+    create_timestamp: ZeroOffsetDatetime = Field(
         description="Newsletter data creation timestamp",
         examples=["2020-12-05T19:21:50.908000+00:00"],
     )
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         description="Newsletter data update timestamp",
         examples=["2021-02-04T15:36:57.511000+00:00"],
     )

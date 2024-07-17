@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import UUID4, ConfigDict, Field, field_validator
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 
 EMAIL_ID_DESCRIPTION = "ID for email"
 EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
@@ -76,15 +77,15 @@ class EmailSchema(EmailBase):
         description=EMAIL_ID_DESCRIPTION,
         examples=[EMAIL_ID_EXAMPLE],
     )
-    create_timestamp: Optional[datetime] = Field(
+    create_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="Contact creation date, CreatedDate in Salesforce",
-        examples=["2020-03-28T15:41:00.000Z"],
+        examples=["2020-03-28T15:41:00.000+00:00"],
     )
-    update_timestamp: Optional[datetime] = Field(
+    update_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="Contact last modified date, LastModifiedDate in Salesforce",
-        examples=["2021-01-28T21:26:57.511Z"],
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )
 
 
@@ -121,8 +122,8 @@ class EmailPatchSchema(EmailInSchema):
 
 
 class UpdatedEmailPutSchema(EmailPutSchema):
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Contact last modified date, LastModifiedDate in Salesforce",
-        examples=["2021-01-28T21:26:57.511Z"],
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )

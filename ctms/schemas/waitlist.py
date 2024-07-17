@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union
 
 from pydantic import UUID4, AnyUrl, ConfigDict, Field, model_validator
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
 
 if TYPE_CHECKING:
@@ -83,7 +83,7 @@ class WaitlistBase(ComparableBase):
                 platform: Optional[str] = PlatformField()
 
             DefaultFieldsSchema(**self.fields)
-        
+
         return self
 
     model_config = ConfigDict(from_attributes=True)
@@ -97,11 +97,11 @@ WaitlistInSchema = WaitlistBase
 
 
 class WaitlistTimestampedSchema(WaitlistBase):
-    create_timestamp: datetime = Field(
+    create_timestamp: ZeroOffsetDatetime = Field(
         description="Waitlist data creation timestamp",
         examples=["2020-12-05T19:21:50.908000+00:00"],
     )
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         description="Waitlist data update timestamp",
         examples=["2021-02-04T15:36:57.511000+00:00"],
     )
@@ -133,7 +133,9 @@ def PlatformField():  # pylint:disable = invalid-name
     )
 
 
-def validate_waitlist_newsletters(contact: Union["ContactInBase", "ContactPatchSchema"]):
+def validate_waitlist_newsletters(
+    contact: Union["ContactInBase", "ContactPatchSchema"]
+):
     """
     This helper validates that when subscribing to `relay-*-waitlist`
     newsletters, the country is provided.
@@ -157,7 +159,7 @@ def validate_waitlist_newsletters(contact: Union["ContactInBase", "ContactPatchS
     # If specified using the legacy `relay_waitlist`
     relay_country = None
     relay_waitlist = contact.relay_waitlist
-    if relay_waitlist:
+    if relay_waitlist and relay_waitlist != "DELETE":
         relay_country = relay_waitlist.geo
     elif hasattr(contact, "waitlists"):
         # If specified using the `waitlists` field (unlikely, but in our tests we do)

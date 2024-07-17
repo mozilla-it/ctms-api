@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import ConfigDict, Field
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 
 
 class AddOnsBase(ComparableBase):
@@ -81,20 +82,20 @@ AddOnsInSchema = AddOnsBase
 
 
 class UpdatedAddOnsInSchema(AddOnsInSchema):
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="AMO data update timestamp",
-        examples=["2021-01-28T21:26:57.511Z"],
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )
 
 
 class AddOnsSchema(AddOnsBase):
-    create_timestamp: Optional[datetime] = Field(
+    create_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="AMO data creation timestamp",
         examples=["2020-12-05T19:21:50.908000+00:00"],
     )
-    update_timestamp: Optional[datetime] = Field(
+    update_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="AMO data update timestamp",
         examples=["2021-02-04T15:36:57.511000+00:00"],
