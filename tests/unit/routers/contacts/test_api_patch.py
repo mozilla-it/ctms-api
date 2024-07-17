@@ -252,7 +252,7 @@ def test_patch_error_on_id_conflict(
     """PATCH returns an error on ID conflicts, and makes none of the changes."""
     conflict_id = str(uuid4())
     conflicting_data = ContactSchema(
-        amo=AddOnsInSchema(user_id=1337),
+        amo=AddOnsInSchema(user_id="1337"),
         email=EmailSchema(
             email_id=conflict_id,
             primary_email="conflict@example.com",
@@ -264,7 +264,7 @@ def test_patch_error_on_id_conflict(
             mofo_contact_id=str(uuid4()),
         ),
         fxa=FirefoxAccountsInSchema(
-            fxa_id=1337, primary_email="fxa-conflict@example.com"
+            fxa_id="1337", primary_email="fxa-conflict@example.com"
         ),
     )
     create_full_contact(dbsession, conflicting_data)
