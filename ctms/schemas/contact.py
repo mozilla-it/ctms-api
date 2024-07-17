@@ -2,14 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import (
-    AnyUrl,
-    BaseModel,
-    Field,
-    model_validator,
-    root_validator,
-    validator,
-)
+from pydantic import AnyUrl, BaseModel, Field, model_validator, validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -167,15 +160,15 @@ class ContactInBase(ComparableBase):
     vpn_waitlist: Optional[VpnWaitlistInSchema] = None
     relay_waitlist: Optional[RelayWaitlistInSchema] = None
 
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
+    @model_validator(mode="after")
+    def check_fields(self):
         """
         This makes sure a Relay country is specified when one of the `relay-*-waitlist`
         newsletter is subscribed.
 
         TODO waitlist: remove once Basket leverages the `waitlists` field.
         """
-        return validate_waitlist_newsletters(values)
+        return validate_waitlist_newsletters(self)
 
     def idempotent_equal(self, other):
         def _noneify(field):
@@ -252,15 +245,15 @@ class ContactPatchSchema(ComparableBase):
         None, description='Relay Waitlist data to update, or "DELETE" to reset.'
     )
 
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
+    @model_validator(mode="after")
+    def check_fields(self):
         """
         This makes sure a Relay country is specified when one of the `relay-*-waitlist`
         newsletter is subscribed.
 
         TODO waitlist: remove once Basket leverages the `waitlists` field.
         """
-        return validate_waitlist_newsletters(values)
+        return validate_waitlist_newsletters(self)
 
 
 class CTMSResponse(BaseModel):
