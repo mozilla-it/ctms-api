@@ -61,7 +61,7 @@ SAMPLE_CONTACT_PARAMS = [
 def _gather_examples(schema_class) -> dict[str, str]:
     """Gather the examples from a schema definition"""
     examples = {}
-    for key, props in schema_class.schema()["properties"].items():
+    for key, props in schema_class.model_json_schema()["properties"].items():
         if "examples" in props:
             examples[key] = props["examples"][0]
     return examples
@@ -430,10 +430,12 @@ def example_contact_data() -> ContactSchema:
         fxa=schemas.FirefoxAccountsSchema(
             **_gather_examples(schemas.FirefoxAccountsSchema)
         ),
-        newsletters=ContactSchema.schema()["properties"]["newsletters"]["examples"][0],
+        newsletters=ContactSchema.model_json_schema()["properties"]["newsletters"][
+            "examples"
+        ][0],
         waitlists=[
             schemas.WaitlistTableSchema(**example)
-            for example in ContactSchema.schema()["properties"]["waitlists"][
+            for example in ContactSchema.model_json_schema()["properties"]["waitlists"][
                 "examples"
             ][0]
         ],
