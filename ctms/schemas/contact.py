@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
@@ -274,22 +274,19 @@ class CTMSResponse(BaseModel):
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
 
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator("amo", pre=True, always=True)
-    def set_default_amo(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("amo", mode="before")
+    @classmethod
+    def set_default_amo(cls, value):
         return value or AddOnsSchema()
 
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator("fxa", pre=True, always=True)
-    def set_default_fxa(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("fxa", mode="before")
+    @classmethod
+    def set_default_fxa(cls, value):
         return value or FirefoxAccountsSchema()
 
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator("mofo", pre=True, always=True)
-    def set_default_mofo(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("mofo", mode="before")
+    @classmethod
+    def set_default_mofo(cls, value):
         return value or MozillaFoundationSchema()
 
     @model_validator(mode="before")
