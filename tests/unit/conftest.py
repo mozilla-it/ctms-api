@@ -87,7 +87,7 @@ def engine(pytestconfig):
     else:
         # Assume the regular database was passed, create a new test database
         test_db_url = str(
-            PostgresDsn.build(
+            PostgresDsn.build(  # pylint: disable=no-member
                 scheme=parsed_db_url.scheme,
                 username=parsed_db_url.username,
                 password=parsed_db_url.password,

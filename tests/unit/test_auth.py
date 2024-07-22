@@ -217,7 +217,7 @@ def test_get_ctms_with_invalid_token_fails(
     client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"},
-        secret_key="secret_key_from_other_deploy",
+        secret_key="secret_key_from_other_deploy",  # pragma: allowlist secret
         expires_delta=test_token_settings["expires_delta"],
     )
     with capture_logs() as caplog:
