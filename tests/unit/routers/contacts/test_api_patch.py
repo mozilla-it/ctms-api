@@ -66,7 +66,7 @@ def swap_bool(existing):
 def test_patch_one_new_value(client, contact_name, group_name, key, value, request):
     """PATCH can update a single value."""
     contact = request.getfixturevalue(contact_name)
-    expected = json.loads(CTMSResponse(**contact.dict()).json())
+    expected = json.loads(CTMSResponse(**contact.model_dump()).json())
     existing_value = expected[group_name][key]
 
     # Set dynamic test values
@@ -132,7 +132,7 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
 def test_patch_to_default(client, maximal_contact, group_name, key):
     """PATCH can set a field to the default value."""
     email_id = maximal_contact.email.email_id
-    expected = json.loads(CTMSResponse(**maximal_contact.dict()).json())
+    expected = json.loads(CTMSResponse(**maximal_contact.model_dump()).json())
     existing_value = expected[group_name][key]
 
     # Load the default value from the schema
@@ -338,7 +338,7 @@ def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
 def test_patch_to_unsubscribe(client, maximal_contact):
     """PATCH can unsubscribe by setting a newsletter field."""
     email_id = maximal_contact.email.email_id
-    existing_news_data = maximal_contact.newsletters[1].dict()
+    existing_news_data = maximal_contact.newsletters[1].model_dump()
     assert existing_news_data["subscribed"]
     assert existing_news_data["name"] == "common-voice"
     assert existing_news_data["unsub_reason"] is None
@@ -410,7 +410,7 @@ def test_patch_to_delete_group(client, maximal_contact, group_name):
         "amo": AddOnsSchema(),
         "fxa": FirefoxAccountsSchema(),
         "mofo": MozillaFoundationSchema(),
-    }[group_name].dict()
+    }[group_name].model_dump()
     assert actual[group_name] == defaults
 
 
@@ -422,7 +422,7 @@ def test_patch_to_delete_deleted_group(client, minimal_contact):
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
-    default_mofo = MozillaFoundationSchema().dict()
+    default_mofo = MozillaFoundationSchema().model_dump()
     assert actual["mofo"] == default_mofo
 
 
@@ -500,7 +500,8 @@ def test_patch_to_update_a_waitlist(client, maximal_contact):
     """PATCH can update a waitlist."""
     email_id = maximal_contact.email.email_id
     existing = [
-        WaitlistInSchema(**wl.dict()).dict() for wl in maximal_contact.waitlists
+        WaitlistInSchema(**wl.model_dump()).model_dump()
+        for wl in maximal_contact.waitlists
     ]
     existing[0]["fields"]["geo"] = "ca"
     patch_data = {"waitlists": existing}
@@ -516,7 +517,7 @@ def test_patch_to_update_a_waitlist(client, maximal_contact):
 def test_patch_to_remove_a_waitlist(client, maximal_contact):
     """PATCH can remove a single waitlist."""
     email_id = maximal_contact.email.email_id
-    existing = [wl.dict() for wl in maximal_contact.waitlists]
+    existing = [wl.model_dump() for wl in maximal_contact.waitlists]
     patch_data = {
         "waitlists": [
             WaitlistInSchema(
@@ -525,7 +526,7 @@ def test_patch_to_remove_a_waitlist(client, maximal_contact):
                     "subscribed": False,
                     "unsub_reason": "Not interested",
                 }
-            ).dict()
+            ).model_dump()
         ]
     }
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)

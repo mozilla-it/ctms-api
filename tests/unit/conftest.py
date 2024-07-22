@@ -173,7 +173,7 @@ def create_full_contact(db, contact: ContactSchema):
     instead of a `ContactInSchema` as input, and will save the specified
     timestamps.
     """
-    contact_input = ContactInSchema(**contact.dict())
+    contact_input = ContactInSchema(**contact.model_dump())
     create_contact(db, contact.email.email_id, contact_input, get_metrics())
     db.flush()
 
@@ -638,7 +638,7 @@ def post_contact(client, dbsession, request):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code in {200, 201}:
+            if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written:
                     if result_list:
                         assert (
@@ -722,7 +722,7 @@ def put_contact(client, dbsession, request):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code in {200, 201}:
+            if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written or field in new_default_fields:
                     assert results is None or (
                         isinstance(results, list) and len(results) == 0

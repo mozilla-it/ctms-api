@@ -109,7 +109,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
     page_length = len(results)
     last_page = page_length < limit
     if page_length > 0:
-        results = [CTMSResponse(**contact.dict()) for contact in results]
+        results = [CTMSResponse(**contact.model_dump()) for contact in results]
 
     if last_page:
         # No results/end
@@ -169,7 +169,7 @@ def read_ctms_by_any_id(
             traced.add(email)
     if traced:
         request.state.log_context["trace"] = ",".join(sorted(traced))
-    return [CTMSResponse(**contact.dict()) for contact in contacts]
+    return [CTMSResponse(**contact.model_dump()) for contact in contacts]
 
 
 @router.get(
@@ -197,7 +197,7 @@ def read_ctms_by_email_id(
 
 def get_ctms_response_or_404(db, email_id):
     contact = get_contact_or_404(db, email_id)
-    return CTMSSingleResponse(**contact.dict(), status="ok")
+    return CTMSSingleResponse(**contact.model_dump(), status="ok")
 
 
 @router.post(
@@ -223,7 +223,7 @@ def create_ctms_contact(
         if re_trace_email.match(email):
             request.state.log_context["trace"] = email
             request.state.log_context["trace_json"] = content_json
-        if ContactInSchema(**existing.dict()).idempotent_equal(contact):
+        if ContactInSchema(**existing.model_dump()).idempotent_equal(contact):
             response.headers["Location"] = f"/ctms/{email_id}"
             response.status_code = 200
             return get_ctms_response_or_404(db=db, email_id=email_id)
@@ -322,7 +322,7 @@ def partial_update_ctms_contact(
             detail="cannot change email_id",
         )
     current_email = get_email_or_404(db, email_id)
-    update_data = contact.dict(exclude_unset=True)
+    update_data = contact.model_dump(exclude_unset=True)
     update_contact(db, current_email, update_data, get_metrics())
     email = current_email.primary_email
     if re_trace_email.match(email):
@@ -398,7 +398,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
             after=after,
             mofo_relevant=mofo_relevant,
         )
-        return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.dict())
+        return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.model_dump())
     except ValidationError as e:
         detail = {"errors": json.loads(e.json())}
         raise HTTPException(

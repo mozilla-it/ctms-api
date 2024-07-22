@@ -246,7 +246,7 @@ def create_amo(
 ) -> Optional[AmoAccount]:
     if amo.is_default():
         return None
-    db_amo = AmoAccount(email_id=email_id, **amo.dict())
+    db_amo = AmoAccount(email_id=email_id, **amo.model_dump())
     db.add(db_amo)
     return db_amo
 
@@ -257,26 +257,26 @@ def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSch
         return
 
     # Providing update timestamp
-    updated_amo = UpdatedAddOnsInSchema(**amo.dict())
-    stmt = insert(AmoAccount).values(email_id=email_id, **updated_amo.dict())
+    updated_amo = UpdatedAddOnsInSchema(**amo.model_dump())
+    stmt = insert(AmoAccount).values(email_id=email_id, **updated_amo.model_dump())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[AmoAccount.email_id], set_=updated_amo.dict()
+        index_elements=[AmoAccount.email_id], set_=updated_amo.model_dump()
     )
     db.execute(stmt)
 
 
 def create_email(db: Session, email: EmailInSchema):
-    db_email = Email(**email.dict())
+    db_email = Email(**email.model_dump())
     db.add(db_email)
 
 
 def create_or_update_email(db: Session, email: EmailPutSchema):
     # Providing update timestamp
-    updated_email = UpdatedEmailPutSchema(**email.dict())
+    updated_email = UpdatedEmailPutSchema(**email.model_dump())
 
-    stmt = insert(Email).values(**updated_email.dict())
+    stmt = insert(Email).values(**updated_email.model_dump())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[Email.email_id], set_=updated_email.dict()
+        index_elements=[Email.email_id], set_=updated_email.model_dump()
     )
     db.execute(stmt)
 
@@ -286,7 +286,7 @@ def create_fxa(
 ) -> Optional[FirefoxAccount]:
     if fxa.is_default():
         return None
-    db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
+    db_fxa = FirefoxAccount(email_id=email_id, **fxa.model_dump())
     db.add(db_fxa)
     return db_fxa
 
@@ -298,11 +298,11 @@ def create_or_update_fxa(
         (db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete())
         return
     # Providing update timestamp
-    updated_fxa = UpdatedFirefoxAccountsInSchema(**fxa.dict())
+    updated_fxa = UpdatedFirefoxAccountsInSchema(**fxa.model_dump())
 
-    stmt = insert(FirefoxAccount).values(email_id=email_id, **updated_fxa.dict())
+    stmt = insert(FirefoxAccount).values(email_id=email_id, **updated_fxa.model_dump())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[FirefoxAccount.email_id], set_=updated_fxa.dict()
+        index_elements=[FirefoxAccount.email_id], set_=updated_fxa.model_dump()
     )
     db.execute(stmt)
 
@@ -312,7 +312,7 @@ def create_mofo(
 ) -> Optional[MozillaFoundationContact]:
     if mofo.is_default():
         return None
-    db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.dict())
+    db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.model_dump())
     db.add(db_mofo)
     return db_mofo
 
@@ -327,9 +327,11 @@ def create_or_update_mofo(
             .delete()
         )
         return
-    stmt = insert(MozillaFoundationContact).values(email_id=email_id, **mofo.dict())
+    stmt = insert(MozillaFoundationContact).values(
+        email_id=email_id, **mofo.model_dump()
+    )
     stmt = stmt.on_conflict_do_update(
-        index_elements=[MozillaFoundationContact.email_id], set_=mofo.dict()
+        index_elements=[MozillaFoundationContact.email_id], set_=mofo.model_dump()
     )
     db.execute(stmt)
 
@@ -339,7 +341,7 @@ def create_newsletter(
 ) -> Optional[Newsletter]:
     if newsletter.is_default():
         return None
-    db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
+    db_newsletter = Newsletter(email_id=email_id, **newsletter.model_dump())
     db.add(db_newsletter)
     return db_newsletter
 
@@ -364,7 +366,7 @@ def create_or_update_newsletters(
 
     if newsletters:
         stmt = insert(Newsletter).values(
-            [{"email_id": email_id, **n.dict()} for n in newsletters]
+            [{"email_id": email_id, **n.model_dump()} for n in newsletters]
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uix_email_name",
@@ -382,7 +384,7 @@ def create_waitlist(
 ) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
-    db_waitlist = Waitlist(email_id=email_id, **waitlist.dict())
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.model_dump())
     db.add(db_waitlist)
     return db_waitlist
 
@@ -404,11 +406,11 @@ def create_or_update_waitlists(
         synchronize_session=False
     )
     waitlists_to_upsert = [
-        WaitlistInSchema(**waitlist.dict()) for waitlist in waitlists
+        WaitlistInSchema(**waitlist.model_dump()) for waitlist in waitlists
     ]
     if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.dict()} for wl in waitlists]
+            [{"email_id": email_id, **wl.model_dump()} for wl in waitlists]
         )
         stmt = stmt.on_conflict_do_update(
             constraint="uix_wl_email_name",
@@ -559,7 +561,7 @@ def update_contact(
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):
     hashed_secret = hash_password(secret)
-    db_api_client = ApiClient(hashed_secret=hashed_secret, **api_client.dict())
+    db_api_client = ApiClient(hashed_secret=hashed_secret, **api_client.model_dump())
     db.add(db_api_client)
 
 

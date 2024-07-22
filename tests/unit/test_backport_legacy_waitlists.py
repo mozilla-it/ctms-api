@@ -77,7 +77,9 @@ def test_relay_waitlist_unsubscribed_on_newsletter_unsubscribed(
             NewsletterInSchema(name="relay-phone-masking-waitlist", subscribed=False),
         ]
     )
-    update_contact(dbsession, contact, patch_data.dict(exclude_unset=True), metrics={})
+    update_contact(
+        dbsession, contact, patch_data.model_dump(exclude_unset=True), metrics={}
+    )
     dbsession.flush()
 
     waitlists = get_waitlists_by_email_id(dbsession, EMAIL_ID_EXAMPLE)
@@ -95,7 +97,9 @@ def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
     contact = get_email(dbsession, EMAIL_ID_EXAMPLE)
 
     patch_data = ContactPatchSchema(newsletters="UNSUBSCRIBE")
-    update_contact(dbsession, contact, patch_data.dict(exclude_unset=True), metrics={})
+    update_contact(
+        dbsession, contact, patch_data.model_dump(exclude_unset=True), metrics={}
+    )
     dbsession.flush()
 
     waitlists = get_waitlists_by_email_id(dbsession, EMAIL_ID_EXAMPLE)
