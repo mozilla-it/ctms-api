@@ -512,7 +512,7 @@ def update_contact(
                     setattr(email, group_name, new)
                 else:
                     _update_orm(existing, update_data[group_name])
-                    if schema.from_orm(existing).is_default():
+                    if schema.model_validate(existing).is_default():
                         db.delete(existing)
                         setattr(email, group_name, None)
 
