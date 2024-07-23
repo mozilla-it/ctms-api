@@ -28,7 +28,7 @@ def example_contact_in(dbsession, email_factory):
 
 
 def test_idempotent_equal(example_contact_in):
-    contact_copy = example_contact_in.copy(deep=True)
+    contact_copy = example_contact_in.model_copy(deep=True)
     assert example_contact_in.idempotent_equal(contact_copy)
     assert contact_copy.idempotent_equal(example_contact_in)
 

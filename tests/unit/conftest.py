@@ -622,7 +622,7 @@ def post_contact(client, dbsession, request):
     ):
         if query_fields is None:
             query_fields = {"primary_email": contact_fixture.email.primary_email}
-        sample = contact_fixture.copy(deep=True)
+        sample = contact_fixture.model_copy(deep=True)
         sample = modifier(sample)
         resp = client.post("/ctms", content=sample.model_dump_json())
         assert resp.status_code == code, resp.text
@@ -708,7 +708,7 @@ def put_contact(client, dbsession, request):
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
         new_default_fields = new_default_fields or set()
-        sample = contact.copy(deep=True)
+        sample = contact.model_copy(deep=True)
         sample = modifier(sample)
         resp = client.put(
             f"/ctms/{sample.email.email_id}", content=sample.model_dump_json()
