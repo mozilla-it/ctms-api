@@ -17,7 +17,7 @@ starlette = "^0.32.0"
 requests = "^2.32.3"
 uvicorn = {extras = ["standard"], version = "^0.30.3"}
 pydantic = {extras = ["email"], version = "^1.10.17"}
-SQLAlchemy = ">=1.4.51,<1.5"
+SQLAlchemy = ">=1.4.51,<2.1"
 alembic = "^1.13.2"
 python-multipart = "^0.0.9"
 python-jose = {extras = ["cryptography"], version = "^3.2.0"}
