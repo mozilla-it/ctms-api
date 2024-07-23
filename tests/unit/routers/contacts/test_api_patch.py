@@ -66,7 +66,7 @@ def swap_bool(existing):
 def test_patch_one_new_value(client, contact_name, group_name, key, value, request):
     """PATCH can update a single value."""
     contact = request.getfixturevalue(contact_name)
-    expected = json.loads(CTMSResponse(**contact.model_dump()).json())
+    expected = json.loads(CTMSResponse(**contact.model_dump()).model_dump_json())
     existing_value = expected[group_name][key]
 
     # Set dynamic test values
@@ -132,7 +132,9 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
 def test_patch_to_default(client, maximal_contact, group_name, key):
     """PATCH can set a field to the default value."""
     email_id = maximal_contact.email.email_id
-    expected = json.loads(CTMSResponse(**maximal_contact.model_dump()).json())
+    expected = json.loads(
+        CTMSResponse(**maximal_contact.model_dump()).model_dump_json()
+    )
     existing_value = expected[group_name][key]
 
     # Load the default value from the schema
@@ -163,7 +165,7 @@ def test_patch_to_default(client, maximal_contact, group_name, key):
 def test_patch_cannot_set_timestamps(client, maximal_contact):
     """PATCH can not set timestamps directly."""
     email_id = maximal_contact.email.email_id
-    expected = json.loads(maximal_contact.json())
+    expected = json.loads(maximal_contact.model_dump_json())
     new_ts = "2021-04-07T10:00:00+00:00"
     assert expected["amo"]["create_timestamp"] == "2017-05-12T15:16:00+00:00"
     assert expected["amo"]["create_timestamp"] != new_ts

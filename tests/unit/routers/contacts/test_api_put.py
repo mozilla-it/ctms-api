@@ -20,7 +20,8 @@ def test_create_or_update_basic_id_is_different(client, minimal_contact):
 
     # This id is different from the one in the contact
     resp = client.put(
-        "/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7", content=minimal_contact.json()
+        "/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7",
+        content=minimal_contact.model_dump_json(),
     )
     assert resp.status_code == 422, resp.text
 
@@ -139,7 +140,7 @@ def test_put_create_no_trace(client, dbsession):
 def test_put_replace_no_trace(client, minimal_contact):
     """PUT does not trace most replaced contacts"""
     email_id = minimal_contact.email.email_id
-    data = json.loads(minimal_contact.json())
+    data = json.loads(minimal_contact.model_dump_json())
     data["email"]["first_name"] = "Jeff"
     with capture_logs() as caplogs:
         resp = client.put(f"/ctms/{email_id}", json=data)
@@ -180,7 +181,7 @@ def test_put_create_with_trace(client, dbsession):
 def test_put_replace_with_trace(client, minimal_contact):
     """PUT traces replaced contacts by email"""
     email_id = minimal_contact.email.email_id
-    data = json.loads(minimal_contact.json())
+    data = json.loads(minimal_contact.model_dump_json())
     data["email"]["first_name"] = "Jeff"
     data["email"]["primary_email"] = "test+trace-me-mozilla-2021-05-13@example.com"
     with capture_logs() as caplogs:

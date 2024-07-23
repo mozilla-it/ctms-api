@@ -624,7 +624,7 @@ def post_contact(client, dbsession, request):
             query_fields = {"primary_email": contact_fixture.email.primary_email}
         sample = contact_fixture.copy(deep=True)
         sample = modifier(sample)
-        resp = client.post("/ctms", content=sample.json())
+        resp = client.post("/ctms", content=sample.model_dump_json())
         assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
@@ -710,7 +710,9 @@ def put_contact(client, dbsession, request):
         new_default_fields = new_default_fields or set()
         sample = contact.copy(deep=True)
         sample = modifier(sample)
-        resp = client.put(f"/ctms/{sample.email.email_id}", content=sample.json())
+        resp = client.put(
+            f"/ctms/{sample.email.email_id}", content=sample.model_dump_json()
+        )
         assert resp.status_code == code, resp.text
         saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
