@@ -1,8 +1,9 @@
+from uuid import UUID as UUID4
+
 from sqlalchemy import (
     JSON,
     TIMESTAMP,
     Boolean,
-    Column,
     Date,
     DateTime,
     ForeignKey,
@@ -15,13 +16,17 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql.functions import func
 
-from .database import Base
+
+class Base(DeclarativeBase):
+    pass
 
 
-class CaseInsensitiveComparator(Comparator):  # pylint: disable=abstract-method
+class CaseInsensitiveComparator(
+    Comparator
+):  # pylint: disable=abstract-method,too-many-ancestors
     def __eq__(self, other):
         return func.lower(self.__clause_element__()) == func.lower(other)
 
@@ -29,19 +34,21 @@ class CaseInsensitiveComparator(Comparator):  # pylint: disable=abstract-method
 class TimestampMixin:
     @declared_attr
     def create_timestamp(cls):  # pylint: disable=no-self-argument
-        return Column(
-            TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
+        return mapped_column(
+            TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=func.now(),  # pylint: disable=not-callable
         )
 
     @declared_attr
     def update_timestamp(cls):  # pylint: disable=no-self-argument
-        return Column(
+        return mapped_column(
             TIMESTAMP(timezone=True),
             nullable=False,
-            server_default=func.now(),
+            server_default=func.now(),  # pylint: disable=not-callable
             # server_onupdate would be nice to use here, but it's not supported
             # by Postgres
-            onupdate=func.now(),
+            onupdate=func.now(),  # pylint: disable=not-callable
         )
 
 
@@ -49,18 +56,18 @@ class Email(Base, TimestampMixin):
     __tablename__ = "emails"
     __mapper_args__ = {"eager_defaults": True}
 
-    email_id = Column(UUID(as_uuid=True), primary_key=True)
-    primary_email = Column(String(255), unique=True, nullable=False)
-    basket_token = Column(String(255), unique=True)
-    sfdc_id = Column(String(255), index=True)
-    first_name = Column(String(255))
-    last_name = Column(String(255))
-    mailing_country = Column(String(255))
-    email_format = Column(String(1))
-    email_lang = Column(String(5))
-    double_opt_in = Column(Boolean)
-    has_opted_out_of_email = Column(Boolean)
-    unsubscribe_reason = Column(Text)
+    email_id: Mapped[UUID4] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    primary_email = mapped_column(String(255), unique=True, nullable=False)
+    basket_token = mapped_column(String(255), unique=True)
+    sfdc_id = mapped_column(String(255), index=True)
+    first_name = mapped_column(String(255))
+    last_name = mapped_column(String(255))
+    mailing_country = mapped_column(String(255))
+    email_format = mapped_column(String(1))
+    email_lang = mapped_column(String(5))
+    double_opt_in = mapped_column(Boolean)
+    has_opted_out_of_email = mapped_column(Boolean)
+    unsubscribe_reason = mapped_column(Text)
 
     newsletters = relationship(
         "Newsletter", back_populates="email", order_by="Newsletter.name"
@@ -93,14 +100,16 @@ class Email(Base, TimestampMixin):
 class Newsletter(Base, TimestampMixin):
     __tablename__ = "newsletters"
 
-    id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
-    name = Column(String(255), nullable=False)
-    subscribed = Column(Boolean)
-    format = Column(String(1))
-    lang = Column(String(5))
-    source = Column(Text)
-    unsub_reason = Column(Text)
+    id = mapped_column(Integer, primary_key=True)
+    email_id: Mapped[UUID4] = mapped_column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False
+    )
+    name = mapped_column(String(255), nullable=False)
+    subscribed = mapped_column(Boolean)
+    format = mapped_column(String(1))
+    lang = mapped_column(String(5))
+    source = mapped_column(Text)
+    unsub_reason = mapped_column(Text)
 
     email = relationship("Email", back_populates="newsletters", uselist=False)
 
@@ -110,13 +119,15 @@ class Newsletter(Base, TimestampMixin):
 class Waitlist(Base, TimestampMixin):
     __tablename__ = "waitlists"
 
-    id = Column(Integer, primary_key=True)
-    email_id = Column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
-    name = Column(String(255), nullable=False)
-    source = Column(Text)
-    subscribed = Column(Boolean, nullable=False, default=True)
-    unsub_reason = Column(Text)
-    fields = Column(JSON, nullable=False, server_default="'{}'::json")
+    id = mapped_column(Integer, primary_key=True)
+    email_id: Mapped[UUID4] = mapped_column(
+        UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False
+    )
+    name = mapped_column(String(255), nullable=False)
+    source = mapped_column(Text)
+    subscribed = mapped_column(Boolean, nullable=False, default=True)
+    unsub_reason = mapped_column(Text)
+    fields = mapped_column(JSON, nullable=False, server_default="'{}'::json")
 
     email = relationship("Email", back_populates="waitlists", uselist=False)
 
@@ -126,16 +137,16 @@ class Waitlist(Base, TimestampMixin):
 class FirefoxAccount(Base, TimestampMixin):
     __tablename__ = "fxa"
 
-    id = Column(Integer, primary_key=True)
-    fxa_id = Column(String(255), unique=True)
-    email_id = Column(
+    id = mapped_column(Integer, primary_key=True)
+    fxa_id = mapped_column(String(255), unique=True)
+    email_id = mapped_column(
         UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
     )
-    primary_email = Column(String(255), index=True)
-    created_date = Column(String(50))
-    lang = Column(String(255))
-    first_service = Column(String(50))
-    account_deleted = Column(Boolean)
+    primary_email = mapped_column(String(255), index=True)
+    created_date = mapped_column(String(50))
+    lang = mapped_column(String(255))
+    first_service = mapped_column(String(50))
+    account_deleted = mapped_column(Boolean)
 
     email = relationship("Email", back_populates="fxa", uselist=False)
 
@@ -157,20 +168,20 @@ class FirefoxAccount(Base, TimestampMixin):
 class AmoAccount(Base, TimestampMixin):
     __tablename__ = "amo"
 
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
+    id = mapped_column(Integer, primary_key=True)
+    email_id = mapped_column(
         UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
     )
-    add_on_ids = Column(String(500))
-    display_name = Column(String(255))
-    email_opt_in = Column(Boolean)
-    language = Column(String(5))
-    last_login = Column(Date)
-    location = Column(String(255))
-    profile_url = Column(String(40))
-    user = Column(Boolean)
-    user_id = Column(String(40), index=True)
-    username = Column(String(100))
+    add_on_ids = mapped_column(String(500))
+    display_name = mapped_column(String(255))
+    email_opt_in = mapped_column(Boolean)
+    language = mapped_column(String(5))
+    last_login = mapped_column(Date)
+    location = mapped_column(String(255))
+    profile_url = mapped_column(String(40))
+    user = mapped_column(Boolean)
+    user_id = mapped_column(String(40), index=True)
+    username = mapped_column(String(100))
 
     email = relationship("Email", back_populates="amo", uselist=False)
 
@@ -180,22 +191,22 @@ class ApiClient(Base, TimestampMixin):
 
     __tablename__ = "api_client"
 
-    client_id = Column(String(255), primary_key=True)
-    email = Column(String(255), nullable=False)
-    enabled = Column(Boolean, default=True)
-    hashed_secret = Column(String, nullable=False)
-    last_access = Column(DateTime(timezone=True))
+    client_id = mapped_column(String(255), primary_key=True)
+    email = mapped_column(String(255), nullable=False)
+    enabled = mapped_column(Boolean, default=True)
+    hashed_secret = mapped_column(String, nullable=False)
+    last_access = mapped_column(DateTime(timezone=True))
 
 
 class MozillaFoundationContact(Base, TimestampMixin):
     __tablename__ = "mofo"
 
-    id = Column(Integer, primary_key=True)
-    email_id = Column(
+    id = mapped_column(Integer, primary_key=True)
+    email_id = mapped_column(
         UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
     )
-    mofo_email_id = Column(String(255), unique=True)
-    mofo_contact_id = Column(String(255), index=True)
-    mofo_relevant = Column(Boolean)
+    mofo_email_id = mapped_column(String(255), unique=True)
+    mofo_contact_id = mapped_column(String(255), index=True)
+    mofo_relevant = mapped_column(Boolean)
 
     email = relationship("Email", back_populates="mofo", uselist=False)

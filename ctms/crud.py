@@ -9,14 +9,14 @@ from pydantic import UUID4
 from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
-from sqlalchemy.sql import func, select
+from sqlalchemy.sql import func
 
 from .auth import hash_password
 from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
-from .database import Base
 from .models import (
     AmoAccount,
     ApiClient,
+    Base,
     Email,
     FirefoxAccount,
     MozillaFoundationContact,
@@ -45,15 +45,16 @@ logger = logging.getLogger(__name__)
 
 def ping(db: Session):
     try:
-        db.execute(select([func.now()])).first()
+        db.execute(text("SELECT 1"))
         return True
     except Exception as exc:  # pylint:disable = broad-exception-caught
         logger.exception(exc)
         return False
 
 
-def count_total_contacts(db: Session):
+def count_total_contacts(db: Session) -> int:
     """Return the total number of email records.
+
     Since the table is huge, we rely on the PostgreSQL internal
     catalog to retrieve an approximate size efficiently.
     This metadata is refreshed on `VACUUM` or `ANALYSIS` which
@@ -64,7 +65,10 @@ def count_total_contacts(db: Session):
         "FROM pg_class "
         f"where relname = '{Email.__tablename__}'"
     )
-    return int(db.execute(query).first()["estimate"])
+    result = db.execute(query).scalar()
+    if result is None:
+        return -1
+    return int(result)
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):
@@ -571,15 +575,15 @@ def get_active_api_client_ids(db: Session) -> List[str]:
     rows = (
         db.query(ApiClient)
         .filter(ApiClient.enabled.is_(True))
-        .options(load_only("client_id"))
-        .order_by("client_id")
+        .options(load_only(ApiClient.client_id))
+        .order_by(ApiClient.client_id)
         .all()
     )
     return [row.client_id for row in rows]
 
 
 def update_api_client_last_access(db: Session, api_client: ApiClient):
-    api_client.last_access = func.now()
+    api_client.last_access = func.now()  # pylint: disable=not-callable
     db.add(api_client)
 
 
