@@ -15,8 +15,10 @@ def test_delete_contact_by_primary_email(client, maximal_contact):
 
 
 def test_delete_contact_by_primary_email_with_basket_token_unset(
-    client, most_minimal_contact
+    client, dbsession, email_factory
 ):
-    primary_email = most_minimal_contact.email.primary_email
-    resp = client.delete(f"/ctms/{primary_email}")
+    email = email_factory()
+    dbsession.commit()
+
+    resp = client.delete(f"/ctms/{email.primary_email}")
     assert resp.status_code == 200
