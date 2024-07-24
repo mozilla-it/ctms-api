@@ -1,6 +1,5 @@
 """Unit tests for PUT /ctms/{email_id} (Create or update)"""
 
-import json
 from uuid import UUID, uuid4
 
 import pytest
@@ -123,31 +122,6 @@ def test_create_or_update_with_email_collision(put_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_put_create_no_trace(client, dbsession):
-    """PUT does not trace most new contacts"""
-    email_id = str(uuid4())
-    data = {
-        "email": {"email_id": email_id, "primary_email": "test+no-trace@example.com"}
-    }
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert "trace" not in caplogs[0]
-
-
-def test_put_replace_no_trace(client, minimal_contact):
-    """PUT does not trace most replaced contacts"""
-    email_id = minimal_contact.email.email_id
-    data = json.loads(minimal_contact.json())
-    data["email"]["first_name"] = "Jeff"
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert "trace" not in caplogs[0]
-
-
 def test_put_with_not_json_is_error(client, dbsession):
     """Calling PUT with a text body is a 422 validation error."""
     email_id = str(uuid4())
@@ -158,34 +132,3 @@ def test_put_with_not_json_is_error(client, dbsession):
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(caplogs) == 1
     assert "trace" not in caplogs[0]
-
-
-def test_put_create_with_trace(client, dbsession):
-    """PUT traces new contacts by email address"""
-    email_id = str(uuid4())
-    data = {
-        "email": {
-            "email_id": email_id,
-            "primary_email": "test+trace-me-mozilla-2021-05-13@example.com",
-        }
-    }
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert caplogs[0]["trace"] == "test+trace-me-mozilla-2021-05-13@example.com"
-    assert caplogs[0]["trace_json"] == data
-
-
-def test_put_replace_with_trace(client, minimal_contact):
-    """PUT traces replaced contacts by email"""
-    email_id = minimal_contact.email.email_id
-    data = json.loads(minimal_contact.json())
-    data["email"]["first_name"] = "Jeff"
-    data["email"]["primary_email"] = "test+trace-me-mozilla-2021-05-13@example.com"
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert caplogs[0]["trace"] == "test+trace-me-mozilla-2021-05-13@example.com"
-    assert caplogs[0]["trace_json"] == data

@@ -1,5 +1,4 @@
 import json
-import re
 from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
@@ -7,9 +6,6 @@ from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseSettings, PostgresDsn
-
-# If primary email matches, then add trace to logs
-re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
 
 
 @lru_cache()
