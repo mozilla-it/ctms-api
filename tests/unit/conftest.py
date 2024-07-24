@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
 from pytest_factoryboy import register
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms import metrics as metrics_module
@@ -124,7 +124,7 @@ def engine(pytestconfig):
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
     conn = engine.connect()
-    SessionLocal.configure(bind=conn)
+    SessionLocal.configure(bind=conn, join_transaction_mode="create_savepoint")
     yield conn
     conn.close()
 
@@ -133,26 +133,11 @@ def connection(engine):
 def dbsession(connection):
     """Return a database session that rolls back.
 
-    Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
+    Adapted from https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
     """
     transaction = connection.begin()
     session = ScopedSessionLocal()
-    nested = connection.begin_nested()
-
-    # If the application code calls session.commit, it will end the nested
-    # transaction. Need to start a new one when that happens.
-    @event.listens_for(session, "after_transaction_end")
-    def end_savepoint(*args):
-        nonlocal nested
-        if not nested.is_active:
-            nested = connection.begin_nested()
-
     yield session
-    # a nescessary addition to the example in the documentation linked above.
-    # Without this, the listener is not removed after each test ends and
-    # SQLAlchemy emits warnings:
-    #     `SAWarning: nested transaction already deassociated from connection`
-    event.remove(session, "after_transaction_end", end_savepoint)
     session.close()
     transaction.rollback()
 

@@ -120,15 +120,19 @@ def heartbeat(
         "up": alive,
         "time_ms": int(round(1000 * time.monotonic() - start_time)),
     }
+    if not alive:
+        return JSONResponse(content=result, status_code=503)
 
-    if alive and (appmetrics := get_metrics()):
-        # Report number of contacts in the database.
-        # Sending the metric in this heartbeat endpoint is simpler than reporting
-        # it in every write endpoint. Plus, performance does not matter much here.
-        total_contacts = count_total_contacts(db)
+    appmetrics = get_metrics()
+    # Report number of contacts in the database.
+    # Sending the metric in this heartbeat endpoint is simpler than reporting
+    # it in every write endpoint. Plus, performance does not matter much here
+    total_contacts = count_total_contacts(db)
+    contact_query_successful = total_contacts >= 0
+    if appmetrics and contact_query_successful:
         appmetrics["contacts"].set(total_contacts)
 
-    status_code = 200 if alive else 503
+    status_code = 200 if contact_query_successful else 503
     return JSONResponse(content=result, status_code=status_code)
 
 
