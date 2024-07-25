@@ -1,8 +1,11 @@
 """Tests for the private APIs that may be removed."""
 
+import json
 from typing import Any, Tuple
 
 import pytest
+
+from ctms.schemas.contact import ContactSchema
 
 API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
     ("/identities", {"basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"}),
@@ -84,15 +87,17 @@ def test_get_identities_by_alt_id(client, request, name, ident):
     assert resp.json() == [identity]
 
 
-def test_get_identities_by_two_alt_id_match(client, maximal_contact):
+def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
     """GET /identities, with two matching IDs, returns a one-item identities list."""
-    identity = identity_response_for_contact(maximal_contact)
-    sfdc_id = identity["sfdc_id"]
+    email = email_factory(fxa=True, sfdc_id="001A000001aABcDEFG")
+    sfdc_id = email.sfdc_id
     assert sfdc_id
-    fxa_email = identity["fxa_primary_email"]
+    fxa_email = email.fxa.primary_email
     assert fxa_email
+    dbsession.commit()
 
     resp = client.get(f"/identities?sfdc_id={sfdc_id}&fxa_primary_email={fxa_email}")
+    identity = json.loads(ContactSchema.from_email(email).as_identity_response().json())
     assert resp.status_code == 200
     assert resp.json() == [identity]
 
