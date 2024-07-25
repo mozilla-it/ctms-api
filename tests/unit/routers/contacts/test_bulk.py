@@ -6,7 +6,7 @@ from typing import Tuple
 
 import pytest
 
-from ctms.schemas import BulkRequestSchema, CTMSResponse
+from ctms.schemas import BulkRequestSchema, ContactSchema, CTMSResponse
 
 INVALID_BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
     (
@@ -80,23 +80,25 @@ def test_unauthorized_api_call_fails(anon_client, example_contact, method, path)
     assert resp.json() == {"detail": "Not authenticated"}
 
 
-def test_get_ctms_bulk_by_timerange(
-    client, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+def test_get_ctms_bulk_by_timerange(client, dbsession, email_factory):
+    first_email = email_factory()
+    target_email = email_factory(
+        newsletters=1,
+        waitlists=1,
+        mofo=True,
+        amo=True,
+        fxa=True,
     )
-    first_contact = sorted_list[0]
-    last_contact = sorted_list[-1]
+    last_email = email_factory()
+    dbsession.commit()
+
     after = BulkRequestSchema.compressor_for_bulk_encoded_details(
-        first_contact.email.email_id, first_contact.email.update_timestamp
+        first_email.email_id, first_email.update_timestamp
     )
     limit = 1
-    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start = first_email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())
-    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end = last_email.update_timestamp + timedelta(hours=12)
     end_time = urllib.parse.quote_plus(end.isoformat())
     url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
     resp = client.get(url)
@@ -109,8 +111,10 @@ def test_get_ctms_bulk_by_timerange(
     assert "next" in results
     assert "items" in results
     assert len(results["items"]) > 0
-    dict_contact_expected = sorted_list[1].model_dump()
+
+    dict_contact_expected = ContactSchema.from_email(target_email).model_dump()
     dict_contact_actual = CTMSResponse(**results["items"][0]).model_dump()
+
     # The response shows computed fields for retro-compat. Contact schema
     # does not have them.
     del dict_contact_actual["vpn_waitlist"]
@@ -125,23 +129,23 @@ def test_get_ctms_bulk_by_timerange(
     assert results["next"] is not None
 
 
-def test_get_ctms_bulk_by_timerange_no_results(
-    client, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
+def test_get_ctms_bulk_by_timerange_no_results(dbsession, client, email_factory):
+    emails = email_factory.create_batch(3)
+    dbsession.commit()
+
     sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+        emails,
+        key=lambda email: (email.update_timestamp, email.email_id),
     )
-    first_contact = sorted_list[0]
-    last_contact = sorted_list[-1]
+    first_email = sorted_list[0]
+    last_email = sorted_list[-1]
     after = BulkRequestSchema.compressor_for_bulk_encoded_details(
-        last_contact.email.email_id, last_contact.email.update_timestamp
+        last_email.email_id, last_email.update_timestamp
     )
     limit = 1
-    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start = first_email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())
-    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end = last_email.update_timestamp + timedelta(hours=12)
     end_time = urllib.parse.quote_plus(end.isoformat())
     url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
     resp = client.get(url)
