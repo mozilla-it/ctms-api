@@ -6,76 +6,76 @@ POETRY_RUN="poetry run"
 CURRENT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 BASE_DIR="$(dirname "$CURRENT_DIR")"
 
-bandit () {
-  $POETRY_RUN bandit -lll --recursive "${BASE_DIR}" --exclude "${BASE_DIR}/poetry.lock,${BASE_DIR}/.venv,${BASE_DIR}/.mypy,${BASE_DIR}/build"
-}
-black () {
-  $POETRY_RUN black ${check:+--check} "${BASE_DIR}"
-}
-detect_secrets () {
-  # Scan only files fixed into the repo, omit poetry.lock
-  FILES_TO_SCAN=`git ls-tree --full-tree -r --name-only HEAD | grep -v poetry.lock`
-  $POETRY_RUN detect-secrets-hook $FILES_TO_SCAN --baseline .secrets.baseline
-}
-isort () {
-  $POETRY_RUN isort ${check:+--check-only} "${BASE_DIR}"
-}
-pylint () {
-  $POETRY_RUN pylint "${BASE_DIR}/ctms" "${BASE_DIR}/tests"
-}
-mypy () {
-  $POETRY_RUN mypy "${BASE_DIR}/ctms"
-}
+
+BANDIT_CMD="$POETRY_RUN bandit -lll --recursive ${BASE_DIR} --exclude ${BASE_DIR}/poetry.lock,${BASE_DIR}/.venv,${BASE_DIR}/.mypy,${BASE_DIR}/build"
+
+FORMAT_CMD="$POETRY_RUN ruff format $BASE_DIR"
+
+# Scan only files fixed into the repo, omit poetry.lock
+DETECT_SECRETS_FILES="$(git ls-tree --full-tree -r --name-only HEAD | grep -v poetry.lock)"
+DETECT_SECRETS_CMD="$POETRY_RUN detect-secrets-hook $DETECT_SECRETS_FILES --baseline .secrets.baseline"
+
+LINT_CMD="$POETRY_RUN ruff check $BASE_DIR"
+
+MYPY_CMD="$POETRY_RUN mypy ${BASE_DIR}/ctms"
+
+
 all () {
-  echo "running black"
-  black
-  echo "running isort"
-  isort
+  echo "running format (check only)"
+  $FORMAT_CMD
+  echo "running lint"
+  $LINT_CMD
   echo "running mypy"
-  mypy
-  echo "running pylint"
-  pylint
+  $MYPY_CMD
   echo "running bandit"
-  bandit
+  $BANDIT_CMD
   echo "running detect_secrets"
-  detect_secrets
+  $DETECT_SECRETS_CMD
 }
 
 usage () {
-  echo "Usage: bin/lint.sh [OPTION]"
-  echo " run linting checks"
-  echo "Options":
+  echo "Usage: bin/lint.sh [subcommand] [--fix]"
+  echo " run linting checks, and optionally fix in place (if available)"
+  echo "Subcommand":
   echo "  bandit"
-  echo "  black [--fix]"
   echo "  detect-secrets"
-  echo "  isort [--fix]"
+  echo "  format"
+  echo "  lint"
   echo "  mypy"
-  echo "  pylint"
 }
 
-subcommand='';
-check="true"
-if [ -z $1 ]; then
+if [ -z "$1" ]; then
   all
 else
   subcommand=$1; shift
   case $subcommand in
-    "black" | "isort")
-      case $1 in
-        "--fix")
-          check=""
-        ;;
-      esac
-      case $subcommand in
-        "isort") isort;;
-        "black") black;;
-      esac
-    ;;
-
-    "pylint") pylint;;
-    "mypy") mypy;;
-    "bandit") bandit;;
-    "detect-secrets") detect_secrets;;
-    *) usage;;
+    "format")
+      if [ -n "$1" ] && [ "$1" != "--fix" ]; then
+        usage
+      else
+        check_flag="--check"
+        [ "$1" = "--fix" ] && check_flag=""
+        $FORMAT_CMD ${check_flag:-}
+      fi
+      ;;
+    "lint")
+      if [ -n "$1" ] && [ "$1" != "--fix" ]; then
+        usage
+      else
+        $LINT_CMD ${1:-}
+      fi
+      ;;
+    "mypy")
+      $MYPY_CMD
+      ;;
+    "bandit")
+      $BANDIT_CMD
+      ;;
+    "detect-secrets")
+      $DETECT_SECRETS_CMD
+      ;;
+    *)
+      usage
+      ;;
   esac
 fi
