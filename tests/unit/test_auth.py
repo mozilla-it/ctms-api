@@ -117,7 +117,6 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
         "loc": ["body", "grant_type"],
         "msg": f"String should match pattern '{pattern}'",
         "type": "string_pattern_mismatch",
-        "url": "https://errors.pydantic.dev/2.8/v/string_pattern_mismatch",
     }
 
 

@@ -240,7 +240,6 @@ def test_patch_cannot_set_email_to_null(client, email_factory):
                 "loc": ["body", "email", "primary_email"],
                 "msg": "Assertion failed, primary_email may not be None",
                 "type": "assertion_error",
-                "url": "https://errors.pydantic.dev/2.8/v/assertion_error",
             }
         ]
     }
