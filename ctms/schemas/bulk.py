@@ -55,7 +55,7 @@ class BulkRequestSchema(ComparableBase):
     after: Optional[str] = Field(default=None, validate_default=True)
 
     @field_validator("after", mode="before")
-    def after_must_be_base64_decodable(cls, value):  # pylint: disable=no-self-argument
+    def after_must_be_base64_decodable(cls, value):
         if value in BLANK_VALS:
             return None  # Default
         try:

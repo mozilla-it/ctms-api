@@ -24,7 +24,7 @@ def init_sentry():
         sentry_debug = False
 
     version_info = config.get_version()
-    # pylint: disable=abstract-class-instantiated
+
     sentry_sdk.init(
         release=version_info["version"],
         debug=sentry_debug,

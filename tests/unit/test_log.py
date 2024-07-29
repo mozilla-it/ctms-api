@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for logging helpers"""
+
 from unittest.mock import patch
 
 import pytest

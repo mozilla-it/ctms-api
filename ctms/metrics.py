@@ -74,13 +74,12 @@ METRICS = None
 
 
 def set_metrics(metrics: Any) -> None:
-    global METRICS  # pylint: disable=global-statement
+    global METRICS  # noqa: PLW0603
     METRICS = metrics
 
 
-# pylint: disable-next=unnecessary-lambda-assignment
 get_metrics_registry = lambda: METRICS_REGISTRY
-get_metrics = lambda: METRICS  # pylint: disable=unnecessary-lambda-assignment
+get_metrics = lambda: METRICS
 
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)

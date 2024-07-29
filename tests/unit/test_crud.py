@@ -1,6 +1,5 @@
 """Test database operations"""
 
-# pylint: disable=too-many-lines
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -83,7 +82,6 @@ def test_get_contact_by_email_id_found(dbsession, example_contact):
     email_id = example_contact.email.email_id
     contact = get_contact_by_email_id(dbsession, email_id)
     assert contact.email.email_id == email_id
-    # pylint: disable-next=not-an-iterable
     newsletter_names = [nl.name for nl in contact.newsletters]
     assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
     assert sorted(newsletter_names) == newsletter_names

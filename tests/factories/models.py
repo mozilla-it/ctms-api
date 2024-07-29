@@ -8,9 +8,6 @@ from ctms import models
 from ctms.database import ScopedSessionLocal
 
 
-# Pylint complains that we don't override `evaluate` in the class below, but
-# neither does the class that we're subclassing from, hence the disable.
-# pylint: disable-next=abstract-method
 class RelatedFactoryVariableList(factory.RelatedFactoryList):
     """allows overriding ``size`` during factory usage, e.g. ParentFactory(list_factory__size=4)
 

@@ -86,7 +86,7 @@ This can be used to access the API, such as:
         )
 
 
-def main(db, settings, test_args=None):
+def main(db, settings, test_args=None):  # noqa: PLR0912
     """
     Process the command line and create or update client credentials
 
