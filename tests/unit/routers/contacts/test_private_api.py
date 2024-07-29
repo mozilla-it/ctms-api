@@ -102,25 +102,26 @@ def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
     assert resp.json() == [identity]
 
 
-def test_get_identities_by_two_alt_id_mismatch_fails(
-    client, minimal_contact, example_contact
-):
+def test_get_identities_by_two_alt_id_mismatch_fails(client, dbsession, email_factory):
     """GET /identities with two non-matching IDs returns an empty identities list."""
-    email = minimal_contact.email.primary_email
-    amo_user_id = example_contact.amo.user_id
-    assert amo_user_id
+    email_1 = email_factory(amo=True)
+    email_2 = email_factory(amo=True)
+    dbsession.commit()
 
-    resp = client.get(f"/identities?primary_email={email}&amo_user_id={amo_user_id}")
+    resp = client.get(
+        f"/identities?primary_email={email_1.primary_email}&amo_user_id={email_2.amo.user_id}"
+    )
     assert resp.status_code == 200
     assert resp.json() == []
 
 
-def test_get_identities_by_two_alt_id_one_blank_fails(client, minimal_contact):
+def test_get_identities_by_two_alt_id_one_blank_fails(client, dbsession, email_factory):
     """GET /identities with an empty parameter returns an empty list."""
-    email = minimal_contact.email.primary_email
-    assert not minimal_contact.amo
+    email = email_factory()
+    dbsession.commit()
+    assert not email.amo
 
-    resp = client.get(f"/identities?primary_email={email}&amo_user_id=")
+    resp = client.get(f"/identities?primary_email={email.email_id}&amo_user_id=")
     assert resp.status_code == 200
     assert resp.json() == []
 
