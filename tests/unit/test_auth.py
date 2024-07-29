@@ -2,8 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 
+import jwt
 import pytest
-from jose import jwt
 from requests.auth import HTTPBasicAuth
 from structlog.testing import capture_logs
 
@@ -40,8 +40,7 @@ def test_post_token_header(anon_client, test_token_settings, client_id_and_secre
     assert content["token_type"] == "bearer"
     assert content["expires_in"] == 5 * 60
     payload = jwt.decode(
-        content["access_token"],
-        test_token_settings["secret_key"],
+        content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"]
     )
     assert payload["sub"] == f"api_client:{client_id}"
     expected_expires = (
@@ -66,8 +65,7 @@ def test_post_token_form_data(anon_client, test_token_settings, client_id_and_se
     content = resp.json()
     assert content["token_type"] == "bearer"
     payload = jwt.decode(
-        content["access_token"],
-        test_token_settings["secret_key"],
+        content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"]
     )
     assert payload["sub"] == f"api_client:{client_id}"
     expected_expires = (
@@ -179,7 +177,7 @@ def test_get_ctms_with_token(
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
     )
-    token_headers = jwt.get_unverified_headers(token)
+    token_headers = jwt.get_unverified_header(token)
     assert token_headers == {
         "alg": "HS256",
         "typ": "JWT",

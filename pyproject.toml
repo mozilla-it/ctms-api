@@ -20,7 +20,6 @@ uvicorn = {extras = ["standard"], version = "^0.30.3"}
 SQLAlchemy = "^2.0.31"
 alembic = "^1.13.2"
 python-multipart = "^0.0.9"
-python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 python-dateutil = "^2.9.0"
 dockerflow = {extras = ["fastapi"], version = "^2024.4.2"}
 sentry-sdk = "^2.11.0"
@@ -32,6 +31,7 @@ psycopg2 = "^2.9.9"
 google-auth = "^2.32.0"
 pydantic-settings = "^2.3.4"
 argon2-cffi = "^23.1.0"
+pyjwt = "^2.8.0"
 
 
 [tool.poetry.group.dev.dependencies]

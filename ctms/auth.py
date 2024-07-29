@@ -12,17 +12,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 import argon2
+import jwt
 from fastapi.exceptions import HTTPException
 from fastapi.param_functions import Form
 from fastapi.security.oauth2 import OAuth2, OAuthFlowsModel
 from fastapi.security.utils import get_authorization_scheme_param
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
-
-with warnings.catch_warnings():
-    # TODO: remove when fixed: https://github.com/mpdavis/python-jose/issues/208
-    warnings.filterwarnings("ignore", message="int_from_bytes is deprecated")
-    from jose import JWTError, jwt
 
 pwd_context = argon2.PasswordHasher()
 
@@ -60,7 +56,7 @@ def get_subject_from_token(token: str, secret_key: str):
     """
     try:
         payload = jwt.decode(token, secret_key, algorithms=["HS256"])
-    except JWTError:
+    except jwt.InvalidTokenError:
         return None, None
     sub = payload["sub"]
     if ":" not in sub:
