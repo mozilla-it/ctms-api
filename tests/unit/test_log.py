@@ -55,11 +55,11 @@ def test_token_request_log(anon_client, client_id_and_secret):
     """A token request log has omitted headers."""
     client_id, client_secret = client_id_and_secret
     with capture_logs() as cap_logs:
+        anon_client.cookies.set("csrftoken", "0WzT-base64-string")
         resp = anon_client.post(
             "/token",
             data={"grant_type": "client_credentials"},
             auth=HTTPBasicAuth(client_id, client_secret),
-            cookies={"csrftoken": "0WzT-base64-string"},
         )
     assert resp.status_code == 200
     assert len(cap_logs) == 1
