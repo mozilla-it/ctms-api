@@ -11,11 +11,11 @@ import warnings
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
+import argon2
 from fastapi.exceptions import HTTPException
 from fastapi.param_functions import Form
 from fastapi.security.oauth2 import OAuth2, OAuthFlowsModel
 from fastapi.security.utils import get_authorization_scheme_param
-from passlib.context import CryptContext
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
 
@@ -24,18 +24,17 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore", message="int_from_bytes is deprecated")
     from jose import JWTError, jwt
 
-# Argon2 is the winner of the 2015 password hashing competion.
-# It is supported by passlib with the recommended argon2_cffi library.
-pwd_context = CryptContext(schemes=["argon2"], deprecated=["auto"])
+pwd_context = argon2.PasswordHasher()
 
 
-def verify_password(plain_password, hashed_password):
-    """Verify the password, using a constant time equality check."""
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password, hashed_password) -> bool:
+    try:
+        return pwd_context.verify(hashed_password, plain_password)
+    except argon2.exceptions.VerifyMismatchError:
+        return False
 
 
 def hash_password(plain_password):
-    """Hash the password, using the pre-configured CryptContext."""
     return pwd_context.hash(plain_password)
 
 

@@ -1331,26 +1331,6 @@ files = [
 ]
 
 [[package]]
-name = "passlib"
-version = "1.7.4"
-description = "comprehensive password hashing framework supporting over 30 schemes"
-optional = false
-python-versions = "*"
-files = [
-    {file = "passlib-1.7.4-py2.py3-none-any.whl", hash = "sha256:aa6bca462b8d8bda89c70b382f0c298a20b5560af6cbfa2dce410c0a2fb669f1"},
-    {file = "passlib-1.7.4.tar.gz", hash = "sha256:defd50f72b65c5402ab2c573830a6978e5f202ad0d984793c8dde2c4152ebe04"},
-]
-
-[package.dependencies]
-argon2-cffi = {version = ">=18.2.0", optional = true, markers = "extra == \"argon2\""}
-
-[package.extras]
-argon2 = ["argon2-cffi (>=18.2.0)"]
-bcrypt = ["bcrypt (>=3.1.0)"]
-build-docs = ["cloud-sptheme (>=1.10.1)", "sphinx (>=1.6)", "sphinxcontrib-fulltoc (>=1.2.0)"]
-totp = ["cryptography"]
-
-[[package]]
 name = "pbr"
 version = "6.0.0"
 description = "Python Build Reasonableness"
@@ -2568,4 +2548,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12.1"
-content-hash = "e51302f9def969e6ccadaec1eb136fd2ae0c35b3e49eb71389845376668cb1ce"
+content-hash = "1aae6eb5d599b20cba5bcdf10c1341414d77cccb86d66d7bad358645274eafc8"
