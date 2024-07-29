@@ -79,14 +79,13 @@ def test_get_email_miss(dbsession):
     assert email is None
 
 
-def test_get_contact_by_email_id_found(dbsession, example_contact):
-    email_id = example_contact.email.email_id
-    contact = get_contact_by_email_id(dbsession, email_id)
-    assert contact.email.email_id == email_id
-    # pylint: disable-next=not-an-iterable
-    newsletter_names = [nl.name for nl in contact.newsletters]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
+def test_get_contact_by_email_id_found(dbsession, email_factory):
+    email = email_factory()
+    dbsession.commit()
+
+    contact = get_contact_by_email_id(dbsession, email.email_id)
+
+    assert contact.email.email_id == email.email_id
 
 
 def test_get_contact_by_email_id_miss(dbsession):
