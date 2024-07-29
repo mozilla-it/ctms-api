@@ -182,7 +182,7 @@ def test_patch_relay_waitlist_legacy_reports_metric(client, email_factory, regis
 
     patch_data = {"waitlists": [{"name": "relay", "fields": {"geo": "fr"}}]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
@@ -193,7 +193,7 @@ def test_patch_relay_waitlist_legacy_reports_metric(client, email_factory, regis
         "waitlists": [{"name": "relay", "fields": {"geo": "fr"}}],
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
@@ -201,7 +201,7 @@ def test_patch_relay_waitlist_legacy_reports_metric(client, email_factory, regis
     # Metric is sent only if legacy attributes are sent.
     patch_data = {"relay_waitlist": {"geo": "fr"}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 1

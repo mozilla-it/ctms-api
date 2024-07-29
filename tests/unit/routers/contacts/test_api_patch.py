@@ -164,7 +164,7 @@ def test_patch_to_default(client, email_factory, group_name, key):
     assert existing_value != default_value
 
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -199,7 +199,7 @@ def test_patch_cannot_set_timestamps(client, email_factory):
         },
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -292,7 +292,7 @@ def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_fa
     patch_data["relay_waitlist"] = {"geo": "XX"}
 
     email_id = existing_contact.email.email_id
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 409
     assert resp.json() == {
         "detail": (
@@ -308,7 +308,7 @@ def test_patch_to_subscribe(client, email_factory):
 
     patch_data = {"newsletters": [{"name": "zzz-newsletter"}]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -333,7 +333,7 @@ def test_patch_to_update_subscription(client, newsletter_factory):
     patch_data = {
         "newsletters": [{"name": existing_newsletter.name, "format": "H", "lang": "XX"}]
     }
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
+    resp = client.patch(f"/ctms/{email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == 1
@@ -368,7 +368,7 @@ def test_patch_to_unsubscribe(client, email_factory, newsletter_factory):
         ]
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -400,7 +400,7 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, email_factory):
         ]
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -414,7 +414,7 @@ def test_patch_unsubscribe_all(client, email_factory):
 
     patch_data = {"newsletters": "UNSUBSCRIBE"}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -429,7 +429,7 @@ def test_patch_to_delete_group(client, email_factory, group_name):
 
     patch_data = {group_name: "DELETE"}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -449,7 +449,7 @@ def test_patch_to_delete_deleted_group(client, email_factory):
 
     patch_data = {"mofo": "DELETE"}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
 
     assert resp.status_code == 200
@@ -464,7 +464,7 @@ def test_patch_will_validate_waitlist_fields(client, email_factory):
 
     patch_data = {"waitlists": [{"name": "future-tech", "source": 42}]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 422
     details = resp.json()
@@ -483,7 +483,7 @@ def test_patch_to_add_a_waitlist(client, email_factory):
 
     patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -504,7 +504,7 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, email_factory):
 
     patch_data = {"waitlists": [{"name": "future-tech", "subscribed": False}]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -523,7 +523,7 @@ def test_patch_to_update_a_waitlist(client, email_factory, waitlist_factory):
     )
     patch_data = {"waitlists": [patched_waitlist]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -543,7 +543,7 @@ def test_patch_to_remove_a_waitlist(client, email_factory, waitlist_factory):
         ]
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -559,7 +559,7 @@ def test_patch_to_remove_all_waitlists(client, email_factory):
 
     patch_data = {"waitlists": "UNSUBSCRIBE"}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
 
     assert resp.status_code == 200
@@ -573,7 +573,7 @@ def test_patch_preserves_waitlists_if_omitted(client, email_factory):
 
     patch_data = {"email": {"first_name": "Jeff"}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
 
     assert resp.status_code == 200
@@ -586,7 +586,7 @@ def test_patch_vpn_waitlist_legacy_add(client, email_factory):
 
     patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -616,7 +616,7 @@ def test_patch_vpn_waitlist_legacy_delete(client, email_factory, waitlist_factor
 
     patch_data = {"vpn_waitlist": "DELETE"}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
 
     assert resp.status_code == 200
@@ -636,7 +636,7 @@ def test_patch_vpn_waitlist_legacy_delete_default(
 
     patch_data = {"vpn_waitlist": {"geo": None, "platform": None}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -652,7 +652,7 @@ def test_patch_vpn_waitlist_legacy_update(client, waitlist_factory):
 
     patch_data = {"vpn_waitlist": {"geo": "it"}}
     resp = client.patch(
-        f"/ctms/{vpn_waitlist.email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{vpn_waitlist.email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -678,7 +678,7 @@ def test_patch_vpn_waitlist_legacy_update_full(client, waitlist_factory):
 
     patch_data = {"vpn_waitlist": {"geo": "it", "platform": "linux"}}
     resp = client.patch(
-        f"/ctms/{vpn_waitlist.email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{vpn_waitlist.email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -700,7 +700,7 @@ def test_patch_relay_waitlist_legacy_add(client, email_factory):
 
     patch_data = {"relay_waitlist": {"geo": "fr"}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
 
     assert resp.status_code == 200
@@ -726,7 +726,7 @@ def test_patch_relay_waitlist_legacy_delete(client, email_factory, waitlist_fact
 
     patch_data = {"relay_waitlist": "DELETE"}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -743,7 +743,7 @@ def test_patch_relay_waitlist_legacy_delete_default(
 
     patch_data = {"relay_waitlist": {"geo": None}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -759,7 +759,7 @@ def test_patch_relay_waitlist_legacy_update(client, waitlist_factory):
 
     patch_data = {"relay_waitlist": {"geo": "it"}}
     resp = client.patch(
-        f"/ctms/{relay_waitlist.email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{relay_waitlist.email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -803,14 +803,14 @@ def test_patch_relay_waitlist_legacy_update_all(
         ]
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
 
     patch_data = {"relay_waitlist": {"geo": "it"}}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -846,7 +846,7 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
         "newsletters": [{"name": "relay-vpn-bundle-waitlist"}],
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
     actual = resp.json()
@@ -872,7 +872,7 @@ def test_unsubscribe_from_all_newsletters_removes_all_waitlists(client, email_fa
         "newsletters": "UNSUBSCRIBE",
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     current = resp.json()
     assert not any(wl["subscribed"] for wl in current["waitlists"])
@@ -894,7 +894,7 @@ def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
         ]
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
 
     current = resp.json()
@@ -912,7 +912,7 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
         "newsletters": [{"name": "relay-vpn-bundle-waitlist", "subscribed": False}]
     }
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 200
 
@@ -928,6 +928,6 @@ def test_cannot_subscribe_to_relay_newsletter_without_relay_country(
 
     patch_data = {"newsletters": [{"name": "relay-phone-waitlist"}]}
     resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, allow_redirects=True
+        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
     )
     assert resp.status_code == 422
