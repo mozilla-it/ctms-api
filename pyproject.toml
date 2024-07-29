@@ -12,8 +12,8 @@ authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
 python = "^3.12.1"
-fastapi = "^0.108.0"
-starlette = "^0.32.0"
+fastapi = "^0.111.0"
+starlette = "^0.37.2"
 requests = "^2.32.3"
 pydantic = {extras = ["email"], version = "^2.8.2"}
 uvicorn = {extras = ["standard"], version = "^0.30.3"}
