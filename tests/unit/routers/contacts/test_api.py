@@ -151,8 +151,8 @@ def _compare_written_contacts(
 ):
     fields_not_written = new_default_fields or set()
 
-    saved_contact = ContactInSchema(**contact.dict())
-    sample = ContactInSchema(**sample.dict())
+    saved_contact = ContactInSchema(**contact.model_dump())
+    sample = ContactInSchema(**sample.model_dump())
 
     if not ids_should_be_identical:
         assert saved_contact.email.email_id != sample.email.email_id

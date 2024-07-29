@@ -3,9 +3,12 @@ from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseSettings, PostgresDsn
+from pydantic import AfterValidator, Field, PostgresDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PostgresDsnStr = Annotated[PostgresDsn, AfterValidator(str)]
 
 
 @lru_cache()
@@ -31,7 +34,7 @@ class LogLevel(str, Enum):
 
 
 class Settings(BaseSettings):
-    db_url: PostgresDsn
+    db_url: PostgresDsnStr
     db_pool_size: int = 5  # Default value from sqlalchemy
     db_max_overflow: int = 10  # Default value from sqlalchemy
     db_pool_timeout_in_seconds: int = 30  # Default value from sqlalchemy
@@ -44,18 +47,10 @@ class Settings(BaseSettings):
     logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
-    fastapi_env: Optional[str] = None
-    host: str = "0.0.0.0"
-    port: int = 8000
+    fastapi_env: Optional[str] = Field(default=None, alias="FASTAPI_ENV")
+    host: str = Field(default="0.0.0.0", alias="HOST")
+    port: int = Field(default=8000, alias="PORT")
 
     prometheus_pushgateway_url: Optional[str] = None
 
-    class Config:
-        # The attributes of this class extract from the Env Var's that are `(prefix)(attr_name)` within the environment
-        env_prefix = "ctms_"
-
-        fields = {
-            "fastapi_env": {"env": "fastapi_env"},
-            "host": {"env": "host"},
-            "port": {"env": "port"},
-        }
+    model_config = SettingsConfigDict(env_prefix="ctms_")

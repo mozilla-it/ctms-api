@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from .base import ComparableBase
 
@@ -19,9 +19,7 @@ class MozillaFoundationBase(ComparableBase):
     mofo_relevant: bool = Field(
         default=False, description="Mozilla Foundation is tracking this email"
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 MozillaFoundationSchema = MozillaFoundationBase

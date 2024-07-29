@@ -4,6 +4,7 @@ import os.path
 from datetime import datetime, timezone
 from time import mktime
 from typing import Callable, Optional
+from urllib.parse import urlparse
 from uuid import UUID
 
 import pytest
@@ -60,9 +61,9 @@ SAMPLE_CONTACT_PARAMS = [
 def _gather_examples(schema_class) -> dict[str, str]:
     """Gather the examples from a schema definition"""
     examples = {}
-    for key, props in schema_class.schema()["properties"].items():
-        if "example" in props:
-            examples[key] = props["example"]
+    for key, props in schema_class.model_json_schema()["properties"].items():
+        if "examples" in props:
+            examples[key] = props["examples"][0]
     return examples
 
 
@@ -77,22 +78,25 @@ def engine(pytestconfig):
     """Return a SQLAlchemy engine for a fresh test database."""
 
     orig_db_url = Settings().db_url
-    if orig_db_url.path.endswith("test"):
+    parsed_db_url = urlparse(orig_db_url)
+    if parsed_db_url.path.endswith("test"):
         # The database ends with test, assume the caller wanted us to use it
         test_db_url = orig_db_url
         drop_db = False
         assert database_exists(test_db_url)
     else:
         # Assume the regular database was passed, create a new test database
-        test_db_url = PostgresDsn.build(
-            scheme=orig_db_url.scheme,
-            user=orig_db_url.user,
-            password=orig_db_url.password,
-            host=orig_db_url.host,
-            port=orig_db_url.port,
-            path=orig_db_url.path + "_test",
-            query=orig_db_url.query,
-            fragment=orig_db_url.fragment,
+        test_db_url = str(
+            PostgresDsn.build(  # pylint: disable=no-member
+                scheme=parsed_db_url.scheme,
+                username=parsed_db_url.username,
+                password=parsed_db_url.password,
+                host=parsed_db_url.hostname,
+                port=parsed_db_url.port,
+                path=parsed_db_url.path + "_test",
+                query=parsed_db_url.query,
+                fragment=parsed_db_url.fragment,
+            )
         )
         drop_db = True
         # (Re)create the test database
@@ -154,7 +158,7 @@ def create_full_contact(db, contact: ContactSchema):
     instead of a `ContactInSchema` as input, and will save the specified
     timestamps.
     """
-    contact_input = ContactInSchema(**contact.dict())
+    contact_input = ContactInSchema(**contact.model_dump())
     create_contact(db, contact.email.email_id, contact_input, get_metrics())
     db.flush()
 
@@ -411,10 +415,14 @@ def example_contact_data() -> ContactSchema:
         fxa=schemas.FirefoxAccountsSchema(
             **_gather_examples(schemas.FirefoxAccountsSchema)
         ),
-        newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
+        newsletters=ContactSchema.model_json_schema()["properties"]["newsletters"][
+            "examples"
+        ][0],
         waitlists=[
             schemas.WaitlistTableSchema(**example)
-            for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
+            for example in ContactSchema.model_json_schema()["properties"]["waitlists"][
+                "examples"
+            ][0]
         ],
     )
 
@@ -599,9 +607,9 @@ def post_contact(client, dbsession, request):
     ):
         if query_fields is None:
             query_fields = {"primary_email": contact_fixture.email.primary_email}
-        sample = contact_fixture.copy(deep=True)
+        sample = contact_fixture.model_copy(deep=True)
         sample = modifier(sample)
-        resp = client.post("/ctms", content=sample.json())
+        resp = client.post("/ctms", content=sample.model_dump_json())
         assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
@@ -617,7 +625,7 @@ def post_contact(client, dbsession, request):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code in {200, 201}:
+            if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written:
                     if result_list:
                         assert (
@@ -685,9 +693,11 @@ def put_contact(client, dbsession, request):
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
         new_default_fields = new_default_fields or set()
-        sample = contact.copy(deep=True)
+        sample = contact.model_copy(deep=True)
         sample = modifier(sample)
-        resp = client.put(f"/ctms/{sample.email.email_id}", content=sample.json())
+        resp = client.put(
+            f"/ctms/{sample.email.email_id}", content=sample.model_dump_json()
+        )
         assert resp.status_code == code, resp.text
         saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
@@ -701,7 +711,7 @@ def put_contact(client, dbsession, request):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code in {200, 201}:
+            if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written or field in new_default_fields:
                     assert results is None or (
                         isinstance(results, list) and len(results) == 0

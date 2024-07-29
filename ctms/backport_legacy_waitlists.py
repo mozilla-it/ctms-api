@@ -15,7 +15,9 @@ def format_legacy_vpn_relay_waitlist_input(
     Mimic a recent payload format from the legacy `vpn_waitlist` and `relay_waitlist` fields.
     """
     # Use a dict to handle all the different schemas for create, create_or_update, or update
-    formatted = deepcopy(input_data) if schema_class == dict else input_data.dict()
+    formatted = (
+        deepcopy(input_data) if schema_class == dict else input_data.model_dump()
+    )
 
     if len(formatted.get("waitlists", [])) > 0:
         # We are dealing with the current format. Nothing to do.
@@ -136,6 +138,6 @@ def format_legacy_vpn_relay_waitlist_input(
                         )
 
     if to_update:
-        formatted["waitlists"] = [wl.dict() for wl in to_update]
+        formatted["waitlists"] = [wl.model_dump() for wl in to_update]
 
     return formatted if schema_class == dict else schema_class(**formatted)

@@ -5,7 +5,7 @@ from uuid import uuid4
 import backoff
 import pytest
 import requests
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from tests.conftest import FuzzyAssert
 
@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     # We initialize CTMS api client id/secret in `ctms-db-init.sql`
     ctms_client_id: str = "id_integration-test"
     ctms_client_secret: str
-
-    class Config:
-        env_file = os.path.join(TEST_FOLDER, "basket.env")
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(TEST_FOLDER, "basket.env"), extra="ignore"
+    )
 
 
 settings = Settings()

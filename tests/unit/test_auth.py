@@ -113,9 +113,11 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
     pattern = "^(client_credentials|refresh_token)$"
     assert resp.json()["detail"][0] == {
         "ctx": {"pattern": pattern},
+        "input": "password",
         "loc": ["body", "grant_type"],
-        "msg": f'string does not match regex "{pattern}"',
-        "type": "value_error.str.regex",
+        "msg": f"String should match pattern '{pattern}'",
+        "type": "string_pattern_mismatch",
+        "url": "https://errors.pydantic.dev/2.8/v/string_pattern_mismatch",
     }
 
 
@@ -215,7 +217,7 @@ def test_get_ctms_with_invalid_token_fails(
     client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"},
-        secret_key="secret_key_from_other_deploy",
+        secret_key="secret_key_from_other_deploy",  # pragma: allowlist secret
         expires_delta=test_token_settings["expires_delta"],
     )
     with capture_logs() as caplog:
