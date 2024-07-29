@@ -9,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 
-from ctms.config import re_trace_email
 from ctms.crud import (
     create_contact,
     create_or_update_contact,
@@ -162,13 +161,6 @@ def read_ctms_by_any_id(
         )
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_any_id(db, **ids)
-    traced = set()
-    for contact in contacts:
-        email = contact.email.primary_email
-        if re_trace_email.match(email):
-            traced.add(email)
-    if traced:
-        request.state.log_context["trace"] = ",".join(sorted(traced))
     return [CTMSResponse(**contact.model_dump()) for contact in contacts]
 
 
@@ -189,9 +181,6 @@ def read_ctms_by_email_id(
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     resp = get_ctms_response_or_404(db, email_id)
-    email = resp.email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
     return resp
 
 
@@ -219,10 +208,6 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
-        email = existing.email.primary_email
-        if re_trace_email.match(email):
-            request.state.log_context["trace"] = email
-            request.state.log_context["trace_json"] = content_json
         if ContactInSchema(**existing.model_dump()).idempotent_equal(contact):
             response.headers["Location"] = f"/ctms/{email_id}"
             response.status_code = 200
@@ -239,10 +224,6 @@ def create_ctms_contact(
     response.headers["Location"] = f"/ctms/{email_id}"
     response.status_code = 201
     resp_data = get_ctms_response_or_404(db=db, email_id=email_id)
-    email = resp_data.email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
-        request.state.log_context["trace_json"] = content_json
     return resp_data
 
 
@@ -273,10 +254,7 @@ def create_or_update_ctms_contact(
             )
     else:
         contact.email.email_id = email_id
-    email = contact.email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
-        request.state.log_context["trace_json"] = content_json
+
     try:
         create_or_update_contact(db, email_id, contact, get_metrics())
         db.commit()
@@ -324,10 +302,7 @@ def partial_update_ctms_contact(
     current_email = get_email_or_404(db, email_id)
     update_data = contact.model_dump(exclude_unset=True)
     update_contact(db, current_email, update_data, get_metrics())
-    email = current_email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
-        request.state.log_context["trace_json"] = content_json
+
     try:
         db.commit()
     except Exception as e:  # pylint:disable = W0703

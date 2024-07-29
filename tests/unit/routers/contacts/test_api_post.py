@@ -120,16 +120,6 @@ def test_create_basic_with_email_collision(post_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_create_without_trace(client):
-    """Most contacts are not traced."""
-    data = {"email": {"primary_email": "test+no-trace@example.com"}}
-    with capture_logs() as cap_logs:
-        resp = client.post("/ctms", json=data)
-    assert resp.status_code == 201
-    assert len(cap_logs) == 1
-    assert "trace" not in cap_logs[0]
-
-
 def test_create_with_non_json_is_error(client):
     """When non-JSON is posted /ctms, a 422 is returned"""
     data = b"this is not JSON"
@@ -139,25 +129,3 @@ def test_create_with_non_json_is_error(client):
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(cap_logs) == 1
     assert "trace" not in cap_logs[0]
-
-
-def test_create_with_trace(client, status_code=201):
-    """A contact is traced by email."""
-    data = {
-        "email": {
-            "email_id": "7eec2254-fba7-485b-a921-6308c929dd25",
-            "primary_email": "test+trace-me-mozilla-May-2021@example.com",
-        }
-    }
-    with capture_logs() as cap_logs:
-        resp = client.post("/ctms", json=data)
-    assert resp.status_code == status_code
-    assert len(cap_logs) == 1
-    assert cap_logs[0]["trace"] == "test+trace-me-mozilla-May-2021@example.com"
-    assert cap_logs[0]["trace_json"] == data
-
-
-def test_recreate_with_trace(client):
-    """A idempotent re-create is traced by email."""
-    test_create_with_trace(client)
-    test_create_with_trace(client, 200)

@@ -78,13 +78,6 @@ Some headers contain security sensitive information, such as client credentials 
 access token. These values are replaced by ``[OMITTED]``. Similar replacement
 removes emails from the query string (when parsed).
 
-If tracing by email is desired, a tester can trace their activity in the system
-by adding the text ``+trace_me_mozilla_`` to their email, such as
-``test+trace_me_mozilla_20211207@example.com``. This works with the
-[plus-sign trick](https://gmail.googleblog.com/2008/03/2-hidden-ways-to-get-more-from-your.html)
-in Gmail and other email providers to create a unique email address.
-This causes the email to appear in logs, along with further request context
-for some endpoints.
 
 ### API Logging Fields
 
@@ -114,10 +107,6 @@ traceback) are logged at ``ERROR`` level (Severity 3). Some of the fields are:
 * ``token_creds_from``: For ``/token``, if the credentials were read from the
   ``Authentication`` header ("header") or from the form-encoded body ("form")
 * ``token_fail``: For ``/token``, why the token request failed
-* ``trace_json``: The request payload if tracing via the email address is
-  requested.
-* ``trace``: An email matching the trace pattern, such as
-  ``test+trace_me_mozilla_2021@example.com``
 
 ## Metrics
 

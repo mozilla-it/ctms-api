@@ -1,5 +1,4 @@
 import json
-import re
 from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
@@ -8,9 +7,6 @@ from typing import Annotated, Optional
 
 from pydantic import AfterValidator, Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# If primary email matches, then add trace to logs
-re_trace_email = re.compile(r".*\+trace-me-mozilla-.*@.*")
 
 PostgresDsnStr = Annotated[PostgresDsn, AfterValidator(str)]
 
