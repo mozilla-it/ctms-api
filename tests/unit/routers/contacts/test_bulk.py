@@ -2,78 +2,48 @@
 
 import urllib.parse
 from datetime import timedelta
-from typing import Tuple
 
 import pytest
 
 from ctms.schemas import BulkRequestSchema, ContactSchema, CTMSResponse
 
-INVALID_BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
-    (
-        "GET",
+
+@pytest.mark.parametrize(
+    "path",
+    [
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=-11&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=1001&after=&mofo_relevant=",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=-3&after=&mofo_relevant=",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&after=null",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&limit=null",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&after=hello",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&mofo_relevant=nah",
-    ),
+    ],
 )
-BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
-    ),
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=100&after=&mofo_relevant=",
-    ),
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00",
-    ),
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&mofo_relevant=yes",
-    ),
-)
+def test_authorized_bulk_call_errs_on_validation(client, path):
+    """Calling the API with invlaid query parameters fails"""
 
-
-@pytest.mark.parametrize("method,path", INVALID_BULK_TEST_CASES)
-def test_authorized_bulk_call_errs_on_validation(client, example_contact, method, path):
-    """Calling the API without credentials fails."""
     resp = client.get(path)
     assert resp.status_code == 422
 
 
-@pytest.mark.parametrize("method,path", BULK_TEST_CASES)
-def test_authorized_bulk_call_succeeds(client, example_contact, method, path):
-    """Calling the API without credentials fails."""
+BULK_TEST_CASES = (
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=100&after=&mofo_relevant=",
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00",
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&mofo_relevant=yes",
+)
+
+
+@pytest.mark.parametrize("path", BULK_TEST_CASES)
+def test_authorized_bulk_call_succeeds(client, path):
+    """Calling the API with credentials succeeds."""
     resp = client.get(path)
     assert resp.status_code == 200
 
 
-@pytest.mark.parametrize("method,path", BULK_TEST_CASES)
-def test_unauthorized_api_call_fails(anon_client, example_contact, method, path):
+@pytest.mark.parametrize("path", BULK_TEST_CASES)
+def test_unauthorized_api_call_fails(anon_client, path):
     """Calling the API without credentials fails."""
     resp = anon_client.get(path)
     assert resp.status_code == 401
