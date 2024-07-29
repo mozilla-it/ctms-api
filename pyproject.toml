@@ -24,7 +24,7 @@ python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 passlib = {extras = ["argon2"], version = "^1.7.4"}
 python-dateutil = "^2.9.0"
 dockerflow = "^2022.8.0"
-sentry-sdk = "^2.10.0"
+sentry-sdk = "^2.11.0"
 lxml = "^5.2.2"
 prometheus-client = "0.20.0"
 structlog = "^24.4.0"
@@ -34,7 +34,7 @@ google-auth = "^2.32.0"
 
 
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^3.7.1"
+pre-commit = "^3.8.0"
 sphinx = "^7.4.7"
 pytest = "^8.2.0"
 isort = {extras = ["pyproject"], version = "^5.13.2"}
