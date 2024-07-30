@@ -516,8 +516,8 @@ def test_patch_to_update_a_waitlist(client, email_factory, waitlist_factory):
     waitlist = waitlist_factory(fields={"geo": "fr"}, email=email)
 
     patched_waitlist = (
-        WaitlistInSchema.from_orm(waitlist)
-        .copy(update={"fields": {"geo": "ca"}})
+        WaitlistInSchema.model_validate(waitlist)
+        .model_copy(update={"fields": {"geo": "ca"}})
         .model_dump()
     )
     patch_data = {"waitlists": [patched_waitlist]}
