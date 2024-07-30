@@ -1,4 +1,5 @@
 import time
+from contextlib import asynccontextmanager
 
 import sentry_sdk
 import structlog
@@ -32,20 +33,23 @@ sentry_sdk.init(
 ignore_logger("uvicorn.error")
 ignore_logger("ctms.web")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    set_metrics(init_metrics(METRICS_REGISTRY))
+    init_metrics_labels(SessionLocal(), app, get_metrics())
+    yield
+
+
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
     version=get_version()["version"],
+    lifespan=lifespan,
 )
 app.include_router(dockerflow_router)
 app.include_router(platform.router)
 app.include_router(contacts.router)
-
-
-@app.on_event("startup")
-def startup_event():  # pragma: no cover
-    set_metrics(init_metrics(METRICS_REGISTRY))
-    init_metrics_labels(SessionLocal(), app, get_metrics())
 
 
 @app.middleware("http")
