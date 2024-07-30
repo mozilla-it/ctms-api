@@ -4,6 +4,7 @@ from secrets import token_hex
 
 import structlog
 import uvicorn
+from dockerflow.fastapi import router as dockerflow_router
 from fastapi import FastAPI, Request
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
@@ -26,6 +27,7 @@ app = FastAPI(
     description="CTMS API (work in progress)",
     version=get_version()["version"],
 )
+app.include_router(dockerflow_router)
 app.include_router(platform.router)
 app.include_router(contacts.router)
 

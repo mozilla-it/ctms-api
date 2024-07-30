@@ -23,6 +23,16 @@ def mock_db():
     del app.dependency_overrides[get_db]
 
 
+@pytest.fixture
+def set_app_root_dir():
+    before = getattr(app.state, "APP_DIR", None)
+    root_dir = Path(__file__).parents[3]
+    app.state.APP_DIR = root_dir
+    yield
+    if before is not None:
+        app.state.APP_DIR = before
+
+
 def test_read_root(anon_client):
     """The site root redirects to the Swagger docs"""
     with capture_logs() as caplogs:
@@ -35,7 +45,7 @@ def test_read_root(anon_client):
     assert len(caplogs) == 2
 
 
-def test_read_version(anon_client):
+def test_read_version(anon_client, set_app_root_dir):
     """__version__ returns the contents of version.json."""
     here = Path(__file__)
     root_dir = here.parents[3]
@@ -87,17 +97,6 @@ def test_read_health(anon_client):
     with capture_logs() as cap_logs:
         resp = anon_client.get("/__lbheartbeat__")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "OK"}
-    assert len(cap_logs) == 1
-
-
-@pytest.mark.parametrize("path", ("/__lbheartbeat__", "/__heartbeat__"))
-def test_head_monitoring_endpoints(anon_client, path):
-    """Monitoring endpoints can be called without credentials"""
-    with capture_logs() as cap_logs:
-        resp = anon_client.head(path)
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
 
 
 def test_get_metrics(anon_client, setup_metrics):

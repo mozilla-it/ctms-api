@@ -96,12 +96,6 @@ def login(
     }
 
 
-@router.get("/__version__", tags=["Platform"])
-def version():
-    """Return version.json, as required by Dockerflow."""
-    return get_version()
-
-
 @router.get("/__heartbeat__", tags=["Platform"])
 @router.head("/__heartbeat__", tags=["Platform"])
 def heartbeat(
@@ -133,13 +127,6 @@ def heartbeat(
 
     status_code = 200 if contact_query_successful else 503
     return JSONResponse(content=result, status_code=status_code)
-
-
-@router.get("/__lbheartbeat__", tags=["Platform"])
-@router.head("/__lbheartbeat__", tags=["Platform"])
-def lbheartbeat():
-    """Return response when application is running, as required by Dockerflow."""
-    return {"status": "OK"}
 
 
 @router.get("/__crash__", tags=["Platform"], include_in_schema=False)
