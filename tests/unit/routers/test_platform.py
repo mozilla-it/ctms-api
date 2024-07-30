@@ -98,3 +98,11 @@ def test_head_monitoring_endpoints(anon_client, path):
         resp = anon_client.head(path)
     assert resp.status_code == 200
     assert len(cap_logs) == 1
+
+
+def test_get_metrics(anon_client, setup_metrics):
+    """An anonoymous user can request metrics."""
+    with capture_logs() as cap_logs:
+        resp = anon_client.get("/metrics")
+    assert resp.status_code == 200
+    assert len(cap_logs) == 1

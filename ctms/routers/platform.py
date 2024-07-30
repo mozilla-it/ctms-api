@@ -7,7 +7,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasicCredentials
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
-from structlog.testing import capture_logs
 
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
@@ -155,11 +154,3 @@ def metrics():
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_registry()
     return Response(generate_latest(registry), status_code=200, headers=headers)
-
-
-def test_get_metrics(anon_client, setup_metrics):
-    """An anonoymous user can request metrics."""
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics")
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
