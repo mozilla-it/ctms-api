@@ -199,18 +199,6 @@ def create_full_contact(db, contact: ContactSchema):
 
 
 @pytest.fixture
-def most_minimal_contact(dbsession):
-    contact = ContactSchema(
-        email=schemas.EmailSchema(
-            email_id=UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
-            primary_email="ctms-most-minimal-user@example.com",
-        ),
-    )
-    create_full_contact(dbsession, contact)
-    return contact
-
-
-@pytest.fixture
 def minimal_contact_data() -> ContactSchema:
     email_id = UUID("93db83d4-4119-4e0c-af87-a713786fa81d")
     return ContactSchema(

@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from structlog.testing import capture_logs
 
+from ctms.schemas import ContactPutSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 from .test_api import _compare_written_contacts
@@ -14,15 +15,19 @@ PUT_TEST_PARAMS = pytest.mark.parametrize(
 )
 
 
-def test_create_or_update_basic_id_is_different(client, minimal_contact):
+def test_create_or_update_basic_id_is_different(client):
     """This should fail since we require an email_id to PUT"""
 
+    contact = ContactPutSchema(
+        email={"email_id": str(uuid4()), "primary_email": "hello@example.com"}
+    )
     # This id is different from the one in the contact
     resp = client.put(
-        "/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7",
-        content=minimal_contact.model_dump_json(),
+        f"/ctms/{str(uuid4())}",
+        content=contact.model_dump_json(),
     )
     assert resp.status_code == 422, resp.text
+    assert resp.json()["detail"] == "email_id in path must match email_id in contact"
 
 
 @PUT_TEST_PARAMS

@@ -171,9 +171,12 @@ def test_post_token_fails_disabled_client(dbsession, anon_client, client_id_and_
 
 
 def test_get_ctms_with_token(
-    example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     """An authenticated API can be fetched with a valid token"""
+    email = email_factory()
+    dbsession.commit()
+
     client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
@@ -184,16 +187,19 @@ def test_get_ctms_with_token(
         "typ": "JWT",
     }
     resp = anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
+        f"/ctms/{email.email_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
 
 
 def test_successful_login_tracks_last_access(
-    dbsession, example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     client_id = client_id_and_secret[0]
+    email = email_factory()
+    dbsession.commit()
+
     api_client = get_api_client_by_id(dbsession, client_id)
     before = api_client.last_access
 
@@ -201,7 +207,7 @@ def test_successful_login_tracks_last_access(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
     )
     anon_client.get(
-        f"/ctms/{example_contact.email.email_id}",
+        f"/ctms/{email.email_id}",
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -211,9 +217,12 @@ def test_successful_login_tracks_last_access(
 
 
 def test_get_ctms_with_invalid_token_fails(
-    example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with an invalid token is an error"""
+    email = email_factory()
+    dbsession.commit()
+
     client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"},
@@ -222,7 +231,7 @@ def test_get_ctms_with_invalid_token_fails(
     )
     with capture_logs() as caplog:
         resp = anon_client.get(
-            f"/ctms/{example_contact.email.email_id}",
+            f"/ctms/{email.email_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 401
@@ -231,14 +240,17 @@ def test_get_ctms_with_invalid_token_fails(
 
 
 def test_get_ctms_with_invalid_namespace_fails(
-    example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with an unexpected namespace is an error"""
+    email = email_factory()
+    dbsession.commit()
+
     client_id = client_id_and_secret[0]
     token = create_access_token({"sub": f"unknown:{client_id}"}, **test_token_settings)
     with capture_logs() as caplog:
         resp = anon_client.get(
-            f"/ctms/{example_contact.email.email_id}",
+            f"/ctms/{email.email_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 401
@@ -247,16 +259,19 @@ def test_get_ctms_with_invalid_namespace_fails(
 
 
 def test_get_ctms_with_unknown_client_fails(
-    example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     """A token with an unknown (deleted?) API client name is an error"""
+    email = email_factory()
+    dbsession.commit()
+
     client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:not_{client_id}"}, **test_token_settings
     )
     with capture_logs() as caplog:
         resp = anon_client.get(
-            f"/ctms/{example_contact.email.email_id}",
+            f"/ctms/{email.email_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 401
@@ -265,9 +280,12 @@ def test_get_ctms_with_unknown_client_fails(
 
 
 def test_get_ctms_with_expired_token_fails(
-    example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with an expired token is an error"""
+    email = email_factory()
+    dbsession.commit()
+
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     client_id = client_id_and_secret[0]
     token = create_access_token(
@@ -275,7 +293,7 @@ def test_get_ctms_with_expired_token_fails(
     )
     with capture_logs() as caplog:
         resp = anon_client.get(
-            f"/ctms/{example_contact.email.email_id}",
+            f"/ctms/{email.email_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 401
@@ -284,9 +302,12 @@ def test_get_ctms_with_expired_token_fails(
 
 
 def test_get_ctms_with_disabled_client_fails(
-    dbsession, example_contact, anon_client, test_token_settings, client_id_and_secret
+    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
 ):
     """Calling an authenticated API with a valid token for an expired client is an error."""
+    email = email_factory()
+    dbsession.commit()
+
     client_id = client_id_and_secret[0]
     token = create_access_token(
         {"sub": f"api_client:{client_id}"}, **test_token_settings
@@ -297,7 +318,7 @@ def test_get_ctms_with_disabled_client_fails(
 
     with capture_logs() as caplog:
         resp = anon_client.get(
-            f"/ctms/{example_contact.email.email_id}",
+            f"/ctms/{email.email_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 400
