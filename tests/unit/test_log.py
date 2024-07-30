@@ -25,7 +25,11 @@ def test_request_log(client, email_factory):
     assert resp.status_code == 200
     assert len(cap_logs) == 1
     log = cap_logs[0]
-    assert "duration_s" in log
+
+    # remove Sentry headers with random trace ids
+    assert log["headers"].pop("baggage")
+    assert log["headers"].pop("sentry-trace")
+
     expected_log = {
         "client_allowed": True,
         "client_host": "testclient",
