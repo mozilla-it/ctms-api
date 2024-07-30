@@ -22,7 +22,7 @@ alembic = "^1.13.2"
 python-multipart = "^0.0.9"
 python-dateutil = "^2.9.0"
 dockerflow = {extras = ["fastapi"], version = "^2024.4.2"}
-sentry-sdk = "^2.11.0"
+sentry-sdk = {extras = ["fastapi"], version = "^2.11.0"}
 lxml = "^5.2.2"
 prometheus-client = "0.20.0"
 structlog = "^24.4.0"
