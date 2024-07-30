@@ -10,9 +10,12 @@ from structlog.testing import capture_logs
 from ctms.log import configure_logging
 
 
-def test_request_log(client, minimal_contact):
+def test_request_log(client, dbsession, email_factory):
     """A request is logged."""
-    email_id = str(minimal_contact.email.email_id)
+    email = email_factory()
+    dbsession.commit()
+    email_id = str(email.email_id)
+
     with capture_logs() as cap_logs:
         resp = client.get(
             f"/ctms/{email_id}",
@@ -69,14 +72,12 @@ def test_token_request_log(anon_client, client_id_and_secret):
     assert log["headers"]["cookie"] == "[OMITTED]"
 
 
-def test_log_omits_emails(client, maximal_contact):
+def test_log_omits_emails(client, email_factory):
     """The logger omits emails from query params."""
-    email_id = str(maximal_contact.email.email_id)
-    email = maximal_contact.email.primary_email
-    fxa_email = maximal_contact.fxa.primary_email
+    email = email_factory(fxa=True)
     url = (
-        f"/ctms?primary_email={email}&fxa_primary_email={fxa_email}"
-        f"&email_id={email_id}"
+        f"/ctms?primary_email={email.primary_email}&fxa_primary_email={email.fxa.primary_email}"
+        f"&email_id={email.email_id}"
     )
     with capture_logs() as cap_logs:
         resp = client.get(url)
@@ -84,7 +85,7 @@ def test_log_omits_emails(client, maximal_contact):
     assert len(cap_logs) == 1
     log = cap_logs[0]
     assert log["query"] == {
-        "email_id": email_id,
+        "email_id": str(email.email_id),
         "fxa_primary_email": "[OMITTED]",
         "primary_email": "[OMITTED]",
     }

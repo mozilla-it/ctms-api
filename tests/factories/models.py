@@ -90,7 +90,7 @@ class AmoAccountFactory(BaseSQLAlchemyModelFactory):
     last_login = factory.Faker("date_object")
     location = factory.Faker("city")
     profile_url = factory.LazyAttribute(
-        lambda obj: f"https://www.example.com/{obj.display_name}"
+        lambda obj: f"https://ex.com/{obj.display_name}",
     )
     user = True
     user_id = factory.Faker("pystr", max_chars=40)
