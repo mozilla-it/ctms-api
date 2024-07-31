@@ -23,7 +23,7 @@ python-multipart = "^0.0.9"
 python-jose = {extras = ["cryptography"], version = "^3.2.0"}
 passlib = {extras = ["argon2"], version = "^1.7.4"}
 python-dateutil = "^2.9.0"
-dockerflow = "^2024.4.2"
+dockerflow = {extras = ["fastapi"], version = "^2024.4.2"}
 sentry-sdk = "^2.11.0"
 lxml = "^5.2.2"
 prometheus-client = "0.20.0"
