@@ -38,11 +38,12 @@ from ctms.schemas.waitlist import WaitlistInSchema
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
 
 
+@pytest.mark.disable_autouse
 def test_email_count(connection, email_factory):
-    # The default `dbsession` fixture will run in a nested transaction
-    # that is rollback.
     # In this test, we manipulate raw connections and transactions because
     # we need to force a VACUUM operation outside a running transaction.
+    # To do so, we mark the tests with `disable_autouse` since the `dbsession`
+    # fixture is configured with `autouse=True`
 
     # Insert contacts in the table.
     with ScopedSessionLocal() as session:
