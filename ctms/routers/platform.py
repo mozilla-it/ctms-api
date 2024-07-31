@@ -1,10 +1,9 @@
 import logging
-import time
-from typing import Any, Optional
+from typing import Optional
 
 from dockerflow import checks as dockerflow_checks
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasicCredentials
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
@@ -14,14 +13,8 @@ from ctms.auth import (
     create_access_token,
     verify_password,
 )
-from ctms.config import Settings
 from ctms.crud import count_total_contacts, get_api_client_by_id, ping
-from ctms.dependencies import (
-    get_db,
-    get_enabled_api_client,
-    get_settings,
-    get_token_settings,
-)
+from ctms.dependencies import get_db, get_enabled_api_client, get_token_settings
 from ctms.metrics import get_metrics, get_metrics_registry, token_scheme
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse

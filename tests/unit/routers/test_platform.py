@@ -7,7 +7,6 @@ from sqlalchemy.exc import TimeoutError as SQATimeoutError
 from structlog.testing import capture_logs
 
 from ctms.app import app
-from ctms.dependencies import get_db
 
 
 @pytest.fixture
@@ -82,7 +81,7 @@ def test_read_heartbeat(anon_client):
 
 def test_read_heartbeat_db_fails(anon_client, mock_db):
     """/__heartbeat__ returns 503 when the database is unavailable."""
-    mock_db.__next__().execute.side_effect = SQATimeoutError()
+    next(mock_db).execute.side_effect = SQATimeoutError()
     resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 500
     data = resp.json()
