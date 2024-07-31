@@ -139,26 +139,25 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
             for _ in range(extracted):
                 WaitlistFactory(email=self, **kwargs)
 
-    @factory.post_generation
-    def fxa(self, create, extracted, **kwargs):
-        if not create:
-            return
-        if extracted:
-            FirefoxAccountFactory(email=self, **kwargs)
-
-    @factory.post_generation
-    def mofo(self, create, extracted, **kwargs):
-        if not create:
-            return
-        if extracted:
-            MozillaFoundationContactFactory(email=self, **kwargs)
-
-    @factory.post_generation
-    def amo(self, create, extracted, **kwargs):
-        if not create:
-            return
-        if extracted:
-            AmoAccountFactory(email=self, **kwargs)
+    class Params:
+        with_fxa = factory.Trait(
+            fxa=factory.RelatedFactory(
+                FirefoxAccountFactory,
+                factory_related_name="email",
+            )
+        )
+        with_amo = factory.Trait(
+            amo=factory.RelatedFactory(
+                AmoAccountFactory,
+                factory_related_name="email",
+            )
+        )
+        with_mofo = factory.Trait(
+            mofo=factory.RelatedFactory(
+                MozillaFoundationContactFactory,
+                factory_related_name="email",
+            )
+        )
 
 
 __all__ = (

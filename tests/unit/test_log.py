@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests for logging helpers"""
+
 from unittest.mock import patch
 
 import pytest
@@ -73,7 +74,7 @@ def test_token_request_log(anon_client, client_id_and_secret):
 
 def test_log_omits_emails(client, email_factory):
     """The logger omits emails from query params."""
-    email = email_factory(fxa=True)
+    email = email_factory(with_fxa=True)
     url = (
         f"/ctms?primary_email={email.primary_email}&fxa_primary_email={email.fxa.primary_email}"
         f"&email_id={email.email_id}"

@@ -105,8 +105,8 @@ def test_get_bulk_contacts_mofo_relevant(
     dbsession, email_factory, mofo_relevant_flag, num_contacts_returned
 ):
     email_factory()
-    email_factory(mofo=True, mofo__mofo_relevant=True)
-    email_factory(mofo=True, mofo__mofo_relevant=False)
+    email_factory(with_mofo=True, mofo__mofo_relevant=True)
+    email_factory(with_mofo=True, mofo__mofo_relevant=False)
     dbsession.commit()
 
     contacts = get_bulk_contacts(

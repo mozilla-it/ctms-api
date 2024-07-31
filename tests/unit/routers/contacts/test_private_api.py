@@ -95,7 +95,7 @@ def test_get_identities_by_alt_id(client, request, name, ident):
 
 def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
     """GET /identities, with two matching IDs, returns a one-item identities list."""
-    email = email_factory(fxa=True, sfdc_id="001A000001aABcDEFG")
+    email = email_factory(with_fxa=True, sfdc_id="001A000001aABcDEFG")
     sfdc_id = email.sfdc_id
     assert sfdc_id
     fxa_email = email.fxa.primary_email
@@ -110,8 +110,8 @@ def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
 
 def test_get_identities_by_two_alt_id_mismatch_fails(client, dbsession, email_factory):
     """GET /identities with two non-matching IDs returns an empty identities list."""
-    email_1 = email_factory(amo=True)
-    email_2 = email_factory(amo=True)
+    email_1 = email_factory(with_amo=True)
+    email_2 = email_factory(with_amo=True)
     dbsession.commit()
 
     resp = client.get(

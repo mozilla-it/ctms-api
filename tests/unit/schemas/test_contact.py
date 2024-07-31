@@ -7,11 +7,11 @@ from ctms.schemas.contact import ContactInSchema
 def example_contact_in(dbsession, email_factory):
     email = email_factory(
         email_format="H",
-        amo=True,
+        with_amo=True,
         amo__display_name="foo",
-        fxa=True,
+        with_fxa=True,
         fxa__lang="en",
-        mofo=True,
+        with_mofo=True,
         newsletters=1,
         waitlists=1,
     )

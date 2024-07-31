@@ -136,10 +136,10 @@ def test_patch_to_default(client, dbsession, email_factory, group_name, key):
         sfdc_id="001A000001aMozFan",
         unsubscribe_reason="You know what you did.",
         double_opt_in=True,
-        fxa=True,
+        with_fxa=True,
         fxa__first_service="abc",
-        mofo=True,
-        amo=True,
+        with_mofo=True,
+        with_amo=True,
     )
     dbsession.commit()
 
@@ -178,7 +178,7 @@ def test_patch_to_default(client, dbsession, email_factory, group_name, key):
 
 def test_patch_cannot_set_timestamps(client, dbsession, email_factory):
     """PATCH can not set timestamps directly."""
-    email = email_factory(amo=True)
+    email = email_factory(with_amo=True)
     dbsession.commit()
 
     expected = jsonable_encoder(
@@ -261,7 +261,7 @@ def test_patch_cannot_set_email_to_null(client, dbsession, email_factory):
 )
 def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_factory):
     """PATCH returns an error on ID conflicts, and makes none of the changes."""
-    email = email_factory(mofo=True, fxa=True)
+    email = email_factory(with_mofo=True, with_fxa=True)
     dbsession.commit()
 
     existing_contact = ContactSchema.from_email(email)
@@ -434,7 +434,7 @@ def test_patch_unsubscribe_all(client, dbsession, email_factory):
 @pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo"))
 def test_patch_to_delete_group(client, dbsession, email_factory, group_name):
     """PATCH with a group set to "DELETE" resets the group to defaults."""
-    email = email_factory(amo=True, fxa=True, mofo=True)
+    email = email_factory(with_amo=True, with_fxa=True, with_mofo=True)
     dbsession.commit()
 
     patch_data = {group_name: "DELETE"}

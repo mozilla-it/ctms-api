@@ -55,9 +55,9 @@ def test_get_ctms_bulk_by_timerange(client, dbsession, email_factory):
     target_email = email_factory(
         newsletters=1,
         waitlists=1,
-        mofo=True,
-        amo=True,
-        fxa=True,
+        with_mofo=True,
+        with_amo=True,
+        with_fxa=True,
     )
     last_email = email_factory()
     dbsession.commit()
