@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Any, Optional
 
+from dockerflow import checks as dockerflow_checks
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasicCredentials
@@ -13,7 +14,7 @@ from ctms.auth import (
     create_access_token,
     verify_password,
 )
-from ctms.config import Settings, get_version
+from ctms.config import Settings
 from ctms.crud import count_total_contacts, get_api_client_by_id, ping
 from ctms.dependencies import (
     get_db,
@@ -96,37 +97,27 @@ def login(
     }
 
 
-@router.get("/__heartbeat__", tags=["Platform"])
-@router.head("/__heartbeat__", tags=["Platform"])
-def heartbeat(
-    request: Request,
-    db: Session = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-):
-    """Return status of backing services, as required by Dockerflow."""
-
-    result: dict[str, Any] = {}
-
-    start_time = time.monotonic()
+@dockerflow_checks.register
+def database():
+    db = next(get_db())
+    result = []
     alive = ping(db)
-    result["database"] = {
-        "up": alive,
-        "time_ms": int(round(1000 * time.monotonic() - start_time)),
-    }
     if not alive:
-        return JSONResponse(content=result, status_code=503)
+        result.append(dockerflow_checks.Error("Database not reachable", id="db.0001"))
+        return result
 
-    appmetrics = get_metrics()
     # Report number of contacts in the database.
     # Sending the metric in this heartbeat endpoint is simpler than reporting
     # it in every write endpoint. Plus, performance does not matter much here
     total_contacts = count_total_contacts(db)
     contact_query_successful = total_contacts >= 0
-    if appmetrics and contact_query_successful:
-        appmetrics["contacts"].set(total_contacts)
-
-    status_code = 200 if contact_query_successful else 503
-    return JSONResponse(content=result, status_code=status_code)
+    if contact_query_successful:
+        appmetrics = get_metrics()
+        if appmetrics:
+            appmetrics["contacts"].set(total_contacts)
+    else:
+        result.append(dockerflow_checks.Error("Contacts table empty", id="db.0002"))
+    return result
 
 
 @router.get("/__crash__", tags=["Platform"], include_in_schema=False)
