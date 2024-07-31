@@ -130,7 +130,7 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
         ("mofo", "mofo_relevant"),
     ),
 )
-def test_patch_to_default(client, dbsession, email_factory, group_name, key):
+def test_patch_to_default(client, email_factory, group_name, key):
     """PATCH can set a field to the default value."""
     email = email_factory(
         sfdc_id="001A000001aMozFan",
@@ -141,7 +141,6 @@ def test_patch_to_default(client, dbsession, email_factory, group_name, key):
         with_mofo=True,
         with_amo=True,
     )
-    dbsession.commit()
 
     expected = jsonable_encoder(
         CTMSResponse(**ContactSchema.from_email(email).model_dump())
@@ -176,10 +175,9 @@ def test_patch_to_default(client, dbsession, email_factory, group_name, key):
     assert actual == expected
 
 
-def test_patch_cannot_set_timestamps(client, dbsession, email_factory):
+def test_patch_cannot_set_timestamps(client, email_factory):
     """PATCH can not set timestamps directly."""
     email = email_factory(with_amo=True)
-    dbsession.commit()
 
     expected = jsonable_encoder(
         CTMSResponse(**ContactSchema.from_email(email).model_dump())
@@ -215,10 +213,9 @@ def test_patch_cannot_set_timestamps(client, dbsession, email_factory):
     assert actual == expected
 
 
-def test_patch_cannot_change_email_id(client, dbsession, email_factory):
+def test_patch_cannot_change_email_id(client, email_factory):
     """PATCH cannot change the email_id."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"email": {"email_id": str(uuid4())}}
     resp = client.patch(f"/ctms/{email.email_id}", json=patch_data)
@@ -226,10 +223,9 @@ def test_patch_cannot_change_email_id(client, dbsession, email_factory):
     assert resp.json() == {"detail": "cannot change email_id"}
 
 
-def test_patch_cannot_set_email_to_null(client, dbsession, email_factory):
+def test_patch_cannot_set_email_to_null(client, email_factory):
     """PATCH cannot set the email address to null."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"email": {"primary_email": None}}
     resp = client.patch(f"/ctms/{email.email_id}", json=patch_data)
@@ -262,7 +258,6 @@ def test_patch_cannot_set_email_to_null(client, dbsession, email_factory):
 def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_factory):
     """PATCH returns an error on ID conflicts, and makes none of the changes."""
     email = email_factory(with_mofo=True, with_fxa=True)
-    dbsession.commit()
 
     existing_contact = ContactSchema.from_email(email)
 
@@ -307,10 +302,9 @@ def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_fa
     }
 
 
-def test_patch_to_subscribe(client, dbsession, email_factory):
+def test_patch_to_subscribe(client, email_factory):
     """PATCH can subscribe to a single newsletter."""
     email = email_factory(newsletters=1)
-    dbsession.commit()
 
     patch_data = {"newsletters": [{"name": "zzz-newsletter"}]}
     resp = client.patch(
@@ -331,10 +325,10 @@ def test_patch_to_subscribe(client, dbsession, email_factory):
     }
 
 
-def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
+def test_patch_to_update_subscription(client, newsletter_factory):
     """PATCH can update an existing newsletter subscription."""
     existing_newsletter = newsletter_factory()
-    dbsession.commit()
+
     email_id = str(existing_newsletter.email.email_id)
     patch_data = {
         "newsletters": [{"name": existing_newsletter.name, "format": "H", "lang": "XX"}]
@@ -355,11 +349,10 @@ def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
     }
 
 
-def test_patch_to_unsubscribe(client, dbsession, email_factory, newsletter_factory):
+def test_patch_to_unsubscribe(client, email_factory, newsletter_factory):
     """PATCH can unsubscribe by setting a newsletter field."""
     email = email_factory()
     existing_newsletter = newsletter_factory(name="common-voice", email=email)
-    dbsession.commit()
 
     assert len(email.newsletters) == 1
     assert existing_newsletter.subscribed
@@ -392,10 +385,9 @@ def test_patch_to_unsubscribe(client, dbsession, email_factory, newsletter_facto
     }
 
 
-def test_patch_to_unsubscribe_but_not_subscribed(client, dbsession, email_factory):
+def test_patch_to_unsubscribe_but_not_subscribed(client, email_factory):
     """PATCH doesn't create a record when unsubscribing to a new newsletter."""
     email = email_factory(newsletters=1)
-    dbsession.commit()
 
     unknown_name = "zzz-unknown-newsletter"
     patch_data = {
@@ -416,10 +408,9 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, dbsession, email_factor
     assert actual["newsletters"][0]["name"] != unknown_name
 
 
-def test_patch_unsubscribe_all(client, dbsession, email_factory):
+def test_patch_unsubscribe_all(client, email_factory):
     """PATCH with newsletters set to "UNSUBSCRIBE" unsubscribes all newsletters."""
     email = email_factory(newsletters=2)
-    dbsession.commit()
 
     patch_data = {"newsletters": "UNSUBSCRIBE"}
     resp = client.patch(
@@ -432,10 +423,9 @@ def test_patch_unsubscribe_all(client, dbsession, email_factory):
 
 
 @pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo"))
-def test_patch_to_delete_group(client, dbsession, email_factory, group_name):
+def test_patch_to_delete_group(client, email_factory, group_name):
     """PATCH with a group set to "DELETE" resets the group to defaults."""
     email = email_factory(with_amo=True, with_fxa=True, with_mofo=True)
-    dbsession.commit()
 
     patch_data = {group_name: "DELETE"}
     resp = client.patch(
@@ -451,10 +441,10 @@ def test_patch_to_delete_group(client, dbsession, email_factory, group_name):
     assert actual[group_name] == defaults
 
 
-def test_patch_to_delete_deleted_group(client, dbsession, email_factory):
+def test_patch_to_delete_deleted_group(client, email_factory):
     """PATCH with a default group set to "DELETE" does nothing."""
     email = email_factory()
-    dbsession.commit()
+
     assert email.amo is None
 
     patch_data = {"mofo": "DELETE"}
@@ -468,10 +458,9 @@ def test_patch_to_delete_deleted_group(client, dbsession, email_factory):
     assert actual["mofo"] == default_mofo
 
 
-def test_patch_will_validate_waitlist_fields(client, dbsession, email_factory):
+def test_patch_will_validate_waitlist_fields(client, email_factory):
     """PATCH validates waitlist schema."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "future-tech", "source": 42}]}
     resp = client.patch(
@@ -488,10 +477,9 @@ def test_patch_will_validate_waitlist_fields(client, dbsession, email_factory):
     ]
 
 
-def test_patch_to_add_a_waitlist(client, dbsession, email_factory):
+def test_patch_to_add_a_waitlist(client, email_factory):
     """PATCH can add a single waitlist."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
     resp = client.patch(
@@ -511,9 +499,8 @@ def test_patch_to_add_a_waitlist(client, dbsession, email_factory):
     }
 
 
-def test_patch_does_not_add_an_unsubscribed_waitlist(client, dbsession, email_factory):
+def test_patch_does_not_add_an_unsubscribed_waitlist(client, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "future-tech", "subscribed": False}]}
     resp = client.patch(
@@ -524,11 +511,10 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, dbsession, email_fa
     assert len(actual["waitlists"]) == 0
 
 
-def test_patch_to_update_a_waitlist(client, dbsession, email_factory, waitlist_factory):
+def test_patch_to_update_a_waitlist(client, email_factory, waitlist_factory):
     """PATCH can update a waitlist."""
     email = email_factory()
     waitlist = waitlist_factory(fields={"geo": "fr"}, email=email)
-    dbsession.commit()
 
     patched_waitlist = (
         WaitlistInSchema.from_orm(waitlist)
@@ -544,11 +530,10 @@ def test_patch_to_update_a_waitlist(client, dbsession, email_factory, waitlist_f
     assert actual["waitlists"][0]["fields"]["geo"] == "ca"
 
 
-def test_patch_to_remove_a_waitlist(client, dbsession, email_factory, waitlist_factory):
+def test_patch_to_remove_a_waitlist(client, email_factory, waitlist_factory):
     """PATCH can remove a single waitlist."""
     email = email_factory()
     waitlist_factory(name="bye-bye", email=email)
-    dbsession.commit()
 
     patch_data = {
         "waitlists": [
@@ -567,11 +552,10 @@ def test_patch_to_remove_a_waitlist(client, dbsession, email_factory, waitlist_f
     assert unsubscribed["unsub_reason"] == "Not interested"
 
 
-def test_patch_to_remove_all_waitlists(client, dbsession, email_factory):
+def test_patch_to_remove_all_waitlists(client, email_factory):
     """PATCH can remove all waitlists."""
     email = email_factory(waitlists=2)
     assert all(wl.subscribed for wl in email.waitlists)
-    dbsession.commit()
 
     patch_data = {"waitlists": "UNSUBSCRIBE"}
     resp = client.patch(
@@ -583,10 +567,9 @@ def test_patch_to_remove_all_waitlists(client, dbsession, email_factory):
     assert not any(wl["subscribed"] for wl in actual["waitlists"])
 
 
-def test_patch_preserves_waitlists_if_omitted(client, dbsession, email_factory):
+def test_patch_preserves_waitlists_if_omitted(client, email_factory):
     """PATCH won't update waitlists if omitted."""
     email = email_factory(waitlists=2)
-    dbsession.commit()
 
     patch_data = {"email": {"first_name": "Jeff"}}
     resp = client.patch(
@@ -598,9 +581,8 @@ def test_patch_preserves_waitlists_if_omitted(client, dbsession, email_factory):
     assert len(actual["waitlists"]) == len(email.waitlists)
 
 
-def test_patch_vpn_waitlist_legacy_add(client, dbsession, email_factory):
+def test_patch_vpn_waitlist_legacy_add(client, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"vpn_waitlist": {"geo": "fr", "platform": "win32"}}
     resp = client.patch(
@@ -624,14 +606,12 @@ def test_patch_vpn_waitlist_legacy_add(client, dbsession, email_factory):
     ]
 
 
-def test_patch_vpn_waitlist_legacy_delete(
-    client, dbsession, email_factory, waitlist_factory
-):
+def test_patch_vpn_waitlist_legacy_delete(client, email_factory, waitlist_factory):
     email = email_factory()
     waitlist_factory(
         name="vpn", fields={"geo": "ca", "platform": "windows,android"}, email=email
     )
-    dbsession.commit()
+
     assert len([wl for wl in email.waitlists if wl.subscribed]) == 1
 
     patch_data = {"vpn_waitlist": "DELETE"}
@@ -645,13 +625,13 @@ def test_patch_vpn_waitlist_legacy_delete(
 
 
 def test_patch_vpn_waitlist_legacy_delete_default(
-    client, dbsession, email_factory, waitlist_factory
+    client, email_factory, waitlist_factory
 ):
     email = email_factory()
     waitlist_factory(
         name="vpn", fields={"geo": "ca", "platform": "windows,android"}, email=email
     )
-    dbsession.commit()
+
     assert len([wl for wl in email.waitlists if wl.subscribed]) == 1
 
     patch_data = {"vpn_waitlist": {"geo": None, "platform": None}}
@@ -663,13 +643,13 @@ def test_patch_vpn_waitlist_legacy_delete_default(
     assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == 0
 
 
-def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
+def test_patch_vpn_waitlist_legacy_update(client, waitlist_factory):
     vpn_waitlist = waitlist_factory(
         name="vpn",
         source="https://www.example.com/vpn_signup",
         fields={"geo": "es", "platform": "ios"},
     )
-    dbsession.commit()
+
     patch_data = {"vpn_waitlist": {"geo": "it"}}
     resp = client.patch(
         f"/ctms/{vpn_waitlist.email.email_id}", json=patch_data, allow_redirects=True
@@ -689,13 +669,13 @@ def test_patch_vpn_waitlist_legacy_update(client, dbsession, waitlist_factory):
     ]
 
 
-def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_factory):
+def test_patch_vpn_waitlist_legacy_update_full(client, waitlist_factory):
     vpn_waitlist = waitlist_factory(
         name="vpn",
         source="https://www.example.com/vpn_signup",
         fields={"geo": "es", "platform": "ios"},
     )
-    dbsession.commit()
+
     patch_data = {"vpn_waitlist": {"geo": "it", "platform": "linux"}}
     resp = client.patch(
         f"/ctms/{vpn_waitlist.email.email_id}", json=patch_data, allow_redirects=True
@@ -715,9 +695,8 @@ def test_patch_vpn_waitlist_legacy_update_full(client, dbsession, waitlist_facto
     ]
 
 
-def test_patch_relay_waitlist_legacy_add(client, dbsession, email_factory):
+def test_patch_relay_waitlist_legacy_add(client, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"relay_waitlist": {"geo": "fr"}}
     resp = client.patch(
@@ -739,12 +718,10 @@ def test_patch_relay_waitlist_legacy_add(client, dbsession, email_factory):
     ]
 
 
-def test_patch_relay_waitlist_legacy_delete(
-    client, dbsession, email_factory, waitlist_factory
-):
+def test_patch_relay_waitlist_legacy_delete(client, email_factory, waitlist_factory):
     email = email_factory()
     waitlist_factory(name="relay", fields={"geo": "cn"}, email=email)
-    dbsession.commit()
+
     assert len([wl for wl in email.waitlists if wl.subscribed]) == 1
 
     patch_data = {"relay_waitlist": "DELETE"}
@@ -757,11 +734,11 @@ def test_patch_relay_waitlist_legacy_delete(
 
 
 def test_patch_relay_waitlist_legacy_delete_default(
-    client, dbsession, email_factory, waitlist_factory
+    client, email_factory, waitlist_factory
 ):
     email = email_factory()
     waitlist_factory(name="relay", fields={"geo": "cn"}, email=email)
-    dbsession.commit()
+
     assert len([wl for wl in email.waitlists if wl.subscribed]) == 1
 
     patch_data = {"relay_waitlist": {"geo": None}}
@@ -773,13 +750,13 @@ def test_patch_relay_waitlist_legacy_delete_default(
     assert len([wl for wl in actual["waitlists"] if wl["subscribed"]]) == 0
 
 
-def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory):
+def test_patch_relay_waitlist_legacy_update(client, waitlist_factory):
     relay_waitlist = waitlist_factory(
         name="relay",
         source="https://www.example.com/relay_signup",
         fields={"geo": "es"},
     )
-    dbsession.commit()
+
     patch_data = {"relay_waitlist": {"geo": "it"}}
     resp = client.patch(
         f"/ctms/{relay_waitlist.email.email_id}", json=patch_data, allow_redirects=True
@@ -800,7 +777,7 @@ def test_patch_relay_waitlist_legacy_update(client, dbsession, waitlist_factory)
 
 
 def test_patch_relay_waitlist_legacy_update_all(
-    client, dbsession, email_factory, waitlist_factory
+    client, email_factory, waitlist_factory
 ):
     # Test that all relay waitlists records are updated from the legacy way.
     email = email_factory()
@@ -818,7 +795,7 @@ def test_patch_relay_waitlist_legacy_update_all(
             email=email,
         ),
     ]
-    dbsession.commit()
+
     patch_data = {
         "waitlists": [
             {"name": "relay", "fields": {"geo": "fr"}},
@@ -860,10 +837,9 @@ def test_patch_relay_waitlist_legacy_update_all(
 
 
 def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
-    client, dbsession, email_factory
+    client, email_factory
 ):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {
         "relay_waitlist": {"geo": "ru"},
@@ -887,11 +863,9 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
     ]
 
 
-def test_unsubscribe_from_all_newsletters_removes_all_waitlists(
-    client, dbsession, email_factory
-):
+def test_unsubscribe_from_all_newsletters_removes_all_waitlists(client, email_factory):
     email = email_factory(newsletters=1, waitlists=1)
-    dbsession.commit()
+
     assert len(email.waitlists) == 1
 
     patch_data = {
@@ -905,7 +879,7 @@ def test_unsubscribe_from_all_newsletters_removes_all_waitlists(
 
 
 def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
-    client, dbsession, email_factory, waitlist_factory
+    client, email_factory, waitlist_factory
 ):
     email = email_factory()
     waitlist_factory(
@@ -913,7 +887,6 @@ def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
         fields={"geo": "ca", "platform": "windows,android"},
         email=email,
     )
-    dbsession.commit()
 
     patch_data = {
         "newsletters": [
@@ -930,11 +903,10 @@ def test_unsubscribe_from_guardian_vpn_newsletter_removes_vpn_waitlist(
 
 
 def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
-    client, dbsession, email_factory, waitlist_factory
+    client, email_factory, waitlist_factory
 ):
     email = email_factory()
     waitlist_factory(name="relay-vpn-bundle", fields={"geo": "ru"}, email=email)
-    dbsession.commit()
 
     patch_data = {
         "newsletters": [{"name": "relay-vpn-bundle-waitlist", "subscribed": False}]
@@ -950,10 +922,9 @@ def test_unsubscribe_from_relay_newsletter_removes_relay_waitlist(
 
 
 def test_cannot_subscribe_to_relay_newsletter_without_relay_country(
-    client, dbsession, email_factory
+    client, email_factory
 ):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"newsletters": [{"name": "relay-phone-waitlist"}]}
     resp = client.patch(

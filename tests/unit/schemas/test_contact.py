@@ -4,7 +4,7 @@ from ctms.schemas.contact import ContactInSchema
 
 
 @pytest.fixture
-def example_contact_in(dbsession, email_factory):
+def example_contact_in(email_factory):
     email = email_factory(
         email_format="H",
         with_amo=True,
@@ -15,7 +15,6 @@ def example_contact_in(dbsession, email_factory):
         newsletters=1,
         waitlists=1,
     )
-    dbsession.commit()
 
     return ContactInSchema(
         amo=email.amo,

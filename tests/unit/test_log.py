@@ -10,10 +10,9 @@ from structlog.testing import capture_logs
 from ctms.log import configure_logging
 
 
-def test_request_log(client, dbsession, email_factory):
+def test_request_log(client, email_factory):
     """A request is logged."""
     email = email_factory()
-    dbsession.commit()
     email_id = str(email.email_id)
 
     with capture_logs() as cap_logs:

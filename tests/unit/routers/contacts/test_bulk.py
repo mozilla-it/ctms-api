@@ -50,7 +50,7 @@ def test_unauthorized_api_call_fails(anon_client, path):
     assert resp.json() == {"detail": "Not authenticated"}
 
 
-def test_get_ctms_bulk_by_timerange(client, dbsession, email_factory):
+def test_get_ctms_bulk_by_timerange(client, email_factory):
     first_email = email_factory()
     target_email = email_factory(
         newsletters=1,
@@ -60,7 +60,6 @@ def test_get_ctms_bulk_by_timerange(client, dbsession, email_factory):
         with_fxa=True,
     )
     last_email = email_factory()
-    dbsession.commit()
 
     after = BulkRequestSchema.compressor_for_bulk_encoded_details(
         first_email.email_id, first_email.update_timestamp
@@ -99,9 +98,8 @@ def test_get_ctms_bulk_by_timerange(client, dbsession, email_factory):
     assert results["next"] is not None
 
 
-def test_get_ctms_bulk_by_timerange_no_results(dbsession, client, email_factory):
+def test_get_ctms_bulk_by_timerange_no_results(client, email_factory):
     emails = email_factory.create_batch(3)
-    dbsession.commit()
 
     sorted_list = sorted(
         emails,

@@ -14,13 +14,12 @@ API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
 
 
 @pytest.mark.parametrize("path,params", API_TEST_CASES)
-def test_authorized_api_call_succeeds(client, dbsession, email_factory, path, params):
+def test_authorized_api_call_succeeds(client, email_factory, path, params):
     """Calling the API with credentials succeeds."""
     email_factory(
         email_id="332de237-cab7-4461-bcc3-48e68f42bd5c",
         basket_token="c4a7d759-bb52-457b-896b-90f1d3ef8433",
     )
-    dbsession.commit()
 
     resp = client.get(path, params=params)
     assert resp.status_code == 200
@@ -93,14 +92,13 @@ def test_get_identities_by_alt_id(client, request, name, ident):
     assert resp.json() == [identity]
 
 
-def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
+def test_get_identities_by_two_alt_id_match(client, email_factory):
     """GET /identities, with two matching IDs, returns a one-item identities list."""
     email = email_factory(with_fxa=True, sfdc_id="001A000001aABcDEFG")
     sfdc_id = email.sfdc_id
     assert sfdc_id
     fxa_email = email.fxa.primary_email
     assert fxa_email
-    dbsession.commit()
 
     resp = client.get(f"/identities?sfdc_id={sfdc_id}&fxa_primary_email={fxa_email}")
     identity = json.loads(ContactSchema.from_email(email).as_identity_response().json())
@@ -108,11 +106,10 @@ def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
     assert resp.json() == [identity]
 
 
-def test_get_identities_by_two_alt_id_mismatch_fails(client, dbsession, email_factory):
+def test_get_identities_by_two_alt_id_mismatch_fails(client, email_factory):
     """GET /identities with two non-matching IDs returns an empty identities list."""
     email_1 = email_factory(with_amo=True)
     email_2 = email_factory(with_amo=True)
-    dbsession.commit()
 
     resp = client.get(
         f"/identities?primary_email={email_1.primary_email}&amo_user_id={email_2.amo.user_id}"
@@ -121,10 +118,9 @@ def test_get_identities_by_two_alt_id_mismatch_fails(client, dbsession, email_fa
     assert resp.json() == []
 
 
-def test_get_identities_by_two_alt_id_one_blank_fails(client, dbsession, email_factory):
+def test_get_identities_by_two_alt_id_one_blank_fails(client, email_factory):
     """GET /identities with an empty parameter returns an empty list."""
     email = email_factory()
-    dbsession.commit()
     assert not email.amo
 
     resp = client.get(f"/identities?primary_email={email.email_id}&amo_user_id=")
