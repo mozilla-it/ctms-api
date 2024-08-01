@@ -1,10 +1,15 @@
-from datetime import datetime
-from typing import Optional
+from __future__ import annotations
 
-from pydantic import UUID4, AnyUrl, Field, root_validator
+from typing import TYPE_CHECKING, Optional, Union
+
+from pydantic import UUID4, ConfigDict, Field, model_validator
 
 from .base import ComparableBase
+from .common import AnyUrlString, ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
+
+if TYPE_CHECKING:
+    from .contact import ContactInBase, ContactPatchSchema
 
 
 class WaitlistBase(ComparableBase):
@@ -18,15 +23,15 @@ class WaitlistBase(ComparableBase):
     name: str = Field(
         min_length=1,
         description="Basket slug for the waitlist",
-        example="new-product",
+        examples=["new-product"],
     )
-    source: Optional[AnyUrl] = Field(
+    source: Optional[AnyUrlString] = Field(
         default=None,
         description="Source URL of subscription",
-        example="https://www.mozilla.org/en-US/",
+        examples=["https://www.mozilla.org/en-US/"],
     )
     fields: dict = Field(
-        default={}, description="Additional fields", example='{"platform": "linux"}'
+        default={}, description="Additional fields", examples=['{"platform": "linux"}']
     )
     subscribed: bool = Field(
         default=True, description="True to subscribe, False to unsubscribe"
@@ -38,13 +43,44 @@ class WaitlistBase(ComparableBase):
     def __lt__(self, other):
         return self.name < other.name
 
-    @root_validator
-    def check_fields(cls, values):  # pylint:disable = no-self-argument
-        validate_waitlist_fields(values.get("name"), values.get("fields", {}))
-        return values
+    @model_validator(mode="after")
+    def check_fields(self):
+        """
+        Once waitlists will have been migrated to a full N-N relationship,
+        this will be the only remaining VPN specific piece of code.
+        """
+        if self.name == "relay":
 
-    class Config:
-        orm_mode = True
+            class RelayFieldsSchema(ComparableBase):
+                geo: Optional[str] = CountryField()
+                model_config = ConfigDict(extra="forbid")
+
+            RelayFieldsSchema(**self.fields)
+
+        elif self.name == "vpn":
+
+            class VPNFieldsSchema(ComparableBase):
+                geo: Optional[str] = CountryField()
+                platform: Optional[str] = PlatformField()
+                model_config = ConfigDict(extra="forbid")
+
+            VPNFieldsSchema(**self.fields)
+
+        else:
+            # Default schema for any waitlist.
+            # Only the known fields are validated. Any extra field would
+            # be accepted as is.
+            # This should allow us to onboard most waitlists without specific
+            # code change and service redeployment.
+            class DefaultFieldsSchema(ComparableBase):
+                geo: Optional[str] = CountryField()
+                platform: Optional[str] = PlatformField()
+
+            DefaultFieldsSchema(**self.fields)
+
+        return self
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # No need to change anything, just extend if you want to
@@ -54,22 +90,23 @@ WaitlistSchema = WaitlistBase
 WaitlistInSchema = WaitlistBase
 
 
-class WaitlistTableSchema(WaitlistBase):
-    email_id: UUID4 = Field(
-        description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
-    )
-    create_timestamp: datetime = Field(
+class WaitlistTimestampedSchema(WaitlistBase):
+    create_timestamp: ZeroOffsetDatetime = Field(
         description="Waitlist data creation timestamp",
-        example="2020-12-05T19:21:50.908000+00:00",
+        examples=["2020-12-05T19:21:50.908000+00:00"],
     )
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         description="Waitlist data update timestamp",
-        example="2021-02-04T15:36:57.511000+00:00",
+        examples=["2021-02-04T15:36:57.511000+00:00"],
     )
 
-    class Config:
-        extra = "forbid"
+
+class WaitlistTableSchema(WaitlistTimestampedSchema):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        examples=[EMAIL_ID_EXAMPLE],
+    )
+    model_config = ConfigDict(extra="forbid")
 
 
 def CountryField():  # pylint:disable = invalid-name
@@ -77,7 +114,7 @@ def CountryField():  # pylint:disable = invalid-name
         default=None,
         max_length=100,
         description="Waitlist country",
-        example="fr",
+        examples=["fr"],
     )
 
 
@@ -86,49 +123,8 @@ def PlatformField():  # pylint:disable = invalid-name
         default=None,
         max_length=100,
         description="VPN waitlist platforms as comma-separated list",
-        example="ios,mac",
+        examples=["ios,mac"],
     )
-
-
-def validate_waitlist_fields(name: Optional[str], fields: dict):
-    """
-    This is the only place where specific code has
-    to be added for custom validation of extra waitlist
-    fields.
-    In the future, a JSON schema for each waitlist could be put in the database instead.
-    """
-    if name == "relay":
-
-        class RelayFieldsSchema(ComparableBase):
-            geo: Optional[str] = CountryField()
-
-            class Config:
-                extra = "forbid"
-
-        RelayFieldsSchema(**fields)
-
-    elif name == "vpn":
-
-        class VPNFieldsSchema(ComparableBase):
-            geo: Optional[str] = CountryField()
-            platform: Optional[str] = PlatformField()
-
-            class Config:
-                extra = "forbid"
-
-        VPNFieldsSchema(**fields)
-
-    else:
-        # Default schema for any waitlist.
-        # Only the known fields are validated. Any extra field would
-        # be accepted as is.
-        # This should allow us to onboard most waitlists without specific
-        # code change and service redeployment.
-        class DefaultFieldsSchema(ComparableBase):
-            geo: Optional[str] = CountryField()
-            platform: Optional[str] = PlatformField()
-
-        DefaultFieldsSchema(**fields)
 
 
 class RelayWaitlistSchema(ComparableBase):
@@ -140,11 +136,9 @@ class RelayWaitlistSchema(ComparableBase):
         default=None,
         max_length=100,
         description="Relay waitlist country",
-        example="fr",
+        examples=["fr"],
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VpnWaitlistSchema(ComparableBase):
@@ -156,7 +150,7 @@ class VpnWaitlistSchema(ComparableBase):
         default=None,
         max_length=100,
         description="VPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
-        example="fr",
+        examples=["fr"],
     )
     platform: Optional[str] = Field(
         default=None,
@@ -165,8 +159,6 @@ class VpnWaitlistSchema(ComparableBase):
             "VPN waitlist platforms as comma-separated list,"
             " FPN_Waitlist_Platform__c in Salesforce"
         ),
-        example="ios,mac",
+        examples=["ios,mac"],
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

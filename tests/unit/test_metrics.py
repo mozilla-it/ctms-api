@@ -13,16 +13,16 @@ from ctms.app import app
 # Higher numbers = more ways to slice data, more storage, more processing time for summaries
 
 # Cardinality of ctms_requests_total counter
-METHOD_PATH_CODE_COMBINATIONS = 54
+METHOD_PATH_CODE_COMBINATIONS = 50
 
 # Cardinality of ctms_requests_duration_seconds histogram
-METHOD_PATH_CODEFAM_COMBOS = 39
+METHOD_PATH_CODEFAM_COMBOS = 35
 DURATION_BUCKETS = 8
 DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 
 # Base cardinatility of ctms_api_requests_total
 # Actual is multiplied by the number of API clients
-METHOD_API_PATH_COMBINATIONS = 19
+METHOD_API_PATH_COMBINATIONS = 18
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):
@@ -148,16 +148,6 @@ def assert_api_request_metric_inc(
     assert metrics_registry.get_sample_value("ctms_api_requests_total", labels) == count
 
 
-def assert_pending_acoustic_sync_inc(
-    metrics_registry: CollectorRegistry,
-    count: int = 1,
-):
-    """Assert ctms_pending_acoustic_sync_total was incremented"""
-    assert (
-        metrics_registry.get_sample_value("ctms_pending_acoustic_sync_total") == count
-    )
-
-
 def test_homepage_request(anon_client, registry):
     """A homepage request emits metrics for / and /docs"""
     anon_client.get("/")
@@ -175,27 +165,17 @@ def test_contacts_total(anon_client, dbsession, registry):
     assert registry.get_sample_value("ctms_contacts_total") == 3
 
 
-def test_api_request(client, minimal_contact, registry):
+def test_api_request(client, dbsession, email_factory, registry):
     """An API request emits API metrics as well."""
-    email_id = minimal_contact.email.email_id
-    client.get(f"/ctms/{email_id}")
+    email = email_factory()
+    dbsession.commit()
+
+    client.get(f"/ctms/{email.email_id}")
     path = "/ctms/{email_id}"
+
     assert_request_metric_inc(registry, "GET", path, 200)
     assert_duration_metric_obs(registry, "GET", path, "2xx")
     assert_api_request_metric_inc(registry, "GET", path, "test_client", "2xx")
-
-
-def test_pending_sync(client, minimal_contact, registry):
-    """An API requests that schedules an Acoustic contact sync emits a metric."""
-    data = {"email": {"first_name": "CTMS", "last_name": "User"}}
-    email_id = minimal_contact.email.email_id
-    response = client.patch(f"/ctms/{email_id}", json=data)
-    assert response.status_code == 200
-    path = "/ctms/{email_id}"
-    assert_request_metric_inc(registry, "PATCH", path, 200)
-    assert_duration_metric_obs(registry, "PATCH", path, "2xx", limit=0.5)
-    assert_api_request_metric_inc(registry, "PATCH", path, "test_client", "2xx")
-    assert_pending_acoustic_sync_inc(registry)
 
 
 @pytest.mark.parametrize(

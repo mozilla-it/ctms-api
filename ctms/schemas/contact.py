@@ -1,13 +1,14 @@
-from collections import defaultdict
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .addons import AddOnsInSchema, AddOnsSchema
 from .base import ComparableBase
+from .common import AnyUrlString
 from .email import (
+    EMAIL_ID_EXAMPLE,
     EmailBase,
     EmailInSchema,
     EmailPatchSchema,
@@ -16,123 +17,23 @@ from .email import (
 )
 from .fxa import FirefoxAccountsInSchema, FirefoxAccountsSchema
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
-from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
-from .product import ProductBaseSchema, ProductSegmentEnum
+from .newsletter import (
+    NewsletterInSchema,
+    NewsletterSchema,
+    NewsletterTableSchema,
+    NewsletterTimestampedSchema,
+)
 from .waitlist import (
     RelayWaitlistSchema,
     VpnWaitlistSchema,
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,
+    WaitlistTimestampedSchema,
 )
 
 if TYPE_CHECKING:
-    from models import Email, StripeSubscription, StripeSubscriptionItem
-
-
-def _subscription_items_by_product(
-    subscriptions: list["StripeSubscription"],
-) -> dict[str, "StripeSubscriptionItem"]:
-    """Groups Stripe subscription items by the Stripe product ID they're associated with"""
-    by_product = defaultdict(list)
-
-    for subscription in subscriptions:
-        for item in subscription.subscription_items:
-            by_product[item.price.stripe_product_id].append(item)
-    return by_product
-
-
-def _determine_segment(
-    latest: "StripeSubscription", num_subscriptions: int
-) -> ProductSegmentEnum:
-    """Use product subscription data to determine the marketing segment for
-    a customer as it pertains to a particular product"""
-
-    segment_prefix = "" if num_subscriptions == 1 else "re-"
-    if latest.status == "active":
-        if latest.canceled_at:
-            segment = "cancelling"
-        else:
-            segment = "active"
-    elif latest.status == "canceled":
-        segment = "canceled"
-    else:
-        segment_prefix = ""
-        segment = "other"
-
-    return ProductSegmentEnum(segment_prefix + segment)
-
-
-def _determine_changed(latest: "StripeSubscription") -> datetime:
-    if latest.status == "active":
-        if latest.canceled_at:
-            changed = latest.canceled_at
-        else:
-            changed = latest.start_date
-    elif latest.status == "canceled":
-        changed = latest.ended_at
-    else:
-        changed = latest.stripe_created
-    assert changed
-    return cast(datetime, changed)
-
-
-def _product_metadata(product_subscription_items: list["StripeSubscriptionItem"]):
-    """Generate metadata about a Stripe product as it pertains to a Stripe customer.
-
-    We use the latest subscription item that relates to a particular stripe product to
-    generate metadata concerning a customer's relationship to that product.
-    """
-
-    latest = max(
-        product_subscription_items,
-        key=lambda sub_item: cast(datetime, sub_item.subscription.current_period_end),
-    )
-    return ProductBaseSchema(
-        payment_service="stripe",
-        ###
-        # These come from the Payment Method, not imported from Stripe.
-        payment_type=None,
-        card_brand=None,
-        card_last4=None,
-        billing_country=None,
-        ###
-        status=latest.subscription.status,
-        created=latest.subscription.stripe_created,
-        start=latest.subscription.start_date,
-        current_period_start=latest.subscription.current_period_start,
-        current_period_end=latest.subscription.current_period_end,
-        canceled_at=latest.subscription.canceled_at,
-        cancel_at_period_end=latest.subscription.cancel_at_period_end,
-        ended_at=latest.subscription.ended_at,
-        product_id=latest.price.stripe_product_id,
-        product_name=None,  # Products are not imported
-        price_id=latest.price.stripe_id,
-        currency=latest.price.currency,
-        amount=latest.price.unit_amount,
-        interval_count=latest.price.recurring_interval_count,
-        interval=latest.price.recurring_interval,
-        sub_count=len(product_subscription_items),
-        segment=_determine_segment(
-            latest.subscription, len(product_subscription_items)
-        ),
-        changed=_determine_changed(latest.subscription),
-    )
-
-
-def get_stripe_products(email: "Email") -> List[ProductBaseSchema]:
-    """Return a list of Stripe products for the contact, if any."""
-    if not email.stripe_customer:
-        return []
-    sub_items_by_product = _subscription_items_by_product(
-        email.stripe_customer.subscriptions
-    )
-    products = [
-        _product_metadata(product_subscription_items)
-        for product_subscription_items in sub_items_by_product.values()
-    ]
-    products.sort(key=lambda prod: prod.product_id or "")
-    return products
+    from ctms.models import Email
 
 
 class ContactSchema(ComparableBase):
@@ -142,9 +43,55 @@ class ContactSchema(ComparableBase):
     email: EmailSchema
     fxa: Optional[FirefoxAccountsSchema] = None
     mofo: Optional[MozillaFoundationSchema] = None
-    newsletters: List[NewsletterTableSchema] = []
-    waitlists: List[WaitlistTableSchema] = []
-    products: List[ProductBaseSchema] = []
+    newsletters: List[NewsletterTableSchema] = Field(
+        default_factory=list,
+        description="List of newsletters for which the contact is or was subscribed",
+        examples=[
+            [
+                {
+                    "name": "firefox-welcome",
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+                {
+                    "name": "mozilla-welcome",
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+            ]
+        ],
+    )
+    waitlists: List[WaitlistTableSchema] = Field(
+        default_factory=list,
+        description="List of waitlists for which the contact is or was subscribed",
+        examples=[
+            [
+                {
+                    "name": "example-product",
+                    "fields": {"geo": "fr", "platform": "win64"},
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+                {
+                    "name": "relay",
+                    "fields": {"geo": "fr"},
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+                {
+                    "name": "vpn",
+                    "fields": {"geo": "fr", "platform": "ios,mac"},
+                    "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
+                    "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
+                    "email_id": EMAIL_ID_EXAMPLE,
+                },
+            ]
+        ],
+    )
 
     @classmethod
     def from_email(cls, email: "Email") -> "ContactSchema":
@@ -155,65 +102,7 @@ class ContactSchema(ComparableBase):
             mofo=email.mofo,
             newsletters=email.newsletters,
             waitlists=email.waitlists,
-            products=get_stripe_products(email),
         )
-
-    class Config:
-        fields = {
-            "newsletters": {
-                "description": "List of newsletters for which the contact is or was subscribed",
-                "example": [
-                    {
-                        "name": "firefox-welcome",
-                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                        "email_id": EmailSchema.schema()["properties"]["email_id"][
-                            "example"
-                        ],
-                    },
-                    {
-                        "name": "mozilla-welcome",
-                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                        "email_id": EmailSchema.schema()["properties"]["email_id"][
-                            "example"
-                        ],
-                    },
-                ],
-            },
-            "waitlists": {
-                "description": "List of waitlists for which the contact is or was subscribed",
-                "example": [
-                    {
-                        "name": "example-product",
-                        "fields": {"geo": "fr", "platform": "win64"},
-                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                        "email_id": EmailSchema.schema()["properties"]["email_id"][
-                            "example"
-                        ],
-                    },
-                    {
-                        "name": "relay",
-                        "fields": {"geo": "fr"},
-                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                        "email_id": EmailSchema.schema()["properties"]["email_id"][
-                            "example"
-                        ],
-                    },
-                    {
-                        "name": "vpn",
-                        "fields": {"geo": "fr", "platform": "ios,mac"},
-                        "create_timestamp": "2020-12-05T19:21:50.908000+00:00",
-                        "update_timestamp": "2021-02-04T15:36:57.511000+00:00",
-                        "email_id": EmailSchema.schema()["properties"]["email_id"][
-                            "example"
-                        ],
-                    },
-                ],
-            },
-        }
 
     def as_identity_response(self) -> "IdentityResponse":
         """Return the identities of a contact"""
@@ -237,11 +126,34 @@ class ContactInBase(ComparableBase):
     email: EmailBase
     fxa: Optional[FirefoxAccountsInSchema] = None
     mofo: Optional[MozillaFoundationInSchema] = None
-    newsletters: List[NewsletterInSchema] = []
-    waitlists: List[WaitlistInSchema] = []
-
-    class Config:
-        fields = ContactSchema.Config.fields
+    newsletters: List[NewsletterInSchema] = Field(
+        default_factory=list,
+        examples=[
+            [
+                {
+                    "name": "firefox-welcome",
+                },
+                {
+                    "name": "mozilla-welcome",
+                },
+            ]
+        ],
+    )
+    waitlists: List[WaitlistInSchema] = Field(
+        default_factory=list,
+        examples=[
+            [
+                {
+                    "name": "example-product",
+                    "fields": {"geo": "fr", "platform": "win64"},
+                },
+                {
+                    "name": "relay",
+                    "fields": {"geo": "fr"},
+                },
+            ]
+        ],
+    )
 
     def idempotent_equal(self, other):
         def _noneify(field):
@@ -279,45 +191,38 @@ class ContactPatchSchema(ComparableBase):
     "UNSUBSCRIBE" instead of lists or objects.
     """
 
-    amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]]
-    email: Optional[EmailPatchSchema]
-    fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]]
-    mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]]
-    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]]
-    waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]]
-
-    class Config:
-        fields = {
-            "amo": {"description": 'Add-ons data to update, or "DELETE" to reset.'},
-            "fxa": {
-                "description": 'Firefox Accounts data to update, or "DELETE" to reset.'
-            },
-            "mofo": {
-                "description": 'Mozilla Foundation data to update, or "DELETE" to reset.'
-            },
-            "newsletters": {
-                "description": (
-                    "List of newsletters to add or update, or 'UNSUBSCRIBE' to"
-                    " unsubscribe from all."
-                ),
-                "example": [{"name": "firefox-welcome", "subscribed": False}],
-            },
-            "vpn_waitlist": {
-                "description": 'VPN Waitlist data to update, or "DELETE" to reset.'
-            },
-            "relay_waitlist": {
-                "description": 'Relay Waitlist data to update, or "DELETE" to reset.'
-            },
-            "waitlists": {
-                "description": ("List of waitlists to add or update."),
-                "example": [
-                    {
-                        "name": "example-product",
-                        "fields": {"geo": "fr", "platform": "win64"},
-                    }
-                ],
-            },
-        }
+    amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]] = Field(
+        None, description='Add-ons data to update, or "DELETE" to reset.'
+    )
+    email: Optional[EmailPatchSchema] = None
+    fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]] = Field(
+        None, description='Firefox Accounts data to update, or "DELETE" to reset.'
+    )
+    mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]] = Field(
+        None, description='Mozilla Foundation data to update, or "DELETE" to reset.'
+    )
+    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]] = (
+        Field(
+            None,
+            description=(
+                "List of newsletters to add or update, or 'UNSUBSCRIBE' to"
+                " unsubscribe from all."
+            ),
+            examples=[[{"name": "firefox-welcome", "subscribed": False}]],
+        )
+    )
+    waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]] = Field(
+        None,
+        description=("List of waitlists to add or update."),
+        examples=[
+            [
+                {
+                    "name": "example-product",
+                    "fields": {"geo": "fr", "platform": "win64"},
+                }
+            ]
+        ],
+    )
 
 
 class CTMSResponse(BaseModel):
@@ -331,25 +236,29 @@ class CTMSResponse(BaseModel):
     email: EmailSchema
     fxa: FirefoxAccountsSchema
     mofo: MozillaFoundationSchema
-    newsletters: List[NewsletterSchema]
-    waitlists: List[WaitlistSchema]
+    newsletters: List[NewsletterTimestampedSchema]
+    waitlists: List[WaitlistTimestampedSchema]
     # Retro-compat fields
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
 
-    @validator("amo", pre=True, always=True)
-    def set_default_amo(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("amo", mode="before")
+    @classmethod
+    def set_default_amo(cls, value):
         return value or AddOnsSchema()
 
-    @validator("fxa", pre=True, always=True)
-    def set_default_fxa(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("fxa", mode="before")
+    @classmethod
+    def set_default_fxa(cls, value):
         return value or FirefoxAccountsSchema()
 
-    @validator("mofo", pre=True, always=True)
-    def set_default_mofo(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("mofo", mode="before")
+    @classmethod
+    def set_default_mofo(cls, value):
         return value or MozillaFoundationSchema()
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def legacy_waitlists(cls, values):  # pylint: disable=no-self-argument
         # Show computed fields in response for retro-compatibility.
         values["vpn_waitlist"] = VpnWaitlistSchema()
@@ -389,7 +298,7 @@ class CTMSSingleResponse(CTMSResponse):
     """
 
     status: Literal["ok"] = Field(
-        default="ok", description="Request was successful", example="ok"
+        default="ok", description="Request was successful", examples=["ok"]
     )
 
 
@@ -403,7 +312,7 @@ class CTMSBulkResponse(BaseModel):
     end: datetime
     limit: int
     after: Optional[str] = None
-    next: Optional[Union[AnyUrl, str]] = None
+    next: Optional[Union[AnyUrlString, str]] = None
     items: List[CTMSResponse]
 
 

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import Dict, List, Literal, Optional, Union
 from uuid import UUID, uuid4
@@ -8,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 
-from ctms.config import re_trace_email
 from ctms.crud import (
     create_contact,
     create_or_update_contact,
@@ -17,7 +17,6 @@ from ctms.crud import (
     get_contact_by_email_id,
     get_contacts_by_any_id,
     get_email,
-    schedule_acoustic_record,
     update_contact,
 )
 from ctms.dependencies import get_db, get_enabled_api_client, get_json, get_settings
@@ -109,7 +108,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
     page_length = len(results)
     last_page = page_length < limit
     if page_length > 0:
-        results = [CTMSResponse(**contact.dict()) for contact in results]
+        results = [CTMSResponse(**contact.model_dump()) for contact in results]
 
     if last_page:
         # No results/end
@@ -162,14 +161,7 @@ def read_ctms_by_any_id(
         )
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_any_id(db, **ids)
-    traced = set()
-    for contact in contacts:
-        email = contact.email.primary_email
-        if re_trace_email.match(email):
-            traced.add(email)
-    if traced:
-        request.state.log_context["trace"] = ",".join(sorted(traced))
-    return [CTMSResponse(**contact.dict()) for contact in contacts]
+    return [CTMSResponse(**contact.model_dump()) for contact in contacts]
 
 
 @router.get(
@@ -189,15 +181,12 @@ def read_ctms_by_email_id(
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
     resp = get_ctms_response_or_404(db, email_id)
-    email = resp.email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
     return resp
 
 
 def get_ctms_response_or_404(db, email_id):
     contact = get_contact_or_404(db, email_id)
-    return CTMSSingleResponse(**contact.dict(), status="ok")
+    return CTMSSingleResponse(**contact.model_dump(), status="ok")
 
 
 @router.post(
@@ -219,23 +208,13 @@ def create_ctms_contact(
     email_id = contact.email.email_id
     existing = get_contact_by_email_id(db, email_id)
     if existing:
-        email = existing.email.primary_email
-        if re_trace_email.match(email):
-            request.state.log_context["trace"] = email
-            request.state.log_context["trace_json"] = content_json
-        if ContactInSchema(**existing.dict()).idempotent_equal(contact):
+        if ContactInSchema(**existing.model_dump()).idempotent_equal(contact):
             response.headers["Location"] = f"/ctms/{email_id}"
             response.status_code = 200
             return get_ctms_response_or_404(db=db, email_id=email_id)
         raise HTTPException(status_code=409, detail="Contact already exists")
     try:
         create_contact(db, email_id, contact, get_metrics())
-        # Without applying the operations to the DB with `flush()`, the low level operations
-        # of `schedule_acoustic_record()` won't detect the created contact and the foreign key
-        # constraint on email id will be violated.
-        # See https://github.com/mozilla-it/ctms-api/issues/549#issuecomment-1725519936
-        db.flush()
-        schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
         db.rollback()
@@ -245,10 +224,6 @@ def create_ctms_contact(
     response.headers["Location"] = f"/ctms/{email_id}"
     response.status_code = 201
     resp_data = get_ctms_response_or_404(db=db, email_id=email_id)
-    email = resp_data.email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
-        request.state.log_context["trace_json"] = content_json
     return resp_data
 
 
@@ -279,13 +254,9 @@ def create_or_update_ctms_contact(
             )
     else:
         contact.email.email_id = email_id
-    email = contact.email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
-        request.state.log_context["trace_json"] = content_json
+
     try:
         create_or_update_contact(db, email_id, contact, get_metrics())
-        schedule_acoustic_record(db, email_id, get_metrics())
         db.commit()
     except Exception as e:  # pylint:disable = W0703
         db.rollback()
@@ -329,13 +300,9 @@ def partial_update_ctms_contact(
             detail="cannot change email_id",
         )
     current_email = get_email_or_404(db, email_id)
-    update_data = contact.dict(exclude_unset=True)
+    update_data = contact.model_dump(exclude_unset=True)
     update_contact(db, current_email, update_data, get_metrics())
-    email = current_email.primary_email
-    if re_trace_email.match(email):
-        request.state.log_context["trace"] = email
-        request.state.log_context["trace_json"] = content_json
-    schedule_acoustic_record(db, email_id, get_metrics())
+
     try:
         db.commit()
     except Exception as e:  # pylint:disable = W0703
@@ -406,9 +373,9 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
             after=after,
             mofo_relevant=mofo_relevant,
         )
-        return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.dict())
+        return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.model_dump())
     except ValidationError as e:
-        detail = {"errors": e.errors()}
+        detail = {"errors": json.loads(e.json())}
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
         ) from e

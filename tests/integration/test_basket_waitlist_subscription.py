@@ -5,7 +5,9 @@ from uuid import uuid4
 import backoff
 import pytest
 import requests
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from tests.conftest import FuzzyAssert
 
 TEST_FOLDER = os.path.dirname(os.path.realpath(__file__))
 
@@ -16,9 +18,9 @@ class Settings(BaseSettings):
     # We initialize CTMS api client id/secret in `ctms-db-init.sql`
     ctms_client_id: str = "id_integration-test"
     ctms_client_secret: str
-
-    class Config:
-        env_file = os.path.join(TEST_FOLDER, "basket.env")
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(TEST_FOLDER, "basket.env"), extra="ignore"
+    )
 
 
 settings = Settings()
@@ -137,6 +139,8 @@ def test_vpn_waitlist(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
     # Legacy (read-only) fields.
@@ -173,6 +177,8 @@ def test_vpn_waitlist(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
     # Legacy (read-only) fields.
@@ -231,6 +237,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         }
     ]
     # Legacy (read-only) fields.
@@ -265,6 +273,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
         {
             "name": "relay-vpn-bundle",
@@ -274,6 +284,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
     ]
     # Legacy (read-only) fields.
@@ -305,6 +317,8 @@ def test_relay_waitlists(ctms_headers):
             "source": "https://relay.firefox.com/",
             "subscribed": False,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
         {
             "name": "relay-vpn-bundle",
@@ -314,6 +328,8 @@ def test_relay_waitlists(ctms_headers):
             },
             "subscribed": True,
             "unsub_reason": None,
+            "create_timestamp": FuzzyAssert.iso8601(),
+            "update_timestamp": FuzzyAssert.iso8601(),
         },
     ]
     # Legacy (read-only) fields.

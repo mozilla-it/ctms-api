@@ -1,101 +1,74 @@
 """pytest tests for API functionality"""
+
 import urllib.parse
 from datetime import timedelta
-from typing import Tuple
 
 import pytest
 
-from ctms.schemas import BulkRequestSchema, CTMSResponse
+from ctms.schemas import BulkRequestSchema, ContactSchema, CTMSResponse
 
-INVALID_BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
-    (
-        "GET",
+
+@pytest.mark.parametrize(
+    "path",
+    [
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=-11&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=1001&after=&mofo_relevant=",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=-3&after=&mofo_relevant=",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&after=null",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&limit=null",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&after=hello",
-    ),
-    (
-        "GET",
         "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&mofo_relevant=nah",
-    ),
+    ],
 )
-BULK_TEST_CASES: Tuple[Tuple[str, str], ...] = (
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
-    ),
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=100&after=&mofo_relevant=",
-    ),
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00",
-    ),
-    (
-        "GET",
-        "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&mofo_relevant=yes",
-    ),
-)
+def test_authorized_bulk_call_errs_on_validation(client, path):
+    """Calling the API with invlaid query parameters fails"""
 
-
-@pytest.mark.parametrize("method,path", INVALID_BULK_TEST_CASES)
-def test_authorized_bulk_call_errs_on_validation(client, example_contact, method, path):
-    """Calling the API without credentials fails."""
     resp = client.get(path)
     assert resp.status_code == 422
 
 
-@pytest.mark.parametrize("method,path", BULK_TEST_CASES)
-def test_authorized_bulk_call_succeeds(client, example_contact, method, path):
-    """Calling the API without credentials fails."""
+BULK_TEST_CASES = (
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=2021-01-29T09%3A26%3A57.511000%2B00%3A00&limit=1&after=OTNkYjgzZDQtNDExOS00ZTBjLWFmODctYTcxMzc4NmZhODFkLDIwMjAtMDEtMjIgMTU6MjQ6MDArMDA6MDA=",
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&end=&limit=100&after=&mofo_relevant=",
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00",
+    "/updates?start=2020-01-22T03%3A24%3A00%2B00%3A00&mofo_relevant=yes",
+)
+
+
+@pytest.mark.parametrize("path", BULK_TEST_CASES)
+def test_authorized_bulk_call_succeeds(client, path):
+    """Calling the API with credentials succeeds."""
     resp = client.get(path)
     assert resp.status_code == 200
 
 
-@pytest.mark.parametrize("method,path", BULK_TEST_CASES)
-def test_unauthorized_api_call_fails(anon_client, example_contact, method, path):
+@pytest.mark.parametrize("path", BULK_TEST_CASES)
+def test_unauthorized_api_call_fails(anon_client, path):
     """Calling the API without credentials fails."""
     resp = anon_client.get(path)
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
 
 
-def test_get_ctms_bulk_by_timerange(
-    client, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+def test_get_ctms_bulk_by_timerange(client, dbsession, email_factory):
+    first_email = email_factory()
+    target_email = email_factory(
+        newsletters=1,
+        waitlists=1,
+        mofo=True,
+        amo=True,
+        fxa=True,
     )
-    first_contact = sorted_list[0]
-    last_contact = sorted_list[-1]
+    last_email = email_factory()
+    dbsession.commit()
+
     after = BulkRequestSchema.compressor_for_bulk_encoded_details(
-        first_contact.email.email_id, first_contact.email.update_timestamp
+        first_email.email_id, first_email.update_timestamp
     )
     limit = 1
-    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start = first_email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())
-    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end = last_email.update_timestamp + timedelta(hours=12)
     end_time = urllib.parse.quote_plus(end.isoformat())
     url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
     resp = client.get(url)
@@ -108,12 +81,10 @@ def test_get_ctms_bulk_by_timerange(
     assert "next" in results
     assert "items" in results
     assert len(results["items"]) > 0
-    dict_contact_expected = sorted_list[1].dict()
-    dict_contact_actual = CTMSResponse.parse_obj(results["items"][0]).dict()
-    # products list is not (yet) in output schema
-    assert dict_contact_expected["products"] == []
-    assert "products" not in dict_contact_actual
-    dict_contact_actual["products"] = []
+
+    dict_contact_expected = ContactSchema.from_email(target_email).model_dump()
+    dict_contact_actual = CTMSResponse(**results["items"][0]).model_dump()
+
     # The response shows computed fields for retro-compat. Contact schema
     # does not have them.
     del dict_contact_actual["vpn_waitlist"]
@@ -121,34 +92,30 @@ def test_get_ctms_bulk_by_timerange(
     # The reponse does not show `email_id` and timestamp fields.
     for newsletter in dict_contact_expected["newsletters"]:
         del newsletter["email_id"]
-        del newsletter["create_timestamp"]
-        del newsletter["update_timestamp"]
     for waitlist in dict_contact_expected["waitlists"]:
         del waitlist["email_id"]
-        del waitlist["create_timestamp"]
-        del waitlist["update_timestamp"]
 
     assert dict_contact_expected == dict_contact_actual
     assert results["next"] is not None
 
 
-def test_get_ctms_bulk_by_timerange_no_results(
-    client, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
+def test_get_ctms_bulk_by_timerange_no_results(dbsession, client, email_factory):
+    emails = email_factory.create_batch(3)
+    dbsession.commit()
+
     sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
+        emails,
+        key=lambda email: (email.update_timestamp, email.email_id),
     )
-    first_contact = sorted_list[0]
-    last_contact = sorted_list[-1]
+    first_email = sorted_list[0]
+    last_email = sorted_list[-1]
     after = BulkRequestSchema.compressor_for_bulk_encoded_details(
-        last_contact.email.email_id, last_contact.email.update_timestamp
+        last_email.email_id, last_email.update_timestamp
     )
     limit = 1
-    start = first_contact.email.update_timestamp - timedelta(hours=12)
+    start = first_email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())
-    end = last_contact.email.update_timestamp + timedelta(hours=12)
+    end = last_email.update_timestamp + timedelta(hours=12)
     end_time = urllib.parse.quote_plus(end.isoformat())
     url = f"/updates?start={start_time}&end={end_time}&limit={limit}&after={after}"
     resp = client.get(url)

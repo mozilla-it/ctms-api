@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Literal, Optional, Tuple, Union
 
 import dateutil.parser
-from pydantic import validator
+from pydantic import Field, field_validator
 
 from .base import ComparableBase
 
@@ -15,20 +15,24 @@ class BulkRequestSchema(ComparableBase):
 
     start_time: datetime
 
-    end_time: Optional[Union[datetime, Literal[""]]] = None
+    end_time: Optional[Union[datetime, Literal[""]]] = Field(
+        default=None, validate_default=True
+    )
 
-    @validator("end_time", always=True)
-    def end_time_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("end_time", mode="before")
+    @classmethod
+    def end_time_must_not_be_blank(cls, value):
         if value in BLANK_VALS:
             return datetime.now(timezone.utc)
         return value
 
-    limit: Optional[Union[int, Literal[""]]] = None
+    limit: Optional[Union[int, Literal[""]]] = Field(
+        default=None, validate_default=True
+    )
 
-    @validator("limit", always=True)
-    def limit_must_adhere_to_validations(
-        cls, value
-    ):  # pylint: disable=no-self-argument
+    @field_validator("limit", mode="before")
+    @classmethod
+    def limit_must_adhere_to_validations(cls, value):
         if value in BLANK_VALS:
             return 100  # Default
         if value < 0:
@@ -37,17 +41,20 @@ class BulkRequestSchema(ComparableBase):
             raise ValueError('"limit" should be less than or equal to 1000')
         return value
 
-    mofo_relevant: Optional[Union[bool, Literal[""]]] = None
+    mofo_relevant: Optional[Union[bool, Literal[""]]] = Field(
+        default=None, validate_default=True
+    )
 
-    @validator("mofo_relevant", always=True)
-    def mofo_relevant_must_not_be_blank(cls, value):  # pylint: disable=no-self-argument
+    @field_validator("mofo_relevant", mode="before")
+    @classmethod
+    def mofo_relevant_must_not_be_blank(cls, value):
         if value in BLANK_VALS:
             return None  # Default
         return value
 
-    after: Optional[str] = None
+    after: Optional[str] = Field(default=None, validate_default=True)
 
-    @validator("after", always=True)
+    @field_validator("after", mode="before")
     def after_must_be_base64_decodable(cls, value):  # pylint: disable=no-self-argument
         if value in BLANK_VALS:
             return None  # Default

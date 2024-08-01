@@ -1,9 +1,10 @@
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 
 
 class AddOnsBase(ComparableBase):
@@ -21,13 +22,13 @@ class AddOnsBase(ComparableBase):
     add_on_ids: Optional[str] = Field(
         default=None,
         description="Comma-separated list of add-ons for account, AMO_Add_On_ID_s__c in Salesforce",
-        example="add-on-1,add-on-2",
+        examples=["add-on-1,add-on-2"],
     )
     display_name: Optional[str] = Field(
         default=None,
         max_length=255,
         description="Display name on AMO, AMO_Display_Name__c in Salesforce",
-        example="Add-ons Author",
+        examples=["Add-ons Author"],
     )
     email_opt_in: bool = Field(
         default=False,
@@ -37,45 +38,43 @@ class AddOnsBase(ComparableBase):
         default=None,
         max_length=5,
         description="Account language, AMO_Language__c in Salesforce",
-        example="en",
+        examples=["en"],
     )
     last_login: Optional[date] = Field(
         default=None,
         description="Last login date on addons.mozilla.org, AMO_Last_Login__c in Salesforce",
-        example="2021-01-28",
+        examples=["2021-01-28"],
     )
     location: Optional[str] = Field(
         default=None,
         max_length=255,
         description="Free-text location on AMO, AMO_Location__c in Salesforce",
-        example="California",
+        examples=["California"],
     )
     profile_url: Optional[str] = Field(
         default=None,
         max_length=40,
         description="AMO profile URL, AMO_Profile_URL__c in Salesforce",
-        example="firefox/user/98765",
+        examples=["firefox/user/98765"],
     )
     user: bool = Field(
         default=False,
         description="True if user is from an Add-on sync, AMO_User__c in Salesforce",
-        example=True,
+        examples=[True],
     )
     user_id: Optional[str] = Field(
         default=None,
         max_length=40,
         description="User ID on AMO, AMO_User_ID__c in Salesforce",
-        example="98765",
+        examples=["98765"],
     )
     username: Optional[str] = Field(
         default=None,
         max_length=100,
         description="Username on AMO, AMO_Username__c in Salesforce",
-        example="AddOnAuthor",
+        examples=["AddOnAuthor"],
     )
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # No need to change anything, just extend if you want to
@@ -83,21 +82,21 @@ AddOnsInSchema = AddOnsBase
 
 
 class UpdatedAddOnsInSchema(AddOnsInSchema):
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="AMO data update timestamp",
-        example="2021-01-28T21:26:57.511Z",
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )
 
 
 class AddOnsSchema(AddOnsBase):
-    create_timestamp: Optional[datetime] = Field(
+    create_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="AMO data creation timestamp",
-        example="2020-12-05T19:21:50.908000+00:00",
+        examples=["2020-12-05T19:21:50.908000+00:00"],
     )
-    update_timestamp: Optional[datetime] = Field(
+    update_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="AMO data update timestamp",
-        example="2021-02-04T15:36:57.511000+00:00",
+        examples=["2021-02-04T15:36:57.511000+00:00"],
     )

@@ -1,5 +1,6 @@
 """Unit tests for cross-API functionality"""
-from typing import Any, Optional, Set, Tuple
+
+from typing import Optional, Set
 from uuid import uuid4
 
 import pytest
@@ -8,7 +9,7 @@ from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
 from ctms.schemas.waitlist import WaitlistInSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
-API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
+API_TEST_CASES = (
     ("GET", "/ctms", {"primary_email": "contact@example.com"}),
     ("GET", "/ctms/332de237-cab7-4461-bcc3-48e68f42bd5c", None),
     (
@@ -43,51 +44,49 @@ API_TEST_CASES: Tuple[Tuple[str, str, Any], ...] = (
     (
         "DELETE",
         "/ctms/contact@example.com",
-        [
-            {
-                "email_id": str(uuid4()),
-                "primary_email": "contact@example.com",
-                "basket_token": str(uuid4()),
-                "sfcd_id": str(),
-                "mofo_contact_id": str(),
-                "mofo_email_id": str(),
-                "amo_user_id": str(),
-                "fxa_id": str(),
-                "fxa_primary_email": str(),
-            }
-        ],
+        None,
     ),
 )
 
 
 @pytest.mark.parametrize("method,path,params", API_TEST_CASES)
-def test_unauthorized_api_call_fails(
-    anon_client, example_contact, method, path, params
-):
+def test_unauthorized_api_call_fails(anon_client, method, path, params):
     """Calling the API without credentials fails."""
-    if method == "GET":
-        resp = anon_client.get(path, params=params)
+    if method in ("GET", "DELETE"):
+        resp = anon_client.request(method, path)
     else:
-        assert method in ("PATCH", "POST", "PUT", "DELETE")
+        assert method in ("PATCH", "POST", "PUT")
         resp = anon_client.request(method, path, json=params)
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
 
 
 @pytest.mark.parametrize("method,path,params", API_TEST_CASES)
-def test_authorized_api_call_succeeds(client, example_contact, method, path, params):
-    """Calling the API without credentials fails."""
+def test_authorized_api_call_succeeds(
+    client, dbsession, email_factory, method, path, params
+):
+    """Calling the API with credentials succeeds."""
+
+    email_factory(
+        email_id="332de237-cab7-4461-bcc3-48e68f42bd5c",
+        primary_email="contact@example.com",
+    )
+    dbsession.commit()
+
     if method == "GET":
-        resp = client.get(path, params=params)
+        resp = client.request(method, path, params=params)
+        assert resp.status_code == 200
+    elif method == "DELETE":
+        resp = client.request(method, path)
         assert resp.status_code == 200
     else:
-        assert method in ("PATCH", "POST", "PUT", "DELETE")
+        assert method in ("PATCH", "POST", "PUT")
         resp = client.request(method, path, json=params)
         if method == "PUT":
             assert resp.status_code in {200, 201}  # Either creates or updates
         elif method == "POST":
             assert resp.status_code == 201
-        else:  # PATCH, DELETE
+        else:  # PATCH
             assert resp.status_code == 200
 
 
@@ -150,8 +149,8 @@ def _compare_written_contacts(
 ):
     fields_not_written = new_default_fields or set()
 
-    saved_contact = ContactInSchema(**contact.dict())
-    sample = ContactInSchema(**sample.dict())
+    saved_contact = ContactInSchema(**contact.model_dump())
+    sample = ContactInSchema(**sample.model_dump())
 
     if not ids_should_be_identical:
         assert saved_contact.email.email_id != sample.email.email_id

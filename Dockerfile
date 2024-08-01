@@ -1,4 +1,4 @@
-FROM python:3.11.5 as python-base
+FROM python:3.12.4 as python-base
 
 ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
@@ -9,14 +9,14 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
     PYSETUP_PATH="/opt/pysetup"
 
 RUN python3 -m venv $POETRY_HOME && \
-    $POETRY_HOME/bin/pip install poetry==1.3.2 && \
+    $POETRY_HOME/bin/pip install poetry==1.7.1 && \
     $POETRY_HOME/bin/poetry --version
 
 WORKDIR $PYSETUP_PATH
 COPY ./poetry.lock ./pyproject.toml ./
-RUN $POETRY_HOME/bin/poetry install --no-dev --no-root
+RUN $POETRY_HOME/bin/poetry install --no-root --only main
 
-FROM python:3.11.5-slim as production
+FROM python:3.12.4-slim as production
 
 COPY bin/update_and_install_system_packages.sh /opt
 RUN opt/update_and_install_system_packages.sh libpq5

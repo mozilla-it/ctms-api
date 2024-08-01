@@ -51,13 +51,6 @@ METRICS_PARAMS: dict[
             ],
         },
     ),
-    "pending_acoustic_sync": (
-        Counter,
-        {
-            "name": "ctms_pending_acoustic_sync_total",
-            "documentation": "Total count of contacts added to Acoustic sync backlog",
-        },
-    ),
     "contacts": (
         Gauge,
         {
@@ -119,7 +112,7 @@ def init_metrics_labels(
                     status_codes.extend(
                         [int(code) for code in list(mspec.get("responses", [200]))]
                     )
-                    is_api |= "security" in mspec and not path.endswith("from_pubsub")
+                    is_api |= "security" in mspec
         elif path == "/":
             status_codes = [307]
         else:

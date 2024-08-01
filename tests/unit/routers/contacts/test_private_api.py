@@ -1,7 +1,11 @@
 """Tests for the private APIs that may be removed."""
+
+import json
 from typing import Any, Tuple
 
 import pytest
+
+from ctms.schemas.contact import ContactSchema
 
 API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
     ("/identities", {"basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"}),
@@ -10,18 +14,24 @@ API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
 
 
 @pytest.mark.parametrize("path,params", API_TEST_CASES)
-def test_unauthorized_api_call_fails(anon_client, example_contact, path, params):
+def test_authorized_api_call_succeeds(client, dbsession, email_factory, path, params):
+    """Calling the API with credentials succeeds."""
+    email_factory(
+        email_id="332de237-cab7-4461-bcc3-48e68f42bd5c",
+        basket_token="c4a7d759-bb52-457b-896b-90f1d3ef8433",
+    )
+    dbsession.commit()
+
+    resp = client.get(path, params=params)
+    assert resp.status_code == 200
+
+
+@pytest.mark.parametrize("path,params", API_TEST_CASES)
+def test_unauthorized_api_call_fails(anon_client, path, params):
     """Calling the API without credentials fails."""
     resp = anon_client.get(path, params=params)
     assert resp.status_code == 401
     assert resp.json() == {"detail": "Not authenticated"}
-
-
-@pytest.mark.parametrize("path,params", API_TEST_CASES)
-def test_authorized_api_call_succeeds(client, example_contact, path, params):
-    """Calling the API without credentials fails."""
-    resp = client.get(path, params=params)
-    assert resp.status_code == 200
 
 
 def identity_response_for_contact(contact):
@@ -83,38 +93,41 @@ def test_get_identities_by_alt_id(client, request, name, ident):
     assert resp.json() == [identity]
 
 
-def test_get_identities_by_two_alt_id_match(client, maximal_contact):
+def test_get_identities_by_two_alt_id_match(client, dbsession, email_factory):
     """GET /identities, with two matching IDs, returns a one-item identities list."""
-    identity = identity_response_for_contact(maximal_contact)
-    sfdc_id = identity["sfdc_id"]
+    email = email_factory(fxa=True, sfdc_id="001A000001aABcDEFG")
+    sfdc_id = email.sfdc_id
     assert sfdc_id
-    fxa_email = identity["fxa_primary_email"]
+    fxa_email = email.fxa.primary_email
     assert fxa_email
+    dbsession.commit()
 
     resp = client.get(f"/identities?sfdc_id={sfdc_id}&fxa_primary_email={fxa_email}")
+    identity = json.loads(ContactSchema.from_email(email).as_identity_response().json())
     assert resp.status_code == 200
     assert resp.json() == [identity]
 
 
-def test_get_identities_by_two_alt_id_mismatch_fails(
-    client, minimal_contact, example_contact
-):
+def test_get_identities_by_two_alt_id_mismatch_fails(client, dbsession, email_factory):
     """GET /identities with two non-matching IDs returns an empty identities list."""
-    email = minimal_contact.email.primary_email
-    amo_user_id = example_contact.amo.user_id
-    assert amo_user_id
+    email_1 = email_factory(amo=True)
+    email_2 = email_factory(amo=True)
+    dbsession.commit()
 
-    resp = client.get(f"/identities?primary_email={email}&amo_user_id={amo_user_id}")
+    resp = client.get(
+        f"/identities?primary_email={email_1.primary_email}&amo_user_id={email_2.amo.user_id}"
+    )
     assert resp.status_code == 200
     assert resp.json() == []
 
 
-def test_get_identities_by_two_alt_id_one_blank_fails(client, minimal_contact):
+def test_get_identities_by_two_alt_id_one_blank_fails(client, dbsession, email_factory):
     """GET /identities with an empty parameter returns an empty list."""
-    email = minimal_contact.email.primary_email
-    assert not minimal_contact.amo
+    email = email_factory()
+    dbsession.commit()
+    assert not email.amo
 
-    resp = client.get(f"/identities?primary_email={email}&amo_user_id=")
+    resp = client.get(f"/identities?primary_email={email.email_id}&amo_user_id=")
     assert resp.status_code == 200
     assert resp.json() == []
 

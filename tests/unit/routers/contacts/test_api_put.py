@@ -1,10 +1,11 @@
 """Unit tests for PUT /ctms/{email_id} (Create or update)"""
-import json
+
 from uuid import UUID, uuid4
 
 import pytest
 from structlog.testing import capture_logs
 
+from ctms.schemas import ContactPutSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 from .test_api import _compare_written_contacts
@@ -14,14 +15,19 @@ PUT_TEST_PARAMS = pytest.mark.parametrize(
 )
 
 
-def test_create_or_update_basic_id_is_different(client, minimal_contact):
+def test_create_or_update_basic_id_is_different(client):
     """This should fail since we require an email_id to PUT"""
 
+    contact = ContactPutSchema(
+        email={"email_id": str(uuid4()), "primary_email": "hello@example.com"}
+    )
     # This id is different from the one in the contact
     resp = client.put(
-        "/ctms/d16c4ec4-caa0-4bf2-a06f-1bbf07bf03c7", minimal_contact.json()
+        f"/ctms/{str(uuid4())}",
+        content=contact.model_dump_json(),
     )
     assert resp.status_code == 422, resp.text
+    assert resp.json()["detail"] == "email_id in path must match email_id in contact"
 
 
 @PUT_TEST_PARAMS
@@ -122,71 +128,13 @@ def test_create_or_update_with_email_collision(put_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_put_create_no_trace(client, dbsession):
-    """PUT does not trace most new contacts"""
-    email_id = str(uuid4())
-    data = {
-        "email": {"email_id": email_id, "primary_email": "test+no-trace@example.com"}
-    }
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert "trace" not in caplogs[0]
-
-
-def test_put_replace_no_trace(client, minimal_contact):
-    """PUT does not trace most replaced contacts"""
-    email_id = minimal_contact.email.email_id
-    data = json.loads(minimal_contact.json())
-    data["email"]["first_name"] = "Jeff"
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert "trace" not in caplogs[0]
-
-
 def test_put_with_not_json_is_error(client, dbsession):
     """Calling PUT with a text body is a 422 validation error."""
     email_id = str(uuid4())
-    data = "make a contact please"
+    data = b"make a contact please"
     with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", data=data)
+        resp = client.put(f"/ctms/{email_id}", content=data)
     assert resp.status_code == 422
-    assert (
-        resp.json()["detail"][0]["msg"] == "Expecting value: line 1 column 1 (char 0)"
-    )
+    assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(caplogs) == 1
     assert "trace" not in caplogs[0]
-
-
-def test_put_create_with_trace(client, dbsession):
-    """PUT traces new contacts by email address"""
-    email_id = str(uuid4())
-    data = {
-        "email": {
-            "email_id": email_id,
-            "primary_email": "test+trace-me-mozilla-2021-05-13@example.com",
-        }
-    }
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert caplogs[0]["trace"] == "test+trace-me-mozilla-2021-05-13@example.com"
-    assert caplogs[0]["trace_json"] == data
-
-
-def test_put_replace_with_trace(client, minimal_contact):
-    """PUT traces replaced contacts by email"""
-    email_id = minimal_contact.email.email_id
-    data = json.loads(minimal_contact.json())
-    data["email"]["first_name"] = "Jeff"
-    data["email"]["primary_email"] = "test+trace-me-mozilla-2021-05-13@example.com"
-    with capture_logs() as caplogs:
-        resp = client.put(f"/ctms/{email_id}", json=data)
-    assert resp.status_code == 201
-    assert len(caplogs) == 1
-    assert caplogs[0]["trace"] == "test+trace-me-mozilla-2021-05-13@example.com"
-    assert caplogs[0]["trace_json"] == data

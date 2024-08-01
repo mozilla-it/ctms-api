@@ -28,7 +28,7 @@ def example_contact_in(dbsession, email_factory):
 
 
 def test_idempotent_equal(example_contact_in):
-    contact_copy = example_contact_in.copy(deep=True)
+    contact_copy = example_contact_in.model_copy(deep=True)
     assert example_contact_in.idempotent_equal(contact_copy)
     assert contact_copy.idempotent_equal(example_contact_in)
 
@@ -43,7 +43,7 @@ def test_idempotent_equal(example_contact_in):
     ),
 )
 def test_change_field_not_idempotent_equal(example_contact_in, group, field, value):
-    data = example_contact_in.dict()
+    data = example_contact_in.model_dump()
     original = ContactInSchema(**data)
     assert data[group][field] != value
     data[group][field] = value
@@ -52,7 +52,7 @@ def test_change_field_not_idempotent_equal(example_contact_in, group, field, val
 
 
 def test_unsubscribe_not_idempotent_equal(example_contact_in):
-    data = example_contact_in.dict()
+    data = example_contact_in.model_dump()
     original = ContactInSchema(**data)
     assert data["newsletters"][0]["subscribed"]
     data["newsletters"][0]["subscribed"] = False

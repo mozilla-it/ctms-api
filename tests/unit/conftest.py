@@ -1,11 +1,10 @@
 """pytest fixtures for the CTMS app"""
-import json
+
 import os.path
 from datetime import datetime, timezone
-from glob import glob
 from time import mktime
 from typing import Callable, Optional
-from unittest import mock
+from urllib.parse import urlparse
 from uuid import UUID
 
 import pytest
@@ -15,19 +14,16 @@ from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
 from pytest_factoryboy import register
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms import metrics as metrics_module
 from ctms import schemas
 from ctms.app import app
-from ctms.background_metrics import BackgroundMetricService
 from ctms.config import Settings
 from ctms.crud import (
     create_api_client,
     create_contact,
-    get_all_acoustic_fields,
-    get_all_acoustic_newsletters_mapping,
     get_amo_by_email_id,
     get_contacts_by_any_id,
     get_email,
@@ -42,7 +38,6 @@ from ctms.metrics import get_metrics
 from ctms.schemas import ApiClientSchema, ContactSchema
 from ctms.schemas.contact import ContactInSchema
 from tests import factories
-from tests.data import fake_stripe_id
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -62,18 +57,13 @@ SAMPLE_CONTACT_PARAMS = [
     ("default_waitlist_contact_data", {"waitlists"}),
 ]
 
-FAKE_STRIPE_CUSTOMER_ID = fake_stripe_id("cus", "customer")
-FAKE_STRIPE_INVOICE_ID = fake_stripe_id("in", "invoice")
-FAKE_STRIPE_PRICE_ID = fake_stripe_id("price", "price")
-FAKE_STRIPE_SUBSCRIPTION_ID = fake_stripe_id("sub", "subscription")
-
 
 def _gather_examples(schema_class) -> dict[str, str]:
     """Gather the examples from a schema definition"""
     examples = {}
-    for key, props in schema_class.schema()["properties"].items():
-        if "example" in props:
-            examples[key] = props["example"]
+    for key, props in schema_class.model_json_schema()["properties"].items():
+        if "examples" in props:
+            examples[key] = props["examples"][0]
     return examples
 
 
@@ -88,22 +78,25 @@ def engine(pytestconfig):
     """Return a SQLAlchemy engine for a fresh test database."""
 
     orig_db_url = Settings().db_url
-    if orig_db_url.path.endswith("test"):
+    parsed_db_url = urlparse(orig_db_url)
+    if parsed_db_url.path.endswith("test"):
         # The database ends with test, assume the caller wanted us to use it
         test_db_url = orig_db_url
         drop_db = False
         assert database_exists(test_db_url)
     else:
         # Assume the regular database was passed, create a new test database
-        test_db_url = PostgresDsn.build(
-            scheme=orig_db_url.scheme,
-            user=orig_db_url.user,
-            password=orig_db_url.password,
-            host=orig_db_url.host,
-            port=orig_db_url.port,
-            path=orig_db_url.path + "_test",
-            query=orig_db_url.query,
-            fragment=orig_db_url.fragment,
+        test_db_url = str(
+            PostgresDsn.build(  # pylint: disable=no-member
+                scheme=parsed_db_url.scheme,
+                username=parsed_db_url.username,
+                password=parsed_db_url.password,
+                host=parsed_db_url.hostname,
+                port=parsed_db_url.port,
+                path=parsed_db_url.path + "_test",
+                query=parsed_db_url.query,
+                fragment=parsed_db_url.fragment,
+            )
         )
         drop_db = True
         # (Re)create the test database
@@ -135,7 +128,7 @@ def engine(pytestconfig):
 def connection(engine):
     """Return a connection to the database that rolls back automatically."""
     conn = engine.connect()
-    SessionLocal.configure(bind=conn)
+    SessionLocal.configure(bind=conn, join_transaction_mode="create_savepoint")
     yield conn
     conn.close()
 
@@ -144,26 +137,11 @@ def connection(engine):
 def dbsession(connection):
     """Return a database session that rolls back.
 
-    Adapted from https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
+    Adapted from https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
     """
     transaction = connection.begin()
     session = ScopedSessionLocal()
-    nested = connection.begin_nested()
-
-    # If the application code calls session.commit, it will end the nested
-    # transaction. Need to start a new one when that happens.
-    @event.listens_for(session, "after_transaction_end")
-    def end_savepoint(*args):
-        nonlocal nested
-        if not nested.is_active:
-            nested = connection.begin_nested()
-
     yield session
-    # a nescessary addition to the example in the documentation linked above.
-    # Without this, the listener is not removed after each test ends and
-    # SQLAlchemy emits warnings:
-    #     `SAWarning: nested transaction already deassociated from connection`
-    event.remove(session, "after_transaction_end", end_savepoint)
     session.close()
     transaction.rollback()
 
@@ -171,16 +149,7 @@ def dbsession(connection):
 # Database models
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
-register(factories.models.PendingAcousticRecordFactory)
-register(factories.models.StripeCustomerFactory)
-register(factories.models.StripeInvoiceFactory)
-register(factories.models.StripeInvoiceLineItemFactory)
-register(factories.models.StripePriceFactory)
-register(factories.models.StripeSubscriptionFactory)
-register(factories.models.StripeSubscriptionItemFactory)
 register(factories.models.WaitlistFactory)
-# Stripe REST API payloads
-register(factories.stripe.StripeCustomerDataFactory)
 
 
 def create_full_contact(db, contact: ContactSchema):
@@ -189,7 +158,7 @@ def create_full_contact(db, contact: ContactSchema):
     instead of a `ContactInSchema` as input, and will save the specified
     timestamps.
     """
-    contact_input = ContactInSchema(**contact.dict())
+    contact_input = ContactInSchema(**contact.model_dump())
     create_contact(db, contact.email.email_id, contact_input, get_metrics())
     db.flush()
 
@@ -227,18 +196,6 @@ def create_full_contact(db, contact: ContactSchema):
             db.add(waitlist_in_db)
 
     db.commit()
-
-
-@pytest.fixture
-def most_minimal_contact(dbsession):
-    contact = ContactSchema(
-        email=schemas.EmailSchema(
-            email_id=UUID("62d8d3c6-95f3-4ed6-b176-7f69acff22f6"),
-            primary_email="ctms-most-minimal-user@example.com",
-        ),
-    )
-    create_full_contact(dbsession, contact)
-    return contact
 
 
 @pytest.fixture
@@ -446,10 +403,14 @@ def example_contact_data() -> ContactSchema:
         fxa=schemas.FirefoxAccountsSchema(
             **_gather_examples(schemas.FirefoxAccountsSchema)
         ),
-        newsletters=ContactSchema.schema()["properties"]["newsletters"]["example"],
+        newsletters=ContactSchema.model_json_schema()["properties"]["newsletters"][
+            "examples"
+        ][0],
         waitlists=[
             schemas.WaitlistTableSchema(**example)
-            for example in ContactSchema.schema()["properties"]["waitlists"]["example"]
+            for example in ContactSchema.model_json_schema()["properties"]["waitlists"][
+                "examples"
+            ][0]
         ],
     )
 
@@ -549,24 +510,6 @@ def sample_contacts(minimal_contact, maximal_contact, example_contact):
 
 
 @pytest.fixture
-def main_acoustic_fields(dbsession):
-    records = get_all_acoustic_fields(dbsession, tablename="main")
-    return {r.field for r in records}
-
-
-@pytest.fixture
-def waitlist_acoustic_fields(dbsession):
-    records = get_all_acoustic_fields(dbsession, tablename="waitlist")
-    return {r.field for r in records}
-
-
-@pytest.fixture
-def acoustic_newsletters_mapping(dbsession):
-    records = get_all_acoustic_newsletters_mapping(dbsession)
-    return {r.source: r.destination for r in records}
-
-
-@pytest.fixture
 def anon_client(dbsession):
     """A test client with no authorization."""
 
@@ -652,9 +595,9 @@ def post_contact(client, dbsession, request):
     ):
         if query_fields is None:
             query_fields = {"primary_email": contact_fixture.email.primary_email}
-        sample = contact_fixture.copy(deep=True)
+        sample = contact_fixture.model_copy(deep=True)
         sample = modifier(sample)
-        resp = client.post("/ctms", sample.json())
+        resp = client.post("/ctms", content=sample.model_dump_json())
         assert resp.status_code == code, resp.text
         if check_redirect:
             assert resp.headers["location"] == f"/ctms/{sample.email.email_id}"
@@ -670,7 +613,7 @@ def post_contact(client, dbsession, request):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code in {200, 201}:
+            if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written:
                     if result_list:
                         assert (
@@ -738,9 +681,11 @@ def put_contact(client, dbsession, request):
         if query_fields is None:
             query_fields = {"primary_email": contact.email.primary_email}
         new_default_fields = new_default_fields or set()
-        sample = contact.copy(deep=True)
+        sample = contact.model_copy(deep=True)
         sample = modifier(sample)
-        resp = client.put(f"/ctms/{sample.email.email_id}", sample.json())
+        resp = client.put(
+            f"/ctms/{sample.email.email_id}", content=sample.model_dump_json()
+        )
         assert resp.status_code == code, resp.text
         saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
@@ -754,7 +699,7 @@ def put_contact(client, dbsession, request):
             else:
                 written_id = resp.headers["location"].split("/")[-1]
             results = getter(dbsession, written_id)
-            if sample.dict().get(field) and code in {200, 201}:
+            if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written or field in new_default_fields:
                     assert results is None or (
                         isinstance(results, list) and len(results) == 0
@@ -784,210 +729,3 @@ def put_contact(client, dbsession, request):
         return saved, sample, sample_email_id
 
     return _add
-
-
-def pytest_generate_tests(metafunc):
-    """Dynamicaly generate fixtures."""
-
-    if "stripe_test_json" in metafunc.fixturenames:
-        # Get names of Stripe test JSON files in test/data/stripe
-        stripe_data_folder = os.path.join(TEST_FOLDER, "data", "stripe")
-        test_paths = glob(os.path.join(stripe_data_folder, "*.json"))
-        test_files = [os.path.basename(test_path) for test_path in test_paths]
-        metafunc.parametrize("stripe_test_json", test_files, indirect=True)
-
-
-@pytest.fixture
-def stripe_test_json(request):
-    """
-    Return contents of Stripe test JSON file.
-
-    The filenames are initialized by pytest_generate_tests.
-    """
-    filename = request.param
-    stripe_data_folder = os.path.join(TEST_FOLDER, "data", "stripe")
-    sample_filepath = os.path.join(stripe_data_folder, filename)
-    with open(sample_filepath, "r", encoding="utf8") as the_file:
-        data = json.load(the_file)
-    return data
-
-
-@pytest.fixture
-def stripe_price_data():
-    return {
-        "stripe_id": FAKE_STRIPE_PRICE_ID,
-        "stripe_created": datetime(2020, 10, 27, 10, 45, tzinfo=timezone.utc),
-        "stripe_product_id": fake_stripe_id("prod", "product"),
-        "active": True,
-        "currency": "usd",
-        "recurring_interval": "month",
-        "recurring_interval_count": 1,
-        "unit_amount": 999,
-    }
-
-
-@pytest.fixture
-def stripe_subscription_data():
-    return {
-        "stripe_id": FAKE_STRIPE_SUBSCRIPTION_ID,
-        "stripe_created": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "stripe_customer_id": FAKE_STRIPE_CUSTOMER_ID,
-        "default_source_id": None,
-        "default_payment_method_id": None,
-        "cancel_at_period_end": False,
-        "canceled_at": None,
-        "current_period_start": datetime(2021, 10, 27, tzinfo=timezone.utc),
-        "current_period_end": datetime(2021, 11, 27, tzinfo=timezone.utc),
-        "ended_at": None,
-        "start_date": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "status": "active",
-    }
-
-
-@pytest.fixture
-def stripe_subscription_item_data():
-    return {
-        "stripe_id": FAKE_STRIPE_SUBSCRIPTION_ID,
-        "stripe_created": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "stripe_subscription_id": FAKE_STRIPE_SUBSCRIPTION_ID,
-        "stripe_price_id": FAKE_STRIPE_PRICE_ID,
-    }
-
-
-@pytest.fixture
-def stripe_invoice_data():
-    return {
-        "stripe_id": FAKE_STRIPE_INVOICE_ID,
-        "stripe_created": datetime(2021, 10, 28, tzinfo=timezone.utc),
-        "stripe_customer_id": FAKE_STRIPE_CUSTOMER_ID,
-        "default_source_id": None,
-        "default_payment_method_id": None,
-        "currency": "usd",
-        "total": 1000,
-        "status": "open",
-    }
-
-
-@pytest.fixture
-def stripe_invoice_line_item_data():
-    return {
-        "stripe_id": fake_stripe_id("il", "invoice line item"),
-        "stripe_price_id": FAKE_STRIPE_PRICE_ID,
-        "stripe_invoice_id": FAKE_STRIPE_INVOICE_ID,
-        "stripe_subscription_id": FAKE_STRIPE_SUBSCRIPTION_ID,
-        "stripe_subscription_item_id": fake_stripe_id("si", "subscription_item"),
-        "stripe_type": "subscription",
-        "amount": 1000,
-        "currency": "usd",
-    }
-
-
-@pytest.fixture
-def raw_stripe_price_data(stripe_price_data):
-    """Return minimal Stripe price data."""
-    return {
-        "id": stripe_price_data["stripe_id"],
-        "object": "price",
-        "created": unix_timestamp(stripe_price_data["stripe_created"]),
-        "product": stripe_price_data["stripe_product_id"],
-        "active": stripe_price_data["active"],
-        "currency": stripe_price_data["currency"],
-        "recurring": {
-            "interval": stripe_price_data["recurring_interval"],
-            "interval_count": stripe_price_data["recurring_interval_count"],
-        },
-        "unit_amount": stripe_price_data["unit_amount"],
-    }
-
-
-@pytest.fixture
-def raw_stripe_subscription_data(
-    stripe_subscription_data, stripe_subscription_item_data, raw_stripe_price_data
-):
-    """Return minimal Stripe subscription data."""
-    return {
-        "id": stripe_subscription_data["stripe_id"],
-        "object": "subscription",
-        "created": unix_timestamp(stripe_subscription_data["stripe_created"]),
-        "customer": stripe_subscription_data["stripe_customer_id"],
-        "cancel_at_period_end": stripe_subscription_data["cancel_at_period_end"],
-        "canceled_at": stripe_subscription_data["canceled_at"],
-        "current_period_start": unix_timestamp(
-            stripe_subscription_data["current_period_start"]
-        ),
-        "current_period_end": unix_timestamp(
-            stripe_subscription_data["current_period_end"]
-        ),
-        "ended_at": stripe_subscription_data["ended_at"],
-        "start_date": unix_timestamp(stripe_subscription_data["start_date"]),
-        "status": stripe_subscription_data["status"],
-        "default_source": stripe_subscription_data["default_source_id"],
-        "default_payment_method": stripe_subscription_data["default_payment_method_id"],
-        "items": {
-            "object": "list",
-            "total_count": 1,
-            "has_more": False,
-            "url": f"/v1/subscription_items?subscription={stripe_subscription_data['stripe_id']}",
-            "data": [
-                {
-                    "id": stripe_subscription_item_data["stripe_id"],
-                    "object": "subscription_item",
-                    "created": unix_timestamp(
-                        stripe_subscription_item_data["stripe_created"]
-                    ),
-                    "subscription": stripe_subscription_item_data[
-                        "stripe_subscription_id"
-                    ],
-                    "price": raw_stripe_price_data,
-                }
-            ],
-        },
-    }
-
-
-@pytest.fixture
-def raw_stripe_invoice_data(
-    raw_stripe_price_data, stripe_invoice_data, stripe_invoice_line_item_data
-):
-    """Return minimal Stripe invoice data."""
-    return {
-        "id": stripe_invoice_data["stripe_id"],
-        "object": "invoice",
-        "created": unix_timestamp(stripe_invoice_data["stripe_created"]),
-        "customer": stripe_invoice_data["stripe_customer_id"],
-        "currency": stripe_invoice_data["currency"],
-        "total": stripe_invoice_data["total"],
-        "default_source": stripe_invoice_data["default_source_id"],
-        "default_payment_method": stripe_invoice_data["default_payment_method_id"],
-        "status": stripe_invoice_data["status"],
-        "lines": {
-            "object": "list",
-            "total_count": 1,
-            "has_more": False,
-            "url": f"/v1/invoices/{stripe_invoice_data['stripe_id']}/lines",
-            "data": [
-                {
-                    "id": stripe_invoice_line_item_data["stripe_id"],
-                    "object": "line_item",
-                    "type": stripe_invoice_line_item_data["stripe_type"],
-                    "subscription": stripe_invoice_line_item_data[
-                        "stripe_subscription_id"
-                    ],
-                    "subscription_item": stripe_invoice_line_item_data[
-                        "stripe_subscription_item_id"
-                    ],
-                    "price": raw_stripe_price_data,
-                    "amount": stripe_invoice_line_item_data["amount"],
-                    "currency": stripe_invoice_line_item_data["currency"],
-                }
-            ],
-        },
-    }
-
-
-@pytest.fixture
-def background_metric_service():
-    """Return a BackgroundMetricService with push_to_gateway mocked."""
-    service = BackgroundMetricService(CollectorRegistry(), "https://push.example.com")
-    with mock.patch("ctms.background_metrics.BackgroundMetricService.push_to_gateway"):
-        yield service
