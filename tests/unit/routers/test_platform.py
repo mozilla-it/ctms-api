@@ -9,24 +9,6 @@ from structlog.testing import capture_logs
 from ctms.app import app
 
 
-@pytest.fixture
-def mock_db():
-    with mock.patch("ctms.routers.platform.SessionLocal") as mocked_db:
-        mocked = mock.MagicMock()
-        mocked_db.return_value.__enter__.return_value = mocked
-        yield mocked
-
-
-@pytest.fixture
-def set_app_root_dir():
-    before = getattr(app.state, "APP_DIR", None)
-    root_dir = Path(__file__).parents[3]
-    app.state.APP_DIR = root_dir
-    yield
-    if before is not None:
-        app.state.APP_DIR = before
-
-
 def test_read_root(anon_client):
     """The site root redirects to the Swagger docs"""
     with capture_logs() as caplogs:
@@ -39,17 +21,23 @@ def test_read_root(anon_client):
     assert len(caplogs) == 2
 
 
-def test_read_version(anon_client, set_app_root_dir):
+def test_read_version(anon_client):
     """__version__ returns the contents of version.json."""
+    before = getattr(app.state, "APP_DIR", None)
     here = Path(__file__)
     root_dir = here.parents[3]
+    app.state.APP_DIR = root_dir
     version_path = Path(root_dir / "version.json")
     with open(version_path, "r", encoding="utf8") as vp_file:
         version_contents = vp_file.read()
     expected = json.loads(version_contents)
+
     resp = anon_client.get("/__version__")
+
     assert resp.status_code == 200
     assert resp.json() == expected
+    if before is not None:
+        app.state.APP_DIR = before
 
 
 def test_crash_authorized(client):
@@ -79,9 +67,14 @@ def test_read_heartbeat(anon_client):
     assert len(cap_logs) == 1
 
 
-def test_read_heartbeat_db_fails(anon_client, mock_db):
+@mock.patch("ctms.routers.platform.SessionLocal")
+def test_read_heartbeat_db_fails(mock_db, anon_client):
     """/__heartbeat__ returns 503 when the database is unavailable."""
-    mock_db.execute.side_effect = SQATimeoutError()
+    mocked_session = mock.MagicMock()
+    mocked_session.__enter__.return_value = mocked_session
+    mocked_session.execute.side_effect = SQATimeoutError()
+    mock_db.return_value = mocked_session
+
     resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 500
     data = resp.json()
