@@ -14,6 +14,7 @@ from ctms.auth import (
     verify_password,
 )
 from ctms.crud import count_total_contacts, get_api_client_by_id, ping
+from ctms.database import SessionLocal
 from ctms.dependencies import get_db, get_enabled_api_client, get_token_settings
 from ctms.metrics import get_metrics, get_metrics_registry, token_scheme
 from ctms.schemas.api_client import ApiClientSchema
@@ -92,17 +93,20 @@ def login(
 
 @dockerflow_checks.register
 def database():
-    db = next(get_db())
     result = []
-    alive = ping(db)
-    if not alive:
-        result.append(dockerflow_checks.Error("Database not reachable", id="db.0001"))
-        return result
 
-    # Report number of contacts in the database.
-    # Sending the metric in this heartbeat endpoint is simpler than reporting
-    # it in every write endpoint. Plus, performance does not matter much here
-    total_contacts = count_total_contacts(db)
+    with SessionLocal() as db:
+        alive = ping(db)
+        if not alive:
+            result.append(
+                dockerflow_checks.Error("Database not reachable", id="db.0001")
+            )
+            return result
+        # Report number of contacts in the database.
+        # Sending the metric in this heartbeat endpoint is simpler than reporting
+        # it in every write endpoint. Plus, performance does not matter much here
+        total_contacts = count_total_contacts(db)
+
     contact_query_successful = total_contacts >= 0
     if contact_query_successful:
         appmetrics = get_metrics()
@@ -110,6 +114,7 @@ def database():
             appmetrics["contacts"].set(total_contacts)
     else:
         result.append(dockerflow_checks.Error("Contacts table empty", id="db.0002"))
+
     return result
 
 

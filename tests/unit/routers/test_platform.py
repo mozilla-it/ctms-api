@@ -11,9 +11,9 @@ from ctms.app import app
 
 @pytest.fixture
 def mock_db():
-    with mock.patch("ctms.routers.platform.get_db") as mocked_db:
+    with mock.patch("ctms.routers.platform.SessionLocal") as mocked_db:
         mocked = mock.MagicMock()
-        mocked_db.return_value = mocked
+        mocked_db.return_value.__enter__.return_value = mocked
         yield mocked
 
 
@@ -81,7 +81,7 @@ def test_read_heartbeat(anon_client):
 
 def test_read_heartbeat_db_fails(anon_client, mock_db):
     """/__heartbeat__ returns 503 when the database is unavailable."""
-    next(mock_db).execute.side_effect = SQATimeoutError()
+    mock_db.execute.side_effect = SQATimeoutError()
     resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 500
     data = resp.json()
