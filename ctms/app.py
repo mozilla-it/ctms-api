@@ -1,9 +1,10 @@
 import sys
 import time
-from secrets import token_hex
 
 import structlog
 import uvicorn
+from dockerflow.fastapi import router as dockerflow_router
+from dockerflow.fastapi.middleware import RequestIdMiddleware
 from fastapi import FastAPI, Request
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
@@ -26,6 +27,7 @@ app = FastAPI(
     description="CTMS API (work in progress)",
     version=get_version()["version"],
 )
+app.include_router(dockerflow_router)
 app.include_router(platform.router)
 app.include_router(contacts.router)
 
@@ -74,13 +76,7 @@ async def log_request_middleware(request: Request, call_next):
     return response
 
 
-@app.middleware("http")
-async def request_id(request: Request, call_next):
-    """Read the request id from headers. This is set by NGinx."""
-    request.state.rid = request.headers.get("X-Request-Id", token_hex(16))
-    response = await call_next(request)
-    return response
-
+app.add_middleware(RequestIdMiddleware)
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=80, reload=True)

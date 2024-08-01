@@ -1,27 +1,21 @@
 import logging
-import time
-from typing import Any, Optional
+from typing import Optional
 
+from dockerflow import checks as dockerflow_checks
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasicCredentials
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
-from structlog.testing import capture_logs
 
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
     create_access_token,
     verify_password,
 )
-from ctms.config import Settings, get_version
 from ctms.crud import count_total_contacts, get_api_client_by_id, ping
-from ctms.dependencies import (
-    get_db,
-    get_enabled_api_client,
-    get_settings,
-    get_token_settings,
-)
+from ctms.database import SessionLocal
+from ctms.dependencies import get_db, get_enabled_api_client, get_token_settings
 from ctms.metrics import get_metrics, get_metrics_registry, token_scheme
 from ctms.schemas.api_client import ApiClientSchema
 from ctms.schemas.web import BadRequestResponse, TokenResponse
@@ -97,50 +91,31 @@ def login(
     }
 
 
-@router.get("/__version__", tags=["Platform"])
-def version():
-    """Return version.json, as required by Dockerflow."""
-    return get_version()
+@dockerflow_checks.register
+def database():
+    result = []
 
+    with SessionLocal() as db:
+        alive = ping(db)
+        if not alive:
+            result.append(
+                dockerflow_checks.Error("Database not reachable", id="db.0001")
+            )
+            return result
+        # Report number of contacts in the database.
+        # Sending the metric in this heartbeat endpoint is simpler than reporting
+        # it in every write endpoint. Plus, performance does not matter much here
+        total_contacts = count_total_contacts(db)
 
-@router.get("/__heartbeat__", tags=["Platform"])
-@router.head("/__heartbeat__", tags=["Platform"])
-def heartbeat(
-    request: Request,
-    db: Session = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-):
-    """Return status of backing services, as required by Dockerflow."""
-
-    result: dict[str, Any] = {}
-
-    start_time = time.monotonic()
-    alive = ping(db)
-    result["database"] = {
-        "up": alive,
-        "time_ms": int(round(1000 * time.monotonic() - start_time)),
-    }
-    if not alive:
-        return JSONResponse(content=result, status_code=503)
-
-    appmetrics = get_metrics()
-    # Report number of contacts in the database.
-    # Sending the metric in this heartbeat endpoint is simpler than reporting
-    # it in every write endpoint. Plus, performance does not matter much here
-    total_contacts = count_total_contacts(db)
     contact_query_successful = total_contacts >= 0
-    if appmetrics and contact_query_successful:
-        appmetrics["contacts"].set(total_contacts)
+    if contact_query_successful:
+        appmetrics = get_metrics()
+        if appmetrics:
+            appmetrics["contacts"].set(total_contacts)
+    else:
+        result.append(dockerflow_checks.Error("Contacts table empty", id="db.0002"))
 
-    status_code = 200 if contact_query_successful else 503
-    return JSONResponse(content=result, status_code=status_code)
-
-
-@router.get("/__lbheartbeat__", tags=["Platform"])
-@router.head("/__lbheartbeat__", tags=["Platform"])
-def lbheartbeat():
-    """Return response when application is running, as required by Dockerflow."""
-    return {"status": "OK"}
+    return result
 
 
 @router.get("/__crash__", tags=["Platform"], include_in_schema=False)
@@ -155,11 +130,3 @@ def metrics():
     headers = {"Content-Type": CONTENT_TYPE_LATEST}
     registry = get_metrics_registry()
     return Response(generate_latest(registry), status_code=200, headers=headers)
-
-
-def test_get_metrics(anon_client, setup_metrics):
-    """An anonoymous user can request metrics."""
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics")
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1

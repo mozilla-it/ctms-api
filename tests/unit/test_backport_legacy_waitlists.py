@@ -89,7 +89,6 @@ def test_relay_waitlist_unsubscribed_on_newsletter_unsubscribed(
 def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
     dbsession, email_factory, waitlist_factory
 ):
-
     email = email_factory()
     waitlist_factory(name="relay-phone-masking", fields={"geo": "es"}, email=email)
     dbsession.commit()
