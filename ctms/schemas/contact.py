@@ -259,7 +259,7 @@ class CTMSResponse(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def legacy_waitlists(cls, values):  # pylint: disable=no-self-argument
+    def legacy_waitlists(cls, values):
         # Show computed fields in response for retro-compatibility.
         values["vpn_waitlist"] = VpnWaitlistSchema()
         values["relay_waitlist"] = RelayWaitlistSchema()
@@ -269,7 +269,7 @@ class CTMSResponse(BaseModel):
                 continue
             if isinstance(waitlist, dict):
                 # TODO: figure out why dict from `response_model` decorators param in app.py)
-                waitlist = WaitlistSchema(**waitlist)
+                waitlist = WaitlistSchema(**waitlist)  # noqa: PLW2901
             if waitlist.name == "vpn":
                 values["vpn_waitlist"] = VpnWaitlistSchema(
                     geo=waitlist.fields.get("geo"),

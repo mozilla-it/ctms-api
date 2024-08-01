@@ -46,7 +46,7 @@ def ping(db: Session):
     try:
         db.execute(text("SELECT 1"))
         return True
-    except Exception as exc:  # pylint:disable = broad-exception-caught
+    except Exception as exc:
         logger.exception(exc)
         return False
 
@@ -118,15 +118,14 @@ def get_all_contacts_from_ids(db, email_ids):
 
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     filters = [
-        # pylint: disable-next=comparison-with-callable
         Email.update_timestamp >= start_time,
-        Email.update_timestamp < end_time,  # pylint: disable=comparison-with-callable
+        Email.update_timestamp < end_time,
         Email.email_id != after_email_uuid,
     ]
     if mofo_relevant is False:
         filters.append(
             or_(
-                Email.mofo == None,  # pylint: disable=C0121
+                Email.mofo == None,
                 Email.mofo.has(mofo_relevant=mofo_relevant),
             )
         )
@@ -478,7 +477,7 @@ def _update_orm(orm: Base, update_dict: dict):
         setattr(orm, key, value)
 
 
-def update_contact(
+def update_contact(  # noqa: PLR0912
     db: Session, email: Email, update_data: dict, metrics: Optional[Dict]
 ) -> None:
     """Update an existing contact using a sparse update dictionary"""
@@ -501,15 +500,14 @@ def update_contact(
                 if existing:
                     db.delete(existing)
                     setattr(email, group_name, None)
+            elif existing is None:
+                new = creator(db, email_id, schema(**update_data[group_name]))
+                setattr(email, group_name, new)
             else:
-                if existing is None:
-                    new = creator(db, email_id, schema(**update_data[group_name]))
-                    setattr(email, group_name, new)
-                else:
-                    _update_orm(existing, update_data[group_name])
-                    if schema.model_validate(existing).is_default():
-                        db.delete(existing)
-                        setattr(email, group_name, None)
+                _update_orm(existing, update_data[group_name])
+                if schema.model_validate(existing).is_default():
+                    db.delete(existing)
+                    setattr(email, group_name, None)
 
     if "newsletters" in update_data:
         if update_data["newsletters"] == "UNSUBSCRIBE":
@@ -572,7 +570,7 @@ def get_active_api_client_ids(db: Session) -> List[str]:
 
 
 def update_api_client_last_access(db: Session, api_client: ApiClient):
-    api_client.last_access = func.now()  # pylint: disable=not-callable
+    api_client.last_access = func.now()
     db.add(api_client)
 
 

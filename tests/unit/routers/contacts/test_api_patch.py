@@ -130,18 +130,17 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
         ("mofo", "mofo_relevant"),
     ),
 )
-def test_patch_to_default(client, dbsession, email_factory, group_name, key):
+def test_patch_to_default(client, email_factory, group_name, key):
     """PATCH can set a field to the default value."""
     email = email_factory(
         sfdc_id="001A000001aMozFan",
         unsubscribe_reason="You know what you did.",
         double_opt_in=True,
-        fxa=True,
+        with_fxa=True,
         fxa__first_service="abc",
-        mofo=True,
-        amo=True,
+        with_mofo=True,
+        with_amo=True,
     )
-    dbsession.commit()
 
     expected = jsonable_encoder(
         CTMSResponse(**ContactSchema.from_email(email).model_dump())
@@ -176,10 +175,9 @@ def test_patch_to_default(client, dbsession, email_factory, group_name, key):
     assert actual == expected
 
 
-def test_patch_cannot_set_timestamps(client, dbsession, email_factory):
+def test_patch_cannot_set_timestamps(client, email_factory):
     """PATCH can not set timestamps directly."""
-    email = email_factory(amo=True)
-    dbsession.commit()
+    email = email_factory(with_amo=True)
 
     expected = jsonable_encoder(
         CTMSResponse(**ContactSchema.from_email(email).model_dump())
@@ -215,10 +213,9 @@ def test_patch_cannot_set_timestamps(client, dbsession, email_factory):
     assert actual == expected
 
 
-def test_patch_cannot_change_email_id(client, dbsession, email_factory):
+def test_patch_cannot_change_email_id(client, email_factory):
     """PATCH cannot change the email_id."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"email": {"email_id": str(uuid4())}}
     resp = client.patch(f"/ctms/{email.email_id}", json=patch_data)
@@ -226,10 +223,9 @@ def test_patch_cannot_change_email_id(client, dbsession, email_factory):
     assert resp.json() == {"detail": "cannot change email_id"}
 
 
-def test_patch_cannot_set_email_to_null(client, dbsession, email_factory):
+def test_patch_cannot_set_email_to_null(client, email_factory):
     """PATCH cannot set the email address to null."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"email": {"primary_email": None}}
     resp = client.patch(f"/ctms/{email.email_id}", json=patch_data)
@@ -261,8 +257,7 @@ def test_patch_cannot_set_email_to_null(client, dbsession, email_factory):
 )
 def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_factory):
     """PATCH returns an error on ID conflicts, and makes none of the changes."""
-    email = email_factory(mofo=True, fxa=True)
-    dbsession.commit()
+    email = email_factory(with_mofo=True, with_fxa=True)
 
     existing_contact = ContactSchema.from_email(email)
 
@@ -307,10 +302,9 @@ def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_fa
     }
 
 
-def test_patch_to_subscribe(client, dbsession, email_factory):
+def test_patch_to_subscribe(client, email_factory):
     """PATCH can subscribe to a single newsletter."""
     email = email_factory(newsletters=1)
-    dbsession.commit()
 
     patch_data = {"newsletters": [{"name": "zzz-newsletter"}]}
     resp = client.patch(
@@ -331,10 +325,10 @@ def test_patch_to_subscribe(client, dbsession, email_factory):
     }
 
 
-def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
+def test_patch_to_update_subscription(client, newsletter_factory):
     """PATCH can update an existing newsletter subscription."""
     existing_newsletter = newsletter_factory()
-    dbsession.commit()
+
     email_id = str(existing_newsletter.email.email_id)
     patch_data = {
         "newsletters": [{"name": existing_newsletter.name, "format": "H", "lang": "XX"}]
@@ -355,11 +349,10 @@ def test_patch_to_update_subscription(client, dbsession, newsletter_factory):
     }
 
 
-def test_patch_to_unsubscribe(client, dbsession, email_factory, newsletter_factory):
+def test_patch_to_unsubscribe(client, email_factory, newsletter_factory):
     """PATCH can unsubscribe by setting a newsletter field."""
     email = email_factory()
     existing_newsletter = newsletter_factory(name="common-voice", email=email)
-    dbsession.commit()
 
     assert len(email.newsletters) == 1
     assert existing_newsletter.subscribed
@@ -392,10 +385,9 @@ def test_patch_to_unsubscribe(client, dbsession, email_factory, newsletter_facto
     }
 
 
-def test_patch_to_unsubscribe_but_not_subscribed(client, dbsession, email_factory):
+def test_patch_to_unsubscribe_but_not_subscribed(client, email_factory):
     """PATCH doesn't create a record when unsubscribing to a new newsletter."""
     email = email_factory(newsletters=1)
-    dbsession.commit()
 
     unknown_name = "zzz-unknown-newsletter"
     patch_data = {
@@ -416,10 +408,9 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, dbsession, email_factor
     assert actual["newsletters"][0]["name"] != unknown_name
 
 
-def test_patch_unsubscribe_all(client, dbsession, email_factory):
+def test_patch_unsubscribe_all(client, email_factory):
     """PATCH with newsletters set to "UNSUBSCRIBE" unsubscribes all newsletters."""
     email = email_factory(newsletters=2)
-    dbsession.commit()
 
     patch_data = {"newsletters": "UNSUBSCRIBE"}
     resp = client.patch(
@@ -432,10 +423,9 @@ def test_patch_unsubscribe_all(client, dbsession, email_factory):
 
 
 @pytest.mark.parametrize("group_name", ("amo", "fxa", "mofo"))
-def test_patch_to_delete_group(client, dbsession, email_factory, group_name):
+def test_patch_to_delete_group(client, email_factory, group_name):
     """PATCH with a group set to "DELETE" resets the group to defaults."""
-    email = email_factory(amo=True, fxa=True, mofo=True)
-    dbsession.commit()
+    email = email_factory(with_amo=True, with_fxa=True, with_mofo=True)
 
     patch_data = {group_name: "DELETE"}
     resp = client.patch(
@@ -451,10 +441,10 @@ def test_patch_to_delete_group(client, dbsession, email_factory, group_name):
     assert actual[group_name] == defaults
 
 
-def test_patch_to_delete_deleted_group(client, dbsession, email_factory):
+def test_patch_to_delete_deleted_group(client, email_factory):
     """PATCH with a default group set to "DELETE" does nothing."""
     email = email_factory()
-    dbsession.commit()
+
     assert email.amo is None
 
     patch_data = {"mofo": "DELETE"}
@@ -468,10 +458,9 @@ def test_patch_to_delete_deleted_group(client, dbsession, email_factory):
     assert actual["mofo"] == default_mofo
 
 
-def test_patch_will_validate_waitlist_fields(client, dbsession, email_factory):
+def test_patch_will_validate_waitlist_fields(client, email_factory):
     """PATCH validates waitlist schema."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "future-tech", "source": 42}]}
     resp = client.patch(
@@ -488,10 +477,9 @@ def test_patch_will_validate_waitlist_fields(client, dbsession, email_factory):
     ]
 
 
-def test_patch_to_add_a_waitlist(client, dbsession, email_factory):
+def test_patch_to_add_a_waitlist(client, email_factory):
     """PATCH can add a single waitlist."""
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
     resp = client.patch(
@@ -511,9 +499,8 @@ def test_patch_to_add_a_waitlist(client, dbsession, email_factory):
     }
 
 
-def test_patch_does_not_add_an_unsubscribed_waitlist(client, dbsession, email_factory):
+def test_patch_does_not_add_an_unsubscribed_waitlist(client, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "future-tech", "subscribed": False}]}
     resp = client.patch(
@@ -524,11 +511,10 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, dbsession, email_fa
     assert len(actual["waitlists"]) == 0
 
 
-def test_patch_to_update_a_waitlist(client, dbsession, email_factory, waitlist_factory):
+def test_patch_to_update_a_waitlist(client, email_factory, waitlist_factory):
     """PATCH can update a waitlist."""
     email = email_factory()
     waitlist = waitlist_factory(fields={"geo": "fr"}, email=email)
-    dbsession.commit()
 
     patched_waitlist = (
         WaitlistInSchema.from_orm(waitlist)
@@ -544,11 +530,10 @@ def test_patch_to_update_a_waitlist(client, dbsession, email_factory, waitlist_f
     assert actual["waitlists"][0]["fields"]["geo"] == "ca"
 
 
-def test_patch_to_remove_a_waitlist(client, dbsession, email_factory, waitlist_factory):
+def test_patch_to_remove_a_waitlist(client, email_factory, waitlist_factory):
     """PATCH can remove a single waitlist."""
     email = email_factory()
     waitlist_factory(name="bye-bye", email=email)
-    dbsession.commit()
 
     patch_data = {
         "waitlists": [
@@ -567,11 +552,10 @@ def test_patch_to_remove_a_waitlist(client, dbsession, email_factory, waitlist_f
     assert unsubscribed["unsub_reason"] == "Not interested"
 
 
-def test_patch_to_remove_all_waitlists(client, dbsession, email_factory):
+def test_patch_to_remove_all_waitlists(client, email_factory):
     """PATCH can remove all waitlists."""
     email = email_factory(waitlists=2)
     assert all(wl.subscribed for wl in email.waitlists)
-    dbsession.commit()
 
     patch_data = {"waitlists": "UNSUBSCRIBE"}
     resp = client.patch(
@@ -583,10 +567,9 @@ def test_patch_to_remove_all_waitlists(client, dbsession, email_factory):
     assert not any(wl["subscribed"] for wl in actual["waitlists"])
 
 
-def test_patch_preserves_waitlists_if_omitted(client, dbsession, email_factory):
+def test_patch_preserves_waitlists_if_omitted(client, email_factory):
     """PATCH won't update waitlists if omitted."""
     email = email_factory(waitlists=2)
-    dbsession.commit()
 
     patch_data = {"email": {"first_name": "Jeff"}}
     resp = client.patch(
@@ -599,10 +582,9 @@ def test_patch_preserves_waitlists_if_omitted(client, dbsession, email_factory):
 
 
 def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
-    client, dbsession, email_factory
+    client, email_factory
 ):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {
         "relay_waitlist": {"geo": "fr"},

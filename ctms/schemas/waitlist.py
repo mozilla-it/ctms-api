@@ -109,7 +109,7 @@ class WaitlistTableSchema(WaitlistTimestampedSchema):
     model_config = ConfigDict(extra="forbid")
 
 
-def CountryField():  # pylint:disable = invalid-name
+def CountryField():
     return Field(
         default=None,
         max_length=100,
@@ -118,7 +118,7 @@ def CountryField():  # pylint:disable = invalid-name
     )
 
 
-def PlatformField():  # pylint:disable = invalid-name
+def PlatformField():
     return Field(
         default=None,
         max_length=100,

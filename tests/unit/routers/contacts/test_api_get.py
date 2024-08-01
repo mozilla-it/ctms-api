@@ -3,11 +3,11 @@
 import pytest
 
 
-def test_get_ctms_for_minimal_contact(client, dbsession, email_factory):
+def test_get_ctms_for_minimal_contact(client, email_factory):
     """GET /ctms/{email_id} returns a contact with most fields unset."""
     contact = email_factory(newsletters=1)
     newsletter = contact.newsletters[0]
-    dbsession.commit()
+
     email_id = str(contact.email_id)
     resp = client.get(f"/ctms/{email_id}")
     assert resp.status_code == 200

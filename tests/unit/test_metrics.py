@@ -165,10 +165,9 @@ def test_contacts_total(anon_client, dbsession, registry):
     assert registry.get_sample_value("ctms_contacts_total") == 3
 
 
-def test_api_request(client, dbsession, email_factory, registry):
+def test_api_request(client, email_factory, registry):
     """An API request emits API metrics as well."""
     email = email_factory()
-    dbsession.commit()
 
     client.get(f"/ctms/{email.email_id}")
     path = "/ctms/{email_id}"

@@ -216,7 +216,7 @@ def create_ctms_contact(
     try:
         create_contact(db, email_id, contact, get_metrics())
         db.commit()
-    except Exception as e:  # pylint:disable = W0703
+    except Exception as e:
         db.rollback()
         if isinstance(e, IntegrityError):
             raise HTTPException(status_code=409, detail="Contact already exists") from e
@@ -258,7 +258,7 @@ def create_or_update_ctms_contact(
     try:
         create_or_update_contact(db, email_id, contact, get_metrics())
         db.commit()
-    except Exception as e:  # pylint:disable = W0703
+    except Exception as e:
         db.rollback()
         if isinstance(e, IntegrityError):
             raise HTTPException(
@@ -305,7 +305,7 @@ def partial_update_ctms_contact(
 
     try:
         db.commit()
-    except Exception as e:  # pylint:disable = W0703
+    except Exception as e:
         db.rollback()
         if isinstance(e, IntegrityError):
             raise HTTPException(
