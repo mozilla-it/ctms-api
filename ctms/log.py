@@ -6,6 +6,7 @@ import sys
 from typing import Any, Dict, List, Optional
 
 import structlog
+from dockerflow.logging import request_id_context
 from fastapi import Request
 from starlette.routing import Match
 from structlog.types import Processor
@@ -35,6 +36,11 @@ def configure_logging(
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "request_id": {
+                "()": "dockerflow.logging.RequestIdLogFilter",
+            },
+        },
         "formatters": {
             "dev_console": {
                 "()": structlog.stdlib.ProcessorFormatter,
@@ -52,6 +58,7 @@ def configure_logging(
                 "stream": sys.stdout,
                 "formatter": "dev_console",
                 "level": logging.DEBUG,
+                "filters": ["request_id"],
             },
             "null": {
                 "class": "logging.NullHandler",
@@ -61,6 +68,7 @@ def configure_logging(
                 "stream": sys.stdout,
                 "formatter": "mozlog_json",
                 "level": logging.DEBUG,
+                "filters": ["request_id"],
             },
         },
         "root": {
@@ -111,7 +119,7 @@ def context_from_request(request: Request) -> Dict:
         "client_host": host,
         "method": request.method,
         "path": request.url.path,
-        "rid": request.state.rid,
+        "rid": request_id_context.get(),
     }
 
     # Determine the path template, like "/ctms/{email_id}"
