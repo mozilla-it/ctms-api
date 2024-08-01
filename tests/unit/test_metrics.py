@@ -165,10 +165,9 @@ def test_contacts_total(anon_client, dbsession, registry):
     assert registry.get_sample_value("ctms_contacts_total") == 3
 
 
-def test_api_request(client, dbsession, email_factory, registry):
+def test_api_request(client, email_factory, registry):
     """An API request emits API metrics as well."""
     email = email_factory()
-    dbsession.commit()
 
     client.get(f"/ctms/{email.email_id}")
     path = "/ctms/{email_id}"
@@ -178,11 +177,8 @@ def test_api_request(client, dbsession, email_factory, registry):
     assert_api_request_metric_inc(registry, "GET", path, "test_client", "2xx")
 
 
-def test_patch_relay_waitlist_legacy_reports_metric(
-    client, dbsession, email_factory, registry
-):
+def test_patch_relay_waitlist_legacy_reports_metric(client, email_factory, registry):
     email = email_factory()
-    dbsession.commit()
 
     patch_data = {"waitlists": [{"name": "relay", "fields": {"geo": "fr"}}]}
     resp = client.patch(

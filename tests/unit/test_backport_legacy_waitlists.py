@@ -43,7 +43,6 @@ def test_relay_waitlist_created_on_newsletter_updated(
 ):
     email = email_factory()
     waitlist_factory(name="relay", fields={"geo": "fr"}, email=email)
-    dbsession.commit()
 
     contact = ContactPutSchema(
         email={"email_id": email.email_id, "primary_email": email.primary_email},
@@ -67,7 +66,6 @@ def test_relay_waitlist_unsubscribed_on_newsletter_unsubscribed(
     email = email_factory()
     waitlist_factory(name="relay-vpn", fields={"geo": "es"}, email=email)
     waitlist_factory(name="relay-phone-masking", fields={"geo": "es"}, email=email)
-    dbsession.commit()
 
     patch_data = ContactPatchSchema(
         newsletters=[
@@ -91,7 +89,6 @@ def test_relay_waitlist_unsubscribed_on_all_newsletters_unsubscribed(
 ):
     email = email_factory()
     waitlist_factory(name="relay-phone-masking", fields={"geo": "es"}, email=email)
-    dbsession.commit()
 
     patch_data = ContactPatchSchema(newsletters="UNSUBSCRIBE")
     update_contact(

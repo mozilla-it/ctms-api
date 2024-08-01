@@ -62,16 +62,13 @@ def test_unauthorized_api_call_fails(anon_client, method, path, params):
 
 
 @pytest.mark.parametrize("method,path,params", API_TEST_CASES)
-def test_authorized_api_call_succeeds(
-    client, dbsession, email_factory, method, path, params
-):
+def test_authorized_api_call_succeeds(client, email_factory, method, path, params):
     """Calling the API with credentials succeeds."""
 
     email_factory(
         email_id="332de237-cab7-4461-bcc3-48e68f42bd5c",
         primary_email="contact@example.com",
     )
-    dbsession.commit()
 
     if method == "GET":
         resp = client.request(method, path, params=params)

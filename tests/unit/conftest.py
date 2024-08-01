@@ -132,17 +132,20 @@ def connection(engine):
     conn.close()
 
 
-@pytest.fixture
-def dbsession(connection):
+@pytest.fixture(autouse=True)
+def dbsession(request, connection):
     """Return a database session that rolls back.
 
     Adapted from https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites
     """
-    transaction = connection.begin()
-    session = ScopedSessionLocal()
-    yield session
-    session.close()
-    transaction.rollback()
+    if "disable_autouse" in request.keywords:
+        yield
+    else:
+        transaction = connection.begin()
+        session = ScopedSessionLocal()
+        yield session
+        session.close()
+        transaction.rollback()
 
 
 # Database models
