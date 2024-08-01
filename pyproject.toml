@@ -52,8 +52,9 @@ httpx = "^0.27.0"
 ruff = "^0.5.5"
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests/unit",
+testpaths = ["tests/unit"]
+markers = [
+    "disable_autouse: disable fixtures configured with `autouse=True`",
 ]
 
 [tool.ruff]
