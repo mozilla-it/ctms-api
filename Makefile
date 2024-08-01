@@ -21,7 +21,7 @@ help:
 	@echo "  build             - build docker containers"
 	@echo "  db-only           - run PostgreSQL server"
 	@echo "  lint              - lint check for code"
-	@echo "  format            - run formatters (black, isort), fix in place"
+	@echo "  format            - run formatter, fix in place"
 	@echo "  setup             - (re)create the database"
 	@echo "  shell             - open a shell in the web container"
 	@echo "  start             - run the API service"
@@ -53,8 +53,7 @@ lint: $(INSTALL_STAMP)
 
 .PHONY: format
 format: $(INSTALL_STAMP)
-	bin/lint.sh black --fix
-	bin/lint.sh isort --fix
+	bin/lint.sh format --fix
 
 .PHONY: db-only
 db-only: .env

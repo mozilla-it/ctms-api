@@ -79,4 +79,4 @@ def delete(obj, email, email_file):
 
 
 if __name__ == "__main__":
-    cli()  # pylint: disable=no-value-for-parameter
+    cli()

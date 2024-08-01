@@ -1,6 +1,5 @@
 """Test database operations"""
 
-# pylint: disable=too-many-lines
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 

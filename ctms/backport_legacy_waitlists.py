@@ -8,7 +8,7 @@ from .models import Waitlist
 from .schemas import RelayWaitlistInSchema, VpnWaitlistInSchema, WaitlistInSchema
 
 
-def format_legacy_vpn_relay_waitlist_input(
+def format_legacy_vpn_relay_waitlist_input(  # noqa: PLR0912,PLR0915
     db: Session, email_id: UUID4, input_data, schema_class, metrics: Optional[Dict]
 ):
     """
@@ -100,42 +100,38 @@ def format_legacy_vpn_relay_waitlist_input(
                     to_update.append(
                         WaitlistInSchema(name=waitlist.name, subscribed=False)
                     )
-            else:
-                # `relay_waitlist` field was specified.
-                if input_relay_newsletters:
-                    # We are subscribing to a `relay-*-waitlist` newsletter.
-                    # We want to keep the other Relay waitlists already subscribed.
-                    for waitlist in relay_waitlists:
-                        to_update.append(
-                            WaitlistInSchema(
-                                name=waitlist.name,
-                                subscribed=waitlist.subscribed,
-                                fields=waitlist.fields,
-                            )
-                        )
-                    for newsletter in input_relay_newsletters:
-                        name = newsletter["name"].replace("-waitlist", "")
-                        to_update.append(
-                            WaitlistInSchema(
-                                name=name, fields={"geo": parsed_relay.geo}
-                            )
-                        )
-                elif len(relay_waitlists) == 0:
-                    # We are subscribing to the `relay` waitlist for the first time.
+            elif input_relay_newsletters:
+                # We are subscribing to a `relay-*-waitlist` newsletter.
+                # We want to keep the other Relay waitlists already subscribed.
+                for waitlist in relay_waitlists:
                     to_update.append(
-                        WaitlistInSchema(name="relay", fields={"geo": parsed_relay.geo})
-                    )
-                else:
-                    # `relay_waitlist` was specified but without newsletter, hence update geo field
-                    # of all subscribed Relay waitlists.
-                    for waitlist in relay_waitlists:
-                        to_update.append(
-                            WaitlistInSchema(
-                                name=waitlist.name,
-                                source=waitlist.source,
-                                fields={"geo": parsed_relay.geo},
-                            )
+                        WaitlistInSchema(
+                            name=waitlist.name,
+                            subscribed=waitlist.subscribed,
+                            fields=waitlist.fields,
                         )
+                    )
+                for newsletter in input_relay_newsletters:
+                    name = newsletter["name"].replace("-waitlist", "")
+                    to_update.append(
+                        WaitlistInSchema(name=name, fields={"geo": parsed_relay.geo})
+                    )
+            elif len(relay_waitlists) == 0:
+                # We are subscribing to the `relay` waitlist for the first time.
+                to_update.append(
+                    WaitlistInSchema(name="relay", fields={"geo": parsed_relay.geo})
+                )
+            else:
+                # `relay_waitlist` was specified but without newsletter, hence update geo field
+                # of all subscribed Relay waitlists.
+                for waitlist in relay_waitlists:
+                    to_update.append(
+                        WaitlistInSchema(
+                            name=waitlist.name,
+                            source=waitlist.source,
+                            fields={"geo": parsed_relay.geo},
+                        )
+                    )
 
     if to_update:
         formatted["waitlists"] = [wl.model_dump() for wl in to_update]
