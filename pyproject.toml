@@ -38,58 +38,30 @@ pydantic-settings = "^2.3.4"
 pre-commit = "^3.8.0"
 sphinx = "^7.4.7"
 pytest = "^8.2.0"
-isort = {extras = ["pyproject"], version = "^5.13.2"}
-black = "^24.4.2"
 coverage = {extras = ["toml"], version = "^7.6"}
 mypy = "^1.11"
 types-python-dateutil = "^2.9.0"
 detect-secrets = "^1.5.0"
 bandit = "^1.7.9"
 SQLAlchemy-Utils = "^0.41.2"
-pylint = "^3.2.6"
-pylint-pytest = "^1.1.8"
 types-requests = "^2.32.0"
 factory-boy = "^3.3.0"
 pytest-factoryboy = "^2.7.0"
 backoff = "^2.2.1"
 httpx = "^0.27.0"
+ruff = "^0.5.5"
 
 [tool.pytest.ini_options]
 testpaths = [
     "tests/unit",
 ]
 
-[tool.pylint]
-    [tool.pylint.'MESSAGES CONTROL']
-    disable = [
-        "R0801", # sqla has a lot of duplicate code and it is work to "fix" this
-        "C0301", # if black is happy with the line-length, let's not mess with it
-        "R0903", # this is triggered by pydantic's config and is really just a taste thing anyway
-        "R0913", # we have too-many-arguments in too many places to easily fix
-        "R0912", # Same idea as above, let's leave it since it is a matter of taste
-        "W0511", # Let us have our TODOs
-        "W0613", # sometimes unused arguments are nice for symmetry and also api methods
-        "R0914", # Leave me alone, pylint. I can have as many locals as I want
+[tool.ruff]
+target-version = "py312"
 
-        "C0114", # mozilla-it/ctms-api#100
-        "C0115", # mozilla-it/ctms-api#100
-        "C0116", # mozilla-it/ctms-api#100
-    ]
-    [tool.pylint.REPORTS]
-    output-format = 'colorized'
-    [tool.pylint.FORMAT]
-    good-names = 'e,i,f,db,SessionLocal' # Normally pylint objects to these due to not being snake_case
-    [tool.pylint.TYPECHECK]
-    generated-members='alembic.*'
-    [tool.pylint.MASTER]
-    extension-pkg-whitelist='pydantic'
-    load-plugins='pylint_pytest'
-    ignore='third_party'
-    ignore-patterns = "migrations/.*" # Not worth fixing yet
-
-[tool.isort]
-profile = "black"
-
+[tool.ruff.lint]
+select = ["PL", "I"]
+ignore = ["PLR2004", "PLR0913"]
 
 [tool.coverage]
 # https://github.com/nedbat/coveragepy

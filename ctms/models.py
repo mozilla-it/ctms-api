@@ -24,31 +24,29 @@ class Base(DeclarativeBase):
     pass
 
 
-class CaseInsensitiveComparator(
-    Comparator
-):  # pylint: disable=abstract-method,too-many-ancestors
+class CaseInsensitiveComparator(Comparator):
     def __eq__(self, other):
         return func.lower(self.__clause_element__()) == func.lower(other)
 
 
 class TimestampMixin:
     @declared_attr
-    def create_timestamp(cls):  # pylint: disable=no-self-argument
+    def create_timestamp(cls):
         return mapped_column(
             TIMESTAMP(timezone=True),
             nullable=False,
-            server_default=func.now(),  # pylint: disable=not-callable
+            server_default=func.now(),
         )
 
     @declared_attr
-    def update_timestamp(cls):  # pylint: disable=no-self-argument
+    def update_timestamp(cls):
         return mapped_column(
             TIMESTAMP(timezone=True),
             nullable=False,
-            server_default=func.now(),  # pylint: disable=not-callable
+            server_default=func.now(),
             # server_onupdate would be nice to use here, but it's not supported
             # by Postgres
-            onupdate=func.now(),  # pylint: disable=not-callable
+            onupdate=func.now(),
         )
 
 
@@ -87,7 +85,7 @@ class Email(Base, TimestampMixin):
         return self.primary_email.lower()
 
     @primary_email_insensitive.comparator
-    def primary_email_insensitive_comparator(cls):  # pylint: disable=no-self-argument
+    def primary_email_insensitive_comparator(cls):
         return CaseInsensitiveComparator(cls.primary_email)
 
     # Indexes
@@ -158,7 +156,7 @@ class FirefoxAccount(Base, TimestampMixin):
     @fxa_primary_email_insensitive.comparator
     def fxa_primary_email_insensitive_comparator(
         cls,
-    ):  # pylint: disable=no-self-argument
+    ):
         return CaseInsensitiveComparator(cls.primary_email)
 
     # Indexes

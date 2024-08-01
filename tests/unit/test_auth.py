@@ -197,7 +197,6 @@ def test_successful_login_tracks_last_access(
 ):
     client_id = client_id_and_secret[0]
     email = email_factory()
-    dbsession.commit()
 
     api_client = get_api_client_by_id(dbsession, client_id)
     before = api_client.last_access

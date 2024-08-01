@@ -87,7 +87,7 @@ def engine(pytestconfig):
     else:
         # Assume the regular database was passed, create a new test database
         test_db_url = str(
-            PostgresDsn.build(  # pylint: disable=no-member
+            PostgresDsn.build(
                 scheme=parsed_db_url.scheme,
                 username=parsed_db_url.username,
                 password=parsed_db_url.password,
@@ -114,7 +114,6 @@ def engine(pytestconfig):
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
 
-    # pylint: disable-next=unsupported-assignment-operation
     cfg.attributes["connection"] = test_engine
     alembic_command.upgrade(cfg, "head")
 
@@ -627,18 +626,15 @@ def post_contact(client, dbsession, request):
                             results is None
                         ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                 else:
-                    assert (
-                        results
-                    ), f"{email_id} has field `{field}` and it should have been written to db"
+                    assert results, f"{email_id} has field `{field}` and it should have been written to db"
+            elif result_list:
+                assert (
+                    results == []
+                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
             else:
-                if result_list:
-                    assert (
-                        results == []
-                    ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
-                else:
-                    assert (
-                        results is None
-                    ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+                assert (
+                    results is None
+                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
 
         if check_written:
             _check_written("amo", get_amo_by_email_id)
@@ -704,16 +700,15 @@ def put_contact(client, dbsession, request):
             results = getter(dbsession, written_id)
             if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written or field in new_default_fields:
-                    assert results is None or (
-                        isinstance(results, list) and len(results) == 0
+                    assert (
+                        results is None
+                        or (isinstance(results, list) and len(results) == 0)
                     ), f"{sample_email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                 else:
-                    assert (
-                        results
-                    ), f"{sample_email_id} has field `{field}` and it should have been written to db"
+                    assert results, f"{sample_email_id} has field `{field}` and it should have been written to db"
             else:
-                assert results is None or (
-                    isinstance(results, list) and len(results) == 0
+                assert (
+                    results is None or (isinstance(results, list) and len(results) == 0)
                 ), f"{sample_email_id} does not have field `{field}` and it should _not_ have been written to db"
 
         if check_written:

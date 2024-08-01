@@ -1,6 +1,5 @@
 """Test database operations"""
 
-# pylint: disable=too-many-lines
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -69,7 +68,6 @@ def test_email_count(connection, email_factory):
 
 def test_get_email(dbsession, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     fetched_email = get_email(dbsession, email.email_id)
     assert fetched_email.email_id == email.email_id
@@ -82,7 +80,6 @@ def test_get_email_miss(dbsession):
 
 def test_get_contact_by_email_id_found(dbsession, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     contact = get_contact_by_email_id(dbsession, email.email_id)
 
@@ -108,7 +105,6 @@ def test_get_bulk_contacts_mofo_relevant(
     email_factory()
     email_factory(with_mofo=True, mofo__mofo_relevant=True)
     email_factory(with_mofo=True, mofo__mofo_relevant=False)
-    dbsession.commit()
 
     contacts = get_bulk_contacts(
         dbsession,
@@ -131,7 +127,6 @@ def test_get_bulk_contacts_time_bounds(dbsession, email_factory):
     ]
     email_factory(update_timestamp=end_time)
     email_factory(update_timestamp=end_time + timedelta(minutes=1))
-    dbsession.commit()
 
     contacts = get_bulk_contacts(
         dbsession,
@@ -148,7 +143,6 @@ def test_get_bulk_contacts_time_bounds(dbsession, email_factory):
 
 def test_get_bulk_contacts_limited(dbsession, email_factory):
     email_factory.create_batch(10)
-    dbsession.commit()
 
     contacts = get_bulk_contacts(
         dbsession,
@@ -162,7 +156,6 @@ def test_get_bulk_contacts_limited(dbsession, email_factory):
 def test_get_bulk_contacts_after_email_id(dbsession, email_factory):
     first_email = email_factory()
     second_email = email_factory()
-    dbsession.commit()
 
     [contact] = get_bulk_contacts(
         dbsession,
@@ -177,7 +170,6 @@ def test_get_bulk_contacts_after_email_id(dbsession, email_factory):
 
 def test_get_bulk_contacts_one(dbsession, email_factory):
     email = email_factory()
-    dbsession.commit()
 
     [contact] = get_bulk_contacts(
         dbsession,
