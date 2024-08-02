@@ -36,7 +36,7 @@ pydantic-settings = "^2.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.8.0"
-sphinx = "^7.4.7"
+sphinx = "^8.0.2"
 pytest = "^8.2.0"
 coverage = {extras = ["toml"], version = "^7.6"}
 mypy = "^1.11"
