@@ -1,9 +1,9 @@
 """Unit tests for PUT /ctms/{email_id} (Create or update)"""
 
+import logging
 from uuid import UUID, uuid4
 
 import pytest
-from structlog.testing import capture_logs
 
 from ctms.schemas import ContactPutSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
@@ -128,13 +128,13 @@ def test_create_or_update_with_email_collision(put_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_put_with_not_json_is_error(client, dbsession):
+def test_put_with_not_json_is_error(client, dbsession, caplog):
     """Calling PUT with a text body is a 422 validation error."""
     email_id = str(uuid4())
     data = b"make a contact please"
-    with capture_logs() as caplogs:
+    with caplog.at_level(logging.INFO, logger="ctms.web"):
         resp = client.put(f"/ctms/{email_id}", content=data)
     assert resp.status_code == 422
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
-    assert len(caplogs) == 1
-    assert "trace" not in caplogs[0]
+    assert len(caplog.records) == 1
+    assert not hasattr(caplog.records[0], "trace")

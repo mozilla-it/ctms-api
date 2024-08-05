@@ -81,9 +81,9 @@ async def log_request_middleware(request: Request, call_next):
 
         context.update({"status_code": status_code, "duration_s": duration_s})
         if response is None:
-            web_logger.error(log_line, **context)
+            web_logger.error(log_line, extra=context)
         else:
-            web_logger.info(log_line, **context)
+            web_logger.info(log_line, extra=context)
     return response
 
 
