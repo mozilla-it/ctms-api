@@ -69,9 +69,17 @@ async def log_request_middleware(request: Request, call_next):
         log_line = get_log_line(request, status_code, context.get("client_id"))
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)
-        context.update({"status_code": status_code, "duration_s": duration_s})
 
-        emit_response_metrics(context, get_metrics())
+        emit_response_metrics(
+            path_template=context.get("path_template"),
+            method=context["method"],
+            duration_s=duration_s,
+            status_code=status_code,
+            client_id=context.get("client_id"),
+            metrics=get_metrics(),
+        )
+
+        context.update({"status_code": status_code, "duration_s": duration_s})
         if response is None:
             web_logger.error(log_line, **context)
         else:

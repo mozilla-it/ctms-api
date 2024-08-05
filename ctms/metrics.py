@@ -1,7 +1,7 @@
 """Prometheus metrics for instrumentation and monitoring."""
 
 from itertools import product
-from typing import Any, Type, cast
+from typing import Any, Optional, Type, cast
 
 from fastapi import FastAPI
 from fastapi.security import HTTPBasic
@@ -142,21 +142,22 @@ def init_metrics_labels(
 
 
 def emit_response_metrics(
-    context: dict[str, Any], metrics: dict[str, Counter | Histogram]
+    path_template: Optional[str],
+    method: str,
+    duration_s: float,
+    status_code: int,
+    client_id: Optional[str],
+    metrics: dict[str, Counter | Histogram],
 ) -> None:
     """Emit metrics for a response."""
     if not metrics:
         return
 
-    path_template = context.get("path_template")
     if not path_template:
         # If no path_template, then it is not a known route, probably a 404.
         # Don't emit a metric, which will add noise to data
         return
 
-    method = context["method"]
-    duration_s = context["duration_s"]
-    status_code = context["status_code"]
     status_code_family = str(status_code)[0] + "xx"
 
     counter = cast(Counter, metrics["requests"])
@@ -174,7 +175,6 @@ def emit_response_metrics(
         status_code_family=status_code_family,
     ).observe(duration_s)
 
-    client_id = context.get("client_id")
     if client_id:
         counter = cast(Counter, metrics["api_requests"])
         counter.labels(
