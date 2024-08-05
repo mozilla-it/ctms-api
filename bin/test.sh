@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DOCKER_COMPOSE=${DOCKER_COMPOSE:-"docker-compose"}
+DOCKER_COMPOSE=${DOCKER_COMPOSE:-"docker compose"}
 POETRY_RUN="poetry run"
 
 CURRENT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -11,7 +11,7 @@ BASE_DIR="$(dirname "$CURRENT_DIR")"
 # without this, some tests fail because of off-by-timezone errors.
 export TZ=UTC
 
-${DOCKER_COMPOSE} up --wait postgres
+pg_isready -d $CTMS_DB_URL >> /dev/null || ${DOCKER_COMPOSE} up --wait postgres
 
 $POETRY_RUN coverage run --rcfile "${BASE_DIR}/pyproject.toml" -m pytest $@
 
