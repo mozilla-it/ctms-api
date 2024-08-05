@@ -11,7 +11,7 @@ BASE_DIR="$(dirname "$CURRENT_DIR")"
 # without this, some tests fail because of off-by-timezone errors.
 export TZ=UTC
 
-${DOCKER_COMPOSE} up --wait postgres
+pg_isready -d $CTMS_DB_URL >> /dev/null || ${DOCKER_COMPOSE} up --wait postgres
 
 $POETRY_RUN coverage run --rcfile "${BASE_DIR}/pyproject.toml" -m pytest $@
 
