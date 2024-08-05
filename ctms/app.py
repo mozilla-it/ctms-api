@@ -1,7 +1,8 @@
+import logging
 import sys
 import time
 
-import structlog
+
 import uvicorn
 from dockerflow.fastapi import router as dockerflow_router
 from dockerflow.fastapi.middleware import RequestIdMiddleware
@@ -21,6 +22,9 @@ from .metrics import (
     set_metrics,
 )
 from .routers import contacts, platform
+
+
+web_logger = logging.getLogger("ctms.web")
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
@@ -68,11 +72,10 @@ async def log_request_middleware(request: Request, call_next):
         context.update({"status_code": status_code, "duration_s": duration_s})
 
         emit_response_metrics(context, get_metrics())
-        logger = structlog.get_logger("ctms.web")
         if response is None:
-            logger.error(log_line, **context)
+            web_logger.error(log_line, **context)
         else:
-            logger.info(log_line, **context)
+            web_logger.info(log_line, **context)
     return response
 
 
