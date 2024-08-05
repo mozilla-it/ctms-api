@@ -48,8 +48,8 @@ jobs:
       - name: Run tests
         run: bin/test.sh
         env:
-          CTMS_DB_URL: postgresql://postgres:postgres@172.17.0.1:5432/postgres
-          CTMS_SECRET_KEY: secret_${{ github.sha }}
+          CTMS_DB_URL: postgresql://postgres:postgres@172.17.0.1:5432/postgres # pragma: allowlist secret
+          CTMS_SECRET_KEY: secret_${{ github.sha }} # pragma: allowlist secret
   
   build_production_image:
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
       - run: bin/lint.sh
         env:
           CTMS_DB_URL: postgresql://user@localhost/
-          CTMS_SECRET_KEY: secret_${{ github.sha }}
+          CTMS_SECRET_KEY: secret_${{ github.sha }} # pragma: allowlist secret
 
   run_integration_tests:
     env:
