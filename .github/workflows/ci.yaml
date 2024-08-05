@@ -43,6 +43,8 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
+      - run: make .env
+
       - name: Run tests
         run: bin/test.sh
         env:
