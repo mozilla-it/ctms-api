@@ -9,7 +9,7 @@ CTMS_UID ?= 10001
 CTMS_GID ?= 10001
 
 VENV := $(shell echo $${VIRTUAL_ENV-.venv})
-DOCKER_COMPOSE := $(shell echo $${DOCKER_COMPOSE-"docker-compose"})
+DOCKER_COMPOSE := $(shell echo $${DOCKER_COMPOSE-"docker compose"})
 INSTALL_STAMP = $(VENV)/.install.stamp
 
 .PHONY: help
@@ -83,7 +83,7 @@ test: .env $(INSTALL_STAMP)
 .PHONY: integration-test
 integration-test: .env setup $(INSTALL_STAMP)
 	echo "Starting containers..."
-	${DOCKER_COMPOSE} --profile integration-test up --wait basket
+	${DOCKER_COMPOSE} --profile integration-test up --force-recreate --wait basket
 	echo "Start test suite..."
 	bin/integration-test.sh
 	echo "Done."

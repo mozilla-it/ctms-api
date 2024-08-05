@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DOCKER_COMPOSE=${DOCKER_COMPOSE:-"docker-compose"}
+DOCKER_COMPOSE=${DOCKER_COMPOSE:-"docker compose"}
 POETRY_RUN="poetry run"
 
 CURRENT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
