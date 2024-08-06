@@ -1,70 +1,61 @@
 """Logging configuration"""
 
 import logging
-import logging.config
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from dockerflow.logging import request_id_context
 from fastapi import Request
 from starlette.routing import Match
 
+from ctms.config import Settings
 
-def configure_logging(
-    use_mozlog: bool = True, logging_level: str = "INFO", log_sqlalchemy: bool = False
-) -> dict:
-    """Configure Python logging.
+settings = Settings()
 
-    :param use_mozlog: If True, use MozLog format, appropriate for deployments.
-        If False, format logs for human consumption.
-    :param logging_level: The logging level, such as DEBUG or INFO.
-    :param log_sqlalchemy: Include SQLAlchemy engine logs, such as SQL statements
-    """
-    logging_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "filters": {
-            "request_id": {
-                "()": "dockerflow.logging.RequestIdLogFilter",
-            },
+CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {
+            "()": "dockerflow.logging.RequestIdLogFilter",
         },
-        "formatters": {
-            "mozlog_json": {
-                "()": "dockerflow.logging.JsonLogFormatter",
-                "logger_name": "ctms",
-            },
-            "text": {
-                "format": "%(asctime)s %(levelname)-8s [%(rid)s] %(name)-15s %(message)s",
-                "datefmt": "%Y-%m-%d %H:%M:%S",
-            },
+    },
+    "formatters": {
+        "mozlog_json": {
+            "()": "dockerflow.logging.JsonLogFormatter",
+            "logger_name": "ctms",
         },
-        "handlers": {
-            "console": {
-                "level": logging_level,
-                "class": "logging.StreamHandler",
-                "filters": ["request_id"],
-                "formatter": "mozlog_json" if use_mozlog else "text",
-                "stream": sys.stdout,
-            },
-            "null": {
-                "class": "logging.NullHandler",
-            },
+        "text": {
+            "format": "%(asctime)s %(levelname)-8s [%(rid)s] %(name)-15s %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
-        "loggers": {
-            "": {"handlers": ["console"], "level": logging_level},
-            "alembic": {"level": logging_level},
-            "ctms": {"level": logging_level},
-            "uvicorn": {"level": logging_level},
-            "uvicorn.access": {"handlers": ["null"], "propagate": False},
-            "sqlalchemy.engine": {
-                "level": logging_level if log_sqlalchemy else logging.WARNING,
-                "propagate": False,
-            },
+    },
+    "handlers": {
+        "console": {
+            "level": settings.logging_level.name,
+            "class": "logging.StreamHandler",
+            "filters": ["request_id"],
+            "formatter": "mozlog_json" if settings.use_mozlog else "text",
+            "stream": sys.stdout,
         },
-    }
-    logging.config.dictConfig(logging_config)
-
-    return logging_config
+        "null": {
+            "class": "logging.NullHandler",
+        },
+    },
+    "loggers": {
+        "": {"handlers": ["console"]},
+        "request.summary": {"level": logging.INFO},
+        "ctms": {"level": logging.DEBUG},
+        "uvicorn": {"level": logging.INFO},
+        "uvicorn.access": {"handlers": ["null"], "propagate": False},
+        "sqlalchemy.engine": {
+            "level": settings.logging_level.name
+            if settings.log_sqlalchemy
+            else logging.WARNING,
+            "propagate": False,
+        },
+    },
+}
 
 
 def context_from_request(request: Request) -> Dict:

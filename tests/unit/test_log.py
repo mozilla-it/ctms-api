@@ -8,8 +8,6 @@ import pytest
 from requests.auth import HTTPBasicAuth
 from dockerflow.logging import JsonLogFormatter
 
-from ctms.log import configure_logging
-
 
 def test_request_log(client, email_factory, caplog):
     """A request is logged."""
@@ -101,21 +99,3 @@ def test_log_crash(client, caplog):
     log = caplog.records[0]
     assert hasattr(log, "rid") and log.rid is not None
     assert log.msg == "testclient:50000 test_client 'GET /__crash__ HTTP/1.1' 500"
-
-
-@pytest.mark.parametrize(
-    "use_mozlog,logging_level",
-    (
-        (True, "INFO"),
-        (False, "WARNING"),
-    ),
-)
-def test_configure_logging(use_mozlog, logging_level):
-    with patch("ctms.log.logging.config.dictConfig") as mock_dc:
-        configure_logging(use_mozlog, logging_level)
-    mock_dc.assert_called_once()
-    (args,) = mock_dc.mock_calls[0].args
-    assert (
-        args["handlers"]["console"]["formatter"] == "mozlog" if use_mozlog else "text"
-    )
-    assert args["loggers"]["ctms"]["level"] == logging_level
