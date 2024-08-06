@@ -1,7 +1,7 @@
 """Test authentication"""
 
-from datetime import datetime, timedelta, timezone
 import logging
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from jose import jwt

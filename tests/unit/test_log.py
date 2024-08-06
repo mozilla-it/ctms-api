@@ -5,8 +5,8 @@ import logging
 from unittest.mock import patch
 
 import pytest
-from requests.auth import HTTPBasicAuth
 from dockerflow.logging import JsonLogFormatter
+from requests.auth import HTTPBasicAuth
 
 
 def test_request_log(client, email_factory, caplog):

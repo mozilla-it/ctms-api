@@ -2,7 +2,6 @@ import logging
 import sys
 import time
 
-
 import uvicorn
 from dockerflow.fastapi import router as dockerflow_router
 from dockerflow.fastapi.middleware import RequestIdMiddleware
@@ -12,7 +11,8 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from .config import get_version
 from .database import SessionLocal
 from .exception_capture import init_sentry
-from .log import CONFIG as LOG_CONFIG, context_from_request, get_log_line
+from .log import CONFIG as LOG_CONFIG
+from .log import context_from_request, get_log_line
 from .metrics import (
     METRICS_REGISTRY,
     emit_response_metrics,
@@ -22,7 +22,6 @@ from .metrics import (
     set_metrics,
 )
 from .routers import contacts, platform
-
 
 logging.config.dictConfig(LOG_CONFIG)
 
