@@ -24,15 +24,12 @@ from .newsletter import (
     NewsletterTimestampedSchema,
 )
 from .waitlist import (
-    RelayWaitlistInSchema,
     RelayWaitlistSchema,
-    VpnWaitlistInSchema,
     VpnWaitlistSchema,
     WaitlistInSchema,
     WaitlistSchema,
     WaitlistTableSchema,
     WaitlistTimestampedSchema,
-    validate_waitlist_newsletters,
 )
 
 if TYPE_CHECKING:
@@ -157,19 +154,6 @@ class ContactInBase(ComparableBase):
             ]
         ],
     )
-    # TODO waitlist: remove once Basket leverages the `waitlists` field.
-    vpn_waitlist: Optional[VpnWaitlistInSchema] = None
-    relay_waitlist: Optional[RelayWaitlistInSchema] = None
-
-    @model_validator(mode="after")
-    def check_fields(self):
-        """
-        This makes sure a Relay country is specified when one of the `relay-*-waitlist`
-        newsletter is subscribed.
-
-        TODO waitlist: remove once Basket leverages the `waitlists` field.
-        """
-        return validate_waitlist_newsletters(self)
 
     def idempotent_equal(self, other):
         def _noneify(field):
@@ -239,22 +223,6 @@ class ContactPatchSchema(ComparableBase):
             ]
         ],
     )
-    vpn_waitlist: Optional[Union[Literal["DELETE"], VpnWaitlistInSchema]] = Field(
-        None, description='VPN Waitlist data to update, or "DELETE" to reset.'
-    )
-    relay_waitlist: Optional[Union[Literal["DELETE"], RelayWaitlistInSchema]] = Field(
-        None, description='Relay Waitlist data to update, or "DELETE" to reset.'
-    )
-
-    @model_validator(mode="after")
-    def check_fields(self):
-        """
-        This makes sure a Relay country is specified when one of the `relay-*-waitlist`
-        newsletter is subscribed.
-
-        TODO waitlist: remove once Basket leverages the `waitlists` field.
-        """
-        return validate_waitlist_newsletters(self)
 
 
 class CTMSResponse(BaseModel):

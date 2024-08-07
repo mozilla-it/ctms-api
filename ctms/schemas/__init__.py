@@ -25,13 +25,7 @@ from .fxa import (
 )
 from .mofo import MozillaFoundationInSchema, MozillaFoundationSchema
 from .newsletter import NewsletterInSchema, NewsletterSchema, NewsletterTableSchema
-from .waitlist import (
-    RelayWaitlistInSchema,
-    VpnWaitlistInSchema,
-    WaitlistInSchema,
-    WaitlistSchema,
-    WaitlistTableSchema,
-)
+from .waitlist import WaitlistInSchema, WaitlistSchema, WaitlistTableSchema
 from .web import (
     BadRequestResponse,
     NotFoundResponse,

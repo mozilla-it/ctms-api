@@ -45,7 +45,7 @@ production, they are set as part of the runtime environment.
   along with ``CTMS_UID`` to match the development user, for consistent permissions.
 * ``MK_WITH_SERVICE_PORTS`` - If set to ``--service-ports``, passes that option
   to ``docker run`` commands, allowing access to host-based commands.
-* ``MK_KEEP_DOCKER_UP`` - If unset, then ``make test`` runs ``docker-compose down``
+* ``MK_KEEP_DOCKER_UP`` - If unset, then ``make test`` runs ``docker compose down``
   after tests run, shutting down the PostgreSQL container.  If set to ``1``,
   ``make test`` keeps containers running.
 * ``PORT`` - The port for the web service. Defaults to 8000 if unset.
@@ -69,7 +69,7 @@ environments.
 
 ``.env`` is loaded in the ``Makefile``, making those configuration items
 available in Makefile targets and commands. ``.env`` is also loaded by
-``docker-compose`` and passed to Docker. Some adjust the build process by
+``docker compose`` and passed to Docker. Some adjust the build process by
 setting `ARG` variables in the ``Dockerfile``. Others are passed to the runtime
 environment. The CTMS API application then loads these from the environment.
 

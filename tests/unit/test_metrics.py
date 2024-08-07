@@ -177,36 +177,6 @@ def test_api_request(client, email_factory, registry):
     assert_api_request_metric_inc(registry, "GET", path, "test_client", "2xx")
 
 
-def test_patch_relay_waitlist_legacy_reports_metric(client, email_factory, registry):
-    email = email_factory()
-
-    patch_data = {"waitlists": [{"name": "relay", "fields": {"geo": "fr"}}]}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
-
-    # Legacy metric isn't sent if `waitlists` is present.
-    patch_data = {
-        "relay_waitlist": {"geo": "fr"},
-        "waitlists": [{"name": "relay", "fields": {"geo": "fr"}}],
-    }
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
-
-    # Metric is sent only if legacy attributes are sent.
-    patch_data = {"relay_waitlist": {"geo": "fr"}}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 1
-
-
 @pytest.mark.parametrize(
     "email_id,status_code",
     (
