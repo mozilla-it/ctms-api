@@ -12,25 +12,26 @@ authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
 python = "^3.12.1"
-fastapi = "^0.108.0"
-starlette = "^0.32.0"
+fastapi = "^0.111.0"
+starlette = "^0.37.2"
 requests = "^2.32.3"
 pydantic = {extras = ["email"], version = "^2.8.2"}
 uvicorn = {extras = ["standard"], version = "^0.30.5"}
 SQLAlchemy = "^2.0.31"
 alembic = "^1.13.2"
 python-multipart = "^0.0.9"
-python-jose = {extras = ["cryptography"], version = "^3.2.0"}
-passlib = {extras = ["argon2"], version = "^1.7.4"}
 python-dateutil = "^2.9.0"
 dockerflow = {extras = ["fastapi"], version = "^2024.4.2"}
-sentry-sdk = "^2.12.0"
+sentry-sdk = {extras = ["fastapi"], version = "^2.12.0"}
 lxml = "^5.2.2"
 prometheus-client = "0.20.0"
 colorama = "^0.4.6"
 psycopg2 = "^2.9.9"
 google-auth = "^2.32.0"
 pydantic-settings = "^2.4.0"
+argon2-cffi = "^23.1.0"
+pyjwt = "^2.8.0"
+
 
 
 [tool.poetry.group.dev.dependencies]
@@ -50,8 +51,9 @@ httpx = "^0.27.0"
 ruff = "^0.5.6"
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests/unit",
+testpaths = ["tests/unit"]
+markers = [
+    "disable_autouse: disable fixtures configured with `autouse=True`",
 ]
 
 [tool.ruff]

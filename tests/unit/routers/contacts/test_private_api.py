@@ -101,7 +101,9 @@ def test_get_identities_by_two_alt_id_match(client, email_factory):
     assert fxa_email
 
     resp = client.get(f"/identities?sfdc_id={sfdc_id}&fxa_primary_email={fxa_email}")
-    identity = json.loads(ContactSchema.from_email(email).as_identity_response().json())
+    identity = json.loads(
+        ContactSchema.from_email(email).as_identity_response().model_dump_json()
+    )
     assert resp.status_code == 200
     assert resp.json() == [identity]
 

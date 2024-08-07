@@ -26,6 +26,11 @@ def test_request_log(client, email_factory, caplog):
     assert len(caplog.records) == 1
     log = caplog.records[0]
     assert hasattr(log, "duration_s")
+
+    # remove Sentry headers with random trace ids
+    assert log.headers.pop("baggage")
+    assert log.headers.pop("sentry-trace")
+
     expected_log = {
         "client_allowed": True,
         "client_host": "testclient",
@@ -55,11 +60,11 @@ def test_token_request_log(anon_client, client_id_and_secret, caplog):
     """A token request log has omitted headers."""
     client_id, client_secret = client_id_and_secret
     with caplog.at_level(logging.INFO, logger="ctms.web"):
+        anon_client.cookies.set("csrftoken", "0WzT-base64-string")
         resp = anon_client.post(
             "/token",
             data={"grant_type": "client_credentials"},
             auth=HTTPBasicAuth(client_id, client_secret),
-            cookies={"csrftoken": "0WzT-base64-string"},
         )
     assert resp.status_code == 200
     assert len(caplog.records) == 1

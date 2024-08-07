@@ -1,16 +1,16 @@
 import logging
-import sys
 import time
+from contextlib import asynccontextmanager
 
+import sentry_sdk
 import uvicorn
 from dockerflow.fastapi import router as dockerflow_router
 from dockerflow.fastapi.middleware import RequestIdMiddleware
 from fastapi import FastAPI, Request
-from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+from sentry_sdk.integrations.logging import ignore_logger
 
-from .config import get_version
+from .config import Settings, get_version
 from .database import SessionLocal
-from .exception_capture import init_sentry
 from .log import CONFIG as LOG_CONFIG
 from .log import context_from_request, get_log_line
 from .metrics import (
@@ -27,26 +27,34 @@ logging.config.dictConfig(LOG_CONFIG)
 
 web_logger = logging.getLogger("ctms.web")
 
+settings = Settings()
+
+sentry_sdk.init(
+    dsn=settings.sentry_dsn,
+    release=get_version()["version"],
+    debug=settings.sentry_debug,
+    send_default_pii=False,
+)
+ignore_logger("uvicorn.error")
+ignore_logger("ctms.web")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    set_metrics(init_metrics(METRICS_REGISTRY))
+    init_metrics_labels(SessionLocal(), app, get_metrics())
+    yield
+
+
 app = FastAPI(
     title="ConTact Management System (CTMS)",
     description="CTMS API (work in progress)",
     version=get_version()["version"],
+    lifespan=lifespan,
 )
 app.include_router(dockerflow_router)
 app.include_router(platform.router)
 app.include_router(contacts.router)
-
-
-# Initialize Sentry for each thread, unless we're in tests
-if "pytest" not in sys.argv[0]:  # pragma: no cover
-    init_sentry()
-    app.add_middleware(SentryAsgiMiddleware)
-
-
-@app.on_event("startup")
-def startup_event():  # pragma: no cover
-    set_metrics(init_metrics(METRICS_REGISTRY))
-    init_metrics_labels(SessionLocal(), app, get_metrics())
 
 
 @app.middleware("http")

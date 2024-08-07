@@ -8,6 +8,8 @@ from typing import Annotated, Optional
 from pydantic import AfterValidator, Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from ctms.schemas.common import AnyUrlString
+
 PostgresDsnStr = Annotated[PostgresDsn, AfterValidator(str)]
 
 
@@ -48,6 +50,7 @@ class Settings(BaseSettings):
     sentry_debug: bool = False
 
     fastapi_env: Optional[str] = Field(default=None, alias="FASTAPI_ENV")
+    sentry_dsn: Optional[AnyUrlString] = Field(default=None, alias="SENTRY_DSN")
     host: str = Field(default="0.0.0.0", alias="HOST")
     port: int = Field(default=8000, alias="PORT")
 
