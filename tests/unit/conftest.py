@@ -113,7 +113,7 @@ def engine(pytestconfig):
     )
 
     cfg = alembic_config.Config(os.path.join(APP_FOLDER, "alembic.ini"))
-
+    cfg.attributes["unit-tests"] = True
     cfg.attributes["connection"] = test_engine
     alembic_command.upgrade(cfg, "head")
 
