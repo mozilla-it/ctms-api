@@ -3,6 +3,7 @@ from uuid import UUID as UUID4
 from sqlalchemy import (
     JSON,
     TIMESTAMP,
+    UUID,
     Boolean,
     Date,
     DateTime,
@@ -13,7 +14,6 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -54,7 +54,9 @@ class Email(Base, TimestampMixin):
     __tablename__ = "emails"
     __mapper_args__ = {"eager_defaults": True}
 
-    email_id: Mapped[UUID4] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    email_id = mapped_column(
+        UUID, primary_key=True, server_default="uuid_generate_v4()"
+    )
     primary_email = mapped_column(String(255), unique=True, nullable=False)
     basket_token = mapped_column(String(255), unique=True)
     sfdc_id = mapped_column(String(255), index=True)
