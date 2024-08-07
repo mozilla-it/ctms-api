@@ -1,7 +1,7 @@
+import logging
 import sys
 import time
 
-import structlog
 import uvicorn
 from dockerflow.fastapi import router as dockerflow_router
 from dockerflow.fastapi.middleware import RequestIdMiddleware
@@ -11,6 +11,7 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from .config import get_version
 from .database import SessionLocal
 from .exception_capture import init_sentry
+from .log import CONFIG as LOG_CONFIG
 from .log import context_from_request, get_log_line
 from .metrics import (
     METRICS_REGISTRY,
@@ -21,6 +22,10 @@ from .metrics import (
     set_metrics,
 )
 from .routers import contacts, platform
+
+logging.config.dictConfig(LOG_CONFIG)
+
+web_logger = logging.getLogger("ctms.web")
 
 app = FastAPI(
     title="ConTact Management System (CTMS)",
@@ -65,14 +70,21 @@ async def log_request_middleware(request: Request, call_next):
         log_line = get_log_line(request, status_code, context.get("client_id"))
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)
-        context.update({"status_code": status_code, "duration_s": duration_s})
 
-        emit_response_metrics(context, get_metrics())
-        logger = structlog.get_logger("ctms.web")
+        emit_response_metrics(
+            path_template=context.get("path_template"),
+            method=context["method"],
+            duration_s=duration_s,
+            status_code=status_code,
+            client_id=context.get("client_id"),
+            metrics=get_metrics(),
+        )
+
+        context.update({"status_code": status_code, "duration_s": duration_s})
         if response is None:
-            logger.error(log_line, **context)
+            web_logger.error(log_line, extra=context)
         else:
-            logger.info(log_line, **context)
+            web_logger.info(log_line, extra=context)
     return response
 
 

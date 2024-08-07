@@ -14,7 +14,10 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+# We don't want this logging setup during unit tests,
+# see `alembic_command.upgrade(cfg, "head")` in `conftest.py`.
+if not context.config.attributes.get("unit-tests", False):
+    fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

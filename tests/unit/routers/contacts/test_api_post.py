@@ -1,9 +1,9 @@
 """Unit tests for POST /ctms (create record)"""
 
+import logging
 from uuid import UUID
 
 import pytest
-from structlog.testing import capture_logs
 
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
@@ -120,12 +120,13 @@ def test_create_basic_with_email_collision(post_contact):
     _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
 
-def test_create_with_non_json_is_error(client):
+def test_create_with_non_json_is_error(client, caplog):
     """When non-JSON is posted /ctms, a 422 is returned"""
     data = b"this is not JSON"
-    with capture_logs() as cap_logs:
+    with caplog.at_level(logging.INFO, logger="ctms.web"):
         resp = client.post("/ctms", content=data)
+
     assert resp.status_code == 422
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
-    assert len(cap_logs) == 1
-    assert "trace" not in cap_logs[0]
+    assert len(caplog.records) == 1
+    assert caplog.records[0].status_code == 422

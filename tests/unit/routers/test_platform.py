@@ -1,24 +1,24 @@
 import json
+import logging
 from pathlib import Path
 from unittest import mock
 
 import pytest
 from sqlalchemy.exc import TimeoutError as SQATimeoutError
-from structlog.testing import capture_logs
 
 from ctms.app import app
 
 
-def test_read_root(anon_client):
+def test_read_root(anon_client, caplog):
     """The site root redirects to the Swagger docs"""
-    with capture_logs() as caplogs:
+    with caplog.at_level(level=logging.INFO, logger="ctms.web"):
         resp = anon_client.get("/")
     assert resp.status_code == 200
     assert len(resp.history) == 1
     prev_resp = resp.history[0]
     assert prev_resp.status_code == 307  # Temporary Redirect
     assert prev_resp.headers["location"] == "./docs"
-    assert len(caplogs) == 2
+    assert len(caplog.records) == 2
 
 
 def test_read_version(anon_client):
@@ -53,9 +53,9 @@ def test_crash_unauthorized(anon_client):
     assert resp.json() == {"detail": "Not authenticated"}
 
 
-def test_read_heartbeat(anon_client):
+def test_read_heartbeat(anon_client, caplog):
     """The platform calls /__heartbeat__ to check backing services."""
-    with capture_logs() as cap_logs:
+    with caplog.at_level(logging.INFO, logger="ctms.web"):
         resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 200
     data = resp.json()
@@ -64,7 +64,7 @@ def test_read_heartbeat(anon_client):
         "details": {},
         "status": "ok",
     }
-    assert len(cap_logs) == 1
+    assert len(caplog.messages) == 1
 
 
 @mock.patch("ctms.routers.platform.SessionLocal")
@@ -99,9 +99,9 @@ def test_read_health(anon_client):
     assert resp.status_code == 200
 
 
-def test_get_metrics(anon_client, setup_metrics):
+def test_get_metrics(anon_client, setup_metrics, caplog):
     """An anonoymous user can request metrics."""
-    with capture_logs() as cap_logs:
+    with caplog.at_level(logging.INFO, logger="ctms.web"):
         resp = anon_client.get("/metrics")
     assert resp.status_code == 200
-    assert len(cap_logs) == 1
+    assert len(caplog.messages) == 1
