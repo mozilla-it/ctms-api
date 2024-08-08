@@ -54,6 +54,7 @@ lint: $(INSTALL_STAMP)
 .PHONY: format
 format: $(INSTALL_STAMP)
 	bin/lint.sh format --fix
+	bin/lint.sh lint --fix
 
 .PHONY: db-only
 db-only: .env

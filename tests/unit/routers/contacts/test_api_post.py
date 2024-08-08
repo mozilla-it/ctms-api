@@ -1,123 +1,166 @@
 """Unit tests for POST /ctms (create record)"""
 
 import logging
-from uuid import UUID
+from uuid import uuid4
 
-import pytest
+from fastapi.encoders import jsonable_encoder
 
-from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
-
-from .test_api import _compare_written_contacts
-
-POST_TEST_PARAMS = pytest.mark.parametrize(
-    "post_contact", SAMPLE_CONTACT_PARAMS, indirect=True
-)
+from ctms import models, schemas
 
 
-@POST_TEST_PARAMS
-def test_create_basic_no_id(post_contact):
+def test_create_basic_no_email_id(client, dbsession):
     """Most straightforward contact creation succeeds when email_id is not a key."""
 
-    def _remove_id(contact):
-        del contact.email.email_id
-        return contact
-
-    saved_contacts, sample, email_id = post_contact(
-        modifier=_remove_id, check_redirect=False
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(
+            email={"primary_email": "hello@example.com"}
+        ).model_dump(exclude_none=True)
     )
-    _compare_written_contacts(
-        saved_contacts[0], sample, email_id, ids_should_be_identical=False
+    assert "email_id" not in contact_data["email"].keys()
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 201
+
+    assert dbsession.get(models.Email, resp.json()["email"]["email_id"])
+
+
+def test_create_basic_email_id_is_none(client, dbsession):
+    """Most straightforward contact creation succeeds when email_id is not a key."""
+
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(email={"primary_email": "hello@example.com"})
     )
+    assert contact_data["email"]["email_id"] is None
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 201
+
+    assert dbsession.get(models.Email, resp.json()["email"]["email_id"])
 
 
-@POST_TEST_PARAMS
-def test_create_basic_id_is_none(post_contact):
-    """Most straightforward contact creation succeeds when email_id is None."""
-
-    def _remove_id(contact):
-        contact.email.email_id = None
-        return contact
-
-    saved_contacts, sample, email_id = post_contact(
-        modifier=_remove_id, check_redirect=False
-    )
-    _compare_written_contacts(
-        saved_contacts[0], sample, email_id, ids_should_be_identical=False
-    )
-
-
-@POST_TEST_PARAMS
-def test_create_basic_with_id(post_contact):
+def test_create_basic_with_id(client, dbsession, email_factory):
     """Most straightforward contact creation succeeds when email_id is specified."""
-    saved_contacts, sample, email_id = post_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
+    provided_email_id = str(uuid4())
 
-
-@POST_TEST_PARAMS
-def test_create_basic_idempotent(post_contact):
-    """Creating a contact works across retries."""
-    saved_contacts, sample, email_id = post_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
-    saved_contacts, _, _ = post_contact(code=200)
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
-
-
-@POST_TEST_PARAMS
-def test_create_basic_with_id_collision(post_contact):
-    """Creating a contact with the same id but different data fails."""
-    _, sample, _ = post_contact()
-
-    def _change_mailing(contact):
-        assert contact.email.mailing_country != "mx", "sample data has changed"
-        contact.email.mailing_country = "mx"
-        return contact
-
-    # We set check_written to False because the rows it would check for normally
-    # are actually here due to the first write
-    saved_contacts, _, _ = post_contact(
-        modifier=_change_mailing, code=409, check_redirect=False, check_written=False
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(
+            email={"email_id": provided_email_id, "primary_email": "hello@example.com"}
+        )
     )
-    assert saved_contacts[0].email.mailing_country == sample.email.mailing_country
+    assert contact_data["email"]["email_id"] == provided_email_id
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 201
+
+    assert dbsession.get(models.Email, provided_email_id)
 
 
-@POST_TEST_PARAMS
-def test_create_basic_with_basket_collision(post_contact):
+def test_create_basic_idempotent(client, dbsession):
+    """Creating a contact works across retries."""
+
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(email={"primary_email": "hello@example.com"})
+    )
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 201
+    assert dbsession.get(models.Email, resp.json()["email"]["email_id"])
+
+    resp = client.post("/ctms", json=resp.json())
+    assert resp.status_code == 200
+    assert dbsession.get(models.Email, resp.json()["email"]["email_id"])
+    assert dbsession.query(models.Email).count() == 1
+
+
+def test_create_basic_with_id_collision(client, email_factory):
+    """Creating a contact with the same id but different data fails."""
+
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(
+            email={"primary_email": "hello@example.com", "email_lang": "en"}
+        )
+    )
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 201
+
+    modified_data = resp.json()
+    modified_data["email"]["email_lang"] = "XX"
+
+    resp = client.post("/ctms", json=modified_data)
+    assert resp.status_code == 409
+
+
+def test_create_basic_with_email_collision(client, email_factory):
     """Creating a contact with diff ids but same email fails.
     We override the basket token so that we know we're not colliding on that here.
     See test_create_basic_with_email_collision below for that check
     """
-    saved_contacts, orig_sample, email_id = post_contact()
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
 
-    def _change_basket(contact):
-        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-        contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
-        return contact
+    colliding_email = "foo@example.com"
+    email_factory(primary_email=colliding_email)
 
-    saved_contacts, _, _ = post_contact(
-        modifier=_change_basket, code=409, check_redirect=False
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(email={"primary_email": colliding_email})
     )
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 409
 
 
-@POST_TEST_PARAMS
-def test_create_basic_with_email_collision(post_contact):
+def test_create_basic_with_basket_collision(client, email_factory):
     """Creating a contact with diff ids but same basket token fails.
     We override the email so that we know we're not colliding on that here.
     See other test for that check
     """
-    saved_contacts, orig_sample, email_id = post_contact()
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+    colliding_basket_token = str(uuid4())
+    email_factory(basket_token=colliding_basket_token)
 
-    def _change_primary_email(contact):
-        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-        contact.email.primary_email = "foo@example.com"
-        return contact
-
-    saved_contacts, _, _ = post_contact(
-        modifier=_change_primary_email, code=409, check_redirect=False
+    contact_data = jsonable_encoder(
+        schemas.ContactInSchema(
+            email={
+                "primary_email": "hello@example.com",
+                "basket_token": colliding_basket_token,
+            }
+        )
     )
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+
+    resp = client.post("/ctms", json=contact_data)
+    assert resp.status_code == 409
+
+
+def test_default_is_not_written(client, dbsession):
+    """Schema defaults are not written to the database"""
+
+    contact = schemas.ContactInSchema(
+        email=schemas.EmailInSchema(primary_email="hello@example.com"),
+        fxa=schemas.FirefoxAccountsInSchema(),
+        mofo=schemas.MozillaFoundationInSchema(),
+        amo=schemas.AddOnsInSchema(),
+        newsletters=[],
+        waitlists=[],
+    )
+    for attr in ["amo", "fxa", "mofo"]:
+        assert getattr(contact, attr).is_default()
+
+    resp = client.post("/ctms", json=jsonable_encoder(contact.model_dump()))
+    assert resp.status_code == 201
+
+    for model in [
+        models.Newsletter,
+        models.Waitlist,
+        models.FirefoxAccount,
+        models.AmoAccount,
+        models.MozillaFoundationContact,
+    ]:
+        assert dbsession.query(model).count() == 0
+
+
+def test_post_example_contact(client, example_contact_data):
+    """We can POST the example contact data that we include in our Swagger docs"""
+
+    resp = client.post("/ctms", json=jsonable_encoder(example_contact_data))
+    assert resp.status_code == 201
 
 
 def test_create_with_non_json_is_error(client, caplog):

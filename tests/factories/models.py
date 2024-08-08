@@ -104,8 +104,6 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
     class Meta:
         model = models.Email
 
-    # Actual Python UUID objects, not just their string representation
-    email_id = factory.LazyFunction(uuid4)
     primary_email = factory.Faker("email")
     # though this column is full of UUIDs, they're stored as strings, which is
     # what Faker generates
