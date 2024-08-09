@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from ctms.auth import (
     OAuth2ClientCredentialsRequestForm,
+    auth_info_context,
     create_access_token,
     verify_password,
 )
@@ -52,7 +53,7 @@ def login(
     basic_credentials: Optional[HTTPBasicCredentials] = Depends(token_scheme),
     token_settings=Depends(get_token_settings),
 ):
-    log_context = request.state.log_context
+    auth_info = auth_info_context.get()
     failed_auth = HTTPException(
         status_code=400, detail="Incorrect username or password"
     )
@@ -60,25 +61,25 @@ def login(
     if form_data.client_id and form_data.client_secret:
         client_id = form_data.client_id
         client_secret = form_data.client_secret
-        log_context["token_creds_from"] = "form"
+        auth_info["token_creds_from"] = "form"
     elif basic_credentials:
         client_id = basic_credentials.username
         client_secret = basic_credentials.password
-        log_context["token_creds_from"] = "header"
+        auth_info["token_creds_from"] = "header"
     else:
-        log_context["token_fail"] = "No credentials"
+        auth_info["token_fail"] = "No credentials"
         raise failed_auth
 
-    log_context["client_id"] = client_id
+    auth_info["client_id"] = client_id
     api_client = get_api_client_by_id(db, client_id)
     if not api_client:
-        log_context["token_fail"] = "No client record"
+        auth_info["token_fail"] = "No client record"
         raise failed_auth
     if not api_client.enabled:
-        log_context["token_fail"] = "Client disabled"
+        auth_info["token_fail"] = "Client disabled"
         raise failed_auth
     if not verify_password(client_secret, api_client.hashed_secret):
-        log_context["token_fail"] = "Bad credentials"
+        auth_info["token_fail"] = "Bad credentials"
         raise failed_auth
 
     access_token = create_access_token(

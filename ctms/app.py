@@ -5,14 +5,18 @@ from contextlib import asynccontextmanager
 import sentry_sdk
 import uvicorn
 from dockerflow.fastapi import router as dockerflow_router
-from dockerflow.fastapi.middleware import RequestIdMiddleware
+from dockerflow.fastapi.middleware import (
+    MozlogRequestSummaryLogger,
+    RequestIdMiddleware,
+)
 from fastapi import FastAPI, Request
 from sentry_sdk.integrations.logging import ignore_logger
+from starlette.routing import Match
 
+from .auth import auth_info_context
 from .config import Settings, get_version
 from .database import SessionLocal
 from .log import CONFIG as LOG_CONFIG
-from .log import context_from_request, get_log_line
 from .metrics import (
     METRICS_REGISTRY,
     emit_response_metrics,
@@ -56,47 +60,41 @@ app.include_router(dockerflow_router)
 app.include_router(platform.router)
 app.include_router(contacts.router)
 
+app.add_middleware(MozlogRequestSummaryLogger)
+app.add_middleware(RequestIdMiddleware)
+
 
 @app.middleware("http")
-async def log_request_middleware(request: Request, call_next):
+async def send_metrics(request: Request, call_next):
     """Add timing and per-request logging context."""
+    # Determine the path template, like "/ctms/{email_id}"
+    path_template = None
+    for route in request.app.routes:
+        match, _ = route.matches(request.scope)
+        if match == Match.FULL:
+            path_template = str(route.path)
+            break
+
     start_time = time.monotonic()
-    request.state.log_context = context_from_request(request)
     response = None
     try:
         response = await call_next(request)
     finally:
-        if response is None:
-            status_code = 500
-        else:
-            status_code = response.status_code
-
-        context = request.state.log_context
-        if request.path_params:
-            context["path_params"] = request.path_params
-
-        log_line = get_log_line(request, status_code, context.get("client_id"))
         duration = time.monotonic() - start_time
         duration_s = round(duration, 3)
+        auth_info = auth_info_context.get()
 
         emit_response_metrics(
-            path_template=context.get("path_template"),
-            method=context["method"],
+            path_template=path_template,
+            method=request.method,
             duration_s=duration_s,
-            status_code=status_code,
-            client_id=context.get("client_id"),
+            status_code=response.status_code if response else 500,
+            client_id=auth_info.get("client_id"),
             metrics=get_metrics(),
         )
 
-        context.update({"status_code": status_code, "duration_s": duration_s})
-        if response is None:
-            web_logger.error(log_line, extra=context)
-        else:
-            web_logger.info(log_line, extra=context)
     return response
 
-
-app.add_middleware(RequestIdMiddleware)
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=80, reload=True)

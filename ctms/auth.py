@@ -8,6 +8,7 @@ the client POSTs to /token again.
 """
 
 import warnings
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
@@ -21,6 +22,9 @@ from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 pwd_context = argon2.PasswordHasher()
+
+
+auth_info_context: ContextVar[dict] = ContextVar("auth_info_context", default={})
 
 
 def verify_password(plain_password, hashed_password) -> bool:

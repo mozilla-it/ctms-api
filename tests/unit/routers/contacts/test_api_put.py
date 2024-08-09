@@ -137,4 +137,4 @@ def test_put_with_not_json_is_error(client, dbsession, caplog):
     assert resp.status_code == 422
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(caplog.records) == 1
-    assert caplog.records[0].status_code == 422
+    assert caplog.records[0].code == 422
