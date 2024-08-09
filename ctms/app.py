@@ -29,8 +29,6 @@ from .routers import contacts, platform
 
 logging.config.dictConfig(LOG_CONFIG)
 
-web_logger = logging.getLogger("ctms.web")
-
 settings = Settings()
 
 sentry_sdk.init(
@@ -40,7 +38,6 @@ sentry_sdk.init(
     send_default_pii=False,
 )
 ignore_logger("uvicorn.error")
-ignore_logger("ctms.web")
 
 
 @asynccontextmanager

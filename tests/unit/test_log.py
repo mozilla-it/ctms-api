@@ -47,7 +47,7 @@ def test_request_log(client, email_factory, caplog):
 def test_token_request_log(anon_client, client_id_and_secret, caplog):
     """A token request log has omitted headers."""
     client_id, client_secret = client_id_and_secret
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         anon_client.cookies.set("csrftoken", "0WzT-base64-string")
         resp = anon_client.post(
             "/token",
@@ -68,7 +68,7 @@ def test_log_omits_emails(client, email_factory, caplog):
         f"/ctms?primary_email={email.primary_email}&fxa_primary_email={email.fxa.primary_email}"
         f"&email_id={email.email_id}"
     )
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = client.get(url)
     assert resp.status_code == 200
     assert len(caplog.records) == 1

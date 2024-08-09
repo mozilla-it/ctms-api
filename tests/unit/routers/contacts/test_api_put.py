@@ -132,7 +132,7 @@ def test_put_with_not_json_is_error(client, dbsession, caplog):
     """Calling PUT with a text body is a 422 validation error."""
     email_id = str(uuid4())
     data = b"make a contact please"
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = client.put(f"/ctms/{email_id}", content=data)
     assert resp.status_code == 422
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
