@@ -8,7 +8,7 @@ from fastapi.security import HTTPBasic
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 from prometheus_client.utils import INF
 from sqlalchemy.orm import Session
-from starlette.routing import Route
+from starlette.routing import Match, Route
 
 from ctms.auth import OAuth2ClientCredentials
 from ctms.crud import get_active_api_client_ids

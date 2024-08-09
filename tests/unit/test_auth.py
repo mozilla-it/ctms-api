@@ -120,7 +120,7 @@ def test_post_token_fails_wrong_grant(anon_client, client_id_and_secret):
 
 def test_post_token_fails_no_credentials(anon_client, caplog):
     """If no credentials are passed, token generation fails."""
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = anon_client.post("/token", data={"grant_type": "client_credentials"})
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
@@ -130,7 +130,7 @@ def test_post_token_fails_no_credentials(anon_client, caplog):
 def test_post_token_fails_unknown_api_client(anon_client, client_id_and_secret, caplog):
     """Authentication failes on unknown api_client ID."""
     good_id, good_secret = client_id_and_secret
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = anon_client.post(
             "/token", auth=HTTPBasicAuth(good_id + "x", good_secret)
         )

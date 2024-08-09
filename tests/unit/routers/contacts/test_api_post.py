@@ -123,10 +123,10 @@ def test_create_basic_with_email_collision(post_contact):
 def test_create_with_non_json_is_error(client, caplog):
     """When non-JSON is posted /ctms, a 422 is returned"""
     data = b"this is not JSON"
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = client.post("/ctms", content=data)
 
     assert resp.status_code == 422
     assert resp.json()["detail"][0]["msg"] == "JSON decode error"
     assert len(caplog.records) == 1
-    assert caplog.records[0].status_code == 422
+    assert caplog.records[0].code == 422
