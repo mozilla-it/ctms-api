@@ -63,7 +63,6 @@ CONFIG = {
         "": {"handlers": ["console"]},
         "request.summary": {"level": logging.INFO},
         "ctms": {"level": logging.DEBUG},
-        "httpx": {"level": logging.CRITICAL},
         "uvicorn": {"level": logging.INFO},
         "uvicorn.access": {"handlers": ["null"], "propagate": False},
         "sqlalchemy.engine": {
