@@ -1,18 +1,14 @@
 """Unit tests for PUT /ctms/{email_id} (Create or update)"""
 
 import logging
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
+from fastapi.encoders import jsonable_encoder
 
-from ctms.schemas import ContactPutSchema
+from ctms import models
+from ctms.schemas import ContactPutSchema, EmailInSchema
 from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
-
-from .test_api import _compare_written_contacts
-
-PUT_TEST_PARAMS = pytest.mark.parametrize(
-    "put_contact", SAMPLE_CONTACT_PARAMS, indirect=True
-)
 
 
 def test_create_or_update_basic_id_is_different(client):
@@ -30,105 +26,127 @@ def test_create_or_update_basic_id_is_different(client):
     assert resp.json()["detail"] == "email_id in path must match email_id in contact"
 
 
-@PUT_TEST_PARAMS
-def test_create_or_update_basic_id_is_none(put_contact):
+def test_create_or_update_basic_id_is_none(client):
     """This should fail since we require an email_id to PUT"""
 
-    def _remove_id(contact):
-        contact.email.email_id = None
-        return contact
-
-    put_contact(
-        modifier=_remove_id,
-        code=422,
-        stored_contacts=0,
-        check_written=False,
+    contact_data = ContactPutSchema.model_construct(
+        EmailInSchema(primary_email="foo@example.com")
     )
+    resp = client.put(f"/ctms/{str(uuid4())}", json=jsonable_encoder(contact_data))
+    assert resp.status_code == 422
 
 
-@PUT_TEST_PARAMS
-def test_create_or_update_basic_empty_db(put_contact):
+def test_create_or_update_basic_empty_db(client):
     """Most straightforward contact creation succeeds when there is no collision"""
-    saved_contacts, sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
-
-
-@PUT_TEST_PARAMS
-def test_create_or_update_identical(put_contact):
-    """Writing the same thing twice works both times"""
-    saved_contacts, sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
-    saved_contacts, sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
-
-
-@PUT_TEST_PARAMS
-def test_create_or_update_change_primary_email(put_contact):
-    """We can update a primary_email given a ctms ID"""
-    saved_contacts, sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
-
-    def _change_email(contact):
-        contact.email.primary_email = "something-new@example.com"
-        return contact
-
-    saved_contacts, sample, email_id = put_contact(
-        modifier=_change_email, query_fields={"email_id": email_id}
+    email_id = str(uuid4())
+    contact_data = ContactPutSchema(
+        email={"email_id": email_id, "primary_email": "foo@example.com"}
     )
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
+    resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
+    assert resp.status_code == 201
 
 
-@PUT_TEST_PARAMS
-def test_create_or_update_change_basket_token(put_contact):
+def test_create_or_update_identical(client, dbsession):
+    """Writing the same thing twice works both times"""
+
+    email_id = str(uuid4())
+    contact_data = ContactPutSchema(
+        email={"email_id": email_id, "primary_email": "foo@example.com"}
+    )
+
+    resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
+    assert resp.status_code == 201
+    assert dbsession.get(models.Email, email_id)
+
+    resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
+    assert resp.status_code == 201
+    assert dbsession.get(models.Email, email_id)
+    assert dbsession.query(models.Email).count() == 1
+
+
+def test_create_or_update_change_primary_email(client, email_factory, dbsession):
+    """We can update a primary_email given a ctms ID"""
+
+    email_id = str(uuid4())
+    email_factory(email_id=email_id, primary_email="foo@example.com")
+
+    contact_data = ContactPutSchema(
+        email={"email_id": email_id, "primary_email": "bar@example.com"}
+    )
+
+    resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
+    assert resp.status_code == 201
+    assert resp.json()["email"]["primary_email"] == "bar@example.com"
+    assert dbsession.get(models.Email, email_id).primary_email == "bar@example.com"
+    assert dbsession.query(models.Email).count() == 1
+
+
+def test_create_or_update_change_basket_token(client, email_factory, dbsession):
     """We can update a basket_token given a ctms ID"""
-    saved_contacts, sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
 
-    def _change_basket(contact):
-        contact.email.basket_token = UUID("c97fb13b-3a19-4f4a-ac2d-abf0717b8df1")
-        return contact
+    email_id = str(uuid4())
+    email_factory(
+        email_id=email_id, primary_email="foo@example.com", basket_token=uuid4()
+    )
+    new_basket_token = str(uuid4())
 
-    saved_contacts, sample, email_id = put_contact(modifier=_change_basket)
-    _compare_written_contacts(saved_contacts[0], sample, email_id)
+    contact_data = ContactPutSchema(
+        email={
+            "email_id": email_id,
+            "primary_email": "foo@example.com",
+            "basket_token": new_basket_token,
+        }
+    )
+    resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
 
-
-@PUT_TEST_PARAMS
-def test_create_or_update_with_basket_collision(put_contact):
-    """Updating a contact with diff ids but same email fails.
-    We override the basket token so that we know we're not colliding on that here.
-    See test_create_basic_with_email_collision below for that check
-    """
-    saved_contacts, orig_sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
-
-    def _change_basket(contact):
-        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-        contact.email.basket_token = UUID("df9f7086-4949-4b2d-8fcf-49167f8f783d")
-        return contact
-
-    saved_contacts, _, _ = put_contact(modifier=_change_basket, code=409)
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+    assert resp.status_code == 201
+    assert resp.json()["email"]["basket_token"] == new_basket_token
+    assert dbsession.get(models.Email, email_id).basket_token == new_basket_token
+    assert dbsession.query(models.Email).count() == 1
 
 
-@PUT_TEST_PARAMS
-def test_create_or_update_with_email_collision(put_contact):
-    """Updating a contact with diff ids but same basket token fails.
-    We override the email so that we know we're not colliding on that here.
-    See other test for that check
-    """
-    saved_contacts, orig_sample, email_id = put_contact()
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+def test_create_or_update_with_basket_collision(client, email_factory):
+    """Updating a contact with diff ids but same basket token fails."""
 
-    def _change_primary_email(contact):
-        contact.email.email_id = UUID("229cfa16-a8c9-4028-a9bd-fe746dc6bf73")
-        contact.email.primary_email = "foo@example.com"
-        return contact
+    existing_basket_token = str(uuid4())
+    email_factory(basket_token=existing_basket_token)
 
-    saved_contacts, _, _ = put_contact(modifier=_change_primary_email, code=409)
-    _compare_written_contacts(saved_contacts[0], orig_sample, email_id)
+    new_contact_email_id = str(uuid4())
+    contact_data = ContactPutSchema(
+        email={
+            "email_id": new_contact_email_id,
+            "primary_email": "foo@example.com",
+            "basket_token": existing_basket_token,
+        }
+    )
+    resp = client.put(
+        f"/ctms/{new_contact_email_id}", json=jsonable_encoder(contact_data)
+    )
+
+    assert resp.status_code == 409
 
 
-def test_put_with_not_json_is_error(client, dbsession, caplog):
+def test_create_or_update_with_email_collision(client, email_factory):
+    """Updating a contact with diff ids but same email fails."""
+
+    existing_email_address = "foo@example.com"
+    email_factory(email_id=str(uuid4()), primary_email=existing_email_address)
+
+    new_contact_email_id = str(uuid4())
+    contact_data = ContactPutSchema(
+        email={
+            "email_id": new_contact_email_id,
+            "primary_email": existing_email_address,
+        }
+    )
+    resp = client.put(
+        f"/ctms/{new_contact_email_id}", json=jsonable_encoder(contact_data)
+    )
+
+    assert resp.status_code == 409
+
+
+def test_put_with_not_json_is_error(client, caplog):
     """Calling PUT with a text body is a 422 validation error."""
     email_id = str(uuid4())
     data = b"make a contact please"
