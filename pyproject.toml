@@ -12,12 +12,12 @@ authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 [tool.poetry.dependencies]
 # These packages are mandatory and form the core of this package’s distribution.
 python = "^3.12.1"
-fastapi = "^0.112.2"
-starlette = "^0.38.4"
+fastapi = "^0.114.0"
+starlette = "^0.38.5"
 requests = "^2.32.3"
-pydantic = {extras = ["email"], version = "^2.8.2"}
+pydantic = {extras = ["email"], version = "^2.9.0"}
 uvicorn = {extras = ["standard"], version = "^0.30.6"}
-SQLAlchemy = "^2.0.32"
+SQLAlchemy = "^2.0.34"
 alembic = "^1.13.2"
 python-multipart = "^0.0.9"
 python-dateutil = "^2.9.0"
@@ -48,7 +48,7 @@ factory-boy = "^3.3.1"
 pytest-factoryboy = "^2.7.0"
 backoff = "^2.2.1"
 httpx = "^0.27.2"
-ruff = "^0.6.3"
+ruff = "^0.6.4"
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
