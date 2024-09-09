@@ -11,7 +11,7 @@ from ctms.app import app
 
 def test_read_root(anon_client, caplog):
     """The site root redirects to the Swagger docs"""
-    with caplog.at_level(level=logging.INFO, logger="ctms.web"):
+    with caplog.at_level(level=logging.INFO):
         resp = anon_client.get("/")
     assert resp.status_code == 200
     assert len(resp.history) == 1
@@ -55,7 +55,7 @@ def test_crash_unauthorized(anon_client):
 
 def test_read_heartbeat(anon_client, caplog):
     """The platform calls /__heartbeat__ to check backing services."""
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = anon_client.get("/__heartbeat__")
     assert resp.status_code == 200
     data = resp.json()
@@ -101,7 +101,7 @@ def test_read_health(anon_client):
 
 def test_get_metrics(anon_client, setup_metrics, caplog):
     """An anonoymous user can request metrics."""
-    with caplog.at_level(logging.INFO, logger="ctms.web"):
+    with caplog.at_level(logging.INFO):
         resp = anon_client.get("/metrics")
     assert resp.status_code == 200
     assert len(caplog.messages) == 1

@@ -5,7 +5,7 @@ from typing import Dict, Union
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from ctms.auth import get_subject_from_token
+from ctms.auth import auth_info_context, get_subject_from_token
 from ctms.config import Settings
 from ctms.crud import get_api_client_by_id, update_api_client_last_access
 from ctms.database import SessionLocal
@@ -50,21 +50,23 @@ def get_api_client(
         token,
         secret_key=token_settings["secret_key"],
     )
-    log_context = request.state.log_context
-    log_context["client_allowed"] = False
+
+    auth_info = auth_info_context.get()
+    auth_info.clear()
+    auth_info["client_allowed"] = False
 
     if name is None:
-        log_context["auth_fail"] = "No or bad token"
+        auth_info["auth_fail"] = "No or bad token"
         raise credentials_exception
 
-    log_context["client_id"] = name
+    auth_info["client_id"] = name
     if namespace != "api_client":
-        log_context["auth_fail"] = "Bad namespace"
+        auth_info["auth_fail"] = "Bad namespace"
         raise credentials_exception
 
     api_client = get_api_client_by_id(db, name)
     if not api_client:
-        log_context["auth_fail"] = "No client record"
+        auth_info["auth_fail"] = "No client record"
         raise credentials_exception
 
     # Track last usage of API client.
@@ -76,14 +78,15 @@ def get_api_client(
 def get_enabled_api_client(
     request: Request, api_client: ApiClientSchema = Depends(get_api_client)
 ):
-    log_context = request.state.log_context
-    if not log_context.get("client_id"):
+    auth_info = auth_info_context.get()
+    auth_info.clear()
+    if not auth_info.get("client_id"):
         # get_api_client was overridden by test
-        log_context["client_id"] = api_client.client_id
+        auth_info["client_id"] = api_client.client_id
     if not api_client.enabled:
-        log_context["auth_fail"] = "Client disabled"
+        auth_info["auth_fail"] = "Client disabled"
         raise HTTPException(status_code=400, detail="API Client has been disabled")
-    log_context["client_allowed"] = True
+    auth_info["client_allowed"] = True
     return api_client
 
 

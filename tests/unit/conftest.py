@@ -1,5 +1,6 @@
 """pytest fixtures for the CTMS app"""
 
+import logging
 import os.path
 from datetime import datetime, timezone
 from time import mktime
@@ -43,6 +44,14 @@ MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
 APP_FOLDER = os.path.dirname(TEST_FOLDER)
 
+LOG_CONFIG_TESTS = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "loggers": {
+        "httpx": {"level": logging.CRITICAL},
+    },
+}
+
 # Common test cases to use in parameterized tests
 # List of tuples comprised of name fixture name (defined below) and the list
 # of fields that are given a default value in that fixture, and therefore
@@ -71,6 +80,11 @@ def unix_timestamp(the_time: Optional[datetime] = None) -> int:
     """Create a UNIX timestamp from a datetime or now"""
     the_time = the_time or datetime.now(tz=timezone.utc)
     return int(mktime(the_time.timetuple()))
+
+
+@pytest.fixture(autouse=True, scope="session")
+def setup_logging():
+    logging.config.dictConfig(LOG_CONFIG_TESTS)
 
 
 @pytest.fixture(scope="session")
