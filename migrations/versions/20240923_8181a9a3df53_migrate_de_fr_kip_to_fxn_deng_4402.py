@@ -20,10 +20,10 @@ depends_on = None
 
 
 def upgrade():
-    # Subscribe users to 'firefox-news'
+    # Subscribe users to 'mozilla-and-you' a/k/a Firefox News
     op.execute("""\
         INSERT INTO newsletters (email_id, name, subscribed)
-        SELECT e.email_id, 'firefox-news', TRUE
+        SELECT e.email_id, 'mozilla-and-you', TRUE
         FROM emails e
         JOIN newsletters n ON e.email_id = n.email_id
         WHERE n.name = 'knowledge-is-power'
