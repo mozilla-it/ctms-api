@@ -52,20 +52,6 @@ LOG_CONFIG_TESTS = {
     },
 }
 
-# Common test cases to use in parameterized tests
-# List of tuples comprised of name fixture name (defined below) and the list
-# of fields that are given a default value in that fixture, and therefore
-# should not be overwritten on update.
-SAMPLE_CONTACT_PARAMS = [
-    ("minimal_contact_data", set()),
-    ("maximal_contact_data", set()),
-    ("example_contact_data", set()),
-    ("to_add_contact_data", set()),
-    ("simple_default_contact_data", {"amo"}),
-    ("default_newsletter_contact_data", {"newsletters"}),
-    ("default_waitlist_contact_data", {"waitlists"}),
-]
-
 
 def _gather_examples(schema_class) -> dict[str, str]:
     """Gather the examples from a schema definition"""
@@ -514,15 +500,6 @@ def default_waitlist_contact_data():
         waitlists=[],
     )
     return contact
-
-
-@pytest.fixture
-def sample_contacts(minimal_contact, maximal_contact, example_contact):
-    return {
-        "minimal": (minimal_contact.email.email_id, minimal_contact),
-        "maximal": (maximal_contact.email.email_id, maximal_contact),
-        "example": (example_contact.email.email_id, example_contact),
-    }
 
 
 @pytest.fixture

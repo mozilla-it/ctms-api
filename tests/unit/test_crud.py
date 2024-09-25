@@ -190,6 +190,15 @@ def test_get_bulk_contacts_none(dbsession):
     assert bulk_contact_list == []
 
 
+@pytest.fixture
+def sample_contacts(minimal_contact, maximal_contact, example_contact):
+    return {
+        "minimal": (minimal_contact.email.email_id, minimal_contact),
+        "maximal": (maximal_contact.email.email_id, maximal_contact),
+        "example": (example_contact.email.email_id, example_contact),
+    }
+
+
 @pytest.mark.parametrize(
     "alt_id_name,alt_id_value",
     [
