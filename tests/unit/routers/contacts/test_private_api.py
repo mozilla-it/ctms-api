@@ -69,25 +69,41 @@ def test_get_identity_not_found(client, dbsession):
 
 
 @pytest.mark.parametrize(
-    "name,ident",
+    ("id_name", "id_value"),
     (
-        ("example_contact", "email_id"),
-        ("minimal_contact", "primary_email"),
-        ("maximal_contact", "basket_token"),
-        ("minimal_contact", "sfdc_id"),
-        ("maximal_contact", "amo_user_id"),
-        ("maximal_contact", "fxa_id"),
-        ("example_contact", "fxa_primary_email"),
-        ("maximal_contact", "mofo_contact_id"),
-        ("maximal_contact", "mofo_email_id"),
+        ("email_id", "67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
+        ("primary_email", "mozilla-fan@example.com"),
+        ("amo_user_id", 123),
+        ("basket_token", "d9ba6182-f5dd-4728-a477-2cc11bf62b69"),
+        ("fxa_id", "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"),
+        ("fxa_primary_email", "fxa-firefox-fan@example.com"),
+        ("sfdc_id", "001A000001aMozFan"),
+        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
+        ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
     ),
 )
-def test_get_identities_by_alt_id(client, request, name, ident):
+def test_get_identities_by_alt_id(client, email_factory, id_name, id_value):
     """GET /identities?alt_id=value returns a one-item identities list."""
-    contact = request.getfixturevalue(name)
+
+    email = email_factory(
+        email_id="67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+        primary_email="mozilla-fan@example.com",
+        basket_token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        sfdc_id="001A000001aMozFan",
+        with_amo=True,
+        amo__user_id="123",
+        with_fxa=True,
+        fxa__fxa_id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+        fxa__primary_email="fxa-firefox-fan@example.com",
+        with_mofo=True,
+        mofo__mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+        mofo__mofo_email_id="195207d2-63f2-4c9f-b149-80e9c408477a",
+    )
+    contact = ContactSchema.from_email(email)
     identity = identity_response_for_contact(contact)
-    assert identity[ident]
-    resp = client.get(f"/identities?{ident}={identity[ident]}")
+
+    resp = client.get(f"/identities?{id_name}={id_value}")
+
     assert resp.status_code == 200
     assert resp.json() == [identity]
 
