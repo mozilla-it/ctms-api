@@ -109,7 +109,15 @@ def test_patch_one_new_value_mostly_empty(
 @pytest.mark.parametrize("group_name,key,value", (patch_single_value_params))
 def test_patch_one_new_value_mostly_full(client, email_factory, group_name, key, value):
     """PATCH can update a single value."""
-    email = email_factory(with_amo=True, with_fxa=True, with_mofo=True)
+    email = email_factory(
+        mailing_country="xx",
+        email_lang="xx",
+        with_amo=True,
+        amo__language="xx",
+        with_fxa=True,
+        fxa__lang="xx",
+        with_mofo=True,
+    )
     contact = ContactSchema.from_email(email)
     expected = json.loads(CTMSResponse(**contact.model_dump()).model_dump_json())
     existing_value = expected[group_name][key]
