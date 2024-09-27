@@ -48,13 +48,11 @@ def identity_response_for_contact(contact):
     }
 
 
-@pytest.mark.parametrize(
-    "name", ("minimal_contact", "maximal_contact", "example_contact")
-)
-def test_get_identity_by_email_id(client, name, request):
+def test_get_identity_by_email_id(client, email_factory):
     """GET /identity/{email_id} returns the identity object."""
 
-    contact = request.getfixturevalue(name)
+    email = email_factory(with_fxa=True, with_mofo=True)
+    contact = ContactSchema.from_email(email)
     resp = client.get(f"/identity/{contact.email.email_id}")
     assert resp.status_code == 200
     assert resp.json() == identity_response_for_contact(contact)

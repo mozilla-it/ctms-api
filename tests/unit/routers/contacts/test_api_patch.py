@@ -28,53 +28,52 @@ def swap_bool(existing):
     return not existing
 
 
-@pytest.mark.parametrize("contact_name", ("minimal_contact", "maximal_contact"))
-@pytest.mark.parametrize(
-    "group_name,key,value",
-    (
-        ("amo", "add_on_ids", "new-addon-id"),
-        ("amo", "display_name", "New Display Name"),
-        ("amo", "email_opt_in", swap_bool),
-        ("amo", "language", "es"),
-        ("amo", "last_login", "2020-04-07"),
-        ("amo", "location", "New Location"),
-        ("amo", "profile_url", "firefox/user/14612345"),
-        ("amo", "user", swap_bool),
-        ("amo", "user_id", "987"),
-        ("amo", "username", "NewUsername"),
-        ("email", "primary_email", "new-email@example.com"),
-        ("email", "basket_token", "8b359504-d1b4-4691-9175-cfee3059b171"),
-        ("email", "double_opt_in", swap_bool),
-        ("email", "sfdc_id", "001A000001aNewUser"),
-        ("email", "first_name", "New"),
-        ("email", "last_name", "LastName"),
-        ("email", "mailing_country", "uk"),
-        ("email", "email_format", "T"),
-        ("email", "email_lang", "eo"),
-        ("email", "has_opted_out_of_email", swap_bool),
-        ("email", "unsubscribe_reason", "new reason"),
-        ("fxa", "fxa_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
-        ("fxa", "primary_email", "new-fxa-email@example.com"),
-        ("fxa", "created_date", "2021-04-07T10:00:00+00:00"),
-        ("fxa", "lang", "es"),
-        ("fxa", "first_service", "vpn"),
-        ("fxa", "account_deleted", swap_bool),
-        ("mofo", "mofo_email_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
-        ("mofo", "mofo_contact_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
-        ("mofo", "mofo_relevant", swap_bool),
-    ),
+patch_single_value_params = (
+    ("amo", "add_on_ids", "new-addon-id"),
+    ("amo", "display_name", "New Display Name"),
+    ("amo", "email_opt_in", swap_bool),
+    ("amo", "language", "es"),
+    ("amo", "last_login", "2020-04-07"),
+    ("amo", "location", "New Location"),
+    ("amo", "profile_url", "firefox/user/14612345"),
+    ("amo", "user", swap_bool),
+    ("amo", "user_id", "987"),
+    ("amo", "username", "NewUsername"),
+    ("email", "primary_email", "new-email@example.com"),
+    ("email", "basket_token", "8b359504-d1b4-4691-9175-cfee3059b171"),
+    ("email", "double_opt_in", swap_bool),
+    ("email", "sfdc_id", "001A000001aNewUser"),
+    ("email", "first_name", "New"),
+    ("email", "last_name", "LastName"),
+    ("email", "mailing_country", "uk"),
+    ("email", "email_format", "T"),
+    ("email", "email_lang", "eo"),
+    ("email", "has_opted_out_of_email", swap_bool),
+    ("email", "unsubscribe_reason", "new reason"),
+    ("fxa", "fxa_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
+    ("fxa", "primary_email", "new-fxa-email@example.com"),
+    ("fxa", "created_date", "2021-04-07T10:00:00+00:00"),
+    ("fxa", "lang", "es"),
+    ("fxa", "first_service", "vpn"),
+    ("fxa", "account_deleted", swap_bool),
+    ("mofo", "mofo_email_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
+    ("mofo", "mofo_contact_id", "8b359504-d1b4-4691-9175-cfee3059b171"),
+    ("mofo", "mofo_relevant", swap_bool),
 )
-def test_patch_one_new_value(client, contact_name, group_name, key, value, request):
+
+
+@pytest.mark.parametrize("group_name,key,value", (patch_single_value_params))
+def test_patch_one_new_value_mostly_empty(
+    client, email_factory, group_name, key, value
+):
     """PATCH can update a single value."""
-    contact = request.getfixturevalue(contact_name)
+    email = email_factory()
+    contact = ContactSchema.from_email(email)
     expected = json.loads(CTMSResponse(**contact.model_dump()).model_dump_json())
     existing_value = expected[group_name][key]
 
     # Set dynamic test values
-    if callable(value):
-        new_value = value(existing_value)
-    else:
-        new_value = value
+    new_value = value(existing_value) if callable(value) else value
 
     patch_data = {group_name: {key: new_value}}
     expected[group_name][key] = new_value
@@ -87,14 +86,47 @@ def test_patch_one_new_value(client, contact_name, group_name, key, value, reque
     del actual["status"]
 
     # Timestamps should be set for newly created amo group
-    if group_name == "amo" and contact.amo is None:
+    if group_name == "amo":
         assert expected["amo"]["create_timestamp"] is None
         assert expected["amo"]["update_timestamp"] is None
         assert actual["amo"]["create_timestamp"] is not None
         assert actual["amo"]["update_timestamp"] is not None
         assert actual["amo"]["create_timestamp"] == actual["amo"]["update_timestamp"]
         expected["amo"]["create_timestamp"] = actual["amo"]["create_timestamp"]
-    expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
+        expected["amo"]["update_timestamp"] = actual["amo"]["update_timestamp"]
+
+    # Timestamps are not included for fxa or mofo objects
+    for group in ("fxa", "mofo"):
+        assert expected[group].get("create_timestamp") is None
+        assert expected[group].get("update_timestamp") is None
+        assert actual[group].get("create_timestamp") is None
+        assert actual[group].get("update_timestamp") is None
+
+    expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
+    assert actual == expected
+
+
+@pytest.mark.parametrize("group_name,key,value", (patch_single_value_params))
+def test_patch_one_new_value_mostly_full(client, email_factory, group_name, key, value):
+    """PATCH can update a single value."""
+    email = email_factory(with_amo=True, with_fxa=True, with_mofo=True)
+    contact = ContactSchema.from_email(email)
+    expected = json.loads(CTMSResponse(**contact.model_dump()).model_dump_json())
+    existing_value = expected[group_name][key]
+
+    # Set dynamic test values
+    new_value = value(existing_value) if callable(value) else value
+
+    patch_data = {group_name: {key: new_value}}
+    expected[group_name][key] = new_value
+    assert existing_value != new_value
+
+    resp = client.patch(f"/ctms/{contact.email.email_id}", json=patch_data)
+    assert resp.status_code == 200
+    actual = resp.json()
+    assert actual["status"] == "ok"
+    del actual["status"]
+
     expected["email"]["update_timestamp"] = actual["email"]["update_timestamp"]
     assert actual == expected
 
