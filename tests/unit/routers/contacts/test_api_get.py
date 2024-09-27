@@ -3,7 +3,7 @@
 import pytest
 
 
-def test_get_ctms_for_minimal_contact(client, email_factory):
+def test_get_ctms_for_mostly_empty(client, email_factory):
     """GET /ctms/{email_id} returns a contact with most fields unset."""
     contact = email_factory(newsletters=1)
     newsletter = contact.newsletters[0]
