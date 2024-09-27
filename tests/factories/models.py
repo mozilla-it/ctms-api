@@ -111,7 +111,7 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
     first_name = factory.Faker("first_name")
     last_name = factory.Faker("last_name")
     mailing_country = factory.Faker("country_code")
-    email_format = "T"
+    email_format = "H"
     email_lang = factory.Faker("language_code")
     double_opt_in = False
     has_opted_out_of_email = False
