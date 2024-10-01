@@ -8,7 +8,6 @@ from fastapi.encoders import jsonable_encoder
 
 from ctms import models
 from ctms.schemas import ContactPutSchema, EmailInSchema
-from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 
 def test_create_or_update_basic_id_is_different(client):

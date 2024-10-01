@@ -7,7 +7,6 @@ import pytest
 
 from ctms.schemas import ContactInSchema, ContactSchema, NewsletterInSchema
 from ctms.schemas.waitlist import WaitlistInSchema
-from tests.unit.conftest import SAMPLE_CONTACT_PARAMS
 
 API_TEST_CASES = (
     ("GET", "/ctms", {"primary_email": "contact@example.com"}),
@@ -174,6 +173,17 @@ def find_default_fields(contact: ContactSchema) -> Set[str]:
     if all(n.is_default() for n in contact.waitlists):
         default_fields.add("waitlists")
     return default_fields
+
+
+SAMPLE_CONTACT_PARAMS = [
+    ("minimal_contact_data", set()),
+    ("maximal_contact_data", set()),
+    ("example_contact_data", set()),
+    ("to_add_contact_data", set()),
+    ("simple_default_contact_data", {"amo"}),
+    ("default_newsletter_contact_data", {"newsletters"}),
+    ("default_waitlist_contact_data", {"waitlists"}),
+]
 
 
 @pytest.mark.parametrize("post_contact", SAMPLE_CONTACT_PARAMS, indirect=True)

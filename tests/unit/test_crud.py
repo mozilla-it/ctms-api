@@ -204,14 +204,31 @@ def test_get_bulk_contacts_none(dbsession):
         ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
     ],
 )
-def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
-    contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(contacts) == 1
-    newsletter_names = [nl.name for nl in contacts[0].newsletters]
-    assert sorted(newsletter_names) == newsletter_names
+def test_get_contact_by_any_id(dbsession, email_factory, alt_id_name, alt_id_value):
+    email = email_factory(
+        email_id="67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+        primary_email="mozilla-fan@example.com",
+        basket_token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        sfdc_id="001A000001aMozFan",
+        with_fxa=True,
+        fxa__fxa_id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+        fxa__primary_email="fxa-firefox-fan@example.com",
+        with_amo=True,
+        amo__user_id="123",
+        with_mofo=True,
+        mofo__mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+        mofo__mofo_email_id="195207d2-63f2-4c9f-b149-80e9c408477a",
+    )
+    email_factory.create_batch(2, with_fxa=True, with_amo=True, with_mofo=True)
+
+    [contact] = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
+    assert contact.email.email_id == email.email_id
 
 
-def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
+def test_get_contact_by_any_id_missing(dbsession, email_factory):
+    # create an email
+    email_factory()
+    # but use a different (random) UUID as the basket token
     contact = get_contacts_by_any_id(dbsession, basket_token=str(uuid4()))
     assert len(contact) == 0
 
@@ -226,44 +243,30 @@ def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
     ],
 )
 def test_get_multiple_contacts_by_any_id(
-    dbsession, sample_contacts, alt_id_name, alt_id_value
+    dbsession, email_factory, alt_id_name, alt_id_value
 ):
-    dupe_id = str(uuid4())
-    create_email(
-        dbsession,
-        EmailInSchema(
-            email_id=dupe_id,
-            primary_email="dupe@example.com",
-            basket_token=str(uuid4()),
-            sfdc_id=(
-                alt_id_value if alt_id_name == "sfdc_id" else "other_sdfc_alt_id_value"
-            ),
-        ),
+    """Two contacts can share the same:
+    - fxa primary_email
+    - amo user_id
+    - sfdc_id
+    - mofo_contact_id
+
+    And when we query users by these ids, we might get multiple contacts back
+    """
+    email_factory.create_batch(
+        2,
+        sfdc_id="001A000001aMozFan",
+        with_amo=True,
+        amo__user_id=123,
+        with_fxa=True,
+        fxa__primary_email="fxa-firefox-fan@example.com",
+        with_mofo=True,
+        mofo__mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
     )
-    if alt_id_name == "amo_user_id":
-        create_amo(dbsession, dupe_id, AddOnsInSchema(user_id=alt_id_value))
-    if alt_id_name == "fxa_primary_email":
-        create_fxa(
-            dbsession, dupe_id, FirefoxAccountsInSchema(primary_email=alt_id_value)
-        )
-    if alt_id_name == "mofo_contact_id":
-        create_mofo(
-            dbsession,
-            dupe_id,
-            MozillaFoundationInSchema(
-                mofo_email_id=str(uuid4()), mofo_contact_id=alt_id_value
-            ),
-        )
-
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="zzz_sleepy_news"))
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="aaa_game_news"))
-    dbsession.flush()
-
-    contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(contacts) == 2
-    for contact in contacts:
-        newsletter_names = [nl.name for nl in contact.newsletters]
-        assert sorted(newsletter_names) == newsletter_names
+    [contact_a, contact_b] = get_contacts_by_any_id(
+        dbsession, **{alt_id_name: alt_id_value}
+    )
+    assert contact_a.email.email_id != contact_b.email.email_id
 
 
 def test_create_or_update_contact_related_objects(dbsession, email_factory):

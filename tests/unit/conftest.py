@@ -52,20 +52,6 @@ LOG_CONFIG_TESTS = {
     },
 }
 
-# Common test cases to use in parameterized tests
-# List of tuples comprised of name fixture name (defined below) and the list
-# of fields that are given a default value in that fixture, and therefore
-# should not be overwritten on update.
-SAMPLE_CONTACT_PARAMS = [
-    ("minimal_contact_data", set()),
-    ("maximal_contact_data", set()),
-    ("example_contact_data", set()),
-    ("to_add_contact_data", set()),
-    ("simple_default_contact_data", {"amo"}),
-    ("default_newsletter_contact_data", {"newsletters"}),
-    ("default_waitlist_contact_data", {"waitlists"}),
-]
-
 
 def _gather_examples(schema_class) -> dict[str, str]:
     """Gather the examples from a schema definition"""
@@ -257,12 +243,6 @@ def minimal_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def minimal_contact(minimal_contact_data: ContactSchema, dbsession) -> ContactSchema:
-    create_full_contact(dbsession, minimal_contact_data)
-    return minimal_contact_data
-
-
-@pytest.fixture
 def maximal_contact_data() -> ContactSchema:
     email_id = UUID("67e52c77-950f-4f28-accb-bb3ea1a2c51a")
     return ContactSchema(
@@ -406,12 +386,6 @@ def maximal_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def maximal_contact(dbsession, maximal_contact_data: ContactSchema) -> ContactSchema:
-    create_full_contact(dbsession, maximal_contact_data)
-    return maximal_contact_data
-
-
-@pytest.fixture
 def example_contact_data() -> ContactSchema:
     return ContactSchema(
         amo=schemas.AddOnsSchema(**_gather_examples(schemas.AddOnsSchema)),
@@ -451,12 +425,6 @@ def to_add_contact_data() -> ContactSchema:
 
 
 @pytest.fixture
-def to_add_contact(dbsession, to_add_contact_data: ContactSchema) -> ContactSchema:
-    create_full_contact(dbsession, to_add_contact_data)
-    return to_add_contact_data
-
-
-@pytest.fixture
 def simple_default_contact_data():
     return ContactSchema(
         email=schemas.EmailInSchema(
@@ -468,14 +436,6 @@ def simple_default_contact_data():
         ),
         amo=schemas.AddOnsInSchema(),
     )
-
-
-@pytest.fixture
-def simple_default_contact(
-    dbsession, simple_default_contact_data: ContactSchema
-) -> ContactSchema:
-    create_full_contact(dbsession, simple_default_contact_data)
-    return simple_default_contact_data
 
 
 @pytest.fixture
@@ -494,14 +454,6 @@ def default_newsletter_contact_data():
 
 
 @pytest.fixture
-def default_newsletter_contact(
-    dbsession, default_newsletter_contact_data: ContactSchema
-) -> ContactSchema:
-    create_full_contact(dbsession, default_newsletter_contact_data)
-    return default_newsletter_contact_data
-
-
-@pytest.fixture
 def default_waitlist_contact_data():
     contact = ContactSchema(
         email=schemas.EmailInSchema(
@@ -514,15 +466,6 @@ def default_waitlist_contact_data():
         waitlists=[],
     )
     return contact
-
-
-@pytest.fixture
-def sample_contacts(minimal_contact, maximal_contact, example_contact):
-    return {
-        "minimal": (minimal_contact.email.email_id, minimal_contact),
-        "maximal": (maximal_contact.email.email_id, maximal_contact),
-        "example": (example_contact.email.email_id, example_contact),
-    }
 
 
 @pytest.fixture
