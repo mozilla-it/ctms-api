@@ -93,7 +93,11 @@ class Email(Base, TimestampMixin):
     # Indexes
     __table_args__ = (
         Index("bulk_read_index", "update_timestamp", "email_id"),
-        Index("idx_email_primary_email_lower", func.lower(primary_email)),
+        Index(
+            "idx_email_primary_unique_email_lower",
+            func.lower(primary_email),
+            unique=True,
+        ),
     )
 
 
