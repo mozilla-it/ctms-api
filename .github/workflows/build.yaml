@@ -26,7 +26,7 @@ jobs:
       - id: determine_tag
         name: determine tag
         run: |-
-          TAG=$(git describe --tags | sed s/g//`)
+          TAG=$(git describe --tags)
           printf "\e[1;36m[INFO]\e[0m \$TAG=\"${TAG}\"\n"
           echo TAG=${TAG} >> ${GITHUB_OUTPUT}
 
