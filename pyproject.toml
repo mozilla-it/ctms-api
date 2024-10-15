@@ -13,10 +13,10 @@ authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
 # These packages are mandatory and form the core of this package’s distribution.
 python = "^3.12.1"
 fastapi = "^0.115.2"
-starlette = "^0.39.2"
+starlette = "^0.40.0"
 requests = "^2.32.3"
 pydantic = {extras = ["email"], version = "^2.9.2"}
-uvicorn = {extras = ["standard"], version = "^0.31.1"}
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
 SQLAlchemy = "^2.0.35"
 alembic = "^1.13.3"
 python-multipart = "^0.0.12"
