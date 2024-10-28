@@ -45,7 +45,7 @@ services:
       - 8080:8080
   basket:
     profiles: [integration-test]
-    image: mozmeao/basket:2023-04-24
+    image: mozmeao/basket:2024-10-21
     env_file:
       - ./tests/integration/basket.env
     command:
@@ -66,7 +66,7 @@ services:
       retries: 10
   basket-worker:
     profiles: [integration-test]
-    image: mozmeao/basket:2023-04-24
+    image: mozmeao/basket:2024-10-21
     env_file:
       - ./tests/integration/basket.env
     command:
@@ -79,11 +79,10 @@ services:
       web:
         condition: service_healthy
     healthcheck:
-      test: celery -b redis://redis:6379 -A basket.news inspect ping
+      test: rq info -R default | grep -q "queues"
       interval: 3s
-      # This healthcheck takes forever to start/complete!?
-      timeout: 60s
-      retries: 10
+      timeout: 1s
+      retries: 5
   mysql:
     profiles: [integration-test]
     image: mariadb:11.2.3
