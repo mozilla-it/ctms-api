@@ -16,7 +16,7 @@ fastapi = "^0.115.6"
 starlette = "^0.41.3"
 requests = "^2.32.3"
 pydantic = {extras = ["email"], version = "^2.10.3"}
-uvicorn = {extras = ["standard"], version = "^0.32.1"}
+uvicorn = {extras = ["standard"], version = "^0.34.0"}
 SQLAlchemy = "^2.0.36"
 alembic = "^1.14.0"
 python-multipart = "^0.0.19"
@@ -27,8 +27,8 @@ lxml = "^5.3.0"
 prometheus-client = "0.21.1"
 colorama = "^0.4.6"
 psycopg2 = "^2.9.10"
-google-auth = "^2.36.0"
-pydantic-settings = "^2.6.1"
+google-auth = "^2.37.0"
+pydantic-settings = "^2.7.0"
 argon2-cffi = "^23.1.0"
 pyjwt = "^2.10.1"
 
@@ -48,7 +48,7 @@ factory-boy = "^3.3.1"
 pytest-factoryboy = "^2.7.0"
 backoff = "^2.2.1"
 httpx = "^0.28.1"
-ruff = "^0.8.2"
+ruff = "^0.8.3"
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
