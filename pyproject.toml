@@ -15,11 +15,11 @@ python = "^3.12.1"
 fastapi = "^0.115.6"
 starlette = "^0.41.3"
 requests = "^2.32.3"
-pydantic = {extras = ["email"], version = "^2.10.3"}
+pydantic = {extras = ["email"], version = "^2.10.4"}
 uvicorn = {extras = ["standard"], version = "^0.34.0"}
 SQLAlchemy = "^2.0.36"
 alembic = "^1.14.0"
-python-multipart = "^0.0.19"
+python-multipart = "^0.0.20"
 python-dateutil = "^2.9.0"
 dockerflow = {extras = ["fastapi"], version = "^2024.4.2"}
 sentry-sdk = {extras = ["fastapi"], version = "^2.19.2"}
@@ -38,7 +38,7 @@ pyjwt = "^2.10.1"
 pre-commit = "^4.0.1"
 pytest = "^8.3.4"
 coverage = {extras = ["toml"], version = "^7.6"}
-mypy = "^1.13"
+mypy = "^1.14"
 types-python-dateutil = "^2.9.0"
 detect-secrets = "^1.5.0"
 bandit = "^1.8.0"
@@ -48,7 +48,7 @@ factory-boy = "^3.3.1"
 pytest-factoryboy = "^2.7.0"
 backoff = "^2.2.1"
 httpx = "^0.28.1"
-ruff = "^0.8.3"
+ruff = "^0.8.4"
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
