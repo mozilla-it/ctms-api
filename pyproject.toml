@@ -1,100 +1,104 @@
 [build-system]
-requires = ["poetry>=1.7"]
+requires = ["poetry>=2.0"]
 build-backend = "poetry.masonry.api"
 
-[tool.poetry]
+[project]
 name = "ctms"
-version = "0"
+version = "1.0"
 description = "Contact Management System API"
-authors = ["CTMS Reviewers <@mozilla-it/ctms-reviewers>"]
+readme = "README.md"
+authors = [
+  { name = "CTMS Reviewers" },
+]
+requires-python = ">=3.12,<4"
+package-mode = false
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "alembic>=1.14",
+  "argon2-cffi>=23.1",
+  "colorama>=0.4.6",
+  "dockerflow[fastapi]>=2024.4.2",
+  "fastapi>=0.115.6",
+  "google-auth>=2.37",
+  "lxml>=5.3",
+  "prometheus-client==0.21.1",
+  "psycopg2>=2.9.10",
+  "pydantic-settings>=2.7",
+  "pydantic[email]>=2.10.4",
+  "pyjwt>=2.10.1",
+  "python-dateutil>=2.9",
+  "python-multipart>=0.0.20",
+  "requests>=2.32.3",
+  "sentry-sdk[fastapi]>=2.19.2",
+  "sqlalchemy>=2.0.36",
+  "starlette>=0.41.3",
+  "uvicorn[standard]>=0.34",
+]
 
-
-[tool.poetry.dependencies]
-# These packages are mandatory and form the core of this package’s distribution.
-python = "^3.12.1"
-fastapi = "^0.115.6"
-starlette = "^0.41.3"
-requests = "^2.32.3"
-pydantic = {extras = ["email"], version = "^2.10.4"}
-uvicorn = {extras = ["standard"], version = "^0.34.0"}
-SQLAlchemy = "^2.0.36"
-alembic = "^1.14.0"
-python-multipart = "^0.0.20"
-python-dateutil = "^2.9.0"
-dockerflow = {extras = ["fastapi"], version = "^2024.4.2"}
-sentry-sdk = {extras = ["fastapi"], version = "^2.19.2"}
-lxml = "^5.3.0"
-prometheus-client = "0.21.1"
-colorama = "^0.4.6"
-psycopg2 = "^2.9.10"
-google-auth = "^2.37.0"
-pydantic-settings = "^2.7.0"
-argon2-cffi = "^23.1.0"
-pyjwt = "^2.10.1"
-
-
-
+# TODO: Move to PEP 735 dependency-groups when supported:
+# https://github.com/python-poetry/poetry/issues/9751
 [tool.poetry.group.dev.dependencies]
-pre-commit = "^4.0.1"
-pytest = "^8.3.4"
-coverage = {extras = ["toml"], version = "^7.6"}
-mypy = "^1.14"
-types-python-dateutil = "^2.9.0"
-detect-secrets = "^1.5.0"
-bandit = "^1.8.0"
-SQLAlchemy-Utils = "^0.41.2"
-types-requests = "^2.32.0"
-factory-boy = "^3.3.1"
-pytest-factoryboy = "^2.7.0"
-backoff = "^2.2.1"
-httpx = "^0.28.1"
-ruff = "^0.8.4"
+backoff = ">=2.2.1"
+bandit = ">=1.8.0"
+coverage = {extras = ["toml"], version = ">=7.6.10"}
+detect-secrets = ">=1.5.0"
+factory-boy = ">=3.3.1"
+httpx = ">=0.28.1"
+mypy = "^1.14.1"
+pre-commit = ">=4.0.1"
+pytest = ">=8.3.4"
+pytest-factoryboy = ">=2.7.0"
+ruff = "^0.8.6"
+SQLAlchemy-Utils = ">=0.41.2"
+types-python-dateutil = ">=2.9.0"
+types-requests = ">=2.32.0"
 
 [tool.pytest.ini_options]
-testpaths = ["tests/unit"]
+testpaths = [ "tests/unit" ]
 markers = [
-    "disable_autouse: disable fixtures configured with `autouse=True`",
+  "disable_autouse: disable fixtures configured with `autouse=True`",
 ]
 
 [tool.ruff]
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["PL", "I"]
-ignore = ["PLR2004", "PLR0913"]
+select = [ "PL", "I"] 
+ignore = [ "PLR2004", "PLR0913" ]
 
-[tool.coverage]
-# https://github.com/nedbat/coveragepy
-    [tool.coverage.run]
-    omit = [
-        '*/.local/*',
-        '/usr/*',
-        '*/.venv/*',
-        '*/.tox/*',
-        '*/virtualenvs/*',
-    ]
+[tool.coverage.run]
+omit = [
+  '*/.local/*',
+  '/usr/*',
+  '*/.venv/*',
+  '*/.tox/*',
+  '*/virtualenvs/*',
+]
 
-    [tool.coverage.report]
-
-    exclude_lines = [
-        "# noqa",
-        "raise NotImplementedError",
-        "pragma: no cover",
-        "def __repr__",
-        "if .debug:",
-        "raise NotImplementedError",
-        "if __name__ == .__main__.:",
-        "logger.",
-        "from",
-        "import"
-    ]
+[tool.coverage.report]
+exclude_lines = [
+  "# noqa",
+  "raise NotImplementedError",
+  "pragma: no cover",
+  "def __repr__",
+  "if .debug:",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "logger.",
+  "from",
+  "import",
+]
 
 [tool.mypy]
 # Sync Python version with Dockerfile
 python_version = "3.12"
 # Look for errors in this file
 warn_unused_configs = true
-plugins = ["pydantic.mypy"]
+plugins = [ "pydantic.mypy" ]
 
 # TODO: Get stricter for these options
 # None is compatible with all types (pre-mypy 0.6 behaviour)
