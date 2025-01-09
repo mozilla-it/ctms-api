@@ -87,6 +87,18 @@ This can be used to access the API, such as:
         )
 
 
+def save_json(output, client_id, client_secret):
+    with open(output, "w") as f:
+        json.dump(
+            {
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+            f,
+        )
+    print(f"Credentials saved to {output!r}.")
+
+
 def main(db, settings, test_args=None):  # noqa: PLR0912
     """
     Process the command line and create or update client credentials
@@ -100,7 +112,9 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
     parser = argparse.ArgumentParser(description="Create or update client credentials.")
     parser.add_argument("name", help="short name of the client")
     parser.add_argument("-e", "--email", help="contact email for the client")
-    parser.add_argument("--save-file", help="output credentials into file in JSON format")
+    parser.add_argument(
+        "--save-file", help="output credentials into file in JSON format"
+    )
     parser.add_argument(
         "--enable", action="store_true", help="enable a disabled client"
     )
@@ -129,10 +143,8 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
         print("Can only pick one of --enable and --disable")
         return 1
 
-    if name.startswith("id_"):
-        client_id = name
-    else:
-        client_id = f"id_{name}"
+    client_id = name if name.startswith("id_") else f"id_{name}"
+
     existing = get_api_client_by_id(db, client_id)
     if existing:
         if disable and existing.enabled:
@@ -142,10 +154,7 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
         else:
             enabled = None
 
-        if rotate:
-            new_secret = create_secret()
-        else:
-            new_secret = None
+        new_secret = create_secret() if rotate else None
 
         if new_secret is None and enabled is None and email in (None, existing.email):
             print(f"Nothing to change for existing credentials for {name}.")
@@ -162,12 +171,7 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
                 enabled=enabled,
             )
             if save_file:
-                with open(save_file, "w") as f:
-                    json.dump({
-                        "client_id": existing.client_id,
-                        "client_secret": new_secret,
-                    }, f)
-                print(f"Credentials saved to {save_file!r}.")
+                save_json(save_file, existing.client_id, new_secret)
         else:
             print(f"Credentials for {name} are updated.")
     else:
@@ -182,12 +186,7 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
             client_id, client_secret, settings, sample_email=email, enabled=enabled
         )
         if save_file:
-            with open(save_file, "w") as f:
-                json.dump({
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                }, f)
-            print(f"Credentials saved to {save_file!r}.")
+            save_json(save_file, client_id, client_secret)
     return 0
 
 
