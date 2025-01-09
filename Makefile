@@ -81,8 +81,15 @@ start: .env
 test: .env $(INSTALL_STAMP)
 	COVERAGE_REPORT=1 bin/test.sh
 
+.env.tests: .env setup $(INSTALL_STAMP)
+	cp tests/integration/basket.env .env.tests
+	poetry run ctms/bin/client_credentials.py -e master@local.host integration-test --save-file creds.json
+	echo "CTMS_CLIENT_ID=$(jq -r .client_id creds.json)" >> .env.tests
+	echo "CTMS_CLIENT_SECRET=$(jq -r .client_secret creds.json)" >> .env.tests
+	rm creds.json
+
 .PHONY: integration-test
-integration-test: .env setup $(INSTALL_STAMP)
+integration-test: .env.tests
 	echo "Starting containers..."
 	${DOCKER_COMPOSE} --profile integration-test up --force-recreate --wait basket
 	echo "Start test suite..."

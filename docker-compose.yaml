@@ -47,7 +47,7 @@ services:
     profiles: [integration-test]
     image: mozmeao/basket:2024-10-21
     env_file:
-      - ./tests/integration/basket.env
+      - .env.tests
     command:
       ./bin/run-dev.sh
     ports:
@@ -68,7 +68,7 @@ services:
     profiles: [integration-test]
     image: mozmeao/basket:2024-10-21
     env_file:
-      - ./tests/integration/basket.env
+      - .env.tests
     command:
       ./bin/run-worker.sh
     depends_on:
