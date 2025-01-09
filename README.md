@@ -1,51 +1,22 @@
 # ConTact Management System (CTMS)
 
-While the app is running, interactive API documentation can found at the following relative paths: /docs, /redoc.
+![Status Sustain](https://img.shields.io/badge/Status-Sustain-green)
 
-OpenApiSpec(OAS) formatted in JSON can be found at the following path: /openapi.json
+*CTMS* is an internal service at Mozilla in charge of managing marketing contacts.
 
----
+## Usage
 
-[View All Docs](docs/README.md)
+Run the app with `make start`. Check [developer docs](docs/developer_setup.md) for setup.
 
----
+While the app is running, interactive API documentation is available at:
 
-## Prerequisites
+- http://localhost:8000/docs
+- http://localhost:8000/redoc
 
-Please read the [Developer Setup documentation](docs/developer_setup.md) before developing \
-for this project to ensure correct environment setup.
+OpenApiSpec(OAS) formatted in JSON can be found at the following path: `/openapi.json`.
 
----
-## Project Structure
+## [Documentation](docs/README.md)
 
-The project is structured with the following in mind:
+## License
 
-- [bin/*](bin/)
-    - Some scripts that have proven useful within the CTMS ecosystem
-- [docs/*](docs/)
-    - Documentation to guide others around the project interactions
-- [ctms/*](ctms/)
-    - Application logic lives within this directory
-    - [bin/*](ctms/bin/)
-        - Scripts intended for background machinery
-    - [schemas/*](ctms/schemas/)
-        - Pydantic Models for Data Modeling and Contract Validation
-- [migrations/*](migrations/)
-    - Alembic migrations that act as a changelog or version control system for implementing DB changes in an ordered fashion
-- [tests/unit/*](test/unit/)
-    - Test suite using pytest
-
----
-## Important Files
-
-Below are some files that are worth making note of:
-- [MAKEFILE](Makefile)
-    - Enabling commands such as: make {build | lint | setup | start | test | shell | db-only}
-- [ctms/app.py](ctms/app.py)
-    - FastAPI handling of HTTP Requests and routing to services
-- [ctms/bin/acoustic_sync.py](ctms/bin/acoustic_sync.py)
-    - Background job for synchronizing pending records to Acoustic
-- [ctms/config.py](ctms/config.py)
-    - Environment variables are initialized here
-- [ctms/models.py](ctms/models.py)
-    - SQLAlchemy models for ORM tool
+*CTMS* is licensed under the MPLv2. See the `LICENSE` file for details.

@@ -1,62 +1,33 @@
 # Test for metrics
-from unittest.mock import patch
+from unittest import mock
 
 import pytest
 from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.parser import text_string_to_metric_families
-from structlog.testing import capture_logs
 
+from ctms import metrics as metrics_module
 from ctms.app import app
-from ctms.metrics import METRICS_PARAMS, init_metrics, init_metrics_labels
 
 # Metric cardinatility numbers
 # These numbers change as routes are added or changed
 # Higher numbers = more ways to slice data, more storage, more processing time for summaries
 
 # Cardinality of ctms_requests_total counter
-METHOD_PATH_CODE_COMBINATIONS = 54
+METHOD_PATH_CODE_COMBINATIONS = 50
 
 # Cardinality of ctms_requests_duration_seconds histogram
-METHOD_PATH_CODEFAM_COMBOS = 39
+METHOD_PATH_CODEFAM_COMBOS = 35
 DURATION_BUCKETS = 8
 DURATION_COMBINATIONS = METHOD_PATH_CODEFAM_COMBOS * (DURATION_BUCKETS + 2)
 
 # Base cardinatility of ctms_api_requests_total
 # Actual is multiplied by the number of API clients
-METHOD_API_PATH_COMBINATIONS = 19
-
-
-@pytest.fixture
-def setup_metrics():
-    """Setup a metrics registry and metrics, use them in the app"""
-
-    test_registry = CollectorRegistry()
-    test_metrics = init_metrics(test_registry)
-    # Because these methods are called from a middleware
-    # we can't use dependency injection like with get_db
-    with patch("ctms.app.get_metrics_registry", return_value=test_registry), patch(
-        "ctms.app.get_metrics", return_value=test_metrics
-    ):
-        yield test_registry, test_metrics
-
-
-@pytest.fixture
-def registry(setup_metrics):
-    """Get the test metrics registry"""
-    test_registry, _ = setup_metrics
-    return test_registry
-
-
-@pytest.fixture
-def metrics(setup_metrics):
-    """Get the test metrics"""
-    _, test_metrics = setup_metrics
-    return test_metrics
+METHOD_API_PATH_COMBINATIONS = 18
 
 
 def test_init_metrics_labels(dbsession, client_id_and_secret, registry, metrics):
     """Test that init_metric_labels populates variants"""
-    init_metrics_labels(dbsession, app, metrics)
+    metrics_module.init_metrics_labels(dbsession, app, metrics)
 
     metrics_text = generate_latest(registry).decode()
     families = list(text_string_to_metric_families(metrics_text))
@@ -177,16 +148,6 @@ def assert_api_request_metric_inc(
     assert metrics_registry.get_sample_value("ctms_api_requests_total", labels) == count
 
 
-def assert_pending_acoustic_sync_inc(
-    metrics_registry: CollectorRegistry,
-    count: int = 1,
-):
-    """Assert ctms_pending_acoustic_sync_total was incremented"""
-    assert (
-        metrics_registry.get_sample_value("ctms_pending_acoustic_sync_total") == count
-    )
-
-
 def test_homepage_request(anon_client, registry):
     """A homepage request emits metrics for / and /docs"""
     anon_client.get("/")
@@ -196,40 +157,24 @@ def test_homepage_request(anon_client, registry):
     assert_duration_metric_obs(registry, "GET", "/docs", "2xx")
 
 
-def test_api_request(client, minimal_contact, registry):
+def test_contacts_total(anon_client, dbsession, registry):
+    """Total number of contacts is reported in heartbeat."""
+    with mock.patch("ctms.routers.platform.count_total_contacts", return_value=3):
+        anon_client.get("/__heartbeat__")
+
+    assert registry.get_sample_value("ctms_contacts_total") == 3
+
+
+def test_api_request(client, email_factory, registry):
     """An API request emits API metrics as well."""
-    email_id = minimal_contact.email.email_id
-    client.get(f"/ctms/{email_id}")
+    email = email_factory()
+
+    client.get(f"/ctms/{email.email_id}")
     path = "/ctms/{email_id}"
+
     assert_request_metric_inc(registry, "GET", path, 200)
     assert_duration_metric_obs(registry, "GET", path, "2xx")
     assert_api_request_metric_inc(registry, "GET", path, "test_client", "2xx")
-
-
-def test_pending_sync(client, minimal_contact, registry):
-    """An API requests that schedules an Acoustic contact sync emits a metric."""
-    data = {"email": {"first_name": "CTMS", "last_name": "User"}}
-    email_id = minimal_contact.email.email_id
-    response = client.patch(f"/ctms/{email_id}", json=data)
-    assert response.status_code == 200
-    path = "/ctms/{email_id}"
-    assert_request_metric_inc(registry, "PATCH", path, 200)
-    assert_duration_metric_obs(registry, "PATCH", path, "2xx", limit=0.5)
-    assert_api_request_metric_inc(registry, "PATCH", path, "test_client", "2xx")
-    assert_pending_acoustic_sync_inc(registry)
-
-
-def test_patch_relay_waitlist_legacy_reports_metric(client, minimal_contact, registry):
-    email_id = minimal_contact.email.email_id
-    patch_data = {"waitlists": [{"name": "relay", "fields": {"geo": "fr"}}]}
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 0
-
-    patch_data = {"relay_waitlist": {"geo": "fr"}}
-    resp = client.patch(f"/ctms/{email_id}", json=patch_data, allow_redirects=True)
-    assert resp.status_code == 200
-    assert registry.get_sample_value("ctms_legacy_waitlists_requests_total") == 1
 
 
 @pytest.mark.parametrize(
@@ -267,7 +212,7 @@ def test_unknown_path(anon_client, registry):
     assert resp.status_code == 404
 
     without_labels = []
-    for name, (_, params) in METRICS_PARAMS.items():
+    for name, (_, params) in metrics_module.METRICS_PARAMS.items():
         if "labelnames" not in params:
             without_labels.append(f"ctms_{name}_total")
             without_labels.append(f"ctms_{name}_created")
@@ -281,22 +226,3 @@ def test_unknown_path(anon_client, registry):
             assert sample.labels == {}
         else:
             assert len(family.samples) == 0
-
-
-def test_get_metrics(anon_client, setup_metrics):
-    """An anonoymous user can request metrics."""
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics")
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    assert "trivial" not in cap_logs[0]
-
-
-def test_prometheus_metrics_is_logged_as_trivial(anon_client, setup_metrics):
-    """When Prometheus requests metrics, it is logged as trivial."""
-    headers = {"user-agent": "Prometheus/2.26.0"}
-    with capture_logs() as cap_logs:
-        resp = anon_client.get("/metrics", headers=headers)
-    assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    assert cap_logs[0]["trivial"] is True

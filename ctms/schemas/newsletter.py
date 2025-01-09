@@ -1,9 +1,13 @@
-from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
-from pydantic import AnyUrl, Field
+from pydantic import UUID4, ConfigDict, Field
 
 from .base import ComparableBase
+from .common import AnyUrlString, ZeroOffsetDatetime
+from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
+
+if TYPE_CHECKING:
+    from ctms.models import Newsletter
 
 
 class NewsletterBase(ComparableBase):
@@ -11,7 +15,7 @@ class NewsletterBase(ComparableBase):
 
     name: str = Field(
         description="Basket slug for the newsletter",
-        example="mozilla-welcome",
+        examples=["mozilla-welcome"],
     )
     subscribed: bool = Field(
         default=True, description="True if subscribed, False when formerly subscribed"
@@ -25,10 +29,10 @@ class NewsletterBase(ComparableBase):
         max_length=5,
         description="Newsletter language code, usually 2 lowercase letters",
     )
-    source: Optional[AnyUrl] = Field(
+    source: Optional[AnyUrlString] = Field(
         default=None,
         description="Source URL of subscription",
-        example="https://www.mozilla.org/en-US/",
+        examples=["https://www.mozilla.org/en-US/"],
     )
     unsub_reason: Optional[str] = Field(
         default=None, description="Reason for unsubscribing"
@@ -37,8 +41,7 @@ class NewsletterBase(ComparableBase):
     def __lt__(self, other):
         return self.name < other.name
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # No need to change anything, just extend if you want to
@@ -46,9 +49,20 @@ NewsletterInSchema = NewsletterBase
 NewsletterSchema = NewsletterBase
 
 
-class UpdatedNewsletterInSchema(NewsletterInSchema):
-    update_timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Newsletter subscription data update timestamp",
-        example="2021-01-28T21:26:57.511Z",
+class NewsletterTimestampedSchema(NewsletterBase):
+    create_timestamp: ZeroOffsetDatetime = Field(
+        description="Newsletter data creation timestamp",
+        examples=["2020-12-05T19:21:50.908000+00:00"],
     )
+    update_timestamp: ZeroOffsetDatetime = Field(
+        description="Newsletter data update timestamp",
+        examples=["2021-02-04T15:36:57.511000+00:00"],
+    )
+
+
+class NewsletterTableSchema(NewsletterTimestampedSchema):
+    email_id: UUID4 = Field(
+        description=EMAIL_ID_DESCRIPTION,
+        examples=[EMAIL_ID_EXAMPLE],
+    )
+    model_config = ConfigDict(extra="forbid")

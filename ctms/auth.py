@@ -6,38 +6,35 @@ client_secret, either as form fields in the body, or in the Authentication
 header. A JWT token is returned that expires after a short time. To renew,
 the client POSTs to /token again.
 """
-import warnings
-from datetime import datetime, timedelta, timezone
-from functools import lru_cache
-from typing import Any, Dict, Optional, cast
 
+import warnings
+from contextvars import ContextVar
+from datetime import datetime, timedelta, timezone
+from typing import Dict, Optional
+
+import argon2
+import jwt
 from fastapi.exceptions import HTTPException
 from fastapi.param_functions import Form
 from fastapi.security.oauth2 import OAuth2, OAuthFlowsModel
 from fastapi.security.utils import get_authorization_scheme_param
-from google.auth.transport.requests import Request as GoogleRequest
-from google.oauth2 import id_token
-from passlib.context import CryptContext
 from starlette.requests import Request
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-with warnings.catch_warnings():
-    # TODO: remove when fixed: https://github.com/mpdavis/python-jose/issues/208
-    warnings.filterwarnings("ignore", message="int_from_bytes is deprecated")
-    from jose import JWTError, jwt
-
-# Argon2 is the winner of the 2015 password hashing competion.
-# It is supported by passlib with the recommended argon2_cffi library.
-pwd_context = CryptContext(schemes=["argon2"], deprecated=["auto"])
+pwd_context = argon2.PasswordHasher()
 
 
-def verify_password(plain_password, hashed_password):
-    """Verify the password, using a constant time equality check."""
-    return pwd_context.verify(plain_password, hashed_password)
+auth_info_context: ContextVar[dict] = ContextVar("auth_info_context", default={})
+
+
+def verify_password(plain_password, hashed_password) -> bool:
+    try:
+        return pwd_context.verify(hashed_password, plain_password)
+    except argon2.exceptions.VerifyMismatchError:
+        return False
 
 
 def hash_password(plain_password):
-    """Hash the password, using the pre-configured CryptContext."""
     return pwd_context.hash(plain_password)
 
 
@@ -63,46 +60,12 @@ def get_subject_from_token(token: str, secret_key: str):
     """
     try:
         payload = jwt.decode(token, secret_key, algorithms=["HS256"])
-    except JWTError:
+    except jwt.InvalidTokenError:
         return None, None
     sub = payload["sub"]
     if ":" not in sub:
         return None, None
     return sub.split(":", 1)
-
-
-@lru_cache(maxsize=32)
-def get_claim_from_pubsub_token(token: str, audience: str) -> Dict[str, Any]:
-    """Get the claim from a Google PubSub token.
-
-    Returns claim dictionary if the token is valid.
-    Raises ValueError if token refers to an unknown key
-    Raises GoogleAuthError if verification fails
-
-    The function verify_oauth2_token fetches signing certificates, and then
-    uses these to verify the signature of the JWT token. The fetched
-    certificates are not cached.
-
-    The JWT token has timers with a resolution of 1 second. This means that
-    a burst of messages will have the same JWT token. The lru_cache makes
-    this efficent, avoiding decoding but more importantly the network request.
-
-    The JWT signing certificates last about 2 weeks. Many network requests
-    could be eliminated by caching the certs and using jwt functions directly.
-    PubSub messages may be delayed up to a day, so expired certs may be useful
-    to cache for a day.
-
-    The worst case is a pubsub message once a second - a new token and a new
-    network request every time. Even this may be acceptable, as opposed to
-    the complexity of caching.
-
-    If replacing, see the source code:
-    https://github.com/googleapis/google-auth-library-python/blob/main/google/oauth2/id_token.py
-    """
-    return cast(
-        Dict[str, Any],
-        id_token.verify_oauth2_token(token, GoogleRequest(), audience=audience),
-    )
 
 
 class OAuth2ClientCredentialsRequestForm:
@@ -132,7 +95,7 @@ class OAuth2ClientCredentialsRequestForm:
 
     def __init__(
         self,
-        grant_type: str = Form(None, regex="^(client_credentials|refresh_token)$"),
+        grant_type: str = Form(None, pattern="^(client_credentials|refresh_token)$"),
         scope: str = Form(""),
         client_id: Optional[str] = Form(None),
         client_secret: Optional[str] = Form(None),
@@ -169,7 +132,7 @@ class OAuth2ClientCredentials(OAuth2):
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=True)
 
     async def __call__(self, request: Request) -> Optional[str]:
-        authorization: str = request.headers.get("Authorization")
+        authorization: Optional[str] = request.headers.get("Authorization")
 
         # TODO: Try combining these lines after FastAPI 0.61.2 / mypy update
         scheme_param = get_authorization_scheme_param(authorization)

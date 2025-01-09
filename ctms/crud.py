@@ -1,36 +1,25 @@
 from __future__ import annotations
 
+import logging
 import uuid
-from collections import defaultdict
 from datetime import datetime, timezone
-from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, cast
 
 from pydantic import UUID4
-from sqlalchemy import asc, or_, update
+from sqlalchemy import asc, or_, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload, load_only, selectinload
+from sqlalchemy.sql import func
 
 from .auth import hash_password
-from .backport_legacy_waitlists import format_legacy_vpn_relay_waitlist_input
-from .database import Base
 from .models import (
-    AcousticField,
-    AcousticNewsletterMapping,
     AmoAccount,
     ApiClient,
+    Base,
     Email,
     FirefoxAccount,
     MozillaFoundationContact,
     Newsletter,
-    PendingAcousticRecord,
-    StripeBase,
-    StripeCustomer,
-    StripeInvoice,
-    StripeInvoiceLineItem,
-    StripePrice,
-    StripeSubscription,
-    StripeSubscriptionItem,
     Waitlist,
 )
 from .schemas import (
@@ -44,21 +33,41 @@ from .schemas import (
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
-    ProductBaseSchema,
-    StripeCustomerCreateSchema,
-    StripeInvoiceCreateSchema,
-    StripeInvoiceLineItemCreateSchema,
-    StripePriceCreateSchema,
-    StripeSubscriptionCreateSchema,
-    StripeSubscriptionItemCreateSchema,
     UpdatedAddOnsInSchema,
     UpdatedEmailPutSchema,
     UpdatedFirefoxAccountsInSchema,
-    UpdatedNewsletterInSchema,
-    UpdatedWaitlistInSchema,
     WaitlistInSchema,
 )
-from .schemas.base import BaseModel
+
+logger = logging.getLogger(__name__)
+
+
+def ping(db: Session):
+    try:
+        db.execute(text("SELECT 1"))
+        return True
+    except Exception as exc:
+        logger.exception(exc)
+        return False
+
+
+def count_total_contacts(db: Session) -> int:
+    """Return the total number of email records.
+
+    Since the table is huge, we rely on the PostgreSQL internal
+    catalog to retrieve an approximate size efficiently.
+    This metadata is refreshed on `VACUUM` or `ANALYSIS` which
+    is run regularly by default on our database instances.
+    """
+    query = text(
+        "SELECT reltuples AS estimate "
+        "FROM pg_class "
+        f"where relname = '{Email.__tablename__}'"
+    )
+    result = db.execute(query).scalar()
+    if result is None:
+        return -1
+    return int(result)
 
 
 def get_amo_by_email_id(db: Session, email_id: UUID4):
@@ -98,13 +107,13 @@ def _contact_base_query(db):
         .options(joinedload(Email.mofo))
         .options(selectinload(Email.newsletters))
         .options(selectinload(Email.waitlists))
-        .options(
-            joinedload(Email.stripe_customer)
-            .subqueryload(StripeCustomer.subscriptions)
-            .subqueryload(StripeSubscription.subscription_items)
-            .subqueryload(StripeSubscriptionItem.price)
-        )
     )
+
+
+def get_all_contacts_from_ids(db, email_ids):
+    """Fetch all contacts that have the specified IDs."""
+    bulk_contacts = _contact_base_query(db)
+    return bulk_contacts.filter(Email.email_id.in_(email_ids)).all()
 
 
 def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
@@ -116,7 +125,7 @@ def get_bulk_query(start_time, end_time, after_email_uuid, mofo_relevant):
     if mofo_relevant is False:
         filters.append(
             or_(
-                Email.mofo == None,  # pylint: disable=C0121
+                Email.mofo == None,
                 Email.mofo.has(mofo_relevant=mofo_relevant),
             )
         )
@@ -153,19 +162,7 @@ def get_bulk_contacts(
         .all()
     )
 
-    return [
-        ContactSchema.parse_obj(
-            {
-                "amo": email.amo,
-                "email": email,
-                "fxa": email.fxa,
-                "mofo": email.mofo,
-                "newsletters": email.newsletters,
-                "waitlists": email.waitlists,
-            }
-        )
-        for email in bulk_contacts
-    ]
+    return [ContactSchema.from_email(email) for email in bulk_contacts]
 
 
 def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
@@ -176,25 +173,15 @@ def get_email(db: Session, email_id: UUID4) -> Optional[Email]:
     )
 
 
-def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[Dict]:
-    """Get all the data for a contact, as a dict."""
+def get_contact_by_email_id(db: Session, email_id: UUID4) -> Optional[ContactSchema]:
+    """Return a Contact object for a given email id"""
     email = get_email(db, email_id)
     if email is None:
         return None
-    products = []
-    products.extend(get_stripe_products(email))
-    return {
-        "amo": email.amo,
-        "email": email,
-        "fxa": email.fxa,
-        "mofo": email.mofo,
-        "newsletters": email.newsletters,
-        "products": products,
-        "waitlists": email.waitlists,
-    }
+    return ContactSchema.from_email(email)
 
 
-def get_emails_by_any_id(
+def get_contacts_by_any_id(
     db: Session,
     email_id: Optional[UUID4] = None,
     primary_email: Optional[str] = None,
@@ -205,9 +192,9 @@ def get_emails_by_any_id(
     amo_user_id: Optional[str] = None,
     fxa_id: Optional[str] = None,
     fxa_primary_email: Optional[str] = None,
-) -> List[Email]:
+) -> List[ContactSchema]:
     """
-    Get all the data for multiple contacts by IDs as a list of Email instances.
+    Get all the data for multiple contacts by ID as a list of Contacts.
 
     Newsletters are retrieved in batches of 500 email_ids, so it will be two
     queries for most calls.
@@ -252,168 +239,8 @@ def get_emails_by_any_id(
         statement = statement.join(Email.fxa).filter_by(
             fxa_primary_email_insensitive_comparator=fxa_primary_email
         )
-    return cast(List[Email], statement.all())
-
-
-def get_contacts_by_any_id(
-    db: Session,
-    email_id: Optional[UUID4] = None,
-    primary_email: Optional[str] = None,
-    basket_token: Optional[UUID4] = None,
-    sfdc_id: Optional[str] = None,
-    mofo_contact_id: Optional[str] = None,
-    mofo_email_id: Optional[str] = None,
-    amo_user_id: Optional[str] = None,
-    fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[str] = None,
-) -> List[Dict]:
-    """
-    Get all the data for multiple contacts by ID as a list of dicts.
-
-    Newsletters are retrieved in batches of 500 email_ids, so it will be two
-    queries for most calls.
-    """
-    emails = get_emails_by_any_id(
-        db,
-        email_id,
-        primary_email,
-        basket_token,
-        sfdc_id,
-        mofo_contact_id,
-        mofo_email_id,
-        amo_user_id,
-        fxa_id,
-        fxa_primary_email,
-    )
-    data = []
-    for email in emails:
-        data.append(
-            {
-                "amo": email.amo,
-                "email": email,
-                "fxa": email.fxa,
-                "mofo": email.mofo,
-                "newsletters": email.newsletters,
-                "waitlists": email.waitlists,
-            }
-        )
-    return data
-
-
-def _acoustic_sync_retry_query(db: Session):
-    return (
-        db.query(PendingAcousticRecord)
-        .filter(
-            PendingAcousticRecord.retry > 0,
-        )
-        .order_by(
-            asc(PendingAcousticRecord.retry),
-            asc(PendingAcousticRecord.update_timestamp),
-        )
-    )
-
-
-def get_all_acoustic_retries_count(db: Session) -> int:
-    """
-    Get count of the pending records with >0 retries."""
-    query = _acoustic_sync_retry_query(db=db)
-    pending_retry_count: int = query.count()
-    return pending_retry_count
-
-
-def _acoustic_sync_base_query(db: Session, end_time: datetime, retry_limit: int = 5):
-    return (
-        db.query(PendingAcousticRecord)
-        .filter(
-            PendingAcousticRecord.update_timestamp < end_time,
-            PendingAcousticRecord.retry < retry_limit,
-        )
-        .order_by(
-            asc(PendingAcousticRecord.retry),
-            asc(PendingAcousticRecord.update_timestamp),
-        )
-    )
-
-
-def get_all_acoustic_records_before(
-    db: Session, end_time: datetime, retry_limit: int = 5, batch_limit=None
-) -> List[PendingAcousticRecord]:
-    """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time.
-    """
-    query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
-    if batch_limit:
-        query = query.limit(batch_limit)
-    pending_records: List[PendingAcousticRecord] = query.all()
-    return pending_records
-
-
-def get_all_acoustic_records_count(
-    db: Session, end_time: datetime, retry_limit: int = 5
-) -> int:
-    """
-    Get all the pending records before a given date. Allows retry limit to be provided at query time.
-    """
-    query = _acoustic_sync_base_query(db=db, end_time=end_time, retry_limit=retry_limit)
-    pending_records_count: int = query.count()
-    return pending_records_count
-
-
-def get_acoustic_record_as_contact(
-    db: Session,
-    record: PendingAcousticRecord,
-) -> ContactSchema:
-    contact = get_contact_by_email_id(db, record.email_id)
-    contact_schema: ContactSchema = ContactSchema.parse_obj(contact)
-    return contact_schema
-
-
-def bulk_schedule_acoustic_records(db: Session, primary_emails: list[str]):
-    """Mark a list of primary email as pending synchronization."""
-    statement = _contact_base_query(db).filter(Email.primary_email.in_(primary_emails))
-    db.bulk_save_objects(
-        PendingAcousticRecord(email_id=email.email_id) for email in statement.all()
-    )
-
-
-def reset_retry_acoustic_records(db: Session):
-    pending_records = (
-        db.query(PendingAcousticRecord).filter(PendingAcousticRecord.retry > 0).all()
-    )
-    count = len(pending_records)
-    db.execute(
-        update(PendingAcousticRecord),
-        [{"id": record.id, "retry": 0} for record in (pending_records)],
-    )
-    return count
-
-
-def schedule_acoustic_record(
-    db: Session,
-    email_id: UUID4,
-    metrics: Optional[Dict] = None,
-) -> None:
-    db_pending_record = PendingAcousticRecord(email_id=email_id)
-    db.add(db_pending_record)
-    if metrics:
-        metrics["pending_acoustic_sync"].inc()
-
-
-def retry_acoustic_record(
-    db: Session,
-    pending_record: PendingAcousticRecord,
-    error_message: Optional[str] = None,
-) -> None:
-    if pending_record.retry is None:
-        pending_record.retry = 0
-    pending_record.retry += 1
-    if error_message:
-        pending_record.last_error = error_message
-    pending_record.update_timestamp = datetime.now(timezone.utc)
-
-
-def delete_acoustic_record(db: Session, pending_record: PendingAcousticRecord) -> None:
-    db.delete(pending_record)
+    emails = cast(List[Email], statement.all())
+    return [ContactSchema.from_email(email) for email in emails]
 
 
 def create_amo(
@@ -421,7 +248,7 @@ def create_amo(
 ) -> Optional[AmoAccount]:
     if amo.is_default():
         return None
-    db_amo = AmoAccount(email_id=email_id, **amo.dict())
+    db_amo = AmoAccount(email_id=email_id, **amo.model_dump())
     db.add(db_amo)
     return db_amo
 
@@ -432,26 +259,26 @@ def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSch
         return
 
     # Providing update timestamp
-    updated_amo = UpdatedAddOnsInSchema(**amo.dict())
-    stmt = insert(AmoAccount).values(email_id=email_id, **updated_amo.dict())
+    updated_amo = UpdatedAddOnsInSchema(**amo.model_dump())
+    stmt = insert(AmoAccount).values(email_id=email_id, **updated_amo.model_dump())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[AmoAccount.email_id], set_=updated_amo.dict()
+        index_elements=[AmoAccount.email_id], set_=updated_amo.model_dump()
     )
     db.execute(stmt)
 
 
 def create_email(db: Session, email: EmailInSchema):
-    db_email = Email(**email.dict())
+    db_email = Email(**email.model_dump())
     db.add(db_email)
 
 
 def create_or_update_email(db: Session, email: EmailPutSchema):
     # Providing update timestamp
-    updated_email = UpdatedEmailPutSchema(**email.dict())
+    updated_email = UpdatedEmailPutSchema(**email.model_dump())
 
-    stmt = insert(Email).values(**updated_email.dict())
+    stmt = insert(Email).values(**updated_email.model_dump())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[Email.email_id], set_=updated_email.dict()
+        index_elements=[Email.email_id], set_=updated_email.model_dump()
     )
     db.execute(stmt)
 
@@ -461,7 +288,7 @@ def create_fxa(
 ) -> Optional[FirefoxAccount]:
     if fxa.is_default():
         return None
-    db_fxa = FirefoxAccount(email_id=email_id, **fxa.dict())
+    db_fxa = FirefoxAccount(email_id=email_id, **fxa.model_dump())
     db.add(db_fxa)
     return db_fxa
 
@@ -473,11 +300,11 @@ def create_or_update_fxa(
         (db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete())
         return
     # Providing update timestamp
-    updated_fxa = UpdatedFirefoxAccountsInSchema(**fxa.dict())
+    updated_fxa = UpdatedFirefoxAccountsInSchema(**fxa.model_dump())
 
-    stmt = insert(FirefoxAccount).values(email_id=email_id, **updated_fxa.dict())
+    stmt = insert(FirefoxAccount).values(email_id=email_id, **updated_fxa.model_dump())
     stmt = stmt.on_conflict_do_update(
-        index_elements=[FirefoxAccount.email_id], set_=updated_fxa.dict()
+        index_elements=[FirefoxAccount.email_id], set_=updated_fxa.model_dump()
     )
     db.execute(stmt)
 
@@ -487,7 +314,7 @@ def create_mofo(
 ) -> Optional[MozillaFoundationContact]:
     if mofo.is_default():
         return None
-    db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.dict())
+    db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.model_dump())
     db.add(db_mofo)
     return db_mofo
 
@@ -502,9 +329,11 @@ def create_or_update_mofo(
             .delete()
         )
         return
-    stmt = insert(MozillaFoundationContact).values(email_id=email_id, **mofo.dict())
+    stmt = insert(MozillaFoundationContact).values(
+        email_id=email_id, **mofo.model_dump()
+    )
     stmt = stmt.on_conflict_do_update(
-        index_elements=[MozillaFoundationContact.email_id], set_=mofo.dict()
+        index_elements=[MozillaFoundationContact.email_id], set_=mofo.model_dump()
     )
     db.execute(stmt)
 
@@ -514,7 +343,7 @@ def create_newsletter(
 ) -> Optional[Newsletter]:
     if newsletter.is_default():
         return None
-    db_newsletter = Newsletter(email_id=email_id, **newsletter.dict())
+    db_newsletter = Newsletter(email_id=email_id, **newsletter.model_dump())
     db.add(db_newsletter)
     return db_newsletter
 
@@ -522,22 +351,31 @@ def create_newsletter(
 def create_or_update_newsletters(
     db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
 ):
+    # Start by deleting the existing newsletters that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
     names = [
         newsletter.name for newsletter in newsletters if not newsletter.is_default()
     ]
     db.query(Newsletter).filter(
         Newsletter.email_id == email_id, Newsletter.name.notin_(names)
     ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
         synchronize_session=False
-    )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
+    )
 
     if newsletters:
-        newsletters = [UpdatedNewsletterInSchema(**news.dict()) for news in newsletters]
         stmt = insert(Newsletter).values(
-            [{"email_id": email_id, **n.dict()} for n in newsletters]
+            [{"email_id": email_id, **n.model_dump()} for n in newsletters]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_email_name", set_=dict(stmt.excluded)
+            constraint="uix_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
@@ -548,11 +386,7 @@ def create_waitlist(
 ) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
-    if not isinstance(waitlist, WaitlistInSchema):
-        # Sample data are used as both input (`WaitlistInSchema`) and internal (`WaitlistSchema`)
-        # representations.
-        waitlist = WaitlistInSchema(**waitlist.dict())
-    db_waitlist = Waitlist(email_id=email_id, **waitlist.orm_dict())
+    db_waitlist = Waitlist(email_id=email_id, **waitlist.model_dump())
     db.add(db_waitlist)
     return db_waitlist
 
@@ -560,35 +394,42 @@ def create_waitlist(
 def create_or_update_waitlists(
     db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
 ):
-    # Remove waitlists that are marked as subscribed.
-    names_to_delete = [
-        waitlist.name for waitlist in waitlists if not waitlist.subscribed
-    ]
-    if names_to_delete:
-        db.query(Waitlist).filter(
-            Waitlist.email_id == email_id, Waitlist.name.in_(names_to_delete)
-        ).delete(
-            synchronize_session=False
-        )  # This doesn't need to be synchronized because the next query only alters the other remaining rows. They can happen in whatever order. If you plan to change what the rest of this function does, consider changing this as well!
-
+    # Start by deleting the existing waitlists that are not specified as input.
+    # We delete instead of set subscribed=False, because we want an idempotent
+    # round-trip of PUT/GET at the API level.
+    # Note: the contact is marked as pending synchronization at the API routers level.
+    names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
+    db.query(Waitlist).filter(
+        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
+    ).delete(
+        # Do not bother synchronizing objects in the session.
+        # We won't have stale objects because the next upsert query will update
+        # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
+        synchronize_session=False
+    )
     waitlists_to_upsert = [
-        UpdatedWaitlistInSchema(**waitlist.dict())
-        for waitlist in waitlists
-        if waitlist.subscribed
+        WaitlistInSchema(**waitlist.model_dump()) for waitlist in waitlists
     ]
     if waitlists_to_upsert:
         stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.orm_dict()} for wl in waitlists_to_upsert]
+            [{"email_id": email_id, **wl.model_dump()} for wl in waitlists]
         )
         stmt = stmt.on_conflict_do_update(
-            constraint="uix_wl_email_name", set_=dict(stmt.excluded)
+            constraint="uix_wl_email_name",
+            set_={
+                **dict(stmt.excluded),
+                "update_timestamp": text("statement_timestamp()"),
+            },
         )
 
         db.execute(stmt)
 
 
 def create_contact(
-    db: Session, email_id: UUID4, contact: ContactInSchema, metrics: Optional[Dict]
+    db: Session,
+    email_id: UUID4,
+    contact: ContactInSchema,
+    metrics: Optional[Dict],
 ):
     create_email(db, contact.email)
     if contact.amo:
@@ -597,10 +438,6 @@ def create_contact(
         create_fxa(db, email_id, contact.fxa)
     if contact.mofo:
         create_mofo(db, email_id, contact.mofo)
-
-    contact = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, contact, ContactInSchema, metrics
-    )
 
     for newsletter in contact.newsletters:
         create_newsletter(db, email_id, newsletter)
@@ -617,18 +454,11 @@ def create_or_update_contact(
     create_or_update_fxa(db, email_id, contact.fxa)
     create_or_update_mofo(db, email_id, contact.mofo)
 
-    contact = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, contact, ContactPutSchema, metrics
-    )
-
     create_or_update_newsletters(db, email_id, contact.newsletters)
     create_or_update_waitlists(db, email_id, contact.waitlists)
 
 
 def delete_contact(db: Session, email_id: UUID4):
-    db.query(PendingAcousticRecord).filter(
-        PendingAcousticRecord.email_id == email_id
-    ).delete()
     db.query(AmoAccount).filter(AmoAccount.email_id == email_id).delete()
     db.query(MozillaFoundationContact).filter(
         MozillaFoundationContact.email_id == email_id
@@ -647,7 +477,7 @@ def _update_orm(orm: Base, update_dict: dict):
         setattr(orm, key, value)
 
 
-def update_contact(
+def update_contact(  # noqa: PLR0912
     db: Session, email: Email, update_data: dict, metrics: Optional[Dict]
 ) -> None:
     """Update an existing contact using a sparse update dictionary"""
@@ -670,19 +500,14 @@ def update_contact(
                 if existing:
                     db.delete(existing)
                     setattr(email, group_name, None)
+            elif existing is None:
+                new = creator(db, email_id, schema(**update_data[group_name]))
+                setattr(email, group_name, new)
             else:
-                if existing is None:
-                    new = creator(db, email_id, schema(**update_data[group_name]))
-                    setattr(email, group_name, new)
-                else:
-                    _update_orm(existing, update_data[group_name])
-                    if schema.from_orm(existing).is_default():
-                        db.delete(existing)
-                        setattr(email, group_name, None)
-
-    update_data = format_legacy_vpn_relay_waitlist_input(
-        db, email_id, update_data, dict, metrics
-    )
+                _update_orm(existing, update_data[group_name])
+                if schema.model_validate(existing).is_default():
+                    db.delete(existing)
+                    setattr(email, group_name, None)
 
     if "newsletters" in update_data:
         if update_data["newsletters"] == "UNSUBSCRIBE":
@@ -708,19 +533,13 @@ def update_contact(
     if "waitlists" in update_data:
         if update_data["waitlists"] == "UNSUBSCRIBE":
             for waitlist_orm in existing.values():
-                db.delete(waitlist_orm)
-                email.waitlists.remove(waitlist_orm)
+                _update_orm(waitlist_orm, {"subscribed": False})
         else:
             for wl_update in update_data["waitlists"]:
                 if wl_update["name"] in existing:
                     waitlist_orm = existing[wl_update["name"]]
-                    # Delete waitlists when `subscribed` is False
-                    if not wl_update.get("subscribed", True):
-                        db.delete(waitlist_orm)
-                        email.waitlists.remove(waitlist_orm)
-                    else:
-                        # Update the Waitlist ORM object
-                        _update_orm(waitlist_orm, wl_update)
+                    # Update the Waitlist ORM object
+                    _update_orm(waitlist_orm, wl_update)
                 elif wl_update.get("subscribed", True):
                     new = create_waitlist(db, email_id, WaitlistInSchema(**wl_update))
                     email.waitlists.append(new)
@@ -731,7 +550,7 @@ def update_contact(
 
 def create_api_client(db: Session, api_client: ApiClientSchema, secret):
     hashed_secret = hash_password(secret)
-    db_api_client = ApiClient(hashed_secret=hashed_secret, **api_client.dict())
+    db_api_client = ApiClient(hashed_secret=hashed_secret, **api_client.model_dump())
     db.add(db_api_client)
 
 
@@ -743,233 +562,16 @@ def get_active_api_client_ids(db: Session) -> List[str]:
     rows = (
         db.query(ApiClient)
         .filter(ApiClient.enabled.is_(True))
-        .options(load_only("client_id"))
-        .order_by("client_id")
+        .options(load_only(ApiClient.client_id))
+        .order_by(ApiClient.client_id)
         .all()
     )
     return [row.client_id for row in rows]
 
 
-StripeModel = TypeVar("StripeModel", bound=StripeBase)
-StripeCreateSchema = TypeVar("StripeCreateSchema", bound=BaseModel)
-
-
-def _create_stripe(
-    model: Type[StripeModel],
-    schema: Type[StripeCreateSchema],
-    db: Session,
-    data: StripeCreateSchema,
-) -> StripeModel:
-    """Create a Stripe Model."""
-    db_obj = model(**data.dict())
-    db.add(db_obj)
-    return db_obj
-
-
-create_stripe_customer = partial(
-    _create_stripe, StripeCustomer, StripeCustomerCreateSchema
-)
-create_stripe_invoice = partial(
-    _create_stripe, StripeInvoice, StripeInvoiceCreateSchema
-)
-create_stripe_invoice_line_item = partial(
-    _create_stripe, StripeInvoiceLineItem, StripeInvoiceLineItemCreateSchema
-)
-create_stripe_price = partial(_create_stripe, StripePrice, StripePriceCreateSchema)
-create_stripe_subscription = partial(
-    _create_stripe, StripeSubscription, StripeSubscriptionCreateSchema
-)
-create_stripe_subscription_item = partial(
-    _create_stripe, StripeSubscriptionItem, StripeSubscriptionItemCreateSchema
-)
-
-
-def _get_stripe(
-    model: Type[StripeModel],
-    db_session: Session,
-    stripe_id: str,
-    for_update: bool = False,
-) -> Optional[StripeModel]:
-    """
-    Get a Stripe object by its ID, or None if not found.
-
-    If for_update is True (default False), the row will be locked for update.
-    """
-    query = db_session.query(model)
-    if for_update:
-        query = query.with_for_update()
-    return cast(
-        Optional[StripeModel], query.filter(model.stripe_id == stripe_id).one_or_none()
-    )
-
-
-get_stripe_customer_by_stripe_id = partial(_get_stripe, StripeCustomer)
-get_stripe_invoice_by_stripe_id = partial(_get_stripe, StripeInvoice)
-get_stripe_invoice_line_item_by_stripe_id = partial(_get_stripe, StripeInvoiceLineItem)
-get_stripe_price_by_stripe_id = partial(_get_stripe, StripePrice)
-get_stripe_subscription_by_stripe_id = partial(_get_stripe, StripeSubscription)
-get_stripe_subscription_item_by_stripe_id = partial(_get_stripe, StripeSubscriptionItem)
-
-
-def get_stripe_customer_by_fxa_id(
-    db_session: Session,
-    fxa_id: str,
-    for_update: bool = False,
-) -> Optional[StripeCustomer]:
-    """
-    Get a StripeCustomer by FxA ID, or None if not found.
-
-    If for_update is True (default False), the row will be locked for update.
-    """
-    query = db_session.query(StripeCustomer)
-    if for_update:
-        query = query.with_for_update()
-    obj = query.filter(StripeCustomer.fxa_id == fxa_id).one_or_none()
-    return cast(Optional[StripeCustomer], obj)
-
-
-def get_stripe_products(email: Email) -> List[ProductBaseSchema]:
-    """Return a list of Stripe products for the contact, if any."""
-    if not email.stripe_customer:
-        return []
-
-    base_data: Dict[str, Any] = {
-        "payment_service": "stripe",
-        # These come from the Payment Method, not imported from Stripe.
-        "payment_type": None,
-        "card_brand": None,
-        "card_last4": None,
-        "billing_country": None,
-    }
-    by_product = defaultdict(list)
-
-    for subscription in email.stripe_customer.subscriptions:
-        subscription_data = base_data.copy()
-        subscription_data.update(
-            {
-                "status": subscription.status,
-                "created": subscription.stripe_created,
-                "start": subscription.start_date,
-                "current_period_start": subscription.current_period_start,
-                "current_period_end": subscription.current_period_end,
-                "canceled_at": subscription.canceled_at,
-                "cancel_at_period_end": subscription.cancel_at_period_end,
-                "ended_at": subscription.ended_at,
-            }
-        )
-        for item in subscription.subscription_items:
-            product_data = subscription_data.copy()
-            price = item.price
-            product_data.update(
-                {
-                    "product_id": price.stripe_product_id,
-                    "product_name": None,  # Products are not imported
-                    "price_id": price.stripe_id,
-                    "currency": price.currency,
-                    "amount": price.unit_amount,
-                    "interval_count": price.recurring_interval_count,
-                    "interval": price.recurring_interval,
-                }
-            )
-            by_product[price.stripe_product_id].append(product_data)
-
-    products = []
-    for subscriptions in by_product.values():
-        # Sort to find the latest subscription
-        def get_current_period(sub: Dict) -> datetime:
-            return cast(datetime, sub["current_period_end"])
-
-        subscriptions.sort(key=get_current_period, reverse=True)
-        latest = subscriptions[0]
-        data = latest.copy()
-        if len(subscriptions) == 1:
-            segment_prefix = ""
-        else:
-            segment_prefix = "re-"
-        if latest["status"] == "active":
-            if latest["canceled_at"]:
-                segment = "cancelling"
-                changed = latest["canceled_at"]
-            else:
-                segment = "active"
-                changed = latest["start"]
-        elif latest["status"] == "canceled":
-            segment = "canceled"
-            changed = latest["ended_at"]
-        else:
-            segment_prefix = ""
-            segment = "other"
-            changed = latest["created"]
-
-        assert changed
-        data.update(
-            {
-                "sub_count": len(subscriptions),
-                "segment": f"{segment_prefix}{segment}",
-                "changed": changed,
-            }
-        )
-        products.append(ProductBaseSchema(**data))
-
-    def get_product_id(prod: ProductBaseSchema) -> str:
-        return prod.product_id or ""
-
-    products.sort(key=get_product_id)
-    return products
-
-
-def get_all_acoustic_fields(dbsession: Session, tablename: Optional[str] = None):
-    query = dbsession.query(AcousticField).order_by(
-        asc(AcousticField.tablename), asc(AcousticField.field)
-    )
-    if tablename:
-        query = query.filter_by(tablename=tablename)
-    return query.all()
-
-
-def create_acoustic_field(dbsession: Session, tablename: str, field: str):
-    row = AcousticField(tablename=tablename, field=field)
-    dbsession.merge(row)
-    dbsession.commit()
-    return row
-
-
-def delete_acoustic_field(dbsession: Session, tablename: str, field: str):
-    row = (
-        dbsession.query(AcousticField)
-        .filter_by(tablename=tablename, field=field)
-        .one_or_none()
-    )
-    if row is None:
-        return None
-    dbsession.delete(row)
-    dbsession.commit()
-    return row
-
-
-def get_all_acoustic_newsletters_mapping(dbsession):
-    return dbsession.query(AcousticNewsletterMapping).all()
-
-
-def create_acoustic_newsletters_mapping(dbsession, source, destination):
-    row = AcousticNewsletterMapping(source=source, destination=destination)
-    # This will fail if the mapping already exists.
-    dbsession.add(row)
-    dbsession.commit()
-    return row
-
-
-def delete_acoustic_newsletters_mapping(dbsession, source):
-    row = (
-        dbsession.query(AcousticNewsletterMapping)
-        .filter(AcousticNewsletterMapping.source == source)
-        .one_or_none()
-    )
-    if not row:
-        return None
-    dbsession.delete(row)
-    dbsession.commit()
-    return row
+def update_api_client_last_access(db: Session, api_client: ApiClient):
+    api_client.last_access = func.now()
+    db.add(api_client)
 
 
 def get_contacts_from_newsletter(dbsession, newsletter_name):

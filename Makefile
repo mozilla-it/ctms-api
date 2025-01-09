@@ -9,7 +9,7 @@ CTMS_UID ?= 10001
 CTMS_GID ?= 10001
 
 VENV := $(shell echo $${VIRTUAL_ENV-.venv})
-DOCKER_COMPOSE := $(shell echo $${DOCKER_COMPOSE-"docker-compose"})
+DOCKER_COMPOSE := $(shell echo $${DOCKER_COMPOSE-"docker compose"})
 INSTALL_STAMP = $(VENV)/.install.stamp
 
 .PHONY: help
@@ -21,7 +21,7 @@ help:
 	@echo "  build             - build docker containers"
 	@echo "  db-only           - run PostgreSQL server"
 	@echo "  lint              - lint check for code"
-	@echo "  format            - run formatters (black, isort), fix in place"
+	@echo "  format            - run formatter, fix in place"
 	@echo "  setup             - (re)create the database"
 	@echo "  shell             - open a shell in the web container"
 	@echo "  start             - run the API service"
@@ -44,7 +44,7 @@ $(INSTALL_STAMP): poetry.lock
 
 .PHONY: build
 build: .env
-	${DOCKER_COMPOSE} --version
+	${DOCKER_COMPOSE} version
 	${DOCKER_COMPOSE} build --build-arg userid=${CTMS_UID} --build-arg groupid=${CTMS_GID}
 
 .PHONY: lint
@@ -53,8 +53,8 @@ lint: $(INSTALL_STAMP)
 
 .PHONY: format
 format: $(INSTALL_STAMP)
-	bin/lint.sh black --fix
-	bin/lint.sh isort --fix
+	bin/lint.sh format --fix
+	bin/lint.sh lint --fix
 
 .PHONY: db-only
 db-only: .env
@@ -79,13 +79,7 @@ start: .env
 
 .PHONY: test
 test: .env $(INSTALL_STAMP)
-	${DOCKER_COMPOSE} up --wait postgres
-	bin/test.sh
-ifneq (1, ${MK_KEEP_DOCKER_UP})
-	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
-	# rm all running containers
-	${DOCKER_COMPOSE} down
-endif
+	COVERAGE_REPORT=1 bin/test.sh
 
 .env.tests: .env setup $(INSTALL_STAMP)
 	cp tests/integration/basket.env .env.tests
@@ -96,12 +90,15 @@ endif
 
 .PHONY: integration-test
 integration-test: .env.tests
-	${DOCKER_COMPOSE} --profile integration-test up --wait basket
+	echo "Starting containers..."
+	${DOCKER_COMPOSE} --profile integration-test up --force-recreate --wait basket
+	echo "Start test suite..."
 	bin/integration-test.sh
+	echo "Done."
 ifneq (1, ${MK_KEEP_DOCKER_UP})
 	# Due to https://github.com/docker/compose/issues/2791 we have to explicitly
 	# rm all running containers
-	${DOCKER_COMPOSE} down --remove-orphans
+	${DOCKER_COMPOSE} --profile integration-test down --remove-orphans
 endif
 
 .PHONY: update-secrets

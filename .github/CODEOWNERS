@@ -1,4 +1,4 @@
-# Thanks to @imbstack for the suggestion.
-# see http://code.v.igoro.us/posts/2019/07/codeowners.html
+# See the code-owners Github docs:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 * @mozilla-it/ctms-reviewers

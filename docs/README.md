@@ -1,4 +1,3 @@
-[...back to main README.md](../README.md/)
 - [Architecture Decision Records](adrs/)
 - [Diagrams](diagrams/)
 - [Configuration](configuration.md)

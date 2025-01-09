@@ -7,7 +7,7 @@ class BadRequestResponse(BaseModel):
     detail: str = Field(
         ...,
         description="A human-readable summary of the client error.",
-        example="No identifiers provided, at least one is needed.",
+        examples=["No identifiers provided, at least one is needed."],
     )
 
 
@@ -17,7 +17,7 @@ class NotFoundResponse(BaseModel):
     detail: str = Field(
         ...,
         description="A human-readable summary of the issue.",
-        example="Unknown contact_id",
+        examples=["Unknown contact_id"],
     )
 
 
@@ -35,5 +35,5 @@ class UnauthorizedResponse(BaseModel):
     detail: str = Field(
         ...,
         description="A vague description of the authentication issue.",
-        example="Not authenticated",
+        examples=["Not authenticated"],
     )

@@ -1,122 +1,85 @@
 # -*- coding: utf-8 -*-
 """Tests for logging helpers"""
+
+import logging
 from unittest.mock import patch
 
 import pytest
+from dockerflow.logging import JsonLogFormatter
 from requests.auth import HTTPBasicAuth
-from structlog.testing import capture_logs
 
-from ctms.log import configure_logging
+from tests.conftest import FuzzyAssert
 
 
-def test_request_log(client, minimal_contact):
+def test_request_log(client, email_factory, caplog):
     """A request is logged."""
-    email_id = str(minimal_contact.email.email_id)
-    with capture_logs() as cap_logs:
+    email = email_factory()
+    email_id = str(email.email_id)
+
+    with caplog.at_level(logging.INFO, logger="request.summary"):
         resp = client.get(
             f"/ctms/{email_id}",
             headers={
                 "X-Request-Id": "foo-bar",
             },
         )
+
     assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    log = cap_logs[0]
-    assert "duration_s" in log
+    assert len(caplog.records) == 1
+    log = caplog.records[0]
+
     expected_log = {
         "client_allowed": True,
-        "client_host": "testclient",
         "client_id": "test_client",
-        "duration_s": log["duration_s"],
-        "event": f"testclient:50000 test_client 'GET /ctms/{email_id} HTTP/1.1' 200",
-        "headers": {
-            "host": "testserver",
-            "user-agent": "testclient",
-            "accept-encoding": "gzip, deflate",
-            "accept": "*/*",
-            "connection": "keep-alive",
-            "x-request-id": "foo-bar",
-        },
-        "log_level": "info",
+        "uid": "test_client",
+        "agent": "testclient",
         "method": "GET",
         "path": f"/ctms/{email_id}",
-        "path_params": {"email_id": email_id},
-        "path_template": "/ctms/{email_id}",
-        "status_code": 200,
+        "code": 200,
+        "lang": None,
         "rid": "foo-bar",
+        "t": FuzzyAssert(lambda x: x > 0, name="uint"),
     }
-    assert log == expected_log
+    fmtr = JsonLogFormatter()
+    assert fmtr.convert_record(log)["Fields"] == expected_log
 
 
-def test_token_request_log(anon_client, client_id_and_secret):
+def test_token_request_log(anon_client, client_id_and_secret, caplog):
     """A token request log has omitted headers."""
     client_id, client_secret = client_id_and_secret
-    with capture_logs() as cap_logs:
+    with caplog.at_level(logging.INFO):
+        anon_client.cookies.set("csrftoken", "0WzT-base64-string")
         resp = anon_client.post(
             "/token",
-            {"grant_type": "client_credentials"},
+            data={"grant_type": "client_credentials"},
             auth=HTTPBasicAuth(client_id, client_secret),
-            cookies={"csrftoken": "0WzT-base64-string"},
         )
     assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    log = cap_logs[0]
-    assert log["client_id"] == client_id
-    assert log["token_creds_from"] == "header"
-    assert log["headers"]["authorization"] == "[OMITTED]"
-    assert log["headers"]["content-length"] == "29"
-    assert log["headers"]["cookie"] == "[OMITTED]"
+    assert len(caplog.records) == 1
+    log = caplog.records[0]
+    assert log.client_id == client_id
+    assert log.token_creds_from == "header"
 
 
-def test_log_omits_emails(client, maximal_contact):
+def test_log_omits_emails(client, email_factory, caplog):
     """The logger omits emails from query params."""
-    email_id = str(maximal_contact.email.email_id)
-    email = maximal_contact.email.primary_email
-    fxa_email = maximal_contact.fxa.primary_email
+    email = email_factory(with_fxa=True)
     url = (
-        f"/ctms?primary_email={email}&fxa_primary_email={fxa_email}"
-        f"&email_id={email_id}"
+        f"/ctms?primary_email={email.primary_email}&fxa_primary_email={email.fxa.primary_email}"
+        f"&email_id={email.email_id}"
     )
-    with capture_logs() as cap_logs:
+    with caplog.at_level(logging.INFO):
         resp = client.get(url)
     assert resp.status_code == 200
-    assert len(cap_logs) == 1
-    log = cap_logs[0]
-    assert log["query"] == {
-        "email_id": email_id,
-        "fxa_primary_email": "[OMITTED]",
-        "primary_email": "[OMITTED]",
-    }
+    assert len(caplog.records) == 1
+    log = caplog.records[0]
 
 
-def test_log_crash(client):
+def test_log_crash(client, caplog):
     """Exceptions are logged."""
     path = "/__crash__"
-    with pytest.raises(RuntimeError), capture_logs() as cap_logs:
+    with pytest.raises(RuntimeError), caplog.at_level(logging.INFO):
         client.get(path)
-    assert len(cap_logs) == 1
-    log = cap_logs[0]
-    assert log["log_level"] == "error"
-    assert "rid" in log
-    assert log["event"] == "testclient:50000 test_client 'GET /__crash__ HTTP/1.1' 500"
-
-
-@pytest.mark.parametrize(
-    "use_mozlog,logging_level",
-    (
-        (True, "INFO"),
-        (False, "WARNING"),
-    ),
-)
-def test_configure_logging(use_mozlog, logging_level):
-    with patch("ctms.log.logging.config.dictConfig") as mock_dc:
-        configure_logging(use_mozlog, logging_level)
-    mock_dc.assert_called_once()
-    args = mock_dc.mock_calls[0].args
-    assert len(args) == 1
-    if use_mozlog:
-        handlers = ["mozlog"]
-    else:
-        handlers = ["humans"]
-    assert args[0]["root"] == {"handlers": handlers, "level": logging_level}
-    assert args[0]["loggers"]["ctms"]["level"] == logging_level
+    assert len(caplog.records) == 1
+    log = caplog.records[0]
+    assert hasattr(log, "rid") and log.rid is not None

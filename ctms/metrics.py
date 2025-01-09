@@ -1,17 +1,21 @@
 """Prometheus metrics for instrumentation and monitoring."""
 
 from itertools import product
-from typing import Any, Type, cast
+from typing import Any, Optional, Type, cast
 
 from fastapi import FastAPI
-from prometheus_client import CollectorRegistry, Counter, Histogram
+from fastapi.security import HTTPBasic
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 from prometheus_client.utils import INF
 from sqlalchemy.orm import Session
-from starlette.routing import Route
+from starlette.routing import Match, Route
 
+from ctms.auth import OAuth2ClientCredentials
 from ctms.crud import get_active_api_client_ids
 
-METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
+METRICS_PARAMS: dict[
+    str, tuple[Type[Counter] | Type[Histogram] | type[Gauge], dict]
+] = {
     "requests": (
         Counter,
         {
@@ -47,24 +51,34 @@ METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram], dict]] = {
             ],
         },
     ),
-    "pending_acoustic_sync": (
-        Counter,
+    "contacts": (
+        Gauge,
         {
-            "name": "ctms_pending_acoustic_sync_total",
-            "documentation": "Total count of contacts added to Acoustic sync backlog",
-        },
-    ),
-    "legacy_waitlists_requests": (
-        Counter,
-        {
-            "name": "ctms_legacy_waitlists_requests_total",
-            "documentation": "Total count of API calls that use the legacy waitlists format",
+            "name": "ctms_contacts_total",
+            "documentation": "Total count of contacts in the database",
         },
     ),
 }
 
+# We could use the default prometheus_client.REGISTRY, but it makes tests
+# easier to write if it is possible to replace the registry with a fresh one.
+METRICS_REGISTRY = CollectorRegistry()
+METRICS = None
 
-def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram]:
+
+def set_metrics(metrics: Any) -> None:
+    global METRICS  # noqa: PLW0603
+    METRICS = metrics
+
+
+get_metrics_registry = lambda: METRICS_REGISTRY
+get_metrics = lambda: METRICS
+
+oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
+token_scheme = HTTPBasic(auto_error=False)
+
+
+def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram | Gauge]:
     """Initialize the metrics with the registry."""
     metrics = {}
     for name, init_bits in METRICS_PARAMS.items():
@@ -97,7 +111,7 @@ def init_metrics_labels(
                     status_codes.extend(
                         [int(code) for code in list(mspec.get("responses", [200]))]
                     )
-                    is_api |= "security" in mspec and not path.endswith("from_pubsub")
+                    is_api |= "security" in mspec
         elif path == "/":
             status_codes = [307]
         else:
@@ -121,21 +135,22 @@ def init_metrics_labels(
 
 
 def emit_response_metrics(
-    context: dict[str, Any], metrics: dict[str, Counter | Histogram]
+    path_template: Optional[str],
+    method: str,
+    duration_s: float,
+    status_code: int,
+    client_id: Optional[str],
+    metrics: dict[str, Counter | Histogram],
 ) -> None:
     """Emit metrics for a response."""
     if not metrics:
         return
 
-    path_template = context.get("path_template")
     if not path_template:
         # If no path_template, then it is not a known route, probably a 404.
         # Don't emit a metric, which will add noise to data
         return
 
-    method = context["method"]
-    duration_s = context["duration_s"]
-    status_code = context["status_code"]
     status_code_family = str(status_code)[0] + "xx"
 
     counter = cast(Counter, metrics["requests"])
@@ -153,7 +168,6 @@ def emit_response_metrics(
         status_code_family=status_code_family,
     ).observe(duration_s)
 
-    client_id = context.get("client_id")
     if client_id:
         counter = cast(Counter, metrics["api_requests"])
         counter.labels(

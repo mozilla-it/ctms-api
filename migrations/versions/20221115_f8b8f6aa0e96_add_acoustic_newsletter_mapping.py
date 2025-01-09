@@ -5,6 +5,7 @@ Revises: 06f24cc01c09
 Create Date: 2022-11-15 12:20:10.096170
 
 """
+
 # pylint: disable=no-member invalid-name
 # no-member is triggered by alembic.op, which has dynamically added functions
 # invalid-name is triggered by migration file names with a date prefix

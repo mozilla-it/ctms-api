@@ -2,9 +2,10 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import UUID4, Field, validator
+from pydantic import UUID4, ConfigDict, Field, field_validator
 
 from .base import ComparableBase
+from .common import ZeroOffsetDatetime
 
 EMAIL_ID_DESCRIPTION = "ID for email"
 EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
@@ -13,38 +14,43 @@ EMAIL_ID_EXAMPLE = "332de237-cab7-4461-bcc3-48e68f42bd5c"
 class EmailBase(ComparableBase):
     """Data that is included in input/output/db of a primary_email and such."""
 
-    primary_email: str
+    primary_email: str = Field(
+        description="Contact email address, Email in Salesforce",
+        examples=["contact@example.com"],
+    )
     basket_token: Optional[UUID] = Field(
         default=None,
         description="Basket token, Token__c in Salesforce",
-        example="c4a7d759-bb52-457b-896b-90f1d3ef8433",
+        examples=["c4a7d759-bb52-457b-896b-90f1d3ef8433"],
     )
     double_opt_in: bool = Field(
-        default=False, description="User has clicked a confirmation link", example=True
+        default=False,
+        description="User has clicked a confirmation link",
+        examples=[True],
     )
     sfdc_id: Optional[str] = Field(
         default=None,
         max_length=255,
         description="Salesforce legacy ID, Id in Salesforce",
-        example="001A000023aABcDEFG",
+        examples=["001A000023aABcDEFG"],
     )
     first_name: Optional[str] = Field(
         default=None,
         max_length=255,
         description="First name of contact, FirstName in Salesforce",
-        example="Jane",
+        examples=["Jane"],
     )
     last_name: Optional[str] = Field(
         default=None,
         max_length=255,
         description="Last name of contact, LastName in Salesforce",
-        example="Doe",
+        examples=["Doe"],
     )
     mailing_country: Optional[str] = Field(
         default=None,
         max_length=255,
         description="Mailing country code, 2 lowercase letters, MailingCountryCode in Salesforce",
-        example="us",
+        examples=["us"],
     )
     email_format: Literal["H", "T", "N", ""] = Field(
         default="H",
@@ -63,31 +69,23 @@ class EmailBase(ComparableBase):
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
-
-    class Config:
-        orm_mode = True
-        fields = {
-            "primary_email": {
-                "description": "Contact email address, Email in Salesforce",
-                "example": "contact@example.com",
-            }
-        }
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmailSchema(EmailBase):
     email_id: UUID4 = Field(
         description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
+        examples=[EMAIL_ID_EXAMPLE],
     )
-    create_timestamp: Optional[datetime] = Field(
+    create_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="Contact creation date, CreatedDate in Salesforce",
-        example="2020-03-28T15:41:00.000Z",
+        examples=["2020-03-28T15:41:00.000+00:00"],
     )
-    update_timestamp: Optional[datetime] = Field(
+    update_timestamp: Optional[ZeroOffsetDatetime] = Field(
         default=None,
         description="Contact last modified date, LastModifiedDate in Salesforce",
-        example="2021-01-28T21:26:57.511Z",
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )
 
 
@@ -97,7 +95,7 @@ class EmailInSchema(EmailBase):
     email_id: Optional[UUID4] = Field(
         default=None,
         description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
+        examples=[EMAIL_ID_EXAMPLE],
     )
 
 
@@ -106,16 +104,17 @@ class EmailPutSchema(EmailBase):
 
     email_id: UUID4 = Field(
         description=EMAIL_ID_DESCRIPTION,
-        example=EMAIL_ID_EXAMPLE,
+        examples=[EMAIL_ID_EXAMPLE],
     )
 
 
 class EmailPatchSchema(EmailInSchema):
     """Nearly identical to EmailInSchema but nothing is required."""
 
-    primary_email: Optional[str]
+    primary_email: Optional[str] = None
 
-    @validator("primary_email")
+    @field_validator("primary_email")
+    @classmethod
     @classmethod
     def prevent_none(cls, value):
         assert value is not None, "primary_email may not be None"
@@ -123,8 +122,8 @@ class EmailPatchSchema(EmailInSchema):
 
 
 class UpdatedEmailPutSchema(EmailPutSchema):
-    update_timestamp: datetime = Field(
+    update_timestamp: ZeroOffsetDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Contact last modified date, LastModifiedDate in Salesforce",
-        example="2021-01-28T21:26:57.511Z",
+        examples=["2021-01-28T21:26:57.511+00:00"],
     )

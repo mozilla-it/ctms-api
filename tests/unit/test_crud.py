@@ -1,114 +1,76 @@
 """Test database operations"""
-# pylint: disable=too-many-lines
+
 from datetime import datetime, timedelta, timezone
-from typing import List
 from uuid import uuid4
 
 import pytest
 import sqlalchemy
-from sqlalchemy.orm import Session
 
 from ctms.crud import (
-    create_acoustic_field,
-    create_acoustic_newsletters_mapping,
+    count_total_contacts,
     create_amo,
     create_email,
     create_fxa,
     create_mofo,
     create_newsletter,
-    create_stripe_customer,
-    create_stripe_invoice,
-    create_stripe_invoice_line_item,
-    create_stripe_price,
-    create_stripe_subscription,
-    create_stripe_subscription_item,
-    delete_acoustic_field,
-    delete_acoustic_newsletters_mapping,
-    delete_acoustic_record,
-    get_acoustic_record_as_contact,
-    get_all_acoustic_fields,
-    get_all_acoustic_records_before,
+    create_or_update_contact,
     get_bulk_contacts,
     get_contact_by_email_id,
     get_contacts_by_any_id,
     get_contacts_from_newsletter,
     get_contacts_from_waitlist,
     get_email,
-    get_emails_by_any_id,
-    get_stripe_customer_by_fxa_id,
-    get_stripe_subscription_by_stripe_id,
-    retry_acoustic_record,
-    schedule_acoustic_record,
 )
-from ctms.models import (
-    AcousticField,
-    AcousticNewsletterMapping,
-    Email,
-    PendingAcousticRecord,
-)
+from ctms.database import ScopedSessionLocal
+from ctms.models import Email
 from ctms.schemas import (
     AddOnsInSchema,
     EmailInSchema,
     FirefoxAccountsInSchema,
     MozillaFoundationInSchema,
     NewsletterInSchema,
-    StripeCustomerCreateSchema,
-    StripeInvoiceCreateSchema,
-    StripeInvoiceLineItemCreateSchema,
-    StripePriceCreateSchema,
-    StripeSubscriptionCreateSchema,
-    StripeSubscriptionItemCreateSchema,
 )
-from tests.unit.sample_data import FAKE_STRIPE_ID, SAMPLE_STRIPE_DATA, fake_stripe_id
+from ctms.schemas.contact import ContactPutSchema
+from ctms.schemas.waitlist import WaitlistInSchema
 
 # Treat all SQLAlchemy warnings as errors
 pytestmark = pytest.mark.filterwarnings("error::sqlalchemy.exc.SAWarning")
 
 
-def test_get_email(dbsession, example_contact):
-    email_id = example_contact.email.email_id
-    email = get_email(dbsession, email_id)
-    assert email.email_id == email_id
+@pytest.mark.disable_autouse
+def test_email_count(connection, email_factory):
+    # In this test, we manipulate raw connections and transactions because
+    # we need to force a VACUUM operation outside a running transaction.
+    # To do so, we mark the tests with `disable_autouse` since the `dbsession`
+    # fixture is configured with `autouse=True`
 
-    newsletter_names = [newsletter.name for newsletter in email.newsletters]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
+    # Insert contacts in the table.
+    with ScopedSessionLocal() as session:
+        email_factory.create_batch(3)
+        session.commit()
 
-    waitlists_names = [waitlist.name for waitlist in email.waitlists]
-    assert waitlists_names == ["example-product", "relay", "vpn"]
-    assert sorted(waitlists_names) == waitlists_names
+    # Force an analysis of the table.
+    old_isolation_level = connection.connection.isolation_level
+    connection.connection.set_isolation_level(0)
+    session.execute(sqlalchemy.text(f"VACUUM ANALYZE {Email.__tablename__}"))
+    session.close()
+    connection.connection.set_isolation_level(old_isolation_level)
+
+    # Query the count result (since last analyze)
+    with ScopedSessionLocal() as session:
+        count = count_total_contacts(session)
+        assert count == 3
+
+        # Delete created objects (since our transaction was not rolledback automatically)
+        session.query(Email).delete()
+        session.commit()
 
 
-def test_get_email_with_stripe_customer(dbsession, contact_with_stripe_customer):
-    email_id = contact_with_stripe_customer.email.email_id
-    email = get_email(dbsession, email_id)
-    assert email.email_id == email_id
-    newsletter_names = [newsletter.name for newsletter in email.newsletters]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
+def test_get_email(dbsession, email_factory):
+    email = email_factory()
 
-    assert email.stripe_customer.stripe_id == FAKE_STRIPE_ID["Customer"]
-    assert len(email.stripe_customer.subscriptions) == 0
-
-
-def test_get_email_with_stripe_subscription(
-    dbsession, contact_with_stripe_subscription
-):
-    email_id = contact_with_stripe_subscription.email.email_id
-    email = get_email(dbsession, email_id)
-    assert email.email_id == email_id
-
-    newsletter_names = [newsletter.name for newsletter in email.newsletters]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
-
-    assert email.stripe_customer.stripe_id == FAKE_STRIPE_ID["Customer"]
-    assert len(email.stripe_customer.subscriptions) == 1
-    assert len(email.stripe_customer.subscriptions[0].subscription_items) == 1
-    assert (
-        email.stripe_customer.subscriptions[0].subscription_items[0].price.stripe_id
-        == FAKE_STRIPE_ID["Price"]
-    )
+    fetched_email = get_email(dbsession, email.email_id)
+    assert fetched_email.email_id == email.email_id
 
 
 def test_get_email_miss(dbsession):
@@ -116,90 +78,12 @@ def test_get_email_miss(dbsession):
     assert email is None
 
 
-@pytest.mark.parametrize(
-    "alt_id_name,alt_id_value",
-    [
-        ("email_id", "67e52c77-950f-4f28-accb-bb3ea1a2c51a"),
-        ("primary_email", "mozilla-fan@example.com"),
-        ("amo_user_id", "123"),
-        ("basket_token", "d9ba6182-f5dd-4728-a477-2cc11bf62b69"),
-        ("fxa_id", "611b6788-2bba-42a6-98c9-9ce6eb9cbd34"),
-        ("fxa_primary_email", "fxa-firefox-fan@example.com"),
-        ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
-        ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
-    ],
-)
-def test_get_emails_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
-    emails = get_emails_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(emails) == 1
-    newsletter_names = [newsletter.name for newsletter in emails[0].newsletters]
-    assert sorted(newsletter_names) == newsletter_names
+def test_get_contact_by_email_id_found(dbsession, email_factory):
+    email = email_factory()
 
+    contact = get_contact_by_email_id(dbsession, email.email_id)
 
-def test_get_emails_by_any_id_missing(dbsession):
-    emails = get_emails_by_any_id(dbsession, basket_token=str(uuid4()))
-    assert len(emails) == 0
-
-
-@pytest.mark.parametrize(
-    "alt_id_name,alt_id_value",
-    [
-        ("amo_user_id", "123"),
-        ("fxa_primary_email", "fxa-firefox-fan@example.com"),
-        ("sfdc_id", "001A000001aMozFan"),
-        ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
-    ],
-)
-def test_get_multiple_emails_by_any_id(
-    dbsession, sample_contacts, alt_id_name, alt_id_value
-):
-    dupe_id = str(uuid4())
-    create_email(
-        dbsession,
-        EmailInSchema(
-            email_id=dupe_id,
-            primary_email="dupe@example.com",
-            basket_token=str(uuid4()),
-            sfdc_id=alt_id_value
-            if alt_id_name == "sfdc_id"
-            else "other_sdfc_alt_id_value",
-        ),
-    )
-    if alt_id_name == "amo_user_id":
-        create_amo(dbsession, dupe_id, AddOnsInSchema(user_id=alt_id_value))
-    if alt_id_name == "fxa_primary_email":
-        create_fxa(
-            dbsession, dupe_id, FirefoxAccountsInSchema(primary_email=alt_id_value)
-        )
-    if alt_id_name == "mofo_contact_id":
-        create_mofo(
-            dbsession,
-            dupe_id,
-            MozillaFoundationInSchema(
-                mofo_email_id=str(uuid4()), mofo_contact_id=alt_id_value
-            ),
-        )
-
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="zzz_sleepy_news"))
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="aaa_game_news"))
-    dbsession.flush()
-
-    emails = get_emails_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(emails) == 2
-    for email in emails:
-        newsletter_names = [newsletter.name for newsletter in email.newsletters]
-        assert sorted(newsletter_names) == newsletter_names
-
-
-def test_get_contact_by_email_id_found(dbsession, example_contact):
-    email_id = example_contact.email.email_id
-    contact = get_contact_by_email_id(dbsession, email_id)
-    assert contact["email"].email_id == email_id
-    newsletter_names = [nl.name for nl in contact["newsletters"]]
-    assert newsletter_names == ["firefox-welcome", "mozilla-welcome"]
-    assert sorted(newsletter_names) == newsletter_names
-    assert contact["products"] == []
+    assert contact.email.email_id == email.email_id
 
 
 def test_get_contact_by_email_id_miss(dbsession):
@@ -207,472 +91,93 @@ def test_get_contact_by_email_id_miss(dbsession):
     assert contact is None
 
 
-def test_schedule_then_get_acoustic_records_before_time(
-    dbsession, example_contact, maximal_contact, minimal_contact
+@pytest.mark.parametrize(
+    "mofo_relevant_flag,num_contacts_returned",
+    [
+        (None, 3),
+        (True, 1),
+        (False, 2),
+    ],
+)
+def test_get_bulk_contacts_mofo_relevant(
+    dbsession, email_factory, mofo_relevant_flag, num_contacts_returned
 ):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+    email_factory()
+    email_factory(with_mofo=True, mofo__mofo_relevant=True)
+    email_factory(with_mofo=True, mofo__mofo_relevant=False)
 
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-
-    dbsession.flush()
-    record_list = get_all_acoustic_records_before(
+    contacts = get_bulk_contacts(
         dbsession,
-        end_time=end_time,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        limit=3,
+        mofo_relevant=mofo_relevant_flag,
     )
-    dbsession.flush()
-    assert len(record_list) == 3
-    for record in record_list:
-        assert record.email is not None
-        assert record.retry is not None and record.retry == 0
-        assert record.create_timestamp is not None
-        assert record.update_timestamp is not None
-        assert record.id is not None
+    assert len(contacts) == num_contacts_returned
 
 
-def test_schedule_then_get_acoustic_records_as_contacts(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+def test_get_bulk_contacts_time_bounds(dbsession, email_factory):
+    start_time = datetime.now(timezone.utc)
+    end_time = start_time + timedelta(minutes=2)
 
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-    dbsession.flush()
-
-    record_list = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    dbsession.flush()
-    contact_record_list = [
-        get_acoustic_record_as_contact(dbsession, record) for record in record_list
+    email_factory(update_timestamp=start_time - timedelta(minutes=1))
+    targets = [
+        email_factory(update_timestamp=start_time),
+        email_factory(update_timestamp=start_time + timedelta(minutes=1)),
     ]
-    assert len(contact_record_list) == 3
-    for record in contact_record_list:
-        assert record.email is not None
+    email_factory(update_timestamp=end_time)
+    email_factory(update_timestamp=end_time + timedelta(minutes=1))
 
-
-def test_schedule_then_get_acoustic_records_retry_records(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
+    contacts = get_bulk_contacts(
         dbsession,
-        end_time=end_time,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        limit=5,
     )
-    for record in record_list:
-        retry_acoustic_record(dbsession, record)
 
-    dbsession.flush()
+    assert len(contacts) == 2
+    target_email_ids = [target.email_id for target in targets]
+    contact_email_ids = [contact.email.email_id for contact in contacts]
+    assert set(target_email_ids) == set(contact_email_ids)
 
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
+
+def test_get_bulk_contacts_limited(dbsession, email_factory):
+    email_factory.create_batch(10)
+
+    contacts = get_bulk_contacts(
         dbsession,
-        end_time=end_time,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        limit=5,
     )
-    dbsession.flush()
-
-    assert len(record_list) == 3
-    for record in record_list:
-        assert isinstance(record.email, Email)
-        assert record.retry is not None and record.retry > 0
-        assert record.create_timestamp != record.update_timestamp
-        assert record.id is not None
+    assert len(contacts) == 5
 
 
-def test_schedule_then_get_acoustic_records_minimum_retry(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
+def test_get_bulk_contacts_after_email_id(dbsession, email_factory):
+    first_email = email_factory()
+    second_email = email_factory()
 
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
+    [contact] = get_bulk_contacts(
         dbsession,
-        end_time=end_time,
-    )
-
-    for record in record_list:
-        retry_acoustic_record(dbsession, record)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
-        dbsession, end_time=end_time, retry_limit=1
-    )
-    dbsession.flush()
-    assert len(record_list) == 0
-
-
-def test_schedule_then_get_acoustic_records_then_delete(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    end_time = datetime.now(timezone.utc) + timedelta(hours=12)
-
-    for record in contact_list:
-        schedule_acoustic_record(dbsession, record.email.email_id)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    assert len(record_list) > 0
-
-    for record in record_list:
-        delete_acoustic_record(dbsession, record)
-
-    dbsession.flush()
-
-    record_list: List[PendingAcousticRecord] = get_all_acoustic_records_before(
-        dbsession,
-        end_time=end_time,
-    )
-    dbsession.flush()
-    assert len(record_list) == 0
-
-
-def retry_acoustic_record_with_error(dbsession, example_contact):
-    pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
-    retry_acoustic_record(dbsession, pending, error_message="Boom!")
-    dbsession.flush()
-
-    assert (
-        "Boom"
-        in dbsession.query(PendingAcousticRecord)
-        .filter(PendingAcousticRecord.email_id == example_contact.email.email_id)
-        .last_error
-    )
-
-
-def test_get_acoustic_record_no_stripe_customer(dbsession, example_contact):
-    """A contact with no associated Stripe customer has no subscriptions."""
-    pending = PendingAcousticRecord(email_id=example_contact.email.email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert not contact.products
-
-
-def test_get_acoustic_record_no_stripe_subscriptions(
-    dbsession, contact_with_stripe_customer
-):
-    """A contact with no Stripe subscriptions has no subscriptions."""
-    email_id = contact_with_stripe_customer.email.email_id
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert not contact.products
-
-
-def test_get_acoustic_record_one_stripe_subscription(
-    dbsession, contact_with_stripe_subscription
-):
-    """A contact with one Stripe subscription has one product."""
-    email_id = contact_with_stripe_subscription.email.email_id
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert len(contact.products) == 1
-    product = contact.products[0]
-    assert product.dict() == {
-        "payment_service": "stripe",
-        "product_id": "prod_cHJvZHVjdA",
-        "segment": "active",
-        "changed": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "sub_count": 1,
-        "product_name": None,
-        "price_id": "price_cHJpY2U",
-        "payment_type": None,
-        "card_brand": None,
-        "card_last4": None,
-        "currency": "usd",
-        "amount": 999,
-        "billing_country": None,
-        "status": "active",
-        "interval_count": 1,
-        "interval": "month",
-        "created": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "start": datetime(2021, 9, 27, tzinfo=timezone.utc),
-        "current_period_start": datetime(2021, 10, 27, tzinfo=timezone.utc),
-        "current_period_end": datetime(2021, 11, 27, tzinfo=timezone.utc),
-        "canceled_at": None,
-        "cancel_at_period_end": False,
-        "ended_at": None,
-    }
-
-
-def test_get_acoustic_record_two_stripe_subscriptions(
-    dbsession, contact_with_stripe_subscription
-):
-    """A contact with two Stripe subscriptions to different products has two products."""
-    email_id = contact_with_stripe_subscription.email.email_id
-    now = datetime.now(tz=timezone.utc)
-    new_subscription = SAMPLE_STRIPE_DATA["Subscription"].copy()
-    new_sub_item = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
-    new_price = SAMPLE_STRIPE_DATA["Price"].copy()
-    new_subscription["stripe_id"] = "sub_new"
-    new_subscription["cancel_at_period_end"] = True
-    new_subscription["stripe_created"] = now - timedelta(days=45)
-    new_subscription["canceled_at"] = now - timedelta(days=1)
-    new_subscription["current_period_start"] = now - timedelta(days=15)
-    new_subscription["current_period_end"] = now + timedelta(days=15)
-    new_subscription["start_date"] = new_subscription["stripe_created"]
-
-    new_price["stripe_id"] = "price_new"
-    new_price["stripe_product_id"] = "prod_mozilla_isp"
-
-    new_sub_item["stripe_id"] = "si_new"
-    new_sub_item["stripe_subscription_id"] = new_subscription["stripe_id"]
-    new_sub_item["stripe_price_id"] = new_price["stripe_id"]
-
-    create_stripe_subscription(
-        dbsession, StripeSubscriptionCreateSchema(**new_subscription)
-    )
-    create_stripe_price(dbsession, StripePriceCreateSchema(**new_price))
-    create_stripe_subscription_item(
-        dbsession, StripeSubscriptionItemCreateSchema(**new_sub_item)
-    )
-    dbsession.commit()
-
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert len(contact.products) == 2
-    product1 = contact.products[0]
-    assert product1.product_id == "prod_cHJvZHVjdA"
-    assert product1.sub_count == 1
-    assert product1.segment == "active"
-    product2 = contact.products[1]
-    assert product2.product_id == "prod_mozilla_isp"
-    assert product2.sub_count == 1
-    assert product2.segment == "cancelling"
-    assert product2.changed == now - timedelta(days=1)
-
-
-def test_get_acoustic_record_serial_stripe_subscriptions(
-    dbsession, contact_with_stripe_subscription
-):
-    """A contact with two Stripe subscriptions to the same product has one product."""
-    email_id = contact_with_stripe_subscription.email.email_id
-    old_subscription = SAMPLE_STRIPE_DATA["Subscription"].copy()
-    old_sub_item = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
-    old_subscription["stripe_id"] = "sub_old"
-    old_subscription["cancel_at_period_end"] = True
-    old_subscription["stripe_created"] -= timedelta(days=180)
-    old_subscription["start_date"] -= timedelta(days=180)
-    old_subscription["current_period_start"] -= timedelta(days=180)
-    old_subscription["current_period_end"] -= timedelta(days=180)
-    old_subscription["canceled_at"] = old_subscription[
-        "current_period_end"
-    ] - timedelta(days=10)
-    old_subscription["status"] = "canceled"
-
-    old_sub_item["stripe_id"] = "si_old"
-    old_sub_item["stripe_subscription_id"] = old_subscription["stripe_id"]
-
-    create_stripe_subscription(
-        dbsession, StripeSubscriptionCreateSchema(**old_subscription)
-    )
-    create_stripe_subscription_item(
-        dbsession, StripeSubscriptionItemCreateSchema(**old_sub_item)
-    )
-    dbsession.commit()
-
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert len(contact.products) == 1
-    product = contact.products[0]
-    assert product.product_id == "prod_cHJvZHVjdA"
-    assert product.sub_count == 2
-    assert product.segment == "re-active"
-
-
-def test_get_acoustic_record_stripe_subscription_cancelled(
-    dbsession, contact_with_stripe_subscription
-):
-    """A contact with a canceled Stripe subscription is in the canceled segement."""
-    subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription"]
-    )
-    subscription.status = "canceled"
-    subscription.ended_at = subscription.current_period_end
-    dbsession.commit()
-    email_id = contact_with_stripe_subscription.email.email_id
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert len(contact.products) == 1
-    product = contact.products[0]
-    assert product.segment == "canceled"
-    assert product.changed == subscription.ended_at
-
-
-def test_get_acoustic_record_stripe_subscription_other(
-    dbsession, contact_with_stripe_subscription
-):
-    """A contact with a canceled Stripe subscription is in the canceled segement."""
-    subscription = get_stripe_subscription_by_stripe_id(
-        dbsession, FAKE_STRIPE_ID["Subscription"]
-    )
-    subscription.status = "unpaid"
-    dbsession.commit()
-    email_id = contact_with_stripe_subscription.email.email_id
-    pending = PendingAcousticRecord(email_id=email_id)
-    contact = get_acoustic_record_as_contact(dbsession, pending)
-    assert len(contact.products) == 1
-    product = contact.products[0]
-    assert product.segment == "other"
-    assert product.changed == subscription.stripe_created
-
-
-def test_get_bulk_contacts_mofo_relevant_false(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
-    mofo_relevant_flag = False
-
-    first_contact = sorted_list[0]
-    after_start = first_contact.email.update_timestamp - timedelta(hours=12)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
-        dbsession,
-        start_time=after_start,
-        end_time=end_time,
-        limit=10,
-        mofo_relevant=mofo_relevant_flag,
-    )
-    assert len(bulk_contact_list) == 2
-
-
-def test_get_bulk_contacts_mofo_relevant_true(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
-    mofo_relevant_flag = True
-
-    first_contact = sorted_list[0]
-    after_start = first_contact.email.update_timestamp - timedelta(hours=12)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-    bulk_contact_list = get_bulk_contacts(
-        dbsession,
-        start_time=after_start,
-        end_time=end_time,
-        limit=10,
-        mofo_relevant=mofo_relevant_flag,
-    )
-    assert len(bulk_contact_list) == 1
-    for contact in bulk_contact_list:
-        assert contact.mofo.mofo_relevant == mofo_relevant_flag
-
-
-def test_get_bulk_contacts_some_after_higher_limit(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
-
-    first_contact = sorted_list[0]
-    after_start = first_contact.email.update_timestamp
-    after_id = str(first_contact.email.email_id)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-    bulk_contact_list = get_bulk_contacts(
-        dbsession,
-        start_time=after_start,
-        end_time=end_time,
-        limit=2,
-        after_email_id=after_id,
-    )
-    assert len(bulk_contact_list) == 2
-    assert last_contact in bulk_contact_list
-    assert sorted_list[-2] in bulk_contact_list
-
-
-def test_get_bulk_contacts_some_after(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    contact_list = [example_contact, maximal_contact, minimal_contact]
-    sorted_list = sorted(
-        contact_list,
-        key=lambda contact: (contact.email.update_timestamp, contact.email.email_id),
-    )
-
-    second_to_last_contact = sorted_list[-2]
-    after_start = second_to_last_contact.email.update_timestamp
-    after_id = str(second_to_last_contact.email.email_id)
-    last_contact = sorted_list[-1]
-    last_contact_timestamp = last_contact.email.update_timestamp
-    end_time = last_contact_timestamp + timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
-        dbsession,
-        start_time=after_start,
-        end_time=end_time,
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
         limit=1,
-        after_email_id=after_id,
+        after_email_id=str(first_email.email_id),
     )
-    assert len(bulk_contact_list) == 1
-    assert last_contact in bulk_contact_list
+    assert contact.email.email_id != first_email.email_id
+    assert contact.email.email_id == second_email.email_id
 
 
-def test_get_bulk_contacts_some(
-    dbsession, example_contact, maximal_contact, minimal_contact
-):
-    example_timestamp: datetime = example_contact.email.update_timestamp
-    maximal_timestamp: datetime = maximal_contact.email.update_timestamp
-    minimal_timestamp: datetime = minimal_contact.email.update_timestamp
+def test_get_bulk_contacts_one(dbsession, email_factory):
+    email = email_factory()
 
-    oldest_timestamp = min([example_timestamp, maximal_timestamp, minimal_timestamp])
-    timestamp = oldest_timestamp - timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
+    [contact] = get_bulk_contacts(
         dbsession,
-        start_time=timestamp,
-        end_time=datetime.now(timezone.utc),
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
+        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
         limit=10,
     )
-    assert len(bulk_contact_list) >= 3
-    assert example_contact in bulk_contact_list
-    assert maximal_contact in bulk_contact_list
-    assert minimal_contact in bulk_contact_list
-
-
-def test_get_bulk_contacts_one(dbsession, example_contact):
-    email_id = example_contact.email.email_id
-    timestamp: datetime = example_contact.email.update_timestamp
-    start_time = timestamp - timedelta(12)
-    end_time = timestamp + timedelta(hours=12)
-
-    bulk_contact_list = get_bulk_contacts(
-        dbsession, start_time=start_time, end_time=end_time, limit=10
-    )
-    assert len(bulk_contact_list) == 1
-    assert bulk_contact_list[0].email.email_id == email_id
+    assert contact.email.email_id == email.email_id
 
 
 def test_get_bulk_contacts_none(dbsession):
@@ -699,14 +204,31 @@ def test_get_bulk_contacts_none(dbsession):
         ("mofo_email_id", "195207d2-63f2-4c9f-b149-80e9c408477a"),
     ],
 )
-def test_get_contact_by_any_id(dbsession, sample_contacts, alt_id_name, alt_id_value):
-    contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(contacts) == 1
-    newsletter_names = [nl.name for nl in contacts[0]["newsletters"]]
-    assert sorted(newsletter_names) == newsletter_names
+def test_get_contact_by_any_id(dbsession, email_factory, alt_id_name, alt_id_value):
+    email = email_factory(
+        email_id="67e52c77-950f-4f28-accb-bb3ea1a2c51a",
+        primary_email="mozilla-fan@example.com",
+        basket_token="d9ba6182-f5dd-4728-a477-2cc11bf62b69",
+        sfdc_id="001A000001aMozFan",
+        with_fxa=True,
+        fxa__fxa_id="611b6788-2bba-42a6-98c9-9ce6eb9cbd34",
+        fxa__primary_email="fxa-firefox-fan@example.com",
+        with_amo=True,
+        amo__user_id="123",
+        with_mofo=True,
+        mofo__mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+        mofo__mofo_email_id="195207d2-63f2-4c9f-b149-80e9c408477a",
+    )
+    email_factory.create_batch(2, with_fxa=True, with_amo=True, with_mofo=True)
+
+    [contact] = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
+    assert contact.email.email_id == email.email_id
 
 
-def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
+def test_get_contact_by_any_id_missing(dbsession, email_factory):
+    # create an email
+    email_factory()
+    # but use a different (random) UUID as the basket token
     contact = get_contacts_by_any_id(dbsession, basket_token=str(uuid4()))
     assert len(contact) == 0
 
@@ -721,301 +243,82 @@ def test_get_contact_by_any_id_missing(dbsession, sample_contacts):
     ],
 )
 def test_get_multiple_contacts_by_any_id(
-    dbsession, sample_contacts, alt_id_name, alt_id_value
+    dbsession, email_factory, alt_id_name, alt_id_value
 ):
-    dupe_id = str(uuid4())
-    create_email(
-        dbsession,
-        EmailInSchema(
-            email_id=dupe_id,
-            primary_email="dupe@example.com",
-            basket_token=str(uuid4()),
-            sfdc_id=alt_id_value
-            if alt_id_name == "sfdc_id"
-            else "other_sdfc_alt_id_value",
-        ),
-    )
-    if alt_id_name == "amo_user_id":
-        create_amo(dbsession, dupe_id, AddOnsInSchema(user_id=alt_id_value))
-    if alt_id_name == "fxa_primary_email":
-        create_fxa(
-            dbsession, dupe_id, FirefoxAccountsInSchema(primary_email=alt_id_value)
-        )
-    if alt_id_name == "mofo_contact_id":
-        create_mofo(
-            dbsession,
-            dupe_id,
-            MozillaFoundationInSchema(
-                mofo_email_id=str(uuid4()), mofo_contact_id=alt_id_value
-            ),
-        )
+    """Two contacts can share the same:
+    - fxa primary_email
+    - amo user_id
+    - sfdc_id
+    - mofo_contact_id
 
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="zzz_sleepy_news"))
-    create_newsletter(dbsession, dupe_id, NewsletterInSchema(name="aaa_game_news"))
+    And when we query users by these ids, we might get multiple contacts back
+    """
+    email_factory.create_batch(
+        2,
+        sfdc_id="001A000001aMozFan",
+        with_amo=True,
+        amo__user_id=123,
+        with_fxa=True,
+        fxa__primary_email="fxa-firefox-fan@example.com",
+        with_mofo=True,
+        mofo__mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
+    )
+    [contact_a, contact_b] = get_contacts_by_any_id(
+        dbsession, **{alt_id_name: alt_id_value}
+    )
+    assert contact_a.email.email_id != contact_b.email.email_id
+
+
+def test_create_or_update_contact_related_objects(dbsession, email_factory):
+    email = email_factory(
+        newsletters=3,
+        waitlists=3,
+    )
     dbsession.flush()
 
-    contacts = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
-    assert len(contacts) == 2
-    for contact in contacts:
-        newsletter_names = [nl.name for nl in contact["newsletters"]]
-        assert sorted(newsletter_names) == newsletter_names
-
-
-@pytest.mark.parametrize("with_lock", ("for_update", "no_lock"))
-@pytest.mark.parametrize("fxa_id_source", ("existing", "new"))
-def test_get_stripe_customer_by_fxa_id(
-    dbsession, contact_with_stripe_customer, fxa_id_source, with_lock
-):
-    """A StripeCustomer can be fetched by fxa_id."""
-    if fxa_id_source == "existing":
-        fxa_id = contact_with_stripe_customer.fxa.fxa_id
-    else:
-        fxa_id = str(uuid4())
-    customer = get_stripe_customer_by_fxa_id(
-        dbsession, fxa_id, for_update=(with_lock == "for_update")
+    new_source = "http://waitlists.example.com/"
+    putdata = ContactPutSchema(
+        email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
+        newsletters=[
+            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
+        ],
+        waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
     )
-    if fxa_id_source == "existing":
-        assert customer.fxa_id == fxa_id
-    else:
-        assert customer is None
-
-
-@pytest.fixture()
-def stripe_objects(dbsession, example_contact, maximal_contact):
-    """
-    Create two complete trees of Stripe objects.
-
-    We don't use ForeignKeys for Stripe relations, because the object may come
-    out of order for foreign key contraints. This helps check that the manually
-    created relationships are correct.
-
-    When following a relationship, look for this warning in the logs:
-    SAWarning: Multiple rows returned with uselist=False for lazily-loaded attribute
-
-    This suggests that SQLAlchemy is joining tables without a limiting WHERE clause,
-    and the first item will be returned rather than the related item.
-    """
-    # Create prices / products
-    # Both customers are subscribed to all four, 2 per subscription
-    prices = []
-    for price_idx in range(4):
-        price_data = SAMPLE_STRIPE_DATA["Price"].copy()
-        price_data["stripe_id"] = fake_stripe_id("price", f"price_{price_idx}")
-        price_data["stripe_product_id"] = fake_stripe_id("prod", f"prod_{price_idx}")
-        prices.append(
-            create_stripe_price(dbsession, StripePriceCreateSchema(**price_data))
-        )
-
-    objs = []
-    for contact_idx, contact in enumerate((example_contact, maximal_contact)):
-        email_id = contact.email.email_id
-        email = get_email(dbsession, email_id)
-        obj = {
-            "email_id": email_id,
-            "contact": email,
-            "customer": None,
-            "subscription": [],
-            "invoice": [],
-        }
-        objs.append(obj)
-
-        # Create Customer data
-        cus_data = SAMPLE_STRIPE_DATA["Customer"].copy()
-        cus_data["stripe_id"] = fake_stripe_id("cus", f"cus_{contact_idx}")
-        cus_data["fxa_id"] = contact.fxa.fxa_id
-        obj["customer"] = create_stripe_customer(
-            dbsession, StripeCustomerCreateSchema(**cus_data)
-        )
-
-        # Create Subscriptions / Invoices and related items
-        for sub_inv_idx in range(2):
-            sub_data = SAMPLE_STRIPE_DATA["Subscription"].copy()
-            sub_data["stripe_id"] = fake_stripe_id(
-                "sub", f"cus_{contact_idx}_sub_{sub_inv_idx}"
-            )
-            sub_data["stripe_customer_id"] = cus_data["stripe_id"]
-            sub_obj = {
-                "obj": create_stripe_subscription(
-                    dbsession, StripeSubscriptionCreateSchema(**sub_data)
-                ),
-                "items": [],
-            }
-            obj["subscription"].append(sub_obj)
-
-            inv_data = SAMPLE_STRIPE_DATA["Invoice"].copy()
-            inv_data["stripe_id"] = fake_stripe_id(
-                "sub", f"cus_{contact_idx}_inv_{sub_inv_idx}"
-            )
-            inv_data["stripe_customer_id"] = cus_data["stripe_id"]
-            inv_obj = {
-                "obj": create_stripe_invoice(
-                    dbsession, StripeInvoiceCreateSchema(**inv_data)
-                ),
-                "line_items": [],
-            }
-            obj["invoice"].append(inv_obj)
-
-            for item_idx in range(2):
-                price = prices[sub_inv_idx * 2 + item_idx]
-
-                si_data = SAMPLE_STRIPE_DATA["SubscriptionItem"].copy()
-                si_data["stripe_id"] = fake_stripe_id(
-                    "si", f"cus_{contact_idx}_sub_{sub_inv_idx}_si_{item_idx}"
-                )
-                si_data["stripe_price_id"] = price.stripe_id
-                si_data["stripe_subscription_id"] = sub_data["stripe_id"]
-                sub_obj["items"].append(
-                    {
-                        "obj": create_stripe_subscription_item(
-                            dbsession, StripeSubscriptionItemCreateSchema(**si_data)
-                        ),
-                        "price": price,
-                    }
-                )
-
-                li_data = SAMPLE_STRIPE_DATA["InvoiceLineItem"].copy()
-                li_data["stripe_id"] = fake_stripe_id(
-                    "il", f"cus_{contact_idx}_inv_{sub_inv_idx}_il_{item_idx}"
-                )
-                li_data["stripe_invoice_id"] = inv_data["stripe_id"]
-                li_data["stripe_price_id"] = price.stripe_id
-                li_data["stripe_subscription_id"] = sub_data["stripe_id"]
-                li_data["stripe_subscription_item_id"] = si_data["stripe_id"]
-                inv_obj["line_items"].append(
-                    {
-                        "obj": create_stripe_invoice_line_item(
-                            dbsession, StripeInvoiceLineItemCreateSchema(**li_data)
-                        ),
-                        "price": price,
-                    }
-                )
+    create_or_update_contact(dbsession, email.email_id, putdata, None)
     dbsession.commit()
-    return objs
+
+    updated_email = dbsession.get(Email, email.email_id)
+    # Existing related objects were deleted and replaced by the specified list.
+    assert len(updated_email.newsletters) == 1
+    assert len(updated_email.waitlists) == 1
+    assert updated_email.newsletters[0].source == new_source
+    assert updated_email.waitlists[0].source == new_source
 
 
-@pytest.mark.parametrize("contact_idx", range(2))
-def test_relations_to_stripe_objects(stripe_objects, contact_idx):
-    """Non-stripe objects have correct relations to Stripe objects."""
-    contact = stripe_objects[contact_idx]["contact"]
-    customer = stripe_objects[contact_idx]["customer"]
+def test_create_or_update_contact_timestamps(dbsession, email_factory):
+    email = email_factory(
+        newsletters=1,
+        waitlists=1,
+    )
+    dbsession.flush()
 
-    assert contact.stripe_customer == customer
-    assert contact.fxa.stripe_customer == customer
+    before_nl = email.newsletters[0].update_timestamp
+    before_wl = email.waitlists[0].update_timestamp
 
+    new_source = "http://waitlists.example.com"
+    putdata = ContactPutSchema(
+        email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
+        newsletters=[
+            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
+        ],
+        waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
+    )
+    create_or_update_contact(dbsession, email.email_id, putdata, None)
+    dbsession.commit()
 
-@pytest.mark.parametrize("contact_idx", range(2))
-def test_relations_on_stripe_customer(stripe_objects, contact_idx):
-    """StripeCustomer relationships are correct."""
-    contact = stripe_objects[contact_idx]
-    email = contact["contact"]
-    email_id = contact["email_id"]
-    customer = contact["customer"]
-    invoices = set(inv["obj"] for inv in contact["invoice"])
-    subscriptions = set(sub["obj"] for sub in contact["subscription"])
-
-    assert customer.email == email
-    assert customer.fxa == email.fxa
-    assert set(customer.invoices) == invoices
-    assert set(customer.subscriptions) == subscriptions
-    assert customer.get_email_id() == email_id
-
-
-@pytest.mark.parametrize("si_idx", range(2))
-@pytest.mark.parametrize("item_idx", range(2))
-def test_relations_on_stripe_price(stripe_objects, si_idx, item_idx):
-    """StripePrice relations are correct."""
-    price = None
-    subscription_items = set()
-    invoice_line_items = set()
-    for contact in stripe_objects:
-        subscription_item = contact["subscription"][si_idx]["items"][item_idx]
-        if price:
-            assert subscription_item["price"] == price
-        else:
-            price = subscription_item["price"]
-        subscription_items.add(subscription_item["obj"])
-
-        invoice_line_item = contact["invoice"][si_idx]["line_items"][item_idx]
-        assert invoice_line_item["price"] == price
-        invoice_line_items.add(invoice_line_item["obj"])
-
-    assert set(price.invoice_line_items) == invoice_line_items
-    assert set(price.subscription_items) == subscription_items
-    assert price.get_email_id() is None
-
-
-@pytest.mark.parametrize("contact_idx", range(2))
-@pytest.mark.parametrize("inv_idx", range(2))
-def test_relations_on_stripe_invoice(stripe_objects, contact_idx, inv_idx):
-    """StripeInvoice relations are correct."""
-    contact = stripe_objects[contact_idx]
-    customer = contact["customer"]
-    email_id = contact["email_id"]
-    invoice = contact["invoice"][inv_idx]["obj"]
-    line_items = set(item["obj"] for item in contact["invoice"][inv_idx]["line_items"])
-
-    assert invoice.customer == customer
-    assert set(invoice.line_items) == line_items
-    assert invoice.get_email_id() == email_id
-
-
-@pytest.mark.parametrize("contact_idx", range(2))
-@pytest.mark.parametrize("inv_idx", range(2))
-@pytest.mark.parametrize("li_idx", range(2))
-def test_relations_on_stripe_invoice_line_items(
-    stripe_objects, contact_idx, inv_idx, li_idx
-):
-    """StripeInvoiceLineItem relations are correct."""
-    contact = stripe_objects[contact_idx]
-    email_id = contact["email_id"]
-    inv_data = contact["invoice"][inv_idx]
-    invoice = inv_data["obj"]
-    line_item = inv_data["line_items"][li_idx]["obj"]
-    price = inv_data["line_items"][li_idx]["price"]
-    sub_data = contact["subscription"][inv_idx]
-    subscription = sub_data["obj"]
-    subscription_item = sub_data["items"][li_idx]["obj"]
-    assert sub_data["items"][li_idx]["price"] == price
-
-    assert line_item.invoice == invoice
-    assert line_item.price == price
-    assert line_item.subscription == subscription
-    assert line_item.subscription_item == subscription_item
-    assert line_item.get_email_id() == email_id
-
-
-@pytest.mark.parametrize("contact_idx", range(2))
-@pytest.mark.parametrize("sub_idx", range(2))
-def test_relations_on_stripe_subscription(stripe_objects, contact_idx, sub_idx):
-    """StripeSubscription relations are correct."""
-    contact = stripe_objects[contact_idx]
-    customer = contact["customer"]
-    email_id = contact["email_id"]
-    subscription = contact["subscription"][sub_idx]["obj"]
-    items = set(item["obj"] for item in contact["subscription"][sub_idx]["items"])
-
-    assert subscription.customer == customer
-    assert set(subscription.subscription_items) == items
-    assert subscription.get_email_id() == email_id
-
-
-@pytest.mark.parametrize("contact_idx", range(2))
-@pytest.mark.parametrize("sub_idx", range(2))
-@pytest.mark.parametrize("si_idx", range(2))
-def test_relations_on_stripe_subscription_items(
-    stripe_objects, contact_idx, sub_idx, si_idx
-):
-    """StripeSubscriptionItem relations are correct."""
-    contact = stripe_objects[contact_idx]
-    email_id = contact["email_id"]
-    sub_data = contact["subscription"][sub_idx]
-    subscription = sub_data["obj"]
-    subscription_item = sub_data["items"][si_idx]["obj"]
-    price = sub_data["items"][si_idx]["price"]
-
-    assert subscription_item.subscription == subscription
-    assert subscription_item.price == price
-    assert subscription_item.get_email_id() == email_id
+    updated_email = get_email(dbsession, email.email_id)
+    assert updated_email.newsletters[0].update_timestamp > before_nl
+    assert updated_email.waitlists[0].update_timestamp > before_wl
 
 
 def test_get_contacts_from_newsletter(dbsession, newsletter_factory):
@@ -1032,99 +335,3 @@ def test_get_contacts_from_waitlist(dbsession, waitlist_factory):
     contacts = get_contacts_from_waitlist(dbsession, existing_waitlist.name)
     assert len(contacts) == 1
     assert contacts[0].email.email_id == existing_waitlist.email.email_id
-
-
-def test_create_acoustic_field(dbsession: Session):
-    fields = dbsession.query(AcousticField).filter_by(tablename="main")
-    main_fields = {f.field for f in fields}
-    assert "sub_test_field" not in main_fields
-
-    create_acoustic_field(dbsession, "main", "sub_test_field")
-    dbsession.commit()
-
-    main_fields = {f.field for f in fields}
-    assert "sub_test_field" in main_fields
-
-
-def test_create_acoustic_field_same_pkey_does_not_raise(dbsession: Session):
-    # though there is a composite primary key on tablename + field, attempting
-    # to add the same tablename + field does not raise an exception
-    create_acoustic_field(dbsession, "main", "sub_test_field")
-    create_acoustic_field(dbsession, "main", "sub_test_field")
-
-
-def test_delete_acoustic_field(dbsession):
-    fields = dbsession.query(AcousticField)
-    assert ("main", "email") in [(f.tablename, f.field) for f in fields]
-
-    deleted = delete_acoustic_field(dbsession, "main", "email")
-
-    assert (deleted.tablename, deleted.field) == ("main", "email")
-    assert ("main", "email") not in [(f.tablename, f.field) for f in fields]
-
-
-def test_delete_acoustic_field_no_field_present(dbsession):
-    fields = dbsession.query(AcousticField)
-    assert ("foo", "bar") not in [(f.tablename, f.field) for f in fields]
-
-    deleted = delete_acoustic_field(dbsession, "foo", "bar")
-    assert deleted is None
-
-
-def test_get_all_acoustic_fields(dbsession):
-    assert (
-        len(get_all_acoustic_fields(dbsession))
-        == dbsession.query(AcousticField).count()
-    )
-
-
-def test_get_all_acoustic_fields_filter_by_tablename(dbsession):
-    dbsession.add(AcousticField(tablename="test", field="test"))
-    dbsession.flush()
-    num_fields = dbsession.query(AcousticField).count()
-    num_main_fields = len(get_all_acoustic_fields(dbsession, tablename="main"))
-    assert num_fields > num_main_fields
-
-
-def test_create_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
-    new_mapping = create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-    assert (new_mapping.source, new_mapping.destination) == ("test", "sub_test")
-    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count > len(acoustic_newsletters_mapping)
-
-
-def test_create_acoustic_newsletters_mapping_duplicate_mapping(dbsession):
-    create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-    with pytest.raises(sqlalchemy.exc.IntegrityError):
-        create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-
-
-def test_create_acoustic_newsletters_mapping_source_to_many_dest(dbsession):
-    create_acoustic_newsletters_mapping(dbsession, "test", "sub_test")
-    create_acoustic_newsletters_mapping(dbsession, "test2", "sub_test")
-
-
-def test_delete_acoustic_newsletters_mapping(dbsession, acoustic_newsletters_mapping):
-    mappings = list(acoustic_newsletters_mapping.items())
-    (sample_source, sample_destination) = mappings[0]
-
-    deleted_mapping = delete_acoustic_newsletters_mapping(dbsession, sample_source)
-
-    assert (deleted_mapping.source, deleted_mapping.destination) == (
-        sample_source,
-        sample_destination,
-    )
-    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count < len(acoustic_newsletters_mapping)
-
-
-def test_delete_acoustic_newsletters_mapping_no_mapping(
-    dbsession, acoustic_newsletters_mapping
-):
-    deleted_mapping = delete_acoustic_newsletters_mapping(
-        dbsession, "no_mapping_for_this_source"
-    )
-
-    assert deleted_mapping is None
-    all_mappings_count = dbsession.query(AcousticNewsletterMapping).count()
-    assert all_mappings_count == len(acoustic_newsletters_mapping)
