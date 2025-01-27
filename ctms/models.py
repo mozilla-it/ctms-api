@@ -185,6 +185,8 @@ class ApiClient(Base, TimestampMixin):
     hashed_secret = mapped_column(String, nullable=False)
     last_access = mapped_column(DateTime(timezone=True))
 
+    # Relationships
+    roles = relationship("ApiClientRoles", back_populates="api_client")
 
 class MozillaFoundationContact(Base, TimestampMixin):
     __tablename__ = "mofo"
@@ -196,3 +198,53 @@ class MozillaFoundationContact(Base, TimestampMixin):
     mofo_relevant = mapped_column(Boolean)
 
     email = relationship("Email", back_populates="mofo", uselist=False)
+
+
+# Permissions models.
+
+
+class Roles(Base):
+    __tablename__ = "roles"
+
+    id = mapped_column(Integer, primary_key=True)
+    name = mapped_column(String(255), nullable=False, unique=True)
+    description = mapped_column(Text, nullable=True)
+
+    # Relationships
+    permissions = relationship("RolePermissions", back_populates="role")
+    api_clients = relationship("ApiClientRoles", back_populates="role")
+
+
+class Permissions(Base):
+    __tablename__ = "permissions"
+
+    id = mapped_column(Integer, primary_key=True)
+    name = mapped_column(String(255), nullable=False, unique=True)
+    description = mapped_column(Text, nullable=True)
+
+    # Relationships
+    roles = relationship("RolePermissions", back_populates="permission")
+
+
+class RolePermissions(Base):
+    __tablename__ = "role_permissions"
+
+    id = mapped_column(Integer, primary_key=True)
+    role_id = mapped_column(ForeignKey(Roles.id, ondelete="CASCADE"), nullable=False)
+    permission_id = mapped_column(ForeignKey(Permissions.id, ondelete="CASCADE"), nullable=False)
+
+    # Relationships
+    role = relationship("Roles", back_populates="permissions")
+    permission = relationship("Permissions", back_populates="roles")
+
+
+class ApiClientRoles(Base):
+    __tablename__ = "api_client_roles"
+
+    id = mapped_column(Integer, primary_key=True)
+    api_client_id = mapped_column(ForeignKey(ApiClient.client_id, ondelete="CASCADE"), nullable=False)
+    role_id = mapped_column(ForeignKey(Roles.id, ondelete="CASCADE"), nullable=False)
+
+    # Relationships
+    api_client = relationship("ApiClient", back_populates="roles")
+    role = relationship("Roles", back_populates="api_clients")
