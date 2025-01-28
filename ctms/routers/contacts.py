@@ -22,6 +22,7 @@ from ctms.crud import (
 from ctms.dependencies import get_db, get_enabled_api_client, get_json, get_settings
 from ctms.metrics import get_metrics
 from ctms.models import Email
+from ctms.permissions import with_permission
 from ctms.schemas import (
     ApiClientSchema,
     BadRequestResponse,
@@ -320,6 +321,7 @@ def delete_contact_by_primary_email(
     primary_email: str,
     db: Annotated[Session, Depends(get_db)],
     api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
+    _: Annotated[bool, Depends(with_permission("delete_contact"))],
 ):
     ids = all_ids(primary_email=primary_email.lower())
     contacts = get_contacts_by_any_id(db, **ids)

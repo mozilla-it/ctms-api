@@ -19,7 +19,7 @@ from sqlalchemy import create_engine
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
 from ctms import metrics as metrics_module
-from ctms import schemas
+from ctms import models, schemas
 from ctms.app import app
 from ctms.config import Settings
 from ctms.crud import (
@@ -36,9 +36,11 @@ from ctms.crud import (
 from ctms.database import ScopedSessionLocal, SessionLocal
 from ctms.dependencies import get_api_client, get_db
 from ctms.metrics import get_metrics
+from ctms.permissions import ADMIN_ROLE_NAME
 from ctms.schemas import ApiClientSchema, ContactSchema
 from ctms.schemas.contact import ContactInSchema
 from tests import factories
+from tests.helpers import assign_role
 
 MY_FOLDER = os.path.dirname(__file__)
 TEST_FOLDER = os.path.dirname(MY_FOLDER)
@@ -132,6 +134,14 @@ def connection(engine):
     conn.close()
 
 
+@pytest.fixture(scope="session")
+def session_dbsession(connection):
+    """Provides a session that lasts the entire pytest session (avoiding transaction rollbacks)."""
+    session = SessionLocal()
+    yield session
+    session.close()
+
+
 @pytest.fixture(autouse=True)
 def dbsession(request, connection):
     """Return a database session that rolls back.
@@ -148,9 +158,22 @@ def dbsession(request, connection):
         transaction.rollback()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_admin_role(session_dbsession):
+    """Ensures the admin role exists before running tests."""
+    if not session_dbsession.query(models.Roles).filter_by(name=ADMIN_ROLE_NAME).first():
+        session_dbsession.add(models.Roles(name=ADMIN_ROLE_NAME))
+        session_dbsession.commit()
+
+
 # Database models
+register(factories.models.ApiClientFactory)
+register(factories.models.ApiClientRolesFactory)
 register(factories.models.EmailFactory)
 register(factories.models.NewsletterFactory)
+register(factories.models.PermissionFactory)
+register(factories.models.RoleFactory)
+register(factories.models.RolePermissionsFactory)
 register(factories.models.WaitlistFactory)
 
 
@@ -464,11 +487,50 @@ def anon_client(dbsession):
 
 
 @pytest.fixture
-def client(anon_client):
-    """A test client that passed a valid OAuth2 token."""
+def restricted_client(anon_client, dbsession):
+    """A test client with valid authorization but no special permissions."""
+
+    # Create an API client that we associate with the restricted test client.
+    api_client = models.ApiClient(
+        client_id="restricted_client",
+        email="restricted_client@example.com",
+        hashed_secret="test_secret",  # pragma: allowlist secret
+        enabled=True,
+    )
+    dbsession.add(api_client)
+    dbsession.commit()
 
     def test_api_client():
-        return ApiClientSchema(client_id="test_client", email="test_client@example.com", enabled=True)
+        return ApiClientSchema(client_id=api_client.client_id, email=api_client.email, enabled=True)
+
+    app.dependency_overrides[get_api_client] = test_api_client
+    yield anon_client
+    del app.dependency_overrides[get_api_client]
+
+
+@pytest.fixture
+def client(anon_client, dbsession):
+    """A test client that passed a valid OAuth2 token and has the admin role."""
+
+    # Create an API client that we associate with the test client.
+    api_client = models.ApiClient(
+        client_id="test_client",
+        email="test_client@example.com",
+        hashed_secret="test_secret",  # pragma: allowlist secret
+        enabled=True,
+    )
+    dbsession.add(api_client)
+
+    # Save the schema here to avoid a detached instance error below.
+    client_schema = ApiClientSchema(client_id=api_client.client_id, email=api_client.email, enabled=True)
+
+    dbsession.commit()
+
+    # Assign the admin role to the API client
+    assign_role(dbsession, api_client.client_id, ADMIN_ROLE_NAME)
+
+    def test_api_client():
+        return client_schema
 
     app.dependency_overrides[get_api_client] = test_api_client
     yield anon_client

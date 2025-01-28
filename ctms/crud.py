@@ -60,7 +60,7 @@ def count_total_contacts(db: Session) -> int:
     This metadata is refreshed on `VACUUM` or `ANALYSIS` which
     is run regularly by default on our database instances.
     """
-    result = db.execute(text("SELECT reltuples AS estimate " "FROM pg_class " f"where relname = '{Email.__tablename__}'")).scalar()
+    result = db.execute(text(f"SELECT reltuples AS estimate FROM pg_class where relname = '{Email.__tablename__}'")).scalar()
     if result is None or result < 0:
         # Fall back to a full count if the estimate is not available.
         result = db.execute(text(f"SELECT COUNT(*) FROM {Email.__tablename__}")).scalar()
