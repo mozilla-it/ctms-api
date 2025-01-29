@@ -14,7 +14,7 @@ class AuthInfoLogFilter(logging.Filter):
 
     def filter(self, record: "logging.LogRecord") -> bool:
         # All records attributes will be logged as fields.
-        auth_info = auth_info_context.get()
+        auth_info = auth_info_context.get({})
         for k, v in auth_info.items():
             setattr(record, k, v)
         # MozLog also recommends using `uid` for user ids.

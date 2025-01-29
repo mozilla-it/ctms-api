@@ -22,7 +22,8 @@ from starlette.status import HTTP_401_UNAUTHORIZED
 pwd_context = argon2.PasswordHasher()
 
 
-auth_info_context: ContextVar[dict] = ContextVar("auth_info_context", default={})
+auth_info_context: ContextVar[dict] = ContextVar("auth_info_context")
+auth_info_context.set({})
 
 
 def verify_password(plain_password, hashed_password) -> bool:
