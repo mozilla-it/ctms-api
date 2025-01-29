@@ -54,9 +54,7 @@ def login(
     token_settings=Depends(get_token_settings),
 ):
     auth_info = auth_info_context.get()
-    failed_auth = HTTPException(
-        status_code=400, detail="Incorrect username or password"
-    )
+    failed_auth = HTTPException(status_code=400, detail="Incorrect username or password")
 
     if form_data.client_id and form_data.client_secret:
         client_id = form_data.client_id
@@ -82,9 +80,7 @@ def login(
         auth_info["token_fail"] = "Bad credentials"
         raise failed_auth
 
-    access_token = create_access_token(
-        data={"sub": f"api_client:{client_id}"}, **token_settings
-    )
+    access_token = create_access_token(data={"sub": f"api_client:{client_id}"}, **token_settings)
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -99,9 +95,7 @@ def database():
     with SessionLocal() as db:
         alive = ping(db)
         if not alive:
-            result.append(
-                dockerflow_checks.Error("Database not reachable", id="db.0001")
-            )
+            result.append(dockerflow_checks.Error("Database not reachable", id="db.0001"))
             return result
         # Report number of contacts in the database.
         # Sending the metric in this heartbeat endpoint is simpler than reporting

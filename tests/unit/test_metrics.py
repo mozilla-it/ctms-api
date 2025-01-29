@@ -123,9 +123,7 @@ def assert_duration_metric_obs(
     }
     bucket_labels = labels.copy()
     bucket_labels["le"] = str(limit)
-    assert (
-        metrics_registry.get_sample_value(f"{base_name}_bucket", bucket_labels) == count
-    )
+    assert metrics_registry.get_sample_value(f"{base_name}_bucket", bucket_labels) == count
     assert metrics_registry.get_sample_value(f"{base_name}_count", labels) == count
     assert metrics_registry.get_sample_value(f"{base_name}_sum", labels) < limit
 
@@ -191,9 +189,7 @@ def test_bad_api_request(client, dbsession, registry, email_id, status_code):
     path = "/ctms/{email_id}"
     assert_request_metric_inc(registry, "GET", path, status_code)
     status_code_family = str(status_code)[0] + "xx"
-    assert_api_request_metric_inc(
-        registry, "GET", path, "test_client", status_code_family
-    )
+    assert_api_request_metric_inc(registry, "GET", path, "test_client", status_code_family)
 
 
 def test_crash_request(client, dbsession, registry):

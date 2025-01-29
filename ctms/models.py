@@ -54,9 +54,7 @@ class Email(Base, TimestampMixin):
     __tablename__ = "emails"
     __mapper_args__ = {"eager_defaults": True}
 
-    email_id = mapped_column(
-        UUID, primary_key=True, server_default="uuid_generate_v4()"
-    )
+    email_id = mapped_column(UUID, primary_key=True, server_default="uuid_generate_v4()")
     primary_email = mapped_column(String(255), unique=True, nullable=False)
     basket_token = mapped_column(String(255), unique=True)
     sfdc_id = mapped_column(String(255), index=True)
@@ -69,17 +67,11 @@ class Email(Base, TimestampMixin):
     has_opted_out_of_email = mapped_column(Boolean)
     unsubscribe_reason = mapped_column(Text)
 
-    newsletters = relationship(
-        "Newsletter", back_populates="email", order_by="Newsletter.name"
-    )
-    waitlists = relationship(
-        "Waitlist", back_populates="email", order_by="Waitlist.name"
-    )
+    newsletters = relationship("Newsletter", back_populates="email", order_by="Newsletter.name")
+    waitlists = relationship("Waitlist", back_populates="email", order_by="Waitlist.name")
     fxa = relationship("FirefoxAccount", back_populates="email", uselist=False)
     amo = relationship("AmoAccount", back_populates="email", uselist=False)
-    mofo = relationship(
-        "MozillaFoundationContact", back_populates="email", uselist=False
-    )
+    mofo = relationship("MozillaFoundationContact", back_populates="email", uselist=False)
 
     # Class Comparators
     @hybrid_property
@@ -105,9 +97,7 @@ class Newsletter(Base, TimestampMixin):
     __tablename__ = "newsletters"
 
     id = mapped_column(Integer, primary_key=True)
-    email_id: Mapped[UUID4] = mapped_column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False
-    )
+    email_id: Mapped[UUID4] = mapped_column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     name = mapped_column(String(255), nullable=False)
     subscribed = mapped_column(Boolean)
     format = mapped_column(String(1))
@@ -124,9 +114,7 @@ class Waitlist(Base, TimestampMixin):
     __tablename__ = "waitlists"
 
     id = mapped_column(Integer, primary_key=True)
-    email_id: Mapped[UUID4] = mapped_column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False
-    )
+    email_id: Mapped[UUID4] = mapped_column(UUID(as_uuid=True), ForeignKey(Email.email_id), nullable=False)
     name = mapped_column(String(255), nullable=False)
     source = mapped_column(Text)
     subscribed = mapped_column(Boolean, nullable=False, default=True)
@@ -143,9 +131,7 @@ class FirefoxAccount(Base, TimestampMixin):
 
     id = mapped_column(Integer, primary_key=True)
     fxa_id = mapped_column(String(255), unique=True)
-    email_id = mapped_column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
+    email_id = mapped_column(UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False)
     primary_email = mapped_column(String(255), index=True)
     created_date = mapped_column(String(50))
     lang = mapped_column(String(255))
@@ -173,9 +159,7 @@ class AmoAccount(Base, TimestampMixin):
     __tablename__ = "amo"
 
     id = mapped_column(Integer, primary_key=True)
-    email_id = mapped_column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
+    email_id = mapped_column(UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False)
     add_on_ids = mapped_column(String(500))
     display_name = mapped_column(String(255))
     email_opt_in = mapped_column(Boolean)
@@ -206,9 +190,7 @@ class MozillaFoundationContact(Base, TimestampMixin):
     __tablename__ = "mofo"
 
     id = mapped_column(Integer, primary_key=True)
-    email_id = mapped_column(
-        UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False
-    )
+    email_id = mapped_column(UUID(as_uuid=True), ForeignKey(Email.email_id), unique=True, nullable=False)
     mofo_email_id = mapped_column(String(255), unique=True)
     mofo_contact_id = mapped_column(String(255), index=True)
     mofo_relevant = mapped_column(Boolean)

@@ -16,9 +16,7 @@ class MozillaFoundationBase(ComparableBase):
         max_length=255,
         description="Foriegn key to contact in MoFo contact database",
     )
-    mofo_relevant: bool = Field(
-        default=False, description="Mozilla Foundation is tracking this email"
-    )
+    mofo_relevant: bool = Field(default=False, description="Mozilla Foundation is tracking this email")
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -126,9 +126,7 @@ class OAuth2ClientCredentials(OAuth2):
     ):
         if not scopes:
             scopes = {}
-        flows = OAuthFlowsModel(
-            clientCredentials={"tokenUrl": tokenUrl, "scopes": scopes}
-        )
+        flows = OAuthFlowsModel(clientCredentials={"tokenUrl": tokenUrl, "scopes": scopes})
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=True)
 
     async def __call__(self, request: Request) -> Optional[str]:

@@ -131,18 +131,12 @@ def writefile(path, content):
 
 @click.command()
 @click.argument("csv_path", type=click.Path(exists=True))
-@click.option(
-    "--check-input-rows", default=1000, help="Number of rows to check from input CSV."
-)
+@click.option("--check-input-rows", default=1000, help="Number of rows to check from input CSV.")
 @click.option("--batch-size", default=10000, help="Number of updates per commit.")
 @click.option("--files-count", default=3, help="Number of SQL files")
 @click.option("--sleep-seconds", default=0.1, help="Wait between batches")
-@click.option(
-    "--schedule-sync", default=False, help="Mark update emails as pending sync"
-)
-@click.option(
-    "--csv-path-server", default=".", help="Absolute path where to load the CSV from"
-)
+@click.option("--schedule-sync", default=False, help="Mark update emails as pending sync")
+@click.option("--csv-path-server", default=".", help="Absolute path where to load the CSV from")
 @click.option(
     "--table-suffix",
     default=None,
@@ -233,16 +227,14 @@ def main(
     file_count = len(chunked)
     for i, batch in enumerate(chunked):
         writefile(
-            f"{csv_filename}.{i+1}.apply.sql",
-            "".join(batch) + f"CALL raise_notice('File {i+1}/{file_count} done.');",
+            f"{csv_filename}.{i + 1}.apply.sql",
+            "".join(batch) + f"CALL raise_notice('File {i + 1}/{file_count} done.');",
         )
 
-    logger.info(
-        f"Produced {file_count} files, with {chunk_size} commits ({chunk_size * batch_size} updates)."
-    )
+    logger.info(f"Produced {file_count} files, with {chunk_size} commits ({chunk_size * batch_size} updates).")
 
     writefile(
-        f"{csv_filename}.{file_count+1}.post.sql",
+        f"{csv_filename}.{file_count + 1}.post.sql",
         SQL_COMMANDS_POST.format(
             tmp_suffix=tmp_suffix,
         ),

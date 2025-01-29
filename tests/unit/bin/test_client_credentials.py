@@ -6,9 +6,7 @@ from ctms.models import ApiClient
 
 @pytest.fixture
 def existing_client(dbsession):
-    client = ApiClient(
-        client_id="id_existing", email="existing@example.com", hashed_secret="password"
-    )
+    client = ApiClient(client_id="id_existing", email="existing@example.com", hashed_secret="password")
     dbsession.add(client)
     dbsession.flush()
     return client
@@ -38,9 +36,7 @@ def test_create_explicit_id(dbsession, settings):
 
 def test_create_disabled(dbsession, settings):
     """New client credentials can be generated as disabled."""
-    ret = main(
-        dbsession, settings, ["test2", "--email", "test@example.com", "--disable"]
-    )
+    ret = main(dbsession, settings, ["test2", "--email", "test@example.com", "--disable"])
     assert ret == 0
 
     client = dbsession.query(ApiClient).one()
@@ -57,9 +53,7 @@ def test_create_email_required(dbsession, settings):
     assert dbsession.query(ApiClient).first() is None
 
 
-@pytest.mark.parametrize(
-    "client_id", ("service.mozilla.com", "1-800-Contacts", "under_score.js")
-)
+@pytest.mark.parametrize("client_id", ("service.mozilla.com", "1-800-Contacts", "under_score.js"))
 def test_create_valid_client_id(dbsession, settings, client_id):
     """Some punctuation is allowed."""
     ret = main(dbsession, settings, [client_id, "--email", "test@example.com"])
@@ -113,9 +107,7 @@ def test_update_enable(dbsession, settings, existing_client):
 
 def test_update_enable_and_disable_fails(dbsession, settings, existing_client):
     """Picking enable and disable is an error."""
-    ret = main(
-        dbsession, settings, [existing_client.client_id, "--disable", "--enable"]
-    )
+    ret = main(dbsession, settings, [existing_client.client_id, "--disable", "--enable"])
     assert ret == 1
     client = dbsession.query(ApiClient).one()
     assert client.enabled

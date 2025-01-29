@@ -40,10 +40,7 @@ class FirefoxAccountsBase(ComparableBase):
     )
     account_deleted: bool = Field(
         default=False,
-        description=(
-            "Set to True when FxA account deleted or dupe,"
-            " FxA_Account_Deleted__c in Salesforce"
-        ),
+        description="Set to True when FxA account deleted or dupe, FxA_Account_Deleted__c in Salesforce",
     )
     model_config = ConfigDict(from_attributes=True)
 

@@ -39,13 +39,9 @@ def test_post_token_header(anon_client, test_token_settings, client_id_and_secre
     content = resp.json()
     assert content["token_type"] == "bearer"
     assert content["expires_in"] == 5 * 60
-    payload = jwt.decode(
-        content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"]
-    )
+    payload = jwt.decode(content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"])
     assert payload["sub"] == f"api_client:{client_id}"
-    expected_expires = (
-        datetime.now(timezone.utc) + test_token_settings["expires_delta"]
-    ).timestamp()
+    expected_expires = (datetime.now(timezone.utc) + test_token_settings["expires_delta"]).timestamp()
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -64,13 +60,9 @@ def test_post_token_form_data(anon_client, test_token_settings, client_id_and_se
     assert resp.status_code == 200
     content = resp.json()
     assert content["token_type"] == "bearer"
-    payload = jwt.decode(
-        content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"]
-    )
+    payload = jwt.decode(content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"])
     assert payload["sub"] == f"api_client:{client_id}"
-    expected_expires = (
-        datetime.now(timezone.utc) + test_token_settings["expires_delta"]
-    ).timestamp()
+    expected_expires = (datetime.now(timezone.utc) + test_token_settings["expires_delta"]).timestamp()
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -83,9 +75,7 @@ def test_post_token_succeeds_no_grant(anon_client, client_id_and_secret):
     assert resp.status_code == 200
 
 
-def test_post_token_succeeds_refresh_grant(
-    anon_client, test_token_settings, client_id_and_secret
-):
+def test_post_token_succeeds_refresh_grant(anon_client, test_token_settings, client_id_and_secret):
     """If grant_type is refresh_token, the token grant is successful."""
     client_id, client_secret = client_id_and_secret
     resp = anon_client.post(
@@ -131,9 +121,7 @@ def test_post_token_fails_unknown_api_client(anon_client, client_id_and_secret, 
     """Authentication failes on unknown api_client ID."""
     good_id, good_secret = client_id_and_secret
     with caplog.at_level(logging.INFO):
-        resp = anon_client.post(
-            "/token", auth=HTTPBasicAuth(good_id + "x", good_secret)
-        )
+        resp = anon_client.post("/token", auth=HTTPBasicAuth(good_id + "x", good_secret))
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
     assert caplog.records[0].token_creds_from == "header"
@@ -144,18 +132,14 @@ def test_post_token_fails_bad_credentials(anon_client, client_id_and_secret, cap
     """Authentication fails on bad credentials."""
     good_id, good_secret = client_id_and_secret
     with caplog.at_level(logging.INFO):
-        resp = anon_client.post(
-            "/token", auth=HTTPBasicAuth(good_id, good_secret + "x")
-        )
+        resp = anon_client.post("/token", auth=HTTPBasicAuth(good_id, good_secret + "x"))
     assert resp.status_code == 400
     assert resp.json() == {"detail": "Incorrect username or password"}
     assert caplog.records[0].token_creds_from == "header"
     assert caplog.records[0].token_fail == "Bad credentials"
 
 
-def test_post_token_fails_disabled_client(
-    dbsession, anon_client, client_id_and_secret, caplog
-):
+def test_post_token_fails_disabled_client(dbsession, anon_client, client_id_and_secret, caplog):
     """Authentication fails when the client is disabled."""
     client_id, client_secret = client_id_and_secret
     api_client = get_api_client_by_id(dbsession, client_id)
@@ -169,16 +153,12 @@ def test_post_token_fails_disabled_client(
     assert caplog.records[0].token_fail == "Client disabled"
 
 
-def test_get_ctms_with_token(
-    email_factory, anon_client, test_token_settings, client_id_and_secret
-):
+def test_get_ctms_with_token(email_factory, anon_client, test_token_settings, client_id_and_secret):
     """An authenticated API can be fetched with a valid token"""
     email = email_factory()
 
     client_id = client_id_and_secret[0]
-    token = create_access_token(
-        {"sub": f"api_client:{client_id}"}, **test_token_settings
-    )
+    token = create_access_token({"sub": f"api_client:{client_id}"}, **test_token_settings)
     token_headers = jwt.get_unverified_header(token)
     assert token_headers == {
         "alg": "HS256",
@@ -191,18 +171,14 @@ def test_get_ctms_with_token(
     assert resp.status_code == 200
 
 
-def test_successful_login_tracks_last_access(
-    dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret
-):
+def test_successful_login_tracks_last_access(dbsession, email_factory, anon_client, test_token_settings, client_id_and_secret):
     client_id = client_id_and_secret[0]
     email = email_factory()
 
     api_client = get_api_client_by_id(dbsession, client_id)
     before = api_client.last_access
 
-    token = create_access_token(
-        {"sub": f"api_client:{client_id}"}, **test_token_settings
-    )
+    token = create_access_token({"sub": f"api_client:{client_id}"}, **test_token_settings)
     anon_client.get(
         f"/ctms/{email.email_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -213,9 +189,7 @@ def test_successful_login_tracks_last_access(
     assert before != after
 
 
-def test_get_ctms_with_invalid_token_fails(
-    email_factory, anon_client, test_token_settings, client_id_and_secret, caplog
-):
+def test_get_ctms_with_invalid_token_fails(email_factory, anon_client, test_token_settings, client_id_and_secret, caplog):
     """Calling an authenticated API with an invalid token is an error"""
     email = email_factory()
 
@@ -235,9 +209,7 @@ def test_get_ctms_with_invalid_token_fails(
     assert caplog.records[0].auth_fail == "No or bad token"
 
 
-def test_get_ctms_with_invalid_namespace_fails(
-    email_factory, anon_client, test_token_settings, client_id_and_secret, caplog
-):
+def test_get_ctms_with_invalid_namespace_fails(email_factory, anon_client, test_token_settings, client_id_and_secret, caplog):
     """Calling an authenticated API with an unexpected namespace is an error"""
     email = email_factory()
 
@@ -253,16 +225,12 @@ def test_get_ctms_with_invalid_namespace_fails(
     assert caplog.records[0].auth_fail == "Bad namespace"
 
 
-def test_get_ctms_with_unknown_client_fails(
-    email_factory, anon_client, test_token_settings, client_id_and_secret, caplog
-):
+def test_get_ctms_with_unknown_client_fails(email_factory, anon_client, test_token_settings, client_id_and_secret, caplog):
     """A token with an unknown (deleted?) API client name is an error"""
     email = email_factory()
 
     client_id = client_id_and_secret[0]
-    token = create_access_token(
-        {"sub": f"api_client:not_{client_id}"}, **test_token_settings
-    )
+    token = create_access_token({"sub": f"api_client:not_{client_id}"}, **test_token_settings)
     with caplog.at_level(logging.INFO):
         resp = anon_client.get(
             f"/ctms/{email.email_id}",
@@ -273,17 +241,13 @@ def test_get_ctms_with_unknown_client_fails(
     assert caplog.records[0].auth_fail == "No client record"
 
 
-def test_get_ctms_with_expired_token_fails(
-    email_factory, anon_client, test_token_settings, client_id_and_secret, caplog
-):
+def test_get_ctms_with_expired_token_fails(email_factory, anon_client, test_token_settings, client_id_and_secret, caplog):
     """Calling an authenticated API with an expired token is an error"""
     email = email_factory()
 
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
     client_id = client_id_and_secret[0]
-    token = create_access_token(
-        {"sub": f"api_client:{client_id}"}, **test_token_settings, now=yesterday
-    )
+    token = create_access_token({"sub": f"api_client:{client_id}"}, **test_token_settings, now=yesterday)
     with caplog.at_level(logging.INFO):
         resp = anon_client.get(
             f"/ctms/{email.email_id}",
@@ -306,9 +270,7 @@ def test_get_ctms_with_disabled_client_fails(
     email = email_factory()
 
     client_id = client_id_and_secret[0]
-    token = create_access_token(
-        {"sub": f"api_client:{client_id}"}, **test_token_settings
-    )
+    token = create_access_token({"sub": f"api_client:{client_id}"}, **test_token_settings)
     api_client = get_api_client_by_id(dbsession, client_id)
     api_client.enabled = False
     dbsession.commit()

@@ -178,23 +178,15 @@ def create_full_contact(db, contact: ContactSchema):
     specified_newsletters_by_name = {nl.name: nl for nl in contact.newsletters}
     if specified_newsletters_by_name:
         for newsletter_in_db in get_newsletters_by_email_id(db, contact.email.email_id):
-            newsletter_in_db.create_timestamp = specified_newsletters_by_name[
-                newsletter_in_db.name
-            ].create_timestamp
-            newsletter_in_db.update_timestamp = specified_newsletters_by_name[
-                newsletter_in_db.name
-            ].update_timestamp
+            newsletter_in_db.create_timestamp = specified_newsletters_by_name[newsletter_in_db.name].create_timestamp
+            newsletter_in_db.update_timestamp = specified_newsletters_by_name[newsletter_in_db.name].update_timestamp
             db.add(newsletter_in_db)
 
     specified_waitlists_by_name = {wl.name: wl for wl in contact.waitlists}
     if specified_waitlists_by_name:
         for waitlist_in_db in get_waitlists_by_email_id(db, contact.email.email_id):
-            waitlist_in_db.create_timestamp = specified_waitlists_by_name[
-                waitlist_in_db.name
-            ].create_timestamp
-            waitlist_in_db.update_timestamp = specified_waitlists_by_name[
-                waitlist_in_db.name
-            ].update_timestamp
+            waitlist_in_db.create_timestamp = specified_waitlists_by_name[waitlist_in_db.name].create_timestamp
+            waitlist_in_db.update_timestamp = specified_waitlists_by_name[waitlist_in_db.name].update_timestamp
             db.add(waitlist_in_db)
 
     db.commit()
@@ -390,18 +382,9 @@ def example_contact_data() -> ContactSchema:
     return ContactSchema(
         amo=schemas.AddOnsSchema(**_gather_examples(schemas.AddOnsSchema)),
         email=schemas.EmailSchema(**_gather_examples(schemas.EmailSchema)),
-        fxa=schemas.FirefoxAccountsSchema(
-            **_gather_examples(schemas.FirefoxAccountsSchema)
-        ),
-        newsletters=ContactSchema.model_json_schema()["properties"]["newsletters"][
-            "examples"
-        ][0],
-        waitlists=[
-            schemas.WaitlistTableSchema(**example)
-            for example in ContactSchema.model_json_schema()["properties"]["waitlists"][
-                "examples"
-            ][0]
-        ],
+        fxa=schemas.FirefoxAccountsSchema(**_gather_examples(schemas.FirefoxAccountsSchema)),
+        newsletters=ContactSchema.model_json_schema()["properties"]["newsletters"]["examples"][0],
+        waitlists=[schemas.WaitlistTableSchema(**example) for example in ContactSchema.model_json_schema()["properties"]["waitlists"]["examples"][0]],
     )
 
 
@@ -485,9 +468,7 @@ def client(anon_client):
     """A test client that passed a valid OAuth2 token."""
 
     def test_api_client():
-        return ApiClientSchema(
-            client_id="test_client", email="test_client@example.com", enabled=True
-        )
+        return ApiClientSchema(client_id="test_client", email="test_client@example.com", enabled=True)
 
     app.dependency_overrides[get_api_client] = test_api_client
     yield anon_client
@@ -529,9 +510,7 @@ def metrics(setup_metrics):
 @pytest.fixture
 def client_id_and_secret(dbsession):
     """Return valid OAuth2 client_id and client_secret."""
-    api_client = ApiClientSchema(
-        client_id="id_db_api_client", email="db_api_client@example.com", enabled=True
-    )
+    api_client = ApiClientSchema(client_id="id_db_api_client", email="db_api_client@example.com", enabled=True)
     secret = "secret_what_a_weird_random_string"  # pragma: allowlist secret
     create_api_client(dbsession, api_client, secret)
     dbsession.flush()
@@ -575,23 +554,15 @@ def post_contact(client, dbsession, request):
             if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written:
                     if result_list:
-                        assert (
-                            results == []
-                        ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                        assert results == [], f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                     else:
-                        assert (
-                            results is None
-                        ), f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                        assert results is None, f"{email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
                 else:
                     assert results, f"{email_id} has field `{field}` and it should have been written to db"
             elif result_list:
-                assert (
-                    results == []
-                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+                assert results == [], f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
             else:
-                assert (
-                    results is None
-                ), f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
+                assert results is None, f"{email_id} does not have field `{field}` and it should _not_ have been written to db"
 
         if check_written:
             _check_written("amo", get_amo_by_email_id)
@@ -639,9 +610,7 @@ def put_contact(client, dbsession, request):
         new_default_fields = new_default_fields or set()
         sample = contact.model_copy(deep=True)
         sample = modifier(sample)
-        resp = client.put(
-            f"/ctms/{sample.email.email_id}", content=sample.model_dump_json()
-        )
+        resp = client.put(f"/ctms/{sample.email.email_id}", content=sample.model_dump_json())
         assert resp.status_code == code, resp.text
         saved = get_contacts_by_any_id(dbsession, **query_fields)
         assert len(saved) == stored_contacts
@@ -657,16 +626,15 @@ def put_contact(client, dbsession, request):
             results = getter(dbsession, written_id)
             if sample.model_dump().get(field) and code in {200, 201}:
                 if field in fields_not_written or field in new_default_fields:
-                    assert (
-                        results is None
-                        or (isinstance(results, list) and len(results) == 0)
-                    ), f"{sample_email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                    assert results is None or (isinstance(results, list) and len(results) == 0), (
+                        f"{sample_email_id} has field `{field}` but it is _default_ and it should _not_ have been written to db"
+                    )
                 else:
                     assert results, f"{sample_email_id} has field `{field}` and it should have been written to db"
             else:
-                assert (
-                    results is None or (isinstance(results, list) and len(results) == 0)
-                ), f"{sample_email_id} does not have field `{field}` and it should _not_ have been written to db"
+                assert results is None or (isinstance(results, list) and len(results) == 0), (
+                    f"{sample_email_id} does not have field `{field}` and it should _not_ have been written to db"
+                )
 
         if check_written:
             _check_written("amo", get_amo_by_email_id)

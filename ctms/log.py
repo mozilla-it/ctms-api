@@ -66,9 +66,7 @@ CONFIG = {
         "uvicorn": {"level": logging.INFO},
         "uvicorn.access": {"handlers": ["null"], "propagate": False},
         "sqlalchemy.engine": {
-            "level": settings.logging_level.name
-            if settings.log_sqlalchemy
-            else logging.WARNING,
+            "level": settings.logging_level.name if settings.log_sqlalchemy else logging.WARNING,
             "propagate": False,
         },
     },

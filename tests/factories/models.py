@@ -17,10 +17,7 @@ class RelatedFactoryVariableList(factory.RelatedFactoryList):
     def call(self, instance, step, context):
         size = context.extra.pop("size", self.size)
         assert isinstance(size, int)
-        return [
-            super(factory.RelatedFactoryList, self).call(instance, step, context)
-            for _ in range(size)
-        ]
+        return [super(factory.RelatedFactoryList, self).call(instance, step, context) for _ in range(size)]
 
 
 class BaseSQLAlchemyModelFactory(SQLAlchemyModelFactory):

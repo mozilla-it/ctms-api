@@ -64,10 +64,7 @@ def test_token_request_log(anon_client, client_id_and_secret, caplog):
 def test_log_omits_emails(client, email_factory, caplog):
     """The logger omits emails from query params."""
     email = email_factory(with_fxa=True)
-    url = (
-        f"/ctms?primary_email={email.primary_email}&fxa_primary_email={email.fxa.primary_email}"
-        f"&email_id={email.email_id}"
-    )
+    url = f"/ctms?primary_email={email.primary_email}&fxa_primary_email={email.fxa.primary_email}&email_id={email.email_id}"
     with caplog.at_level(logging.INFO):
         resp = client.get(url)
     assert resp.status_code == 200

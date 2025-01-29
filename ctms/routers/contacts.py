@@ -122,11 +122,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
         )
 
         next_url = (
-            f"{get_settings().server_prefix}/updates?"
-            f"start={start_time.isoformat()}"
-            f"&end={end_time.isoformat()}"
-            f"&limit={limit}"
-            f"&after={after_encoded} "
+            f"{get_settings().server_prefix}/updates?start={start_time.isoformat()}&end={end_time.isoformat()}&limit={limit}&after={after_encoded} "
         )
 
     return CTMSBulkResponse(
@@ -156,9 +152,7 @@ def read_ctms_by_any_id(
     ids=Depends(all_ids),
 ):
     if not any(ids.values()):
-        detail = (
-            f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
-        )
+        detail = f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_any_id(db, **ids)
     return [CTMSResponse(**contact.model_dump()) for contact in contacts]
@@ -290,11 +284,7 @@ def partial_update_ctms_contact(
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
     content_json: Optional[Dict] = Depends(get_json),
 ):
-    if (
-        contact.email
-        and getattr(contact.email, "email_id")
-        and contact.email.email_id != email_id
-    ):
+    if contact.email and getattr(contact.email, "email_id") and contact.email.email_id != email_id:
         raise HTTPException(
             status_code=422,
             detail="cannot change email_id",
@@ -310,10 +300,7 @@ def partial_update_ctms_contact(
         if isinstance(e, IntegrityError):
             raise HTTPException(
                 status_code=409,
-                detail=(
-                    "Contact with primary_email, basket_token, mofo_email_id,"
-                    " or fxa_id already exists"
-                ),
+                detail="Contact with primary_email, basket_token, mofo_email_id, or fxa_id already exists",
             ) from e
         raise
     response.status_code = 200
@@ -376,9 +363,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
         return get_bulk_contacts_by_timestamp_or_4xx(db=db, **bulk_request.model_dump())
     except ValidationError as e:
         detail = {"errors": json.loads(e.json())}
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
-        ) from e
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail) from e
 
 
 @router.get(
@@ -397,9 +382,7 @@ def read_identities(
     ids=Depends(all_ids),
 ):
     if not any(ids.values()):
-        detail = (
-            f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
-        )
+        detail = f"No identifiers provided, at least one is needed: {', '.join(ids.keys())}"
         raise HTTPException(status_code=400, detail=detail)
     contacts = get_contacts_by_any_id(db, **ids)
     return [contact.as_identity_response() for contact in contacts]
