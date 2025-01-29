@@ -2,10 +2,6 @@
 
 import logging
 import sys
-from typing import Any, Dict, Optional
-
-from fastapi import Request
-from starlette.routing import Match
 
 from ctms.auth import auth_info_context
 from ctms.config import Settings

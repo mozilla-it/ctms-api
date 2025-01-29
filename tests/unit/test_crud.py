@@ -8,11 +8,6 @@ import sqlalchemy
 
 from ctms.crud import (
     count_total_contacts,
-    create_amo,
-    create_email,
-    create_fxa,
-    create_mofo,
-    create_newsletter,
     create_or_update_contact,
     get_bulk_contacts,
     get_contact_by_email_id,
@@ -24,10 +19,7 @@ from ctms.crud import (
 from ctms.database import ScopedSessionLocal
 from ctms.models import Email
 from ctms.schemas import (
-    AddOnsInSchema,
     EmailInSchema,
-    FirefoxAccountsInSchema,
-    MozillaFoundationInSchema,
     NewsletterInSchema,
 )
 from ctms.schemas.contact import ContactPutSchema

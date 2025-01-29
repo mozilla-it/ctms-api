@@ -2,7 +2,6 @@
 """Tests for logging helpers"""
 
 import logging
-from unittest.mock import patch
 
 import pytest
 from dockerflow.logging import JsonLogFormatter
@@ -70,6 +69,9 @@ def test_log_omits_emails(client, email_factory, caplog):
     assert resp.status_code == 200
     assert len(caplog.records) == 1
     log = caplog.records[0]
+    assert email.primary_email not in log.message
+    assert email.fxa.primary_email not in log.message
+    assert str(email.email_id) not in log.message
 
 
 def test_log_crash(client, caplog):

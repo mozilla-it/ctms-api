@@ -7,7 +7,6 @@ header. A JWT token is returned that expires after a short time. To renew,
 the client POSTs to /token again.
 """
 
-import warnings
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
