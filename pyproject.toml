@@ -75,6 +75,7 @@ select = [
   "C4", # flake8-comprehensions errors
   "E", # pycodestyle errors
   "F", # pyflakes errors
+  "FAST", # FastAPI
   "I", # import sorting
   "PL", # pylint errors
   "Q", # flake8-quotes errors
