@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -39,11 +39,11 @@ if TYPE_CHECKING:
 class ContactSchema(ComparableBase):
     """A complete contact."""
 
-    amo: Optional[AddOnsSchema] = None
+    amo: AddOnsSchema | None = None
     email: EmailSchema
-    fxa: Optional[FirefoxAccountsSchema] = None
-    mofo: Optional[MozillaFoundationSchema] = None
-    newsletters: List[NewsletterTableSchema] = Field(
+    fxa: FirefoxAccountsSchema | None = None
+    mofo: MozillaFoundationSchema | None = None
+    newsletters: list[NewsletterTableSchema] = Field(
         default_factory=list,
         description="List of newsletters for which the contact is or was subscribed",
         examples=[
@@ -63,7 +63,7 @@ class ContactSchema(ComparableBase):
             ]
         ],
     )
-    waitlists: List[WaitlistTableSchema] = Field(
+    waitlists: list[WaitlistTableSchema] = Field(
         default_factory=list,
         description="List of waitlists for which the contact is or was subscribed",
         examples=[
@@ -122,11 +122,11 @@ class ContactSchema(ComparableBase):
 class ContactInBase(ComparableBase):
     """A contact as provided by callers."""
 
-    amo: Optional[AddOnsInSchema] = None
+    amo: AddOnsInSchema | None = None
     email: EmailBase
-    fxa: Optional[FirefoxAccountsInSchema] = None
-    mofo: Optional[MozillaFoundationInSchema] = None
-    newsletters: List[NewsletterInSchema] = Field(
+    fxa: FirefoxAccountsInSchema | None = None
+    mofo: MozillaFoundationInSchema | None = None
+    newsletters: list[NewsletterInSchema] = Field(
         default_factory=list,
         examples=[
             [
@@ -139,7 +139,7 @@ class ContactInBase(ComparableBase):
             ]
         ],
     )
-    waitlists: List[WaitlistInSchema] = Field(
+    waitlists: list[WaitlistInSchema] = Field(
         default_factory=list,
         examples=[
             [
@@ -191,20 +191,16 @@ class ContactPatchSchema(ComparableBase):
     "UNSUBSCRIBE" instead of lists or objects.
     """
 
-    amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]] = Field(None, description='Add-ons data to update, or "DELETE" to reset.')
-    email: Optional[EmailPatchSchema] = None
-    fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]] = Field(
-        None, description='Firefox Accounts data to update, or "DELETE" to reset.'
-    )
-    mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]] = Field(
-        None, description='Mozilla Foundation data to update, or "DELETE" to reset.'
-    )
-    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]] = Field(
+    amo: Literal["DELETE"] | AddOnsInSchema | None = Field(None, description='Add-ons data to update, or "DELETE" to reset.')
+    email: EmailPatchSchema | None = None
+    fxa: Literal["DELETE"] | FirefoxAccountsInSchema | None = Field(None, description='Firefox Accounts data to update, or "DELETE" to reset.')
+    mofo: Literal["DELETE"] | MozillaFoundationInSchema | None = Field(None, description='Mozilla Foundation data to update, or "DELETE" to reset.')
+    newsletters: list[NewsletterSchema] | Literal["UNSUBSCRIBE"] | None = Field(
         None,
         description="List of newsletters to add or update, or 'UNSUBSCRIBE' to unsubscribe from all.",
         examples=[[{"name": "firefox-welcome", "subscribed": False}]],
     )
-    waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]] = Field(
+    waitlists: list[WaitlistInSchema] | Literal["UNSUBSCRIBE"] | None = Field(
         None,
         description="List of waitlists to add or update.",
         examples=[
@@ -229,8 +225,8 @@ class CTMSResponse(BaseModel):
     email: EmailSchema
     fxa: FirefoxAccountsSchema
     mofo: MozillaFoundationSchema
-    newsletters: List[NewsletterTimestampedSchema]
-    waitlists: List[WaitlistTimestampedSchema]
+    newsletters: list[NewsletterTimestampedSchema]
+    waitlists: list[WaitlistTimestampedSchema]
     # Retro-compat fields
     vpn_waitlist: VpnWaitlistSchema
     relay_waitlist: RelayWaitlistSchema
@@ -297,9 +293,9 @@ class CTMSBulkResponse(BaseModel):
     start: datetime
     end: datetime
     limit: int
-    after: Optional[str] = None
-    next: Optional[Union[AnyUrlString, str]] = None
-    items: List[CTMSResponse]
+    after: str | None = None
+    next: AnyUrlString | str | None = None
+    items: list[CTMSResponse]
 
 
 class IdentityResponse(BaseModel):
@@ -307,10 +303,10 @@ class IdentityResponse(BaseModel):
 
     email_id: UUID
     primary_email: str
-    basket_token: Optional[UUID] = None
-    sfdc_id: Optional[str] = None
-    mofo_contact_id: Optional[str] = None
-    mofo_email_id: Optional[str] = None
-    amo_user_id: Optional[str] = None
-    fxa_id: Optional[str] = None
-    fxa_primary_email: Optional[str] = None
+    basket_token: UUID | None = None
+    sfdc_id: str | None = None
+    mofo_contact_id: str | None = None
+    mofo_email_id: str | None = None
+    amo_user_id: str | None = None
+    fxa_id: str | None = None
+    fxa_primary_email: str | None = None

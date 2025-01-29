@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import UUID4, ConfigDict, Field, model_validator
 
 from .base import ComparableBase
@@ -22,14 +20,14 @@ class WaitlistBase(ComparableBase):
         description="Basket slug for the waitlist",
         examples=["new-product"],
     )
-    source: Optional[AnyUrlString] = Field(
+    source: AnyUrlString | None = Field(
         default=None,
         description="Source URL of subscription",
         examples=["https://www.mozilla.org/en-US/"],
     )
     fields: dict = Field(default={}, description="Additional fields", examples=['{"platform": "linux"}'])
     subscribed: bool = Field(default=True, description="True to subscribe, False to unsubscribe")
-    unsub_reason: Optional[str] = Field(default=None, description="Reason for unsubscribing")
+    unsub_reason: str | None = Field(default=None, description="Reason for unsubscribing")
 
     def __lt__(self, other):
         return self.name < other.name
@@ -43,7 +41,7 @@ class WaitlistBase(ComparableBase):
         if self.name == "relay":
 
             class RelayFieldsSchema(ComparableBase):
-                geo: Optional[str] = CountryField()
+                geo: str | None = CountryField()
                 model_config = ConfigDict(extra="forbid")
 
             RelayFieldsSchema(**self.fields)
@@ -51,8 +49,8 @@ class WaitlistBase(ComparableBase):
         elif self.name == "vpn":
 
             class VPNFieldsSchema(ComparableBase):
-                geo: Optional[str] = CountryField()
-                platform: Optional[str] = PlatformField()
+                geo: str | None = CountryField()
+                platform: str | None = PlatformField()
                 model_config = ConfigDict(extra="forbid")
 
             VPNFieldsSchema(**self.fields)
@@ -64,8 +62,8 @@ class WaitlistBase(ComparableBase):
             # This should allow us to onboard most waitlists without specific
             # code change and service redeployment.
             class DefaultFieldsSchema(ComparableBase):
-                geo: Optional[str] = CountryField()
-                platform: Optional[str] = PlatformField()
+                geo: str | None = CountryField()
+                platform: str | None = PlatformField()
 
             DefaultFieldsSchema(**self.fields)
 
@@ -123,7 +121,7 @@ class RelayWaitlistSchema(ComparableBase):
     The Mozilla Relay Waitlist schema for the read-only `relay_waitlist` field.
     """
 
-    geo: Optional[str] = Field(
+    geo: str | None = Field(
         default=None,
         max_length=100,
         description="Relay waitlist country",
@@ -137,13 +135,13 @@ class VpnWaitlistSchema(ComparableBase):
     The Mozilla VPN Waitlist schema for the read-only `vpn_waitlist` field
     """
 
-    geo: Optional[str] = Field(
+    geo: str | None = Field(
         default=None,
         max_length=100,
         description="VPN waitlist country, FPN_Waitlist_Geo__c in Salesforce",
         examples=["fr"],
     )
-    platform: Optional[str] = Field(
+    platform: str | None = Field(
         default=None,
         max_length=100,
         description="VPN waitlist platforms as comma-separated list, FPN_Waitlist_Platform__c in Salesforce",

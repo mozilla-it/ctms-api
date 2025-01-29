@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from dockerflow import checks as dockerflow_checks
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -50,7 +49,7 @@ def login(
     request: Request,
     db: Session = Depends(get_db),
     form_data: OAuth2ClientCredentialsRequestForm = Depends(),
-    basic_credentials: Optional[HTTPBasicCredentials] = Depends(token_scheme),
+    basic_credentials: HTTPBasicCredentials | None = Depends(token_scheme),
     token_settings=Depends(get_token_settings),
 ):
     auth_info = auth_info_context.get()

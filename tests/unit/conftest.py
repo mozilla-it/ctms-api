@@ -2,9 +2,9 @@
 
 import logging
 import os.path
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from time import mktime
-from typing import Callable, Optional
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -62,9 +62,9 @@ def _gather_examples(schema_class) -> dict[str, str]:
     return examples
 
 
-def unix_timestamp(the_time: Optional[datetime] = None) -> int:
+def unix_timestamp(the_time: datetime | None = None) -> int:
     """Create a UNIX timestamp from a datetime or now"""
-    the_time = the_time or datetime.now(tz=timezone.utc)
+    the_time = the_time or datetime.now(tz=UTC)
     return int(mktime(the_time.timetuple()))
 
 
@@ -528,7 +528,7 @@ def post_contact(client, dbsession, request):
         code: int = 201,
         stored_contacts: int = 1,
         check_redirect: bool = True,
-        query_fields: Optional[dict] = None,
+        query_fields: dict | None = None,
         check_written: bool = True,
     ):
         if query_fields is None:
@@ -596,10 +596,10 @@ def put_contact(client, dbsession, request):
         modifier: Callable[[ContactSchema], ContactSchema] = lambda x: x,
         code: int = 201,
         stored_contacts: int = 1,
-        query_fields: Optional[dict] = None,
+        query_fields: dict | None = None,
         check_written: bool = True,
-        record: Optional[ContactSchema] = None,
-        new_default_fields: Optional[set] = None,
+        record: ContactSchema | None = None,
+        new_default_fields: set | None = None,
     ):
         if record:
             contact = record

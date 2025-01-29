@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -187,7 +187,7 @@ def main(
     #
     # Prepare SQL files
     #
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     tmp_suffix = table_suffix or now.strftime("%Y%m%dT%H%M")
     join_batches = []
     update_batches = []

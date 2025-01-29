@@ -1,6 +1,6 @@
 """Test database operations"""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -98,8 +98,8 @@ def test_get_bulk_contacts_mofo_relevant(dbsession, email_factory, mofo_relevant
 
     contacts = get_bulk_contacts(
         dbsession,
-        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
-        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        start_time=datetime.now(UTC) - timedelta(minutes=1),
+        end_time=datetime.now(UTC) + timedelta(minutes=1),
         limit=3,
         mofo_relevant=mofo_relevant_flag,
     )
@@ -107,7 +107,7 @@ def test_get_bulk_contacts_mofo_relevant(dbsession, email_factory, mofo_relevant
 
 
 def test_get_bulk_contacts_time_bounds(dbsession, email_factory):
-    start_time = datetime.now(timezone.utc)
+    start_time = datetime.now(UTC)
     end_time = start_time + timedelta(minutes=2)
 
     email_factory(update_timestamp=start_time - timedelta(minutes=1))
@@ -120,8 +120,8 @@ def test_get_bulk_contacts_time_bounds(dbsession, email_factory):
 
     contacts = get_bulk_contacts(
         dbsession,
-        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
-        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        start_time=datetime.now(UTC) - timedelta(minutes=1),
+        end_time=datetime.now(UTC) + timedelta(minutes=1),
         limit=5,
     )
 
@@ -136,8 +136,8 @@ def test_get_bulk_contacts_limited(dbsession, email_factory):
 
     contacts = get_bulk_contacts(
         dbsession,
-        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
-        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        start_time=datetime.now(UTC) - timedelta(minutes=1),
+        end_time=datetime.now(UTC) + timedelta(minutes=1),
         limit=5,
     )
     assert len(contacts) == 5
@@ -149,8 +149,8 @@ def test_get_bulk_contacts_after_email_id(dbsession, email_factory):
 
     [contact] = get_bulk_contacts(
         dbsession,
-        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
-        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        start_time=datetime.now(UTC) - timedelta(minutes=1),
+        end_time=datetime.now(UTC) + timedelta(minutes=1),
         limit=1,
         after_email_id=str(first_email.email_id),
     )
@@ -163,8 +163,8 @@ def test_get_bulk_contacts_one(dbsession, email_factory):
 
     [contact] = get_bulk_contacts(
         dbsession,
-        start_time=datetime.now(timezone.utc) - timedelta(minutes=1),
-        end_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        start_time=datetime.now(UTC) - timedelta(minutes=1),
+        end_time=datetime.now(UTC) + timedelta(minutes=1),
         limit=10,
     )
     assert contact.email.email_id == email.email_id
@@ -173,8 +173,8 @@ def test_get_bulk_contacts_one(dbsession, email_factory):
 def test_get_bulk_contacts_none(dbsession):
     bulk_contact_list = get_bulk_contacts(
         dbsession,
-        start_time=datetime.now(timezone.utc) + timedelta(days=1),
-        end_time=datetime.now(timezone.utc) + timedelta(days=1),
+        start_time=datetime.now(UTC) + timedelta(days=1),
+        end_time=datetime.now(UTC) + timedelta(days=1),
         limit=10,
     )
     assert bulk_contact_list == []

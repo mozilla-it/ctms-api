@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import UUID4, ConfigDict, Field
 
@@ -16,18 +16,18 @@ class NewsletterBase(ComparableBase):
     )
     subscribed: bool = Field(default=True, description="True if subscribed, False when formerly subscribed")
     format: Literal["H", "T"] = Field(default="H", description="Newsletter format, H=HTML, T=Plain Text")
-    lang: Optional[str] = Field(
+    lang: str | None = Field(
         default="en",
         min_length=2,
         max_length=5,
         description="Newsletter language code, usually 2 lowercase letters",
     )
-    source: Optional[AnyUrlString] = Field(
+    source: AnyUrlString | None = Field(
         default=None,
         description="Source URL of subscription",
         examples=["https://www.mozilla.org/en-US/"],
     )
-    unsub_reason: Optional[str] = Field(default=None, description="Reason for unsubscribing")
+    unsub_reason: str | None = Field(default=None, description="Reason for unsubscribing")
 
     def __lt__(self, other):
         return self.name < other.name

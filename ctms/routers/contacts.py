@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Dict, List, Literal, Optional, Union
+from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
@@ -56,15 +56,15 @@ def get_contact_or_404(db: Session, email_id) -> ContactSchema:
 
 
 def all_ids(
-    email_id: Optional[UUID] = None,
-    primary_email: Optional[str] = None,
-    basket_token: Optional[UUID] = None,
-    sfdc_id: Optional[str] = None,
-    mofo_contact_id: Optional[str] = None,
-    mofo_email_id: Optional[str] = None,
-    amo_user_id: Optional[str] = None,
-    fxa_id: Optional[str] = None,
-    fxa_primary_email: Optional[str] = None,
+    email_id: UUID | None = None,
+    primary_email: str | None = None,
+    basket_token: UUID | None = None,
+    sfdc_id: str | None = None,
+    mofo_contact_id: str | None = None,
+    mofo_email_id: str | None = None,
+    amo_user_id: str | None = None,
+    fxa_id: str | None = None,
+    fxa_primary_email: str | None = None,
 ):
     """Alternate IDs, injected as a dependency."""
     return {
@@ -138,7 +138,7 @@ def get_bulk_contacts_by_timestamp_or_4xx(
 @router.get(
     "/ctms",
     summary="Get all contacts matching alternate IDs",
-    response_model=List[CTMSResponse],
+    response_model=list[CTMSResponse],
     responses={
         400: {"model": BadRequestResponse},
         401: {"model": UnauthorizedResponse},
@@ -196,7 +196,7 @@ def create_ctms_contact(
     response: Response,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
-    content_json: Optional[Dict] = Depends(get_json),
+    content_json: dict | None = Depends(get_json),
 ):
     contact.email.email_id = contact.email.email_id or uuid4()
     email_id = contact.email.email_id
@@ -238,7 +238,7 @@ def create_or_update_ctms_contact(
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
-    content_json: Optional[Dict] = Depends(get_json),
+    content_json: dict | None = Depends(get_json),
 ):
     if contact.email.email_id:
         if contact.email.email_id != email_id:
@@ -282,7 +282,7 @@ def partial_update_ctms_contact(
     email_id: UUID = Path(..., title="The Email ID"),
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
-    content_json: Optional[Dict] = Depends(get_json),
+    content_json: dict | None = Depends(get_json),
 ):
     if contact.email and getattr(contact.email, "email_id") and contact.email.email_id != email_id:
         raise HTTPException(
@@ -310,7 +310,7 @@ def partial_update_ctms_contact(
 @router.delete(
     "/ctms/{primary_email}",
     summary="Delete all contact information from primary email",
-    response_model=List[IdentityResponse],
+    response_model=list[IdentityResponse],
     responses={
         404: {"model": NotFoundResponse},
     },
@@ -345,10 +345,10 @@ def delete_contact_by_primary_email(
 )
 def read_ctms_in_bulk_by_timestamps_and_limit(
     start: datetime,
-    end: Optional[Union[datetime, Literal[""]]] = None,
-    limit: Optional[Union[int, Literal[""]]] = None,
-    after: Optional[str] = None,
-    mofo_relevant: Optional[Union[bool, Literal[""]]] = None,
+    end: datetime | Literal[""] | None = None,
+    limit: int | Literal[""] | None = None,
+    after: str | None = None,
+    mofo_relevant: bool | Literal[""] | None = None,
     db: Session = Depends(get_db),
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
 ):
@@ -369,7 +369,7 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
 @router.get(
     "/identities",
     summary="Get identities associated with alternate IDs",
-    response_model=List[IdentityResponse],
+    response_model=list[IdentityResponse],
     responses={
         400: {"model": BadRequestResponse},
         401: {"model": UnauthorizedResponse},

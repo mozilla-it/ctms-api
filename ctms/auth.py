@@ -8,8 +8,7 @@ the client POSTs to /token again.
 """
 
 from contextvars import ContextVar
-from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional
+from datetime import UTC, datetime, timedelta
 
 import argon2
 import jwt
@@ -41,11 +40,11 @@ def create_access_token(
     data: dict,
     expires_delta: timedelta,
     secret_key: str,
-    now: Optional[datetime] = None,
+    now: datetime | None = None,
 ) -> str:
     """Create a JWT string to act as an OAuth2 access token."""
     to_encode = data.copy()
-    expire = (now or datetime.now(timezone.utc)) + expires_delta
+    expire = (now or datetime.now(UTC)) + expires_delta
     to_encode["exp"] = expire
     encoded_jwt: str = jwt.encode(to_encode, secret_key, algorithm="HS256")
     return encoded_jwt
@@ -96,8 +95,8 @@ class OAuth2ClientCredentialsRequestForm:
         self,
         grant_type: str = Form(None, pattern="^(client_credentials|refresh_token)$"),
         scope: str = Form(""),
-        client_id: Optional[str] = Form(None),
-        client_secret: Optional[str] = Form(None),
+        client_id: str | None = Form(None),
+        client_secret: str | None = Form(None),
     ):
         self.grant_type = grant_type
         self.scopes = scope.split()
@@ -120,16 +119,16 @@ class OAuth2ClientCredentials(OAuth2):
     def __init__(
         self,
         tokenUrl: str,
-        scheme_name: Optional[str] = None,
-        scopes: Optional[Dict[str, str]] = None,
+        scheme_name: str | None = None,
+        scopes: dict[str, str] | None = None,
     ):
         if not scopes:
             scopes = {}
         flows = OAuthFlowsModel(clientCredentials={"tokenUrl": tokenUrl, "scopes": scopes})
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=True)
 
-    async def __call__(self, request: Request) -> Optional[str]:
-        authorization: Optional[str] = request.headers.get("Authorization")
+    async def __call__(self, request: Request) -> str | None:
+        authorization: str | None = request.headers.get("Authorization")
 
         # TODO: Try combining these lines after FastAPI 0.61.2 / mypy update
         scheme_param = get_authorization_scheme_param(authorization)
