@@ -69,8 +69,13 @@ def set_metrics(metrics: Any) -> None:
     METRICS = metrics
 
 
-get_metrics_registry = lambda: METRICS_REGISTRY
-get_metrics = lambda: METRICS
+def get_metrics_registry() -> CollectorRegistry:
+    return METRICS_REGISTRY
+
+
+def get_metrics() -> Any:
+    return METRICS
+
 
 oauth2_scheme = OAuth2ClientCredentials(tokenUrl="token")
 token_scheme = HTTPBasic(auto_error=False)
