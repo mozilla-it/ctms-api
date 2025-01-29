@@ -75,9 +75,7 @@ def get_api_client(
     return api_client
 
 
-def get_enabled_api_client(
-    request: Request, api_client: ApiClientSchema = Depends(get_api_client)
-):
+def get_enabled_api_client(request: Request, api_client: ApiClientSchema = Depends(get_api_client)):
     auth_info = auth_info_context.get()
     auth_info.clear()
     if not auth_info.get("client_id"):

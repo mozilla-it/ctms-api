@@ -13,9 +13,7 @@ from starlette.routing import Match, Route
 from ctms.auth import OAuth2ClientCredentials
 from ctms.crud import get_active_api_client_ids
 
-METRICS_PARAMS: dict[
-    str, tuple[Type[Counter] | Type[Histogram] | type[Gauge], dict]
-] = {
+METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram] | type[Gauge], dict]] = {
     "requests": (
         Counter,
         {
@@ -87,9 +85,7 @@ def init_metrics(registry: CollectorRegistry) -> dict[str, Counter | Histogram |
     return metrics
 
 
-def init_metrics_labels(
-    dbsession: Session, app: FastAPI, metrics: dict[str, Counter | Histogram]
-) -> None:
+def init_metrics_labels(dbsession: Session, app: FastAPI, metrics: dict[str, Counter | Histogram]) -> None:
     """Create the initial metric combinations."""
     openapi = app.openapi()
     client_ids = get_active_api_client_ids(dbsession) or ["none"]
@@ -108,9 +104,7 @@ def init_metrics_labels(
             status_codes = []
             for method_lower, mspec in api_spec.items():
                 if method_lower.upper() in methods:
-                    status_codes.extend(
-                        [int(code) for code in list(mspec.get("responses", [200]))]
-                    )
+                    status_codes.extend([int(code) for code in list(mspec.get("responses", [200]))])
                     is_api |= "security" in mspec
         elif path == "/":
             status_codes = [307]
@@ -129,9 +123,7 @@ def init_metrics_labels(
             for api_combo in product(methods, status_code_families):
                 method, status_code_family = api_combo
                 for client_id in client_ids:
-                    api_request_metric.labels(
-                        method, path, client_id, status_code_family
-                    )
+                    api_request_metric.labels(method, path, client_id, status_code_family)
 
 
 def emit_response_metrics(

@@ -190,9 +190,7 @@ def test_get_ctms_not_found(client, dbsession):
 
 
 @pytest.mark.parametrize("waitlist_name", ["vpn", "relay"])
-def test_get_ctms_without_geo_in_waitlist(
-    waitlist_name, client, dbsession, waitlist_factory
-):
+def test_get_ctms_without_geo_in_waitlist(waitlist_name, client, dbsession, waitlist_factory):
     existing_waitlist = waitlist_factory(name=waitlist_name, fields={})
     dbsession.flush()
     email_id = existing_waitlist.email.email_id

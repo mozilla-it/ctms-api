@@ -63,9 +63,7 @@ patch_single_value_params = (
 
 
 @pytest.mark.parametrize("group_name,key,value", (patch_single_value_params))
-def test_patch_one_new_value_mostly_empty(
-    client, email_factory, group_name, key, value
-):
+def test_patch_one_new_value_mostly_empty(client, email_factory, group_name, key, value):
     """PATCH can update a single value."""
     email = email_factory()
     contact = ContactSchema.from_email(email)
@@ -182,9 +180,7 @@ def test_patch_to_default(client, email_factory, group_name, key):
         with_amo=True,
     )
 
-    expected = jsonable_encoder(
-        CTMSResponse(**ContactSchema.from_email(email).model_dump())
-    )
+    expected = jsonable_encoder(CTMSResponse(**ContactSchema.from_email(email).model_dump()))
     existing_value = expected[group_name][key]
 
     # Load the default value from the schema
@@ -203,9 +199,7 @@ def test_patch_to_default(client, email_factory, group_name, key):
     expected[group_name][key] = default_value
     assert existing_value != default_value
 
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert actual["status"] == "ok"
@@ -219,9 +213,7 @@ def test_patch_cannot_set_timestamps(client, email_factory):
     """PATCH can not set timestamps directly."""
     email = email_factory(with_amo=True)
 
-    expected = jsonable_encoder(
-        CTMSResponse(**ContactSchema.from_email(email).model_dump())
-    )
+    expected = jsonable_encoder(CTMSResponse(**ContactSchema.from_email(email).model_dump()))
     new_ts = datetime.now(tz=UTC).isoformat()
     assert expected["amo"]["create_timestamp"] == email.amo.create_timestamp.isoformat()
     assert expected["amo"]["create_timestamp"] != new_ts
@@ -238,9 +230,7 @@ def test_patch_cannot_set_timestamps(client, email_factory):
             "update_timestamp": new_ts,
         },
     }
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert actual["status"] == "ok"
@@ -313,9 +303,7 @@ def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_fa
             mofo_email_id=str(uuid4()),
             mofo_contact_id=str(uuid4()),
         ),
-        fxa=FirefoxAccountsInSchema(
-            fxa_id="1337", primary_email="fxa-conflict@example.com"
-        ),
+        fxa=FirefoxAccountsInSchema(fxa_id="1337", primary_email="fxa-conflict@example.com"),
     )
     create_full_contact(dbsession, conflicting_data)
 
@@ -333,12 +321,7 @@ def test_patch_error_on_id_conflict(client, dbsession, group_name, key, email_fa
     email_id = existing_contact.email.email_id
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 409
-    assert resp.json() == {
-        "detail": (
-            "Contact with primary_email, basket_token, mofo_email_id, or fxa_id"
-            " already exists"
-        )
-    }
+    assert resp.json() == {"detail": ("Contact with primary_email, basket_token, mofo_email_id, or fxa_id already exists")}
 
 
 def test_patch_to_subscribe(client, email_factory):
@@ -346,9 +329,7 @@ def test_patch_to_subscribe(client, email_factory):
     email = email_factory(newsletters=1)
 
     patch_data = {"newsletters": [{"name": "zzz-newsletter"}]}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == 2
@@ -369,9 +350,7 @@ def test_patch_to_update_subscription(client, newsletter_factory):
     existing_newsletter = newsletter_factory()
 
     email_id = str(existing_newsletter.email.email_id)
-    patch_data = {
-        "newsletters": [{"name": existing_newsletter.name, "format": "H", "lang": "XX"}]
-    }
+    patch_data = {"newsletters": [{"name": existing_newsletter.name, "format": "H", "lang": "XX"}]}
     resp = client.patch(f"/ctms/{email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
@@ -406,9 +385,7 @@ def test_patch_to_unsubscribe(client, email_factory, newsletter_factory):
             }
         ]
     }
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == len(email.newsletters)
@@ -438,9 +415,7 @@ def test_patch_to_unsubscribe_but_not_subscribed(client, email_factory):
             }
         ]
     }
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == 1
@@ -452,9 +427,7 @@ def test_patch_unsubscribe_all(client, email_factory):
     email = email_factory(newsletters=2)
 
     patch_data = {"newsletters": "UNSUBSCRIBE"}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["newsletters"]) == 2
@@ -467,9 +440,7 @@ def test_patch_to_delete_group(client, email_factory, group_name):
     email = email_factory(with_amo=True, with_fxa=True, with_mofo=True)
 
     patch_data = {group_name: "DELETE"}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     defaults = {
@@ -487,9 +458,7 @@ def test_patch_to_delete_deleted_group(client, email_factory):
     assert email.amo is None
 
     patch_data = {"mofo": "DELETE"}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
 
     assert resp.status_code == 200
     actual = resp.json()
@@ -502,9 +471,7 @@ def test_patch_will_validate_waitlist_fields(client, email_factory):
     email = email_factory()
 
     patch_data = {"waitlists": [{"name": "future-tech", "source": 42}]}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 422
     details = resp.json()
     assert details["detail"][0]["loc"] == [
@@ -521,9 +488,7 @@ def test_patch_to_add_a_waitlist(client, email_factory):
     email = email_factory()
 
     patch_data = {"waitlists": [{"name": "future-tech", "fields": {"geo": "es"}}]}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     [new_waitlist] = actual["waitlists"]
@@ -542,9 +507,7 @@ def test_patch_does_not_add_an_unsubscribed_waitlist(client, email_factory):
     email = email_factory()
 
     patch_data = {"waitlists": [{"name": "future-tech", "subscribed": False}]}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["waitlists"]) == 0
@@ -555,15 +518,9 @@ def test_patch_to_update_a_waitlist(client, email_factory, waitlist_factory):
     email = email_factory()
     waitlist = waitlist_factory(fields={"geo": "fr"}, email=email)
 
-    patched_waitlist = (
-        WaitlistInSchema.model_validate(waitlist)
-        .model_copy(update={"fields": {"geo": "ca"}})
-        .model_dump()
-    )
+    patched_waitlist = WaitlistInSchema.model_validate(waitlist).model_copy(update={"fields": {"geo": "ca"}}).model_dump()
     patch_data = {"waitlists": [patched_waitlist]}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     assert actual["waitlists"][0]["fields"]["geo"] == "ca"
@@ -574,16 +531,8 @@ def test_patch_to_remove_a_waitlist(client, email_factory, waitlist_factory):
     email = email_factory()
     waitlist_factory(name="bye-bye", email=email)
 
-    patch_data = {
-        "waitlists": [
-            WaitlistInSchema(
-                name="bye-bye", subscribed=False, unsub_reason="Not interested"
-            ).model_dump()
-        ]
-    }
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    patch_data = {"waitlists": [WaitlistInSchema(name="bye-bye", subscribed=False, unsub_reason="Not interested").model_dump()]}
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200
     actual = resp.json()
     [unsubscribed] = actual["waitlists"]
@@ -597,9 +546,7 @@ def test_patch_to_remove_all_waitlists(client, email_factory):
     assert all(wl.subscribed for wl in email.waitlists)
 
     patch_data = {"waitlists": "UNSUBSCRIBE"}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
 
     assert resp.status_code == 200
     actual = resp.json()
@@ -611,18 +558,14 @@ def test_patch_preserves_waitlists_if_omitted(client, email_factory):
     email = email_factory(waitlists=2)
 
     patch_data = {"email": {"first_name": "Jeff"}}
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
 
     assert resp.status_code == 200
     actual = resp.json()
     assert len(actual["waitlists"]) == len(email.waitlists)
 
 
-def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
-    client, email_factory
-):
+def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(client, email_factory):
     email = email_factory()
 
     patch_data = {
@@ -630,7 +573,5 @@ def test_subscribe_to_relay_newsletter_turned_into_relay_waitlist(
         "vpn_waitlist": {"geo": "fr", "platform": "windows"},
     }
 
-    resp = client.patch(
-        f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True
-    )
+    resp = client.patch(f"/ctms/{email.email_id}", json=patch_data, follow_redirects=True)
     assert resp.status_code == 200  # Not 400

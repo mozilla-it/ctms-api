@@ -115,9 +115,7 @@ def test_get_identities_by_two_alt_id_match(client, email_factory):
     assert fxa_email
 
     resp = client.get(f"/identities?sfdc_id={sfdc_id}&fxa_primary_email={fxa_email}")
-    identity = json.loads(
-        ContactSchema.from_email(email).as_identity_response().model_dump_json()
-    )
+    identity = json.loads(ContactSchema.from_email(email).as_identity_response().model_dump_json())
     assert resp.status_code == 200
     assert resp.json() == [identity]
 
@@ -127,9 +125,7 @@ def test_get_identities_by_two_alt_id_mismatch_fails(client, email_factory):
     email_1 = email_factory(with_amo=True)
     email_2 = email_factory(with_amo=True)
 
-    resp = client.get(
-        f"/identities?primary_email={email_1.primary_email}&amo_user_id={email_2.amo.user_id}"
-    )
+    resp = client.get(f"/identities?primary_email={email_1.primary_email}&amo_user_id={email_2.amo.user_id}")
     assert resp.status_code == 200
     assert resp.json() == []
 
@@ -178,9 +174,7 @@ def test_get_identities_with_no_alt_ids_fails(client, dbsession):
         ("mofo_email_id", "cad092ec-a71a-4df5-aa92-517959caeecb"),
     ],
 )
-def test_get_identities_with_unknown_ids_fails(
-    client, dbsession, alt_id_name, alt_id_value
-):
+def test_get_identities_with_unknown_ids_fails(client, dbsession, alt_id_name, alt_id_value):
     """GET /identities returns an empty list if no IDs match."""
     resp = client.get(f"/identities?{alt_id_name}={alt_id_value}")
     assert resp.status_code == 200

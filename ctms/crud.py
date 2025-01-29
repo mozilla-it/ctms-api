@@ -59,18 +59,10 @@ def count_total_contacts(db: Session) -> int:
     This metadata is refreshed on `VACUUM` or `ANALYSIS` which
     is run regularly by default on our database instances.
     """
-    result = db.execute(
-        text(
-            "SELECT reltuples AS estimate "
-            "FROM pg_class "
-            f"where relname = '{Email.__tablename__}'"
-        )
-    ).scalar()
+    result = db.execute(text("SELECT reltuples AS estimate " "FROM pg_class " f"where relname = '{Email.__tablename__}'")).scalar()
     if result is None or result < 0:
         # Fall back to a full count if the estimate is not available.
-        result = db.execute(
-            text(f"SELECT COUNT(*) FROM {Email.__tablename__}")
-        ).scalar()
+        result = db.execute(text(f"SELECT COUNT(*) FROM {Email.__tablename__}")).scalar()
     if result is None:
         return -1
     return int(result)
@@ -81,19 +73,11 @@ def get_amo_by_email_id(db: Session, email_id: UUID4):
 
 
 def get_fxa_by_email_id(db: Session, email_id: UUID4):
-    return (
-        db.query(FirefoxAccount)
-        .filter(FirefoxAccount.email_id == email_id)
-        .one_or_none()
-    )
+    return db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).one_or_none()
 
 
 def get_mofo_by_email_id(db: Session, email_id: UUID4):
-    return (
-        db.query(MozillaFoundationContact)
-        .filter(MozillaFoundationContact.email_id == email_id)
-        .one_or_none()
-    )
+    return db.query(MozillaFoundationContact).filter(MozillaFoundationContact.email_id == email_id).one_or_none()
 
 
 def get_newsletters_by_email_id(db: Session, email_id: UUID4):
@@ -162,11 +146,7 @@ def get_bulk_contacts(
     for query_filter in filter_list:
         bulk_contacts = bulk_contacts.filter(query_filter)
 
-    bulk_contacts = (
-        bulk_contacts.order_by(asc(Email.update_timestamp), asc(Email.email_id))
-        .limit(limit)
-        .all()
-    )
+    bulk_contacts = bulk_contacts.order_by(asc(Email.update_timestamp), asc(Email.email_id)).limit(limit).all()
 
     return [ContactSchema.from_email(email) for email in bulk_contacts]
 
@@ -222,36 +202,26 @@ def get_contacts_by_any_id(
     if email_id is not None:
         statement = statement.filter(Email.email_id == email_id)
     if primary_email is not None:
-        statement = statement.filter_by(
-            primary_email_insensitive_comparator=primary_email
-        )
+        statement = statement.filter_by(primary_email_insensitive_comparator=primary_email)
     if basket_token is not None:
         statement = statement.filter(Email.basket_token == str(basket_token))
     if sfdc_id is not None:
         statement = statement.filter(Email.sfdc_id == sfdc_id)
     if mofo_contact_id is not None:
-        statement = statement.join(Email.mofo).filter(
-            MozillaFoundationContact.mofo_contact_id == mofo_contact_id
-        )
+        statement = statement.join(Email.mofo).filter(MozillaFoundationContact.mofo_contact_id == mofo_contact_id)
     if mofo_email_id is not None:
-        statement = statement.join(Email.mofo).filter(
-            MozillaFoundationContact.mofo_email_id == mofo_email_id
-        )
+        statement = statement.join(Email.mofo).filter(MozillaFoundationContact.mofo_email_id == mofo_email_id)
     if amo_user_id is not None:
         statement = statement.join(Email.amo).filter(AmoAccount.user_id == amo_user_id)
     if fxa_id is not None:
         statement = statement.join(Email.fxa).filter(FirefoxAccount.fxa_id == fxa_id)
     if fxa_primary_email is not None:
-        statement = statement.join(Email.fxa).filter_by(
-            fxa_primary_email_insensitive_comparator=fxa_primary_email
-        )
+        statement = statement.join(Email.fxa).filter_by(fxa_primary_email_insensitive_comparator=fxa_primary_email)
     emails = cast(List[Email], statement.all())
     return [ContactSchema.from_email(email) for email in emails]
 
 
-def create_amo(
-    db: Session, email_id: UUID4, amo: AddOnsInSchema
-) -> Optional[AmoAccount]:
+def create_amo(db: Session, email_id: UUID4, amo: AddOnsInSchema) -> Optional[AmoAccount]:
     if amo.is_default():
         return None
     db_amo = AmoAccount(email_id=email_id, **amo.model_dump())
@@ -267,9 +237,7 @@ def create_or_update_amo(db: Session, email_id: UUID4, amo: Optional[AddOnsInSch
     # Providing update timestamp
     updated_amo = UpdatedAddOnsInSchema(**amo.model_dump())
     stmt = insert(AmoAccount).values(email_id=email_id, **updated_amo.model_dump())
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[AmoAccount.email_id], set_=updated_amo.model_dump()
-    )
+    stmt = stmt.on_conflict_do_update(index_elements=[AmoAccount.email_id], set_=updated_amo.model_dump())
     db.execute(stmt)
 
 
@@ -283,15 +251,11 @@ def create_or_update_email(db: Session, email: EmailPutSchema):
     updated_email = UpdatedEmailPutSchema(**email.model_dump())
 
     stmt = insert(Email).values(**updated_email.model_dump())
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[Email.email_id], set_=updated_email.model_dump()
-    )
+    stmt = stmt.on_conflict_do_update(index_elements=[Email.email_id], set_=updated_email.model_dump())
     db.execute(stmt)
 
 
-def create_fxa(
-    db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema
-) -> Optional[FirefoxAccount]:
+def create_fxa(db: Session, email_id: UUID4, fxa: FirefoxAccountsInSchema) -> Optional[FirefoxAccount]:
     if fxa.is_default():
         return None
     db_fxa = FirefoxAccount(email_id=email_id, **fxa.model_dump())
@@ -299,9 +263,7 @@ def create_fxa(
     return db_fxa
 
 
-def create_or_update_fxa(
-    db: Session, email_id: UUID4, fxa: Optional[FirefoxAccountsInSchema]
-):
+def create_or_update_fxa(db: Session, email_id: UUID4, fxa: Optional[FirefoxAccountsInSchema]):
     if not fxa or fxa.is_default():
         (db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete())
         return
@@ -309,15 +271,11 @@ def create_or_update_fxa(
     updated_fxa = UpdatedFirefoxAccountsInSchema(**fxa.model_dump())
 
     stmt = insert(FirefoxAccount).values(email_id=email_id, **updated_fxa.model_dump())
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[FirefoxAccount.email_id], set_=updated_fxa.model_dump()
-    )
+    stmt = stmt.on_conflict_do_update(index_elements=[FirefoxAccount.email_id], set_=updated_fxa.model_dump())
     db.execute(stmt)
 
 
-def create_mofo(
-    db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema
-) -> Optional[MozillaFoundationContact]:
+def create_mofo(db: Session, email_id: UUID4, mofo: MozillaFoundationInSchema) -> Optional[MozillaFoundationContact]:
     if mofo.is_default():
         return None
     db_mofo = MozillaFoundationContact(email_id=email_id, **mofo.model_dump())
@@ -325,28 +283,16 @@ def create_mofo(
     return db_mofo
 
 
-def create_or_update_mofo(
-    db: Session, email_id: UUID4, mofo: Optional[MozillaFoundationInSchema]
-):
+def create_or_update_mofo(db: Session, email_id: UUID4, mofo: Optional[MozillaFoundationInSchema]):
     if not mofo or mofo.is_default():
-        (
-            db.query(MozillaFoundationContact)
-            .filter(MozillaFoundationContact.email_id == email_id)
-            .delete()
-        )
+        (db.query(MozillaFoundationContact).filter(MozillaFoundationContact.email_id == email_id).delete())
         return
-    stmt = insert(MozillaFoundationContact).values(
-        email_id=email_id, **mofo.model_dump()
-    )
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[MozillaFoundationContact.email_id], set_=mofo.model_dump()
-    )
+    stmt = insert(MozillaFoundationContact).values(email_id=email_id, **mofo.model_dump())
+    stmt = stmt.on_conflict_do_update(index_elements=[MozillaFoundationContact.email_id], set_=mofo.model_dump())
     db.execute(stmt)
 
 
-def create_newsletter(
-    db: Session, email_id: UUID4, newsletter: NewsletterInSchema
-) -> Optional[Newsletter]:
+def create_newsletter(db: Session, email_id: UUID4, newsletter: NewsletterInSchema) -> Optional[Newsletter]:
     if newsletter.is_default():
         return None
     db_newsletter = Newsletter(email_id=email_id, **newsletter.model_dump())
@@ -354,18 +300,12 @@ def create_newsletter(
     return db_newsletter
 
 
-def create_or_update_newsletters(
-    db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]
-):
+def create_or_update_newsletters(db: Session, email_id: UUID4, newsletters: List[NewsletterInSchema]):
     # Start by deleting the existing newsletters that are not specified as input.
     # We delete instead of set subscribed=False, because we want an idempotent
     # round-trip of PUT/GET at the API level.
-    names = [
-        newsletter.name for newsletter in newsletters if not newsletter.is_default()
-    ]
-    db.query(Newsletter).filter(
-        Newsletter.email_id == email_id, Newsletter.name.notin_(names)
-    ).delete(
+    names = [newsletter.name for newsletter in newsletters if not newsletter.is_default()]
+    db.query(Newsletter).filter(Newsletter.email_id == email_id, Newsletter.name.notin_(names)).delete(
         # Do not bother synchronizing objects in the session.
         # We won't have stale objects because the next upsert query will update
         # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
@@ -373,9 +313,7 @@ def create_or_update_newsletters(
     )
 
     if newsletters:
-        stmt = insert(Newsletter).values(
-            [{"email_id": email_id, **n.model_dump()} for n in newsletters]
-        )
+        stmt = insert(Newsletter).values([{"email_id": email_id, **n.model_dump()} for n in newsletters])
         stmt = stmt.on_conflict_do_update(
             constraint="uix_email_name",
             set_={
@@ -387,9 +325,7 @@ def create_or_update_newsletters(
         db.execute(stmt)
 
 
-def create_waitlist(
-    db: Session, email_id: UUID4, waitlist: WaitlistInSchema
-) -> Optional[Waitlist]:
+def create_waitlist(db: Session, email_id: UUID4, waitlist: WaitlistInSchema) -> Optional[Waitlist]:
     if waitlist.is_default():
         return None
     db_waitlist = Waitlist(email_id=email_id, **waitlist.model_dump())
@@ -397,29 +333,21 @@ def create_waitlist(
     return db_waitlist
 
 
-def create_or_update_waitlists(
-    db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]
-):
+def create_or_update_waitlists(db: Session, email_id: UUID4, waitlists: List[WaitlistInSchema]):
     # Start by deleting the existing waitlists that are not specified as input.
     # We delete instead of set subscribed=False, because we want an idempotent
     # round-trip of PUT/GET at the API level.
     # Note: the contact is marked as pending synchronization at the API routers level.
     names = [waitlist.name for waitlist in waitlists if not waitlist.is_default()]
-    db.query(Waitlist).filter(
-        Waitlist.email_id == email_id, Waitlist.name.notin_(names)
-    ).delete(
+    db.query(Waitlist).filter(Waitlist.email_id == email_id, Waitlist.name.notin_(names)).delete(
         # Do not bother synchronizing objects in the session.
         # We won't have stale objects because the next upsert query will update
         # the other remaining objects (equivalent to `Waitlist.name.in_(names)`).
         synchronize_session=False
     )
-    waitlists_to_upsert = [
-        WaitlistInSchema(**waitlist.model_dump()) for waitlist in waitlists
-    ]
+    waitlists_to_upsert = [WaitlistInSchema(**waitlist.model_dump()) for waitlist in waitlists]
     if waitlists_to_upsert:
-        stmt = insert(Waitlist).values(
-            [{"email_id": email_id, **wl.model_dump()} for wl in waitlists]
-        )
+        stmt = insert(Waitlist).values([{"email_id": email_id, **wl.model_dump()} for wl in waitlists])
         stmt = stmt.on_conflict_do_update(
             constraint="uix_wl_email_name",
             set_={
@@ -452,9 +380,7 @@ def create_contact(
         create_waitlist(db, email_id, waitlist)
 
 
-def create_or_update_contact(
-    db: Session, email_id: UUID4, contact: ContactPutSchema, metrics: Optional[Dict]
-):
+def create_or_update_contact(db: Session, email_id: UUID4, contact: ContactPutSchema, metrics: Optional[Dict]):
     create_or_update_email(db, contact.email)
     create_or_update_amo(db, email_id, contact.amo)
     create_or_update_fxa(db, email_id, contact.fxa)
@@ -466,9 +392,7 @@ def create_or_update_contact(
 
 def delete_contact(db: Session, email_id: UUID4):
     db.query(AmoAccount).filter(AmoAccount.email_id == email_id).delete()
-    db.query(MozillaFoundationContact).filter(
-        MozillaFoundationContact.email_id == email_id
-    ).delete()
+    db.query(MozillaFoundationContact).filter(MozillaFoundationContact.email_id == email_id).delete()
     db.query(Newsletter).filter(Newsletter.email_id == email_id).delete()
     db.query(Waitlist).filter(Waitlist.email_id == email_id).delete()
     db.query(FirefoxAccount).filter(FirefoxAccount.email_id == email_id).delete()
@@ -492,9 +416,7 @@ def update_contact(  # noqa: PLR0912
     if "email" in update_data:
         _update_orm(email, update_data["email"])
 
-    simple_groups: Dict[
-        str, Tuple[Callable[[Session, UUID4, Any], Optional[Base]], Type[Any]]
-    ] = {
+    simple_groups: Dict[str, Tuple[Callable[[Session, UUID4, Any], Optional[Base]], Type[Any]]] = {
         "amo": (create_amo, AddOnsInSchema),
         "fxa": (create_fxa, FirefoxAccountsInSchema),
         "mofo": (create_mofo, MozillaFoundationInSchema),
@@ -527,9 +449,7 @@ def update_contact(  # noqa: PLR0912
                 if nl_update["name"] in existing:
                     _update_orm(existing[nl_update["name"]], nl_update)
                 elif nl_update.get("subscribed", True):
-                    new = create_newsletter(
-                        db, email_id, NewsletterInSchema(**nl_update)
-                    )
+                    new = create_newsletter(db, email_id, NewsletterInSchema(**nl_update))
                     email.newsletters.append(new)
 
     existing = {}
@@ -565,13 +485,7 @@ def get_api_client_by_id(db: Session, client_id: str):
 
 
 def get_active_api_client_ids(db: Session) -> List[str]:
-    rows = (
-        db.query(ApiClient)
-        .filter(ApiClient.enabled.is_(True))
-        .options(load_only(ApiClient.client_id))
-        .order_by(ApiClient.client_id)
-        .all()
-    )
+    rows = db.query(ApiClient).filter(ApiClient.enabled.is_(True)).options(load_only(ApiClient.client_id)).order_by(ApiClient.client_id).all()
     return [row.client_id for row in rows]
 
 
@@ -591,10 +505,5 @@ def get_contacts_from_newsletter(dbsession, newsletter_name):
 
 
 def get_contacts_from_waitlist(dbsession, waitlist_name):
-    entries = (
-        dbsession.query(Waitlist)
-        .options(joinedload(Waitlist.email))
-        .filter(Waitlist.name == waitlist_name)
-        .all()
-    )
+    entries = dbsession.query(Waitlist).options(joinedload(Waitlist.email)).filter(Waitlist.name == waitlist_name).all()
     return entries

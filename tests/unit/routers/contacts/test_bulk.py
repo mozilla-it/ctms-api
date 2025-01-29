@@ -61,9 +61,7 @@ def test_get_ctms_bulk_by_timerange(client, email_factory):
     )
     last_email = email_factory()
 
-    after = BulkRequestSchema.compressor_for_bulk_encoded_details(
-        first_email.email_id, first_email.update_timestamp
-    )
+    after = BulkRequestSchema.compressor_for_bulk_encoded_details(first_email.email_id, first_email.update_timestamp)
     limit = 1
     start = first_email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())
@@ -107,9 +105,7 @@ def test_get_ctms_bulk_by_timerange_no_results(client, email_factory):
     )
     first_email = sorted_list[0]
     last_email = sorted_list[-1]
-    after = BulkRequestSchema.compressor_for_bulk_encoded_details(
-        last_email.email_id, last_email.update_timestamp
-    )
+    after = BulkRequestSchema.compressor_for_bulk_encoded_details(last_email.email_id, last_email.update_timestamp)
     limit = 1
     start = first_email.update_timestamp - timedelta(hours=12)
     start_time = urllib.parse.quote_plus(start.isoformat())

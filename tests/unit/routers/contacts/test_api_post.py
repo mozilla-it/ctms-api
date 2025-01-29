@@ -11,11 +11,7 @@ from ctms import models, schemas
 def test_create_basic_no_email_id(client, dbsession):
     """Most straightforward contact creation succeeds when email_id is not a key."""
 
-    contact_data = jsonable_encoder(
-        schemas.ContactInSchema(
-            email={"primary_email": "hello@example.com"}
-        ).model_dump(exclude_none=True)
-    )
+    contact_data = jsonable_encoder(schemas.ContactInSchema(email={"primary_email": "hello@example.com"}).model_dump(exclude_none=True))
     assert "email_id" not in contact_data["email"].keys()
 
     resp = client.post("/ctms", json=contact_data)
@@ -27,9 +23,7 @@ def test_create_basic_no_email_id(client, dbsession):
 def test_create_basic_email_id_is_none(client, dbsession):
     """Most straightforward contact creation succeeds when email_id is not a key."""
 
-    contact_data = jsonable_encoder(
-        schemas.ContactInSchema(email={"primary_email": "hello@example.com"})
-    )
+    contact_data = jsonable_encoder(schemas.ContactInSchema(email={"primary_email": "hello@example.com"}))
     assert contact_data["email"]["email_id"] is None
 
     resp = client.post("/ctms", json=contact_data)
@@ -42,11 +36,7 @@ def test_create_basic_with_id(client, dbsession, email_factory):
     """Most straightforward contact creation succeeds when email_id is specified."""
     provided_email_id = str(uuid4())
 
-    contact_data = jsonable_encoder(
-        schemas.ContactInSchema(
-            email={"email_id": provided_email_id, "primary_email": "hello@example.com"}
-        )
-    )
+    contact_data = jsonable_encoder(schemas.ContactInSchema(email={"email_id": provided_email_id, "primary_email": "hello@example.com"}))
     assert contact_data["email"]["email_id"] == provided_email_id
 
     resp = client.post("/ctms", json=contact_data)
@@ -58,9 +48,7 @@ def test_create_basic_with_id(client, dbsession, email_factory):
 def test_create_basic_idempotent(client, dbsession):
     """Creating a contact works across retries."""
 
-    contact_data = jsonable_encoder(
-        schemas.ContactInSchema(email={"primary_email": "hello@example.com"})
-    )
+    contact_data = jsonable_encoder(schemas.ContactInSchema(email={"primary_email": "hello@example.com"}))
 
     resp = client.post("/ctms", json=contact_data)
     assert resp.status_code == 201
@@ -75,11 +63,7 @@ def test_create_basic_idempotent(client, dbsession):
 def test_create_basic_with_id_collision(client, email_factory):
     """Creating a contact with the same id but different data fails."""
 
-    contact_data = jsonable_encoder(
-        schemas.ContactInSchema(
-            email={"primary_email": "hello@example.com", "email_lang": "en"}
-        )
-    )
+    contact_data = jsonable_encoder(schemas.ContactInSchema(email={"primary_email": "hello@example.com", "email_lang": "en"}))
 
     resp = client.post("/ctms", json=contact_data)
     assert resp.status_code == 201
@@ -100,9 +84,7 @@ def test_create_basic_with_email_collision(client, email_factory):
     colliding_email = "foo@example.com"
     email_factory(primary_email=colliding_email)
 
-    contact_data = jsonable_encoder(
-        schemas.ContactInSchema(email={"primary_email": colliding_email})
-    )
+    contact_data = jsonable_encoder(schemas.ContactInSchema(email={"primary_email": colliding_email}))
 
     resp = client.post("/ctms", json=contact_data)
     assert resp.status_code == 409

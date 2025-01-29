@@ -13,9 +13,7 @@ from ctms.schemas import ContactPutSchema, EmailInSchema
 def test_create_or_update_basic_id_is_different(client):
     """This should fail since we require an email_id to PUT"""
 
-    contact = ContactPutSchema(
-        email={"email_id": str(uuid4()), "primary_email": "hello@example.com"}
-    )
+    contact = ContactPutSchema(email={"email_id": str(uuid4()), "primary_email": "hello@example.com"})
     # This id is different from the one in the contact
     resp = client.put(
         f"/ctms/{str(uuid4())}",
@@ -28,9 +26,7 @@ def test_create_or_update_basic_id_is_different(client):
 def test_create_or_update_basic_id_is_none(client):
     """This should fail since we require an email_id to PUT"""
 
-    contact_data = ContactPutSchema.model_construct(
-        EmailInSchema(primary_email="foo@example.com")
-    )
+    contact_data = ContactPutSchema.model_construct(EmailInSchema(primary_email="foo@example.com"))
     resp = client.put(f"/ctms/{str(uuid4())}", json=jsonable_encoder(contact_data))
     assert resp.status_code == 422
 
@@ -38,9 +34,7 @@ def test_create_or_update_basic_id_is_none(client):
 def test_create_or_update_basic_empty_db(client):
     """Most straightforward contact creation succeeds when there is no collision"""
     email_id = str(uuid4())
-    contact_data = ContactPutSchema(
-        email={"email_id": email_id, "primary_email": "foo@example.com"}
-    )
+    contact_data = ContactPutSchema(email={"email_id": email_id, "primary_email": "foo@example.com"})
     resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
     assert resp.status_code == 201
 
@@ -49,9 +43,7 @@ def test_create_or_update_identical(client, dbsession):
     """Writing the same thing twice works both times"""
 
     email_id = str(uuid4())
-    contact_data = ContactPutSchema(
-        email={"email_id": email_id, "primary_email": "foo@example.com"}
-    )
+    contact_data = ContactPutSchema(email={"email_id": email_id, "primary_email": "foo@example.com"})
 
     resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
     assert resp.status_code == 201
@@ -69,9 +61,7 @@ def test_create_or_update_change_primary_email(client, email_factory, dbsession)
     email_id = str(uuid4())
     email_factory(email_id=email_id, primary_email="foo@example.com")
 
-    contact_data = ContactPutSchema(
-        email={"email_id": email_id, "primary_email": "bar@example.com"}
-    )
+    contact_data = ContactPutSchema(email={"email_id": email_id, "primary_email": "bar@example.com"})
 
     resp = client.put(f"/ctms/{email_id}", json=jsonable_encoder(contact_data))
     assert resp.status_code == 201
@@ -84,9 +74,7 @@ def test_create_or_update_change_basket_token(client, email_factory, dbsession):
     """We can update a basket_token given a ctms ID"""
 
     email_id = str(uuid4())
-    email_factory(
-        email_id=email_id, primary_email="foo@example.com", basket_token=uuid4()
-    )
+    email_factory(email_id=email_id, primary_email="foo@example.com", basket_token=uuid4())
     new_basket_token = str(uuid4())
 
     contact_data = ContactPutSchema(
@@ -118,9 +106,7 @@ def test_create_or_update_with_basket_collision(client, email_factory):
             "basket_token": existing_basket_token,
         }
     )
-    resp = client.put(
-        f"/ctms/{new_contact_email_id}", json=jsonable_encoder(contact_data)
-    )
+    resp = client.put(f"/ctms/{new_contact_email_id}", json=jsonable_encoder(contact_data))
 
     assert resp.status_code == 409
 
@@ -138,9 +124,7 @@ def test_create_or_update_with_email_collision(client, email_factory):
             "primary_email": existing_email_address,
         }
     )
-    resp = client.put(
-        f"/ctms/{new_contact_email_id}", json=jsonable_encoder(contact_data)
-    )
+    resp = client.put(f"/ctms/{new_contact_email_id}", json=jsonable_encoder(contact_data))
 
     assert resp.status_code == 409
 

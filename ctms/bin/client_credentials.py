@@ -81,9 +81,7 @@ This can be used to access the API, such as:
 """
         )
     else:
-        print(
-            "These credentials are currently disabled, and can not be used to get an OAuth2 access token."
-        )
+        print("These credentials are currently disabled, and can not be used to get an OAuth2 access token.")
 
 
 def main(db, settings, test_args=None):  # noqa: PLR0912
@@ -99,15 +97,9 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
     parser = argparse.ArgumentParser(description="Create or update client credentials.")
     parser.add_argument("name", help="short name of the client")
     parser.add_argument("-e", "--email", help="contact email for the client")
-    parser.add_argument(
-        "--enable", action="store_true", help="enable a disabled client"
-    )
-    parser.add_argument(
-        "--disable", action="store_true", help="disable a new or enabled client"
-    )
-    parser.add_argument(
-        "--rotate-secret", action="store_true", help="generate a new secret key"
-    )
+    parser.add_argument("--enable", action="store_true", help="enable a disabled client")
+    parser.add_argument("--disable", action="store_true", help="disable a new or enabled client")
+    parser.add_argument("--rotate-secret", action="store_true", help="generate a new secret key")
 
     args = parser.parse_args(args=test_args)
     name = args.name
@@ -117,9 +109,7 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
     rotate = args.rotate_secret
 
     if not re.match(r"^[-_.a-zA-Z0-9]*$", name):
-        print(
-            f"name '{name}' should have only alphanumeric characters, '-', '_', or '.'"
-        )
+        print(f"name '{name}' should have only alphanumeric characters, '-', '_', or '.'")
         return 1
 
     if enable and disable:
@@ -168,9 +158,7 @@ def main(db, settings, test_args=None):  # noqa: PLR0912
         enabled = not disable
         client_id, client_secret = create_client(db, client_id, email, enabled)
         db.commit()
-        print_new_credentials(
-            client_id, client_secret, settings, sample_email=email, enabled=enabled
-        )
+        print_new_credentials(client_id, client_secret, settings, sample_email=email, enabled=enabled)
     return 0
 
 

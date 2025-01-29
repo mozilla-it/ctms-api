@@ -17,12 +17,8 @@ class NewsletterBase(ComparableBase):
         description="Basket slug for the newsletter",
         examples=["mozilla-welcome"],
     )
-    subscribed: bool = Field(
-        default=True, description="True if subscribed, False when formerly subscribed"
-    )
-    format: Literal["H", "T"] = Field(
-        default="H", description="Newsletter format, H=HTML, T=Plain Text"
-    )
+    subscribed: bool = Field(default=True, description="True if subscribed, False when formerly subscribed")
+    format: Literal["H", "T"] = Field(default="H", description="Newsletter format, H=HTML, T=Plain Text")
     lang: Optional[str] = Field(
         default="en",
         min_length=2,
@@ -34,9 +30,7 @@ class NewsletterBase(ComparableBase):
         description="Source URL of subscription",
         examples=["https://www.mozilla.org/en-US/"],
     )
-    unsub_reason: Optional[str] = Field(
-        default=None, description="Reason for unsubscribing"
-    )
+    unsub_reason: Optional[str] = Field(default=None, description="Reason for unsubscribing")
 
     def __lt__(self, other):
         return self.name < other.name

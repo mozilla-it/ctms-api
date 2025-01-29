@@ -18,9 +18,7 @@ class Settings(BaseSettings):
     # We initialize CTMS api client id/secret in `ctms-db-init.sql`
     ctms_client_id: str = "id_integration-test"
     ctms_client_secret: str
-    model_config = SettingsConfigDict(
-        env_file=os.path.join(TEST_FOLDER, "basket.env"), extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=os.path.join(TEST_FOLDER, "basket.env"), extra="ignore")
 
 
 settings = Settings()
@@ -35,9 +33,7 @@ backoff_logger.addHandler(logging.StreamHandler())
 @pytest.fixture(scope="session", autouse=True)
 def adjust_backoff_logger(pytestconfig):
     # Detect whether pytest was run using `-v` or `-vv` and logging.
-    backoff_logger.setLevel(
-        logging.INFO if pytestconfig.getoption("verbose") > 0 else logging.ERROR
-    )
+    backoff_logger.setLevel(logging.INFO if pytestconfig.getoption("verbose") > 0 else logging.ERROR)
 
 
 @pytest.fixture(scope="session")
@@ -58,7 +54,7 @@ def ctms_headers():
     resp.raise_for_status()
     token = resp.json()
     return {
-        "Authorization": f'{token["token_type"]} {token["access_token"]}',
+        "Authorization": f"{token['token_type']} {token['access_token']}",
     }
 
 
@@ -117,9 +113,7 @@ def test_vpn_waitlist(ctms_headers):
     email = f"integration-test-{uuid4()}@restmail.net"
     vpn_waitlist_slug = "guardian-vpn-waitlist"
 
-    basket_subscribe(
-        email, vpn_waitlist_slug, fpn_country="us", fpn_platform="ios,android"
-    )
+    basket_subscribe(email, vpn_waitlist_slug, fpn_country="us", fpn_platform="ios,android")
 
     # 2. Basket should have set the `vpn_waitlist` field/data.
     # Wait for the worker to have processed the request.

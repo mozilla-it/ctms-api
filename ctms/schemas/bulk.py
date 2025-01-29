@@ -15,9 +15,7 @@ class BulkRequestSchema(ComparableBase):
 
     start_time: datetime
 
-    end_time: Optional[Union[datetime, Literal[""]]] = Field(
-        default=None, validate_default=True
-    )
+    end_time: Optional[Union[datetime, Literal[""]]] = Field(default=None, validate_default=True)
 
     @field_validator("end_time", mode="before")
     @classmethod
@@ -26,9 +24,7 @@ class BulkRequestSchema(ComparableBase):
             return datetime.now(timezone.utc)
         return value
 
-    limit: Optional[Union[int, Literal[""]]] = Field(
-        default=None, validate_default=True
-    )
+    limit: Optional[Union[int, Literal[""]]] = Field(default=None, validate_default=True)
 
     @field_validator("limit", mode="before")
     @classmethod
@@ -41,9 +37,7 @@ class BulkRequestSchema(ComparableBase):
             raise ValueError('"limit" should be less than or equal to 1000')
         return value
 
-    mofo_relevant: Optional[Union[bool, Literal[""]]] = Field(
-        default=None, validate_default=True
-    )
+    mofo_relevant: Optional[Union[bool, Literal[""]]] = Field(default=None, validate_default=True)
 
     @field_validator("mofo_relevant", mode="before")
     @classmethod
@@ -60,13 +54,9 @@ class BulkRequestSchema(ComparableBase):
             return None  # Default
         try:
             str_decode = base64.urlsafe_b64decode(value)
-            return str(
-                str_decode.decode("utf-8")
-            )  # 'after' should be decodable otherwise err and invalid
+            return str(str_decode.decode("utf-8"))  # 'after' should be decodable otherwise err and invalid
         except Exception as e:
-            raise ValueError(
-                "'after' param validation error when decoding value."
-            ) from e
+            raise ValueError("'after' param validation error when decoding value.") from e
 
     @staticmethod
     def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
@@ -77,7 +67,5 @@ class BulkRequestSchema(ComparableBase):
 
     @staticmethod
     def compressor_for_bulk_encoded_details(last_email_id, last_update_time):
-        result_after_encoded = base64.urlsafe_b64encode(
-            f"{last_email_id},{last_update_time}".encode("utf-8")
-        )
+        result_after_encoded = base64.urlsafe_b64encode(f"{last_email_id},{last_update_time}".encode("utf-8"))
         return result_after_encoded.decode()

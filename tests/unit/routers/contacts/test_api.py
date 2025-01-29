@@ -97,12 +97,8 @@ def _unsubscribe_newsletter(contact):
 def _subscribe_newsletters_and_change(contact):
     if contact.newsletters:
         contact.newsletters[-1].subscribed = not contact.newsletters[-1].subscribed
-    contact.newsletters.append(
-        NewsletterInSchema(name="a-newsletter", subscribed=False)
-    )
-    contact.newsletters.append(
-        NewsletterInSchema(name="another-newsletter", subscribed=True)
-    )
+    contact.newsletters.append(NewsletterInSchema(name="a-newsletter", subscribed=False))
+    contact.newsletters.append(NewsletterInSchema(name="another-newsletter", subscribed=True))
 
 
 def _subscribe_waitlists_and_change(contact):
@@ -199,20 +195,12 @@ def test_post_get_put(client, post_contact, put_contact, update_fetched):
     # `relay_waitlist` as input.
     # If we don't strip these two fields before turning the data into
     # a `ContactInSchema`, they will create waitlist objects.
-    without_alias_fields = {
-        k: v
-        for k, v in resp.json().items()
-        if k not in ("vpn_waitlist", "relay_waitlist")
-    }
+    without_alias_fields = {k: v for k, v in resp.json().items() if k not in ("vpn_waitlist", "relay_waitlist")}
     fetched = ContactInSchema(**without_alias_fields)
     update_fetched(fetched)
     new_default_fields = find_default_fields(fetched)
     # We set new_default_fields here because the returned response above
     # _includes_ defaults for many fields and we want to not write
     # them when the record is PUT again
-    saved_contacts, sample, email_id = put_contact(
-        record=fetched, new_default_fields=new_default_fields
-    )
-    _compare_written_contacts(
-        saved_contacts[0], sample, email_id, new_default_fields=new_default_fields
-    )
+    saved_contacts, sample, email_id = put_contact(record=fetched, new_default_fields=new_default_fields)
+    _compare_written_contacts(saved_contacts[0], sample, email_id, new_default_fields=new_default_fields)

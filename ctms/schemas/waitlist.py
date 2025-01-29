@@ -30,15 +30,9 @@ class WaitlistBase(ComparableBase):
         description="Source URL of subscription",
         examples=["https://www.mozilla.org/en-US/"],
     )
-    fields: dict = Field(
-        default={}, description="Additional fields", examples=['{"platform": "linux"}']
-    )
-    subscribed: bool = Field(
-        default=True, description="True to subscribe, False to unsubscribe"
-    )
-    unsub_reason: Optional[str] = Field(
-        default=None, description="Reason for unsubscribing"
-    )
+    fields: dict = Field(default={}, description="Additional fields", examples=['{"platform": "linux"}'])
+    subscribed: bool = Field(default=True, description="True to subscribe, False to unsubscribe")
+    unsub_reason: Optional[str] = Field(default=None, description="Reason for unsubscribing")
 
     def __lt__(self, other):
         return self.name < other.name
@@ -155,10 +149,7 @@ class VpnWaitlistSchema(ComparableBase):
     platform: Optional[str] = Field(
         default=None,
         max_length=100,
-        description=(
-            "VPN waitlist platforms as comma-separated list,"
-            " FPN_Waitlist_Platform__c in Salesforce"
-        ),
+        description="VPN waitlist platforms as comma-separated list, FPN_Waitlist_Platform__c in Salesforce",
         examples=["ios,mac"],
     )
     model_config = ConfigDict(from_attributes=True)

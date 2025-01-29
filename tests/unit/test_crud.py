@@ -99,9 +99,7 @@ def test_get_contact_by_email_id_miss(dbsession):
         (False, 2),
     ],
 )
-def test_get_bulk_contacts_mofo_relevant(
-    dbsession, email_factory, mofo_relevant_flag, num_contacts_returned
-):
+def test_get_bulk_contacts_mofo_relevant(dbsession, email_factory, mofo_relevant_flag, num_contacts_returned):
     email_factory()
     email_factory(with_mofo=True, mofo__mofo_relevant=True)
     email_factory(with_mofo=True, mofo__mofo_relevant=False)
@@ -242,9 +240,7 @@ def test_get_contact_by_any_id_missing(dbsession, email_factory):
         ("mofo_contact_id", "5e499cc0-eeb5-4f0e-aae6-a101721874b8"),
     ],
 )
-def test_get_multiple_contacts_by_any_id(
-    dbsession, email_factory, alt_id_name, alt_id_value
-):
+def test_get_multiple_contacts_by_any_id(dbsession, email_factory, alt_id_name, alt_id_value):
     """Two contacts can share the same:
     - fxa primary_email
     - amo user_id
@@ -263,9 +259,7 @@ def test_get_multiple_contacts_by_any_id(
         with_mofo=True,
         mofo__mofo_contact_id="5e499cc0-eeb5-4f0e-aae6-a101721874b8",
     )
-    [contact_a, contact_b] = get_contacts_by_any_id(
-        dbsession, **{alt_id_name: alt_id_value}
-    )
+    [contact_a, contact_b] = get_contacts_by_any_id(dbsession, **{alt_id_name: alt_id_value})
     assert contact_a.email.email_id != contact_b.email.email_id
 
 
@@ -279,9 +273,7 @@ def test_create_or_update_contact_related_objects(dbsession, email_factory):
     new_source = "http://waitlists.example.com/"
     putdata = ContactPutSchema(
         email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
-        newsletters=[
-            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
-        ],
+        newsletters=[NewsletterInSchema(name=email.newsletters[0].name, source=new_source)],
         waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
     )
     create_or_update_contact(dbsession, email.email_id, putdata, None)
@@ -308,9 +300,7 @@ def test_create_or_update_contact_timestamps(dbsession, email_factory):
     new_source = "http://waitlists.example.com"
     putdata = ContactPutSchema(
         email=EmailInSchema(email_id=email.email_id, primary_email=email.primary_email),
-        newsletters=[
-            NewsletterInSchema(name=email.newsletters[0].name, source=new_source)
-        ],
+        newsletters=[NewsletterInSchema(name=email.newsletters[0].name, source=new_source)],
         waitlists=[WaitlistInSchema(name=email.waitlists[0].name, source=new_source)],
     )
     create_or_update_contact(dbsession, email.email_id, putdata, None)

@@ -191,9 +191,7 @@ class ContactPatchSchema(ComparableBase):
     "UNSUBSCRIBE" instead of lists or objects.
     """
 
-    amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]] = Field(
-        None, description='Add-ons data to update, or "DELETE" to reset.'
-    )
+    amo: Optional[Union[Literal["DELETE"], AddOnsInSchema]] = Field(None, description='Add-ons data to update, or "DELETE" to reset.')
     email: Optional[EmailPatchSchema] = None
     fxa: Optional[Union[Literal["DELETE"], FirefoxAccountsInSchema]] = Field(
         None, description='Firefox Accounts data to update, or "DELETE" to reset.'
@@ -201,19 +199,14 @@ class ContactPatchSchema(ComparableBase):
     mofo: Optional[Union[Literal["DELETE"], MozillaFoundationInSchema]] = Field(
         None, description='Mozilla Foundation data to update, or "DELETE" to reset.'
     )
-    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]] = (
-        Field(
-            None,
-            description=(
-                "List of newsletters to add or update, or 'UNSUBSCRIBE' to"
-                " unsubscribe from all."
-            ),
-            examples=[[{"name": "firefox-welcome", "subscribed": False}]],
-        )
+    newsletters: Optional[Union[List[NewsletterSchema], Literal["UNSUBSCRIBE"]]] = Field(
+        None,
+        description="List of newsletters to add or update, or 'UNSUBSCRIBE' to unsubscribe from all.",
+        examples=[[{"name": "firefox-welcome", "subscribed": False}]],
     )
     waitlists: Optional[Union[List[WaitlistInSchema], Literal["UNSUBSCRIBE"]]] = Field(
         None,
-        description=("List of waitlists to add or update."),
+        description="List of waitlists to add or update.",
         examples=[
             [
                 {
@@ -279,13 +272,8 @@ class CTMSResponse(BaseModel):
             # first waitlist is set as the value of `relay_waitlist["geo"]`. This
             # property is intended for legacy consumers. New consumers should prefer the
             # `waitlists` property of the contact schema
-            if (
-                waitlist.name.startswith("relay")
-                and values["relay_waitlist"].geo is None
-            ):
-                values["relay_waitlist"] = RelayWaitlistSchema(
-                    geo=waitlist.fields.get("geo")
-                )
+            if waitlist.name.startswith("relay") and values["relay_waitlist"].geo is None:
+                values["relay_waitlist"] = RelayWaitlistSchema(geo=waitlist.fields.get("geo"))
 
         return values
 
@@ -297,9 +285,7 @@ class CTMSSingleResponse(CTMSResponse):
     Similar to ContactSchema, but groups are required and includes status: OK
     """
 
-    status: Literal["ok"] = Field(
-        default="ok", description="Request was successful", examples=["ok"]
-    )
+    status: Literal["ok"] = Field(default="ok", description="Request was successful", examples=["ok"])
 
 
 class CTMSBulkResponse(BaseModel):
