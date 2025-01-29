@@ -1,6 +1,6 @@
 import base64
-from datetime import datetime, timezone
-from typing import Literal, Optional, Tuple, Union
+from datetime import UTC, datetime
+from typing import Literal
 
 import dateutil.parser
 from pydantic import Field, field_validator
@@ -15,16 +15,16 @@ class BulkRequestSchema(ComparableBase):
 
     start_time: datetime
 
-    end_time: Optional[Union[datetime, Literal[""]]] = Field(default=None, validate_default=True)
+    end_time: datetime | Literal[""] | None = Field(default=None, validate_default=True)
 
     @field_validator("end_time", mode="before")
     @classmethod
     def end_time_must_not_be_blank(cls, value):
         if value in BLANK_VALS:
-            return datetime.now(timezone.utc)
+            return datetime.now(UTC)
         return value
 
-    limit: Optional[Union[int, Literal[""]]] = Field(default=None, validate_default=True)
+    limit: int | Literal[""] | None = Field(default=None, validate_default=True)
 
     @field_validator("limit", mode="before")
     @classmethod
@@ -37,7 +37,7 @@ class BulkRequestSchema(ComparableBase):
             raise ValueError('"limit" should be less than or equal to 1000')
         return value
 
-    mofo_relevant: Optional[Union[bool, Literal[""]]] = Field(default=None, validate_default=True)
+    mofo_relevant: bool | Literal[""] | None = Field(default=None, validate_default=True)
 
     @field_validator("mofo_relevant", mode="before")
     @classmethod
@@ -46,7 +46,7 @@ class BulkRequestSchema(ComparableBase):
             return None  # Default
         return value
 
-    after: Optional[str] = Field(default=None, validate_default=True)
+    after: str | None = Field(default=None, validate_default=True)
 
     @field_validator("after", mode="before")
     def after_must_be_base64_decodable(cls, value):
@@ -59,7 +59,7 @@ class BulkRequestSchema(ComparableBase):
             raise ValueError("'after' param validation error when decoding value.") from e
 
     @staticmethod
-    def extractor_for_bulk_encoded_details(after: str) -> Tuple[str, datetime]:
+    def extractor_for_bulk_encoded_details(after: str) -> tuple[str, datetime]:
         result_after_list = after.split(",")
         after_email_id = result_after_list[0]
         after_start_time = dateutil.parser.parse(result_after_list[1])
@@ -67,5 +67,5 @@ class BulkRequestSchema(ComparableBase):
 
     @staticmethod
     def compressor_for_bulk_encoded_details(last_email_id, last_update_time):
-        result_after_encoded = base64.urlsafe_b64encode(f"{last_email_id},{last_update_time}".encode("utf-8"))
+        result_after_encoded = base64.urlsafe_b64encode(f"{last_email_id},{last_update_time}".encode())
         return result_after_encoded.decode()

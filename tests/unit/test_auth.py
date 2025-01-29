@@ -1,7 +1,7 @@
 """Test authentication"""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
@@ -41,7 +41,7 @@ def test_post_token_header(anon_client, test_token_settings, client_id_and_secre
     assert content["expires_in"] == 5 * 60
     payload = jwt.decode(content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"])
     assert payload["sub"] == f"api_client:{client_id}"
-    expected_expires = (datetime.now(timezone.utc) + test_token_settings["expires_delta"]).timestamp()
+    expected_expires = (datetime.now(UTC) + test_token_settings["expires_delta"]).timestamp()
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -62,7 +62,7 @@ def test_post_token_form_data(anon_client, test_token_settings, client_id_and_se
     assert content["token_type"] == "bearer"
     payload = jwt.decode(content["access_token"], test_token_settings["secret_key"], algorithms=["HS256"])
     assert payload["sub"] == f"api_client:{client_id}"
-    expected_expires = (datetime.now(timezone.utc) + test_token_settings["expires_delta"]).timestamp()
+    expected_expires = (datetime.now(UTC) + test_token_settings["expires_delta"]).timestamp()
     assert -2.0 < (expected_expires - payload["exp"]) < 2.0
 
 
@@ -245,7 +245,7 @@ def test_get_ctms_with_expired_token_fails(email_factory, anon_client, test_toke
     """Calling an authenticated API with an expired token is an error"""
     email = email_factory()
 
-    yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+    yesterday = datetime.now(UTC) - timedelta(days=1)
     client_id = client_id_and_secret[0]
     token = create_access_token({"sub": f"api_client:{client_id}"}, **test_token_settings, now=yesterday)
     with caplog.at_level(logging.INFO):

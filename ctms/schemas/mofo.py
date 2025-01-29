@@ -1,17 +1,15 @@
-from typing import Optional
-
 from pydantic import ConfigDict, Field
 
 from .base import ComparableBase
 
 
 class MozillaFoundationBase(ComparableBase):
-    mofo_email_id: Optional[str] = Field(
+    mofo_email_id: str | None = Field(
         default=None,
         max_length=255,
         description="Foriegn key to email in MoFo contact database",
     )
-    mofo_contact_id: Optional[str] = Field(
+    mofo_contact_id: str | None = Field(
         default=None,
         max_length=255,
         description="Foriegn key to contact in MoFo contact database",

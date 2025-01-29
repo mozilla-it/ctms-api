@@ -1,6 +1,5 @@
 from datetime import timedelta
 from functools import lru_cache
-from typing import Dict, Union
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -13,7 +12,7 @@ from ctms.metrics import oauth2_scheme
 from ctms.schemas import ApiClientSchema
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     return Settings()
 
@@ -28,7 +27,7 @@ def get_db():  # pragma: no cover
 
 def get_token_settings(
     settings: Settings = Depends(get_settings),
-) -> Dict[str, Union[str, timedelta]]:
+) -> dict[str, str | timedelta]:
     return {
         "expires_delta": settings.token_expiration,
         "secret_key": settings.secret_key,
@@ -88,7 +87,7 @@ def get_enabled_api_client(request: Request, api_client: ApiClientSchema = Depen
     return api_client
 
 
-async def get_json(request: Request) -> Dict:
+async def get_json(request: Request) -> dict:
     """
     Get the request body as JSON.
 
@@ -96,5 +95,5 @@ async def get_json(request: Request) -> Dict:
     before this dependency is resolved.
     If the body is form-encoded, it will raise an unknown exception.
     """
-    the_json: Dict = await request.json()
+    the_json: dict = await request.json()
     return the_json

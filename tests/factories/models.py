@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import factory
@@ -113,7 +113,7 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
     double_opt_in = False
     has_opted_out_of_email = False
 
-    create_timestamp = factory.LazyFunction(lambda: datetime.now(timezone.utc))
+    create_timestamp = factory.LazyFunction(lambda: datetime.now(UTC))
     update_timestamp = factory.LazyAttribute(lambda obj: obj.create_timestamp)
 
     @factory.post_generation

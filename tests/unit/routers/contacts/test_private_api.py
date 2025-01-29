@@ -1,13 +1,13 @@
 """Tests for the private APIs that may be removed."""
 
 import json
-from typing import Any, Tuple
+from typing import Any
 
 import pytest
 
 from ctms.schemas.contact import ContactSchema
 
-API_TEST_CASES: Tuple[Tuple[str, Any], ...] = (
+API_TEST_CASES: tuple[tuple[str, Any], ...] = (
     ("/identities", {"basket_token": "c4a7d759-bb52-457b-896b-90f1d3ef8433"}),
     ("/identity/332de237-cab7-4461-bcc3-48e68f42bd5c", {}),
 )

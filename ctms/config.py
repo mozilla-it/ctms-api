@@ -3,7 +3,7 @@ from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import AfterValidator, Field, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,7 +13,7 @@ from ctms.schemas.common import AnyUrlString
 PostgresDsnStr = Annotated[PostgresDsn, AfterValidator(str)]
 
 
-@lru_cache()
+@lru_cache
 def get_version():
     """
     Return contents of version.json.
@@ -49,11 +49,11 @@ class Settings(BaseSettings):
     logging_level: LogLevel = LogLevel.INFO
     sentry_debug: bool = False
 
-    fastapi_env: Optional[str] = Field(default=None, alias="FASTAPI_ENV")
-    sentry_dsn: Optional[AnyUrlString] = Field(default=None, alias="SENTRY_DSN")
+    fastapi_env: str | None = Field(default=None, alias="FASTAPI_ENV")
+    sentry_dsn: AnyUrlString | None = Field(default=None, alias="SENTRY_DSN")
     host: str = Field(default="0.0.0.0", alias="HOST")
     port: int = Field(default=8000, alias="PORT")
 
-    prometheus_pushgateway_url: Optional[str] = None
+    prometheus_pushgateway_url: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="ctms_")

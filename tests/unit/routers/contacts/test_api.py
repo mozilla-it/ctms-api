@@ -1,6 +1,5 @@
 """Unit tests for cross-API functionality"""
 
-from typing import Optional, Set
 from uuid import uuid4
 
 import pytest
@@ -137,7 +136,7 @@ def _compare_written_contacts(
     sample,
     email_id,
     ids_should_be_identical: bool = True,
-    new_default_fields: Optional[set] = None,
+    new_default_fields: set | None = None,
 ):
     fields_not_written = new_default_fields or set()
 
@@ -155,7 +154,7 @@ def _compare_written_contacts(
     assert saved_contact.idempotent_equal(sample)
 
 
-def find_default_fields(contact: ContactSchema) -> Set[str]:
+def find_default_fields(contact: ContactSchema) -> set[str]:
     """Return names of fields that contain default values only"""
     default_fields = set()
     if hasattr(contact, "amo") and contact.amo and contact.amo.is_default():

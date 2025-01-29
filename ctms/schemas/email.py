@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from typing import Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import UUID4, ConfigDict, Field, field_validator
@@ -18,7 +18,7 @@ class EmailBase(ComparableBase):
         description="Contact email address, Email in Salesforce",
         examples=["contact@example.com"],
     )
-    basket_token: Optional[UUID] = Field(
+    basket_token: UUID | None = Field(
         default=None,
         description="Basket token, Token__c in Salesforce",
         examples=["c4a7d759-bb52-457b-896b-90f1d3ef8433"],
@@ -28,25 +28,25 @@ class EmailBase(ComparableBase):
         description="User has clicked a confirmation link",
         examples=[True],
     )
-    sfdc_id: Optional[str] = Field(
+    sfdc_id: str | None = Field(
         default=None,
         max_length=255,
         description="Salesforce legacy ID, Id in Salesforce",
         examples=["001A000023aABcDEFG"],
     )
-    first_name: Optional[str] = Field(
+    first_name: str | None = Field(
         default=None,
         max_length=255,
         description="First name of contact, FirstName in Salesforce",
         examples=["Jane"],
     )
-    last_name: Optional[str] = Field(
+    last_name: str | None = Field(
         default=None,
         max_length=255,
         description="Last name of contact, LastName in Salesforce",
         examples=["Doe"],
     )
-    mailing_country: Optional[str] = Field(
+    mailing_country: str | None = Field(
         default=None,
         max_length=255,
         description="Mailing country code, 2 lowercase letters, MailingCountryCode in Salesforce",
@@ -56,7 +56,7 @@ class EmailBase(ComparableBase):
         default="H",
         description="Email format, H=HTML, T=Plain Text, N and Empty=No selection, Email_Format__c in Salesforce",
     )
-    email_lang: Optional[str] = Field(
+    email_lang: str | None = Field(
         default="en",
         max_length=5,
         description="Email language code, usually 2 lowercase letters, Email_Language__c in Salesforce",
@@ -65,7 +65,7 @@ class EmailBase(ComparableBase):
         default=False,
         description="User has opted-out, HasOptedOutOfEmail in Salesforce",
     )
-    unsubscribe_reason: Optional[str] = Field(
+    unsubscribe_reason: str | None = Field(
         default=None,
         description="Reason for unsubscribing, in basket IGNORE_USER_FIELDS, Unsubscribe_Reason__c in Salesforce",
     )
@@ -77,12 +77,12 @@ class EmailSchema(EmailBase):
         description=EMAIL_ID_DESCRIPTION,
         examples=[EMAIL_ID_EXAMPLE],
     )
-    create_timestamp: Optional[ZeroOffsetDatetime] = Field(
+    create_timestamp: ZeroOffsetDatetime | None = Field(
         default=None,
         description="Contact creation date, CreatedDate in Salesforce",
         examples=["2020-03-28T15:41:00.000+00:00"],
     )
-    update_timestamp: Optional[ZeroOffsetDatetime] = Field(
+    update_timestamp: ZeroOffsetDatetime | None = Field(
         default=None,
         description="Contact last modified date, LastModifiedDate in Salesforce",
         examples=["2021-01-28T21:26:57.511+00:00"],
@@ -92,7 +92,7 @@ class EmailSchema(EmailBase):
 class EmailInSchema(EmailBase):
     """Nearly identical to EmailPutSchema but the email_id is not required."""
 
-    email_id: Optional[UUID4] = Field(
+    email_id: UUID4 | None = Field(
         default=None,
         description=EMAIL_ID_DESCRIPTION,
         examples=[EMAIL_ID_EXAMPLE],
@@ -111,7 +111,7 @@ class EmailPutSchema(EmailBase):
 class EmailPatchSchema(EmailInSchema):
     """Nearly identical to EmailInSchema but nothing is required."""
 
-    primary_email: Optional[str] = None
+    primary_email: str | None = None
 
     @field_validator("primary_email")
     @classmethod
@@ -123,7 +123,7 @@ class EmailPatchSchema(EmailInSchema):
 
 class UpdatedEmailPutSchema(EmailPutSchema):
     update_timestamp: ZeroOffsetDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Contact last modified date, LastModifiedDate in Salesforce",
         examples=["2021-01-28T21:26:57.511+00:00"],
     )

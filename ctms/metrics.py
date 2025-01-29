@@ -1,7 +1,7 @@
 """Prometheus metrics for instrumentation and monitoring."""
 
 from itertools import product
-from typing import Any, Optional, Type, cast
+from typing import Any, cast
 
 from fastapi import FastAPI
 from fastapi.security import HTTPBasic
@@ -13,7 +13,7 @@ from starlette.routing import Route
 from ctms.auth import OAuth2ClientCredentials
 from ctms.crud import get_active_api_client_ids
 
-METRICS_PARAMS: dict[str, tuple[Type[Counter] | Type[Histogram] | type[Gauge], dict]] = {
+METRICS_PARAMS: dict[str, tuple[type[Counter] | type[Histogram] | type[Gauge], dict]] = {
     "requests": (
         Counter,
         {
@@ -132,11 +132,11 @@ def init_metrics_labels(dbsession: Session, app: FastAPI, metrics: dict[str, Cou
 
 
 def emit_response_metrics(
-    path_template: Optional[str],
+    path_template: str | None,
     method: str,
     duration_s: float,
     status_code: int,
-    client_id: Optional[str],
+    client_id: str | None,
     metrics: dict[str, Counter | Histogram],
 ) -> None:
     """Emit metrics for a response."""

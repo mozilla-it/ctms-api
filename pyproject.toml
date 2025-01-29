@@ -76,6 +76,7 @@ select = [
   "I", # import sorting
   "PL", # pylint errors
   "Q", # flake8-quotes errors
+  "UP", # py-upgrade
   "W", # pycodestyle warnings
 ]
 ignore = [

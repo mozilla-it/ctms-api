@@ -28,7 +28,7 @@ def test_read_version(anon_client):
     root_dir = here.parents[3]
     app.state.APP_DIR = root_dir
     version_path = Path(root_dir / "version.json")
-    with open(version_path, "r", encoding="utf8") as vp_file:
+    with open(version_path, encoding="utf8") as vp_file:
         version_contents = vp_file.read()
     expected = json.loads(version_contents)
 
