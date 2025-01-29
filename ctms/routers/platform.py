@@ -1,4 +1,5 @@
 import logging
+from typing import Annotated
 
 from dockerflow import checks as dockerflow_checks
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -47,9 +48,9 @@ def root():
 )
 def login(
     request: Request,
-    db: Session = Depends(get_db),
-    form_data: OAuth2ClientCredentialsRequestForm = Depends(),
-    basic_credentials: HTTPBasicCredentials | None = Depends(token_scheme),
+    db: Annotated[Session, Depends(get_db)],
+    form_data: Annotated[OAuth2ClientCredentialsRequestForm, Depends()],
+    basic_credentials: Annotated[HTTPBasicCredentials | None, Depends(token_scheme)],
     token_settings=Depends(get_token_settings),
 ):
     auth_info = auth_info_context.get()
@@ -113,7 +114,7 @@ def database():
 
 
 @router.get("/__crash__", tags=["Platform"], include_in_schema=False)
-def crash(api_client: ApiClientSchema = Depends(get_enabled_api_client)):
+def crash(api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)]):
     """Raise an exception to test Sentry integration."""
     raise RuntimeError("Test exception handling")
 

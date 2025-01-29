@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
@@ -147,8 +147,8 @@ def get_bulk_contacts_by_timestamp_or_4xx(
 )
 def read_ctms_by_any_id(
     request: Request,
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
     ids=Depends(all_ids),
 ):
     if not any(ids.values()):
@@ -170,9 +170,9 @@ def read_ctms_by_any_id(
 )
 def read_ctms_by_email_id(
     request: Request,
-    email_id: UUID = Path(..., title="The Email ID"),
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    email_id: Annotated[UUID, Path(..., title="The Email ID")],
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
 ):
     resp = get_ctms_response_or_404(db, email_id)
     return resp
@@ -194,9 +194,9 @@ def create_ctms_contact(
     contact: ContactInSchema,
     request: Request,
     response: Response,
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
-    content_json: dict | None = Depends(get_json),
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
+    content_json: Annotated[dict | None, Depends(get_json)],
 ):
     contact.email.email_id = contact.email.email_id or uuid4()
     email_id = contact.email.email_id
@@ -235,10 +235,10 @@ def create_or_update_ctms_contact(
     contact: ContactPutSchema,
     request: Request,
     response: Response,
-    email_id: UUID = Path(..., title="The Email ID"),
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
-    content_json: dict | None = Depends(get_json),
+    email_id: Annotated[UUID, Path(..., title="The Email ID")],
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
+    content_json: Annotated[dict | None, Depends(get_json)],
 ):
     if contact.email.email_id:
         if contact.email.email_id != email_id:
@@ -279,10 +279,10 @@ def partial_update_ctms_contact(
     contact: ContactPatchSchema,
     request: Request,
     response: Response,
-    email_id: UUID = Path(..., title="The Email ID"),
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
-    content_json: dict | None = Depends(get_json),
+    email_id: Annotated[UUID, Path(..., title="The Email ID")],
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
+    content_json: Annotated[dict | None, Depends(get_json)],
 ):
     if contact.email and contact.email.email_id and contact.email.email_id != email_id:
         raise HTTPException(
@@ -318,8 +318,8 @@ def partial_update_ctms_contact(
 )
 def delete_contact_by_primary_email(
     primary_email: str,
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
 ):
     ids = all_ids(primary_email=primary_email.lower())
     contacts = get_contacts_by_any_id(db, **ids)
@@ -349,8 +349,8 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     limit: int | Literal[""] | None = None,
     after: str | None = None,
     mofo_relevant: bool | Literal[""] | None = None,
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    db: Session = Depends(get_db),  # noqa: FAST002, parameter without default
+    api_client: ApiClientSchema = Depends(get_enabled_api_client),  # noqa: FAST002, parameter without default
 ):
     try:
         bulk_request = BulkRequestSchema(
@@ -377,8 +377,8 @@ def read_ctms_in_bulk_by_timestamps_and_limit(
     tags=["Private"],
 )
 def read_identities(
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
     ids=Depends(all_ids),
 ):
     if not any(ids.values()):
@@ -399,9 +399,9 @@ def read_identities(
     tags=["Private"],
 )
 def read_identity(
-    email_id: UUID = Path(..., title="The email ID"),
-    db: Session = Depends(get_db),
-    api_client: ApiClientSchema = Depends(get_enabled_api_client),
+    email_id: Annotated[UUID, Path(..., title="The Email ID")],
+    db: Annotated[Session, Depends(get_db)],
+    api_client: Annotated[ApiClientSchema, Depends(get_enabled_api_client)],
 ):
     contact = get_contact_or_404(db, email_id)
     return contact.as_identity_response()
