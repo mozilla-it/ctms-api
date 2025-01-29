@@ -71,6 +71,7 @@ extend-exclude = ["migrations"]
 [tool.ruff.lint]
 select = [
   "A", # flake8-builtin errors
+  "C4", # flake8-comprehensions errors
   "E", # pycodestyle errors
   "F", # pyflakes errors
   "I", # import sorting

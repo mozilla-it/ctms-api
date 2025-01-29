@@ -194,14 +194,14 @@ def main(
     for i in range(batch_count):
         start_idx = i * batch_size
         end_idx = (i + 1) * batch_size
-        params = dict(
-            batch=i + 1,
-            batch_count=batch_count,
-            start_idx=start_idx,
-            end_idx=end_idx,
-            tmp_suffix=tmp_suffix,
-            sleep_seconds=sleep_seconds,
-        )
+        params = {
+            "batch": i + 1,
+            "batch_count": batch_count,
+            "start_idx": start_idx,
+            "end_idx": end_idx,
+            "tmp_suffix": tmp_suffix,
+            "sleep_seconds": sleep_seconds,
+        }
         join_batches.append(SQL_JOIN_BATCH.format(**params))
         update_batches.append(
             SQL_UPDATE_BATCH.format(
