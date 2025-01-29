@@ -174,8 +174,8 @@ def main(
                 email, date, reason = row
                 assert "@" in email
                 assert re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2} (AM|PM)", date)
-            except (AssertionError, ValueError):
-                raise ValueError(f"Line '{row}' does not look right")
+            except (AssertionError, ValueError) as err:
+                raise ValueError(f"Line '{row}' does not look right") from err
 
     batch_count = 1 + csv_rows_count // batch_size
     chunk_size = 1 + batch_count // files_count

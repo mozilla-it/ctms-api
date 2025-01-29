@@ -71,6 +71,7 @@ extend-exclude = ["migrations"]
 [tool.ruff.lint]
 select = [
   "A", # flake8-builtin errors
+  "B", # bugbear errors
   "C4", # flake8-comprehensions errors
   "E", # pycodestyle errors
   "F", # pyflakes errors
@@ -82,6 +83,7 @@ select = [
 ]
 ignore = [
   "A005", # stdlib module shadowing - platform and email
+  "B008", # function call in default arguments - used for `Depends` in argument defaults.
   "PLR2004", # magic value comparison
   "PLR0913", # too many arguments
 ]

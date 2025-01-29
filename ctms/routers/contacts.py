@@ -284,7 +284,7 @@ def partial_update_ctms_contact(
     api_client: ApiClientSchema = Depends(get_enabled_api_client),
     content_json: dict | None = Depends(get_json),
 ):
-    if contact.email and getattr(contact.email, "email_id") and contact.email.email_id != email_id:
+    if contact.email and contact.email.email_id and contact.email.email_id != email_id:
         raise HTTPException(
             status_code=422,
             detail="cannot change email_id",
