@@ -69,8 +69,18 @@ line-length = 150
 extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
-select = [ "PL", "I"] 
-ignore = [ "PLR2004", "PLR0913" ]
+select = [
+  "A", # flake8-builtin errors
+  "I", # import sorting
+  "PL", # pylint errors
+  "Q", # flake8-quotes errors
+  "W", # pycodestyle warnings
+]
+ignore = [
+  "A005", # stdlib module shadowing - platform and email
+  "PLR2004", # magic value comparison
+  "PLR0913", # too many arguments
+]
 
 [tool.coverage.run]
 omit = [
