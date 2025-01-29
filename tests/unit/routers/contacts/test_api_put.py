@@ -3,7 +3,6 @@
 import logging
 from uuid import uuid4
 
-import pytest
 from fastapi.encoders import jsonable_encoder
 
 from ctms import models

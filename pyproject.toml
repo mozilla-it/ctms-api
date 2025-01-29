@@ -72,6 +72,7 @@ extend-exclude = ["migrations"]
 select = [
   "A", # flake8-builtin errors
   "E", # pycodestyle errors
+  "F", # pyflakes errors
   "I", # import sorting
   "PL", # pylint errors
   "Q", # flake8-quotes errors

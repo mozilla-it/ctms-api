@@ -1,13 +1,10 @@
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import Literal, Optional
 
 from pydantic import UUID4, ConfigDict, Field
 
 from .base import ComparableBase
 from .common import AnyUrlString, ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
-
-if TYPE_CHECKING:
-    from ctms.models import Newsletter
 
 
 class NewsletterBase(ComparableBase):

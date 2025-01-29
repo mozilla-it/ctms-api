@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import Optional
 
 from pydantic import UUID4, ConfigDict, Field, model_validator
 
 from .base import ComparableBase
 from .common import AnyUrlString, ZeroOffsetDatetime
 from .email import EMAIL_ID_DESCRIPTION, EMAIL_ID_EXAMPLE
-
-if TYPE_CHECKING:
-    from .contact import ContactInBase, ContactPatchSchema
 
 
 class WaitlistBase(ComparableBase):
