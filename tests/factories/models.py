@@ -153,9 +153,53 @@ class EmailFactory(BaseSQLAlchemyModelFactory):
         )
 
 
+class ApiClientFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.ApiClient
+
+    client_id = factory.Sequence(lambda n: f"client-id-{n}")
+    email = factory.Sequence(lambda n: f"email-{n}@example.com")
+    hashed_secret = factory.Sequence(lambda n: f"secret-{n}")
+
+
+class RoleFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.Roles
+
+    name = factory.Faker("word")
+
+
+class PermissionFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.Permissions
+
+    name = factory.Faker("word")
+
+
+class ApiClientRolesFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.ApiClientRoles
+
+    api_client = factory.SubFactory(ApiClientFactory)
+    role = factory.SubFactory(RoleFactory)
+
+
+class RolePermissionsFactory(BaseSQLAlchemyModelFactory):
+    class Meta:
+        model = models.RolePermissions
+
+    role = factory.SubFactory(RoleFactory)
+    permission = factory.SubFactory(PermissionFactory)
+
+
 __all__ = (
+    "ApiClientFactory",
+    "ApiClientRolesFactory",
     "EmailFactory",
     "FirefoxAccountFactory",
     "NewsletterFactory",
+    "PermissionFactory",
+    "RoleFactory",
+    "RolePermissionsFactory",
     "WaitlistFactory",
 )
