@@ -188,6 +188,7 @@ class ApiClient(Base, TimestampMixin):
     # Relationships
     roles = relationship("ApiClientRoles", back_populates="api_client")
 
+
 class MozillaFoundationContact(Base, TimestampMixin):
     __tablename__ = "mofo"
 

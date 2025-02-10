@@ -79,7 +79,7 @@ start: .env
 
 .PHONY: test
 test: .env $(INSTALL_STAMP)
-	COVERAGE_REPORT=1 bin/test.sh
+	COVERAGE_REPORT=1 bin/test.sh $(filter-out test, $(MAKECMDGOALS))
 
 .PHONY: integration-test
 integration-test: .env setup $(INSTALL_STAMP)
