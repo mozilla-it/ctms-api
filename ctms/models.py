@@ -186,7 +186,7 @@ class ApiClient(Base, TimestampMixin):
     last_access = mapped_column(DateTime(timezone=True))
 
     # Relationships
-    roles = relationship("ApiClientRoles", back_populates="api_client")
+    roles = relationship("ApiClientRoles", back_populates="api_client", lazy="joined")
 
 
 class MozillaFoundationContact(Base, TimestampMixin):
@@ -212,8 +212,8 @@ class Roles(Base):
     description = mapped_column(Text, nullable=True)
 
     # Relationships
-    permissions = relationship("RolePermissions", back_populates="role")
-    api_clients = relationship("ApiClientRoles", back_populates="role")
+    permissions = relationship("RolePermissions", back_populates="role", lazy="joined")
+    api_clients = relationship("ApiClientRoles", back_populates="role", lazy="joined")
 
 
 class Permissions(Base):
@@ -224,7 +224,7 @@ class Permissions(Base):
     description = mapped_column(Text, nullable=True)
 
     # Relationships
-    roles = relationship("RolePermissions", back_populates="permission")
+    roles = relationship("RolePermissions", back_populates="permission", lazy="joined")
 
 
 class RolePermissions(Base):
@@ -236,7 +236,7 @@ class RolePermissions(Base):
 
     # Relationships
     role = relationship("Roles", back_populates="permissions")
-    permission = relationship("Permissions", back_populates="roles")
+    permission = relationship("Permissions", back_populates="roles", lazy="joined")
 
 
 class ApiClientRoles(Base):

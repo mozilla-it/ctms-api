@@ -11,7 +11,8 @@ authors = [
   { name = "CTMS Reviewers" },
 ]
 requires-python = ">=3.12,<4"
-package-mode = false
+package-mode = true
+packages = [{ include = "ctms" }]
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.12",
@@ -20,6 +21,7 @@ classifiers = [
 dependencies = [
   "alembic>=1.14",
   "argon2-cffi>=23.1",
+  "click (>=8.1.8,<9.0.0)",
   "colorama>=0.4.6",
   "dockerflow[fastapi]>=2024.4.2",
   "fastapi>=0.115.6",
@@ -39,6 +41,9 @@ dependencies = [
   "starlette>=0.41.3",
   "uvicorn[standard]>=0.34",
 ]
+
+[project.scripts]
+ctms-cli = "ctms.cli.main:cli"
 
 # TODO: Move to PEP 735 dependency-groups when supported:
 # https://github.com/python-poetry/poetry/issues/9751
@@ -97,6 +102,8 @@ omit = [
   '*/.venv/*',
   '*/.tox/*',
   '*/virtualenvs/*',
+  'migrations/*',
+  'tests/*',
 ]
 
 [tool.coverage.report]

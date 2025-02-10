@@ -5,11 +5,13 @@ CTMS uses **Role-Based Access Control (RBAC)** to manage access to resources. Th
 - **Roles**: Group permissions together for easier management.
 - **API Clients**: The oAuth clients that authenticate and receive roles.
 
+See the [CTMS CLI](./cli.md) documentation on how to manage API clients, roles, and permissions.
+
 ---
 
 ## Permissions
 
-**Permissions** define **what actions can be performed** within the system. They are the 
+**Permissions** define **what actions can be performed** within the system. They are the
 **lowest level of access control** and must be assigned to **roles**.
 
 ### Key Characteristics

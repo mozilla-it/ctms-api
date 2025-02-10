@@ -124,22 +124,19 @@ The adminer website runs at http://localhost:8080. Log in with these credentials
 ## OAuth2 Client Credentials
 
 The API uses [OAuth 2 Client Credentials](https://oauth.net/2/grant-types/client-credentials/)
-for authentication. To generate credentials for your development environment:
+for authentication. To generate credentials for your development environment use the [CTMS CLI](./cli.md):
 
 ```sh
 make shell  # Enter the web container
-ctms/bin/client_credentials.py test --email test@example.com
+ctms-cli clients create <client_id> <email>
 ```
 
 This will print out new client credentials, such as:
 
 ```
-Your OAuth2 client credentials are:
-
-      client_id: id_test
-  client_secret: secret_dGhpcyBpcyBubyBzZWNyZXQu
-
-...
+** 🔑 Client Credentials -- Store Securely! 🔑 **
+  - Client ID: id_test
+  - Client Secret: secret_JKaKrCCeIucEANisI-z-m4TTTO27ML-TELe2gezWDTI
 ```
 
 You can use these on the interactive Swagger docs by clicking the "**Authorize**" button.

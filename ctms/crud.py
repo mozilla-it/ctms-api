@@ -498,6 +498,11 @@ def update_api_client_last_access(db: Session, api_client: ApiClient):
     db.add(api_client)
 
 
+def update_api_client_secret(db: Session, api_client: ApiClient, secret):
+    api_client.hashed_secret = hash_password(secret)
+    db.add(api_client)
+
+
 def get_contacts_from_newsletter(dbsession, newsletter_name):
     entries = (
         dbsession.query(Newsletter)
