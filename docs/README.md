@@ -3,4 +3,5 @@
 - [Configuration](configuration.md)
 - [Deployment Guide](deployment_guide.md)
 - [Developer Setup](developer_setup.md)
+- [CTMS CLI](cli.md)
 - [Testing Strategy](testing_strategy.md)

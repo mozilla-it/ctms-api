@@ -3,7 +3,7 @@ FROM python:3.12.7 AS python-base
 ENV PIP_DEFAULT_TIMEOUT=100 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_NO_CACHE_DIR=off \
-    POETRY_HOME=/opt/poetry\
+    POETRY_HOME=/opt/poetry \
     POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     PYSETUP_PATH="/opt/pysetup"
@@ -13,8 +13,10 @@ RUN python3 -m venv $POETRY_HOME && \
     $POETRY_HOME/bin/poetry --version
 
 WORKDIR $PYSETUP_PATH
-COPY poetry.lock pyproject.toml .
-RUN $POETRY_HOME/bin/poetry install --no-root --only main
+COPY poetry.lock pyproject.toml README.md .
+# Copy ctms folder for ctms-cli installation.
+COPY ctms /opt/pysetup/ctms/
+RUN $POETRY_HOME/bin/poetry install --only main
 
 FROM python:3.12.7-slim AS production
 
