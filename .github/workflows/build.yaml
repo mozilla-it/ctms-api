@@ -25,6 +25,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+          persist-credentials: false
       
       - id: determine_tag
         name: determine tag
