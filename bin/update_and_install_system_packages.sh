@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-# Tell apt-get we're never going to be able to give manual 
+# Tell apt-get we're never going to be able to give manual
 # feedback:
 export DEBIAN_FRONTEND=noninteractive
 
