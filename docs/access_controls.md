@@ -21,9 +21,9 @@ See the [CTMS CLI](./cli.md) documentation on how to manage API clients, roles, 
 
 ### Example Permissions
 | Permission Name | Description |
-|----------------|-------------|
+|-----------------|-------------|
 | `manage_contacts` | Grants the ability to create, edit, and delete contacts |
-| `view_updates` | Allows access to updated contacts |
+| `view_contacts` | Allows access to view contacts |
 
 ---
 
@@ -40,8 +40,8 @@ permissions within that role.
 ### Example Roles
 | Role Name | Assigned Permissions |
 |-----------|----------------------|
-| `admin` | `manage_contacts`, `view_updates` |
-| `viewer` | `view_updates` |
+| `admin` | `manage_contacts`, `view_contacts` |
+| `viewer` | `view_contacts` |
 
 ---
 
@@ -85,8 +85,7 @@ curl --oauth2-bearer <token> <server_prefix>/ctms?primary_email=<email>
 
 ## Protecting Endpoints in FastAPI
 
-To protect an API endpoint and **require a specific permission**, use the **`with_permission`**
-helper from `ctms.permissions`.
+This is how API endpoints are protected using the `with_permission` helper from `ctms.permissions`.
 
 ### Usage
 

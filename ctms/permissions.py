@@ -66,10 +66,7 @@ def has_any_permission(db: Session, api_client_id: str, permission_names: list[s
         .where(ApiClientRoles.api_client_id == api_client_id)
     ).scalar()
 
-    if has_perm:
-        return True
-
-    return False
+    return bool(has_perm)
 
 
 def with_permission(*permission_names: str):

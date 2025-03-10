@@ -9,7 +9,7 @@ This document outlines how to use the CTMS CLI to manage these entities.
 ## Confirmation Prompts for Destructive Actions
 
 To prevent accidental data loss, all destructive operations (delete, revoke, disable, rotate-secret)
-will prompt for confirmation before proceeding. You can bypass these prompts by using the `--yes` or `-y` 
+will prompt for confirmation before proceeding. You can bypass these prompts by using the `--yes` or `-y`
 flag when running these commands, which is especially useful for scripting or automation.
 
 Example:
@@ -39,7 +39,7 @@ ctms-cli permissions create <permission_name> "<description>"
 ### Deleting a Permission
 Delete the permission from the database. If the permission is assigned to a **role**, the permission
 will need to be revoked from the **role** first. The CLI will output the commands needed to be
-performed. 
+performed.
 ```sh
 ctms-cli permissions delete <permission_name>
 ```
