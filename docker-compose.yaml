@@ -22,7 +22,7 @@ services:
       timeout: 1s
       retries: 10
   postgres:
-    image: postgres:15
+    image: postgres:17
     ports:
       - 5432:5432
     environment:
