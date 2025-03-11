@@ -13,7 +13,7 @@ RUN python3 -m venv $POETRY_HOME && \
     $POETRY_HOME/bin/poetry --version
 
 WORKDIR $PYSETUP_PATH
-COPY ./poetry.lock ./pyproject.toml ./
+COPY poetry.lock pyproject.toml .
 RUN $POETRY_HOME/bin/poetry install --no-root --only main
 
 FROM python:3.12.7-slim AS production
@@ -39,7 +39,19 @@ RUN groupadd --gid $groupid app && \
 USER app
 WORKDIR /app
 
-COPY --chown=app:app . .
+# Copy only what is necessary to reduce image size and security risks
+# FILES
+COPY --chown=app:app \
+    alembic.ini \
+    asgi.py \
+    pyproject.toml \
+    version.json \
+    /app/
+# DIRECTORIES
+COPY --chown=app:app bin /app/bin
+COPY --chown=app:app ctms /app/ctms
+COPY --chown=app:app migrations /app/migrations
+COPY --chown=app:app suppression-list /app/suppression-list
 
 EXPOSE $PORT
 CMD ["python", "asgi.py"]
