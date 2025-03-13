@@ -55,17 +55,21 @@ def ping(db: Session):
 def count_total_contacts(db: Session) -> int:
     """Return the total number of email records.
 
-    Since the table is huge, we rely on the PostgreSQL internal
-    catalog to retrieve an approximate size efficiently.
-    This metadata is refreshed on `VACUUM` or `ANALYSIS` which
-    is run regularly by default on our database instances.
+    Since the table is huge, we rely on the PostgreSQL internal catalog to retrieve an approximate
+    size efficiently.  This metadata is refreshed on VACUUM or ANALYZE which is run regularly by
+    default on our database instances.
+
+    If the catalog estimate is unavailable, we verify if there is at least one email in the table
+    and return 1 to indicate its presence.
     """
-    result = db.execute(text("SELECT reltuples AS estimate " "FROM pg_class " f"where relname = '{Email.__tablename__}'")).scalar()
+    result = db.execute(text(f"SELECT reltuples AS estimate FROM pg_class WHERE relname = '{Email.__tablename__}'")).scalar()
+
     if result is None or result < 0:
-        # Fall back to a full count if the estimate is not available.
-        result = db.execute(text(f"SELECT COUNT(*) FROM {Email.__tablename__}")).scalar()
-    if result is None:
-        return -1
+        # Fall back to verifying if there's at least one record.
+        result = db.execute(text(f"SELECT 1 FROM {Email.__tablename__} LIMIT 1")).scalar()
+        if result is None:
+            return 0  # Table empty.
+
     return int(result)
 
 
