@@ -38,6 +38,9 @@ class FuzzyAssert:
     def __repr__(self):
         return f"<{self.__class__.__name__}.{self.name}>"
 
+    def __hash__(self):
+        return hash((self.name, id(self.test)))
+
     @classmethod
     def iso8601(cls):
         def is_iso8601_date(sdate):
