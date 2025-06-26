@@ -14,7 +14,6 @@ from alembic import config as alembic_config
 from fastapi.testclient import TestClient
 from prometheus_client import CollectorRegistry
 from pydantic import PostgresDsn
-from pytest_factoryboy import register
 from sqlalchemy import create_engine
 from sqlalchemy_utils.functions import create_database, database_exists, drop_database
 
@@ -166,15 +165,85 @@ def setup_admin_role(session_dbsession):
         session_dbsession.commit()
 
 
-# Database models
-register(factories.models.ApiClientFactory)
-register(factories.models.ApiClientRolesFactory)
-register(factories.models.EmailFactory)
-register(factories.models.NewsletterFactory)
-register(factories.models.PermissionFactory)
-register(factories.models.RoleFactory)
-register(factories.models.RolePermissionsFactory)
-register(factories.models.WaitlistFactory)
+# Database models - Using manual fixture registration to avoid pytest-factoryboy compatibility issues
+@pytest.fixture
+def api_client_factory():
+    return factories.models.ApiClientFactory
+
+
+@pytest.fixture
+def api_client(api_client_factory):
+    return api_client_factory()
+
+
+@pytest.fixture
+def api_client_roles_factory():
+    return factories.models.ApiClientRolesFactory
+
+
+@pytest.fixture
+def api_client_roles(api_client_roles_factory):
+    return api_client_roles_factory()
+
+
+@pytest.fixture
+def email_factory():
+    return factories.models.EmailFactory
+
+
+@pytest.fixture
+def email(email_factory):
+    return email_factory()
+
+
+@pytest.fixture
+def newsletter_factory():
+    return factories.models.NewsletterFactory
+
+
+@pytest.fixture
+def newsletter(newsletter_factory):
+    return newsletter_factory()
+
+
+@pytest.fixture
+def permission_factory():
+    return factories.models.PermissionFactory
+
+
+@pytest.fixture
+def permission(permission_factory):
+    return permission_factory()
+
+
+@pytest.fixture
+def role_factory():
+    return factories.models.RoleFactory
+
+
+@pytest.fixture
+def role(role_factory):
+    return role_factory()
+
+
+@pytest.fixture
+def role_permissions_factory():
+    return factories.models.RolePermissionsFactory
+
+
+@pytest.fixture
+def role_permissions(role_permissions_factory):
+    return role_permissions_factory()
+
+
+@pytest.fixture
+def waitlist_factory():
+    return factories.models.WaitlistFactory
+
+
+@pytest.fixture
+def waitlist(waitlist_factory):
+    return waitlist_factory()
 
 
 def create_full_contact(db, contact: ContactSchema):

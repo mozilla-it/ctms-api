@@ -28,6 +28,9 @@ class CaseInsensitiveComparator(Comparator):
     def __eq__(self, other):
         return func.lower(self.__clause_element__()) == func.lower(other)
 
+    def __hash__(self):
+        return hash(self.__clause_element__())
+
 
 class TimestampMixin:
     @declared_attr
