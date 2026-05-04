@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
   "alembic>=1.15",
-  "argon2-cffi>=23.1",
+  "argon2-cffi>=25.1.0",
   "click (>=8.1.8,<9.0.0)",
   "colorama>=0.4.6",
   "dockerflow[fastapi]>=2024.4.2",
